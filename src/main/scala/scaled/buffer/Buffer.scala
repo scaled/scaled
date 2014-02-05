@@ -4,7 +4,7 @@
 
 package scaled.buffer
 
-import java.io.{BufferedReader, File, FileReader}
+import java.io.{Reader, BufferedReader, File, FileReader}
 import reactual.{Signal, SignalV, Value, ValueV}
 import scala.collection.mutable.ArrayBuffer
 
@@ -27,23 +27,30 @@ object Buffer {
     def addedLines :Seq[Line] = buffer.lines.slice(offset, offset+added)
   }
 
+  /** Reads the contents of `reader` info a buffer. Note that the caller is responsible for closing
+    * the reader if necessary. */
+  def apply (name :String, dir :File, reader :Reader) :Buffer = {
+    val buffed = new BufferedReader(reader)
+    val lines = ArrayBuffer[Line]()
+    var line :String = buffed.readLine()
+    while (line != null) {
+      lines += new Line(line.toCharArray)
+      line = buffed.readLine()
+    }
+    new Buffer(name, dir, lines)
+  }
+
   /** Reads the contents of `file` into a buffer. */
   def fromFile (file :File) :Buffer = {
     // TODO: rewrite all this to use a mmap'd file and scan for CR/LF ourselves and construct the
     // lines directly from the mmap'd file data, which will reduce expense to one read to find
     // CR/LF and one read to copy the data into one array per line
-    val lines = ArrayBuffer[Line]()
-    val reader = new BufferedReader(new FileReader(file))
+    val reader = new FileReader(file)
     try {
-      var line :String = reader.readLine()
-      while (line != null) {
-        lines += new Line(line.toCharArray)
-        line = reader.readLine()
-      }
+      apply(file.getName, file.getParentFile, reader)
     } finally {
       reader.close
     }
-    new Buffer(file.getName, file.getParentFile, lines)
   }
 }
 
@@ -68,6 +75,8 @@ class Buffer private (initName :String, initDir :File, initLines :ArrayBuffer[Li
 
   /** The lines that make up this buffer. */
   def lines :Seq[Line] = _lines
+
+  // TODO: methods for inserting, removing and replacing lines
 
   override def toString () = s"[dir=${dir.get}, name=${name.get}, lines=${lines.size}]"
 }
