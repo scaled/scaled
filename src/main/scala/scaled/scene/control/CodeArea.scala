@@ -8,16 +8,13 @@ import javafx.beans.binding.ObjectBinding
 import javafx.beans.property.{DoubleProperty, ObjectProperty, SimpleDoubleProperty}
 import javafx.beans.value.{ChangeListener, ObservableObjectValue, ObservableValue}
 import javafx.beans.{InvalidationListener, Observable}
-import javafx.css.CssMetaData
-import javafx.css.FontCssMetaData
-import javafx.css.Styleable
-import javafx.css.StyleableProperty
-import javafx.css.{StyleOrigin, StyleableObjectProperty}
+import javafx.css.{CssMetaData, FontCssMetaData, Styleable, StyleableProperty, StyleOrigin,
+  StyleableObjectProperty}
 import javafx.event.EventHandler
-import javafx.geometry.{Bounds, VPos}
+import javafx.geometry.{Bounds, Rectangle2D, VPos}
 import javafx.scene.Group
 import javafx.scene.control.{Control, ScrollPane}
-import javafx.scene.input.MouseEvent
+import javafx.scene.input.{MouseEvent, KeyCode, KeyEvent}
 import javafx.scene.layout.Region
 import javafx.scene.text.{Font, Text}
 
@@ -39,7 +36,8 @@ import scaled.buffer.{Buffer, Line}
 
 /** A control that displays code and allows it to be edited. A control is instantiated with a
   * [Buffer] and always displays/edits that buffer. You cannot switch the buffer in a CodeArea, you
-  * would instead make a new CodeArea. */
+  * would instead make a new CodeArea.
+  */
 class CodeArea (val buffer :Buffer) extends Control {
 
   val  scrollTop :DoubleProperty = new SimpleDoubleProperty(this, "scrollTop", 0)
@@ -88,8 +86,19 @@ class CodeArea (val buffer :Buffer) extends Control {
 object CodeArea {
 
   class Behavior (ctrl :CodeArea) extends BehaviorBase(ctrl, null) {
-    // TODO: override callActionForEvent() to handle keys, or matchActionForEvent() and use
-    // built-in "action" system
+    override def callActionForEvent (e :KeyEvent) {
+      if (e.getEventType == KeyEvent.KEY_PRESSED) {
+        e.getCode match {
+          case KeyCode.DOWN =>
+            ctrl.scrollTop.set(ctrl.scrollTop.get+ctrl.getSkin.asInstanceOf[Skin].lineHeight)
+          case KeyCode.UP =>
+            ctrl.scrollTop.set(ctrl.scrollTop.get-ctrl.getSkin.asInstanceOf[Skin].lineHeight)
+          case _ =>
+            println(s"Pressed $e")
+            super.callActionForEvent(e)
+        }
+      } else super.callActionForEvent(e)
+    }
   }
 
   class Skin (ctrl :CodeArea) extends BehaviorSkinBase[CodeArea,Behavior](ctrl, new Behavior(ctrl)) {
@@ -99,7 +108,7 @@ object CodeArea {
     private var computedPrefWidth = Double.NegativeInfinity
     private var computedPrefHeight = Double.NegativeInfinity
     private var characterWidth = 0d
-    private var lineHeight = 0d
+    var lineHeight = 0d // TEMP viz for scrolling hack
 
     // ctrl.prefColumnCountProperty.addListener(new ChangeListener<Number>() {
     //   @Override
@@ -116,7 +125,7 @@ object CodeArea {
     //   }
     // });
 
-    protected var fontMetrics :ObservableObjectValue[FontMetrics] = new ObjectBinding[FontMetrics]() {
+    protected val fontMetrics = new ObjectBinding[FontMetrics]() {
       { bind(ctrl.font) }
       override def computeValue = {
         invalidateMetrics()
@@ -129,7 +138,7 @@ object CodeArea {
       }
     })
 
-    private def updateFontMetrics() {
+    private def updateFontMetrics () {
       val firstLine = lineNodes.getChildren.get(0).asInstanceOf[Text]
       lineHeight = Utils.getLineHeight(getSkinnable.font.get, firstLine.getBoundsType)
       characterWidth = fontMetrics.get.computeStringWidth("W")
@@ -192,7 +201,7 @@ object CodeArea {
 
     // contains our content node and scrolls and clips it
     private val scrollPane = new ScrollPane()
-    scrollPane.setStyle("-fx-background-color:blue; -fx-border-color:crimson;") // TEMP
+    // scrollPane.setStyle("-fx-background-color:blue; -fx-border-color:crimson;") // TEMP
     scrollPane.setMinWidth(0)
     scrollPane.setMinHeight(0)
     // bind the h/vvalue scroll pane props to the scroll left/top code area props
@@ -207,7 +216,6 @@ object CodeArea {
       }
     })
 
-    private var oldViewportBounds :Bounds = _
     scrollPane.viewportBoundsProperty.addListener(new InvalidationListener() {
       override def invalidated (valueModel :Observable) {
         if (scrollPane.getViewportBounds != null) {
@@ -223,6 +231,7 @@ object CodeArea {
           }
         }
       }
+      private var oldViewportBounds :Bounds = _
     })
 
     // contains the Text nodes for each line
@@ -254,6 +263,11 @@ object CodeArea {
         })
       }
 
+      override def resize (w :Double, h :Double) {
+        super.resize(w, h)
+        println(s"Content resized $w x $h")
+      }
+
       // make this visible
       override def getChildren = super.getChildren
 
@@ -271,7 +285,19 @@ object CodeArea {
         computedPrefWidth
       }
 
-      // TODO: do we need to compute a preferred height in order to satisfy the scroll pane?
+      override protected def computePrefHeight (width :Double) = {
+        if (computedPrefHeight < 0) {
+          val linesHeight = lineNodes.getChildren.map(_.asInstanceOf[Text]).map(
+            t => Utils.getLineHeight(t.getFont, t.getBoundsType)).sum
+          val prefHeight = linesHeight + snappedTopInset + snappedBottomInset
+          val viewPortHeight = scrollPane.getViewportBounds match {
+            case null => 0
+            case vp => vp.getHeight
+          }
+          computedPrefHeight = math.max(prefHeight, viewPortHeight)
+        }
+        computedPrefHeight
+      }
 
       override protected def computeMinWidth (height :Double) = {
         if (computedMinWidth < 0) {
@@ -368,6 +394,36 @@ object CodeArea {
       math.max(0, contentNode.getHeight - scrollPane.getViewportBounds.getHeight)
     private def getScrollLeftMax :Double =
       math.max(0, contentNode.getWidth - scrollPane.getViewportBounds.getWidth)
+
+    private def scrollBoundsToVisible (bounds :Rectangle2D) {
+      val ctrl = getSkinnable
+      val vpBounds = scrollPane.getViewportBounds
+      val vpWidth = vpBounds.getWidth
+      val vpHeight = vpBounds.getHeight
+      val scrollTop = ctrl.scrollTop.get
+      val scrollLeft = ctrl.scrollLeft.get
+      val slop = 6.0
+
+      if (bounds.getMinY < 0) {
+        var y = scrollTop + bounds.getMinY
+        if (y <= contentNode.snappedTopInset) y = 0
+        ctrl.scrollTop.set(y)
+      } else if (contentNode.snappedTopInset + bounds.getMaxY > vpHeight) {
+        var y = scrollTop + contentNode.snappedTopInset + bounds.getMaxY - vpHeight
+        if (y >= getScrollTopMax - contentNode.snappedBottomInset) y = getScrollTopMax
+        ctrl.scrollTop.set(y)
+      }
+
+      if (bounds.getMinX < 0) {
+        var x = scrollLeft + bounds.getMinX - slop
+        if (x <= contentNode.snappedLeftInset + slop) x = 0
+        ctrl.scrollLeft.set(x)
+      } else if (contentNode.snappedLeftInset + bounds.getMaxX > vpWidth) {
+        var x = scrollLeft + contentNode.snappedLeftInset + bounds.getMaxX - vpWidth + slop
+        if (x >= getScrollLeftMax - contentNode.snappedRightInset - slop) x = getScrollLeftMax
+        ctrl.scrollLeft.set(x)
+      }
+    }
 
     private def updatePrefViewportWidth () {
       val columnCount = 80 // TODO: getSkinnable.getPrefColumnCount
