@@ -38,14 +38,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.oracle</groupId>
-      <artifactId>javafx</artifactId>
-      <version>2.2.45</version>
-      <scope>system</scope>
-      <systemPath>${java.home}/lib/jfxrt.jar</systemPath>
-    </dependency>
-
-    <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>${scala.version}</version>
