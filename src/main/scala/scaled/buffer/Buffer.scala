@@ -8,6 +8,14 @@ import java.io.{Reader, BufferedReader, File, FileReader}
 import reactual.{Signal, SignalV, Value, ValueV}
 import scala.collection.mutable.ArrayBuffer
 
+// TODO
+//
+// - Buffer.Loc which demarks a point in a buffer; allow converting to/from buffer char_offset, and
+// to/from line_no+char_offset
+//
+// - Buffer.Anchor which demarks a point in a buffer which is automatically adjusted as the buffer
+// is edited (and likely reports to listeners when it's location changes)
+
 /** `Buffer` related types and utilities. */
 object Buffer {
 
