@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.scene.control
+package scaled.impl
 
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.Toolkit

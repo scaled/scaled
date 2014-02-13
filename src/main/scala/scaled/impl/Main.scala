@@ -1,4 +1,4 @@
-package scaled.shell
+package scaled.impl
 
 import java.io.File
 
@@ -11,9 +11,6 @@ import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.stage.Stage
 
-import scaled.buffer.Buffer
-import scaled.scene.control.CodeArea
-
 class Main extends Application {
 
   override def start (stage :Stage) {
@@ -22,7 +19,7 @@ class Main extends Application {
     val root = new BorderPane()
 
     // TODO: open a tab? for each file passed on the command line
-    val buff = Buffer.fromFile(new File(getParameters.getRaw.get(0)))
+    val buff = BufferImpl.fromFile(new File(getParameters.getRaw.get(0)))
     val code = new CodeArea(buff)
     root.setCenter(code)
 

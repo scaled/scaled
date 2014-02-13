@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.scene.control
+package scaled.impl
 
 import javafx.beans.binding.ObjectBinding
 import javafx.beans.property.{DoubleProperty, ObjectProperty, SimpleDoubleProperty}
@@ -24,7 +24,7 @@ import com.sun.javafx.tk.{FontMetrics, Toolkit}
 
 import scala.collection.JavaConversions._
 
-import scaled.buffer.{Buffer, Line}
+import scaled._
 
 // TODO
 //
@@ -34,11 +34,9 @@ import scaled.buffer.{Buffer, Line}
 // - how will we support styles? attribute the buffer? probably so because that will cause all
 // views of the buffer to remain in sync as attributes are provided by external intelligence
 
-/** A control that displays code and allows it to be edited. A control is instantiated with a
-  * [Buffer] and always displays/edits that buffer. You cannot switch the buffer in a CodeArea, you
-  * would instead make a new CodeArea.
+/** The main implementation of [BufferView].
   */
-class CodeArea (val buffer :Buffer) extends Control {
+class CodeArea (val buffer :BufferImpl) extends Control {
 
   val  scrollTop :DoubleProperty = new SimpleDoubleProperty(this, "scrollTop", 0)
   val scrollLeft :DoubleProperty = new SimpleDoubleProperty(this, "scrollLeft", 0)
@@ -379,7 +377,7 @@ object CodeArea {
       computedPrefHeight = Double.NegativeInfinity
     }
 
-    private def addLineNode (line :Line, idx :Int) {
+    private def addLineNode (line :LineImpl, idx :Int) {
       val node = new Text(line.asString)
       node.setTextOrigin(VPos.TOP)
       node.setManaged(false)

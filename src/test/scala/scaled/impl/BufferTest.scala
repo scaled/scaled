@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.buffer
+package scaled.impl
 
 import java.io.{File, StringReader}
 
@@ -16,7 +16,7 @@ class BufferTest {
       |Now is the time for all good citizens to come to the aid of their country.
       |Every good boy deserves fudge.
       |The quick brown fox jumped over the lazy dog.""".stripMargin
-    val buffer = Buffer("test", new File(""), new StringReader(text))
+    val buffer = BufferImpl("test", new File(""), new StringReader(text))
     assertEquals(4, buffer.lines.size)
   }
 }
