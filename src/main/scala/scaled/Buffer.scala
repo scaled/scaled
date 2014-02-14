@@ -46,6 +46,14 @@ trait Buffer {
   /** A read-only view of the lines in this buffer. */
   def lines :Seq[Line]
 
+  /** Returns a location for the specified offset into the buffer. If `offset` is greater than the
+    * length of the buffer, the returned `Loc` will be positioned after the buffer's final
+    * character. */
+  def loc (offset :Int) :Loc
+
+  /** TEMP: Returns the "word" at the specified location. */
+  def wordAt (loc :Loc) :String = "TEMP"
+
   // TODO: methods for inserting, removing and replacing lines
   // TODO: methods for editing based on a pair of Locs
 }

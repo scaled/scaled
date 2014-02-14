@@ -8,7 +8,7 @@ import java.io.{Reader, BufferedReader, File, FileReader}
 import reactual.{Signal, SignalV, Value, ValueV}
 import scala.collection.mutable.ArrayBuffer
 
-import scaled.{Buffer, RBuffer}
+import scaled._
 
 // TODO
 //
@@ -67,6 +67,22 @@ class BufferImpl private (
   def edited = _edited
   def line (idx :Int) = _lines(idx)
   def lines = _lines
+
+  def loc (offset :Int) = {
+    assert(offset >= 0)
+    def seek (off :Int, idx :Int) :Loc = {
+      // if we've spilled past the end of our buffer, trim offset to fit and return a location one
+      // line past the last line of our buffer; TODO: what if we don't force trailing newlines?
+      if (idx >= _lines.length) Loc(offset-off, _lines.length, 0)
+      else {
+        val len = _lines(idx).length
+        // TODO: this assumes a single character line terminator, what about \r\n?
+        if (off > len) seek(off-len-1, idx+1)
+        else Loc(offset, idx, off)
+      }
+    }
+    seek(offset, 0)
+  }
 
   override def toString () = s"[dir=${dir}, name=${name}, lines=${lines.size}]"
 }
