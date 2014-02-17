@@ -18,7 +18,7 @@ object Config {
   def key[T] (descrip :String, defval :T) = Key(descrip, defval)
 
   /** The key used to configure global and per-mode key bindings. */
-  val keymap = key("Key bindings.", Seq[KeyBinding]())
+  val keymap = key("Key bindings.", Seq[(String,String)]())
 }
 
 /** Manages editor configuration. This trait is used to manage the global configuration for the

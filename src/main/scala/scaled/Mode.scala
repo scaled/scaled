@@ -7,8 +7,23 @@ package scaled
 /** Defines the API shared by major and minor modes. */
 trait Mode {
 
-  /** Returns the key bindings defined by this mode. Key bindings are applied in a stack-like
-    * fashion:
+  /** Returns the key bindings defined by this mode: a list of `(trigger sequence -> fn binding)`
+    * mappings.
+    *
+    * Trigger sequences are defined thusly: A single key consists of the key identifier (e.g. 'g',
+    * 'F1', '-',) prefixed by zero or more modifier keys ('C-' for control, 'M-' for meta, 'A-' for
+    * alt, and 'S-' for shift). Key sequences consist of single keys separated by spaces. Examples:
+    *  - `e`: lowercase e
+    *  - `S-s`: upper case S
+    *  - `C-c`: control-c
+    *  - `C-c C-i`: control-c followed by control-i
+    *
+    * The fn bindings defined by the mode, by using an [[Fn]] annotation on a method. The name in
+    * the keymap corresponds to the [[Fn.name]] parameter. When a mode refers to its own fns, it
+    * may provide just the name, but if a mode (or a mode hook) refers to another mode's fns, it
+    * must prefix the name by the name of the mode and a colon (e.g. "scala:goto-term").
+    *
+    * Key bindings are applied in a stack-like fashion:
     *  - start with global key bindings
     *  - push the major mode key bindings
     *  - push customizations to that mode's key bindings specified by the user
@@ -21,7 +36,7 @@ trait Mode {
     * global key bindings), then on down the stack until a match is found, or we fall off the
     * bottom after searching the stock global key bindings.
     */
-  def keymap :Seq[KeyBinding]
+  def keymap :Seq[(String, String)]
 
   /** Cleans up any external resources managed by this mode. This is called when the mode is disabled
     * or the buffer containing the mode is going away. */
