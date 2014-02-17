@@ -4,12 +4,10 @@
 
 package scaled.major
 
-import scaled.{MajorMode, RBufferView}
-
 /** A major mode for editing plain text. This mode is used when no more specific mode can be found.
   */
-class TextMode (view :RBufferView) extends MajorMode {
+class TextMode extends EditingMode {
 
-  override def keymap = Seq() // no custom bindings
+  override def name = "text"
   override def dispose () {}  // nothing to dispose
 }

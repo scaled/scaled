@@ -18,11 +18,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Fn {
 
-    /** The name of this fn binding, generally a series of lowercase strings separated by dashes.
-     * Examples: forward-char, delete-char, forward-page. */
-    String name ();
-
     /** A documentary description of the effects of this fn. This will be shown to the user when
      * they ask to describe the fn, so don't hold back on the details. */
-    String descrip ();
+    String value ();
 }

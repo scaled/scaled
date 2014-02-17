@@ -40,6 +40,7 @@ trait BufferView {
 
   /** Prompts the user to input a string via the minibuffer. */
   def minibufferRead (prompt :String, defval :String) :Future[String]
+  // TODO: minibufferRead variant that takes a tab-completer? mode provides?
 
   /** Emits a message to the status view associated with this buffer. */
   def emitStatus (msg :String)

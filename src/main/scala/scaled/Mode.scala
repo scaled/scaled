@@ -7,6 +7,11 @@ package scaled
 /** Defines the API shared by major and minor modes. */
 trait Mode {
 
+  /** The name of this mode. Displayed to the user. This is generally a simple single word. For
+    * example: `scala`, `text`, `commit`. This name string will be prefixed to this mode's fns when
+    * called interactively by the user or bound in keymaps, so don't be extravagant. */
+  def name :String
+
   /** Returns the key bindings defined by this mode: a list of `(trigger sequence -> fn binding)`
     * mappings.
     *
