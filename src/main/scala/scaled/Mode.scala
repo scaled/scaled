@@ -4,7 +4,21 @@
 
 package scaled
 
-/** Defines the API shared by major and minor modes. */
+/** Defines the attributes of an editor mode (major or minor). An editing mode has two main
+  * components:
+  *  - a collection of fns; an fn is a function that can be called interactively (by virtue of
+  *    being bound to a key, or called by name by the user) and which has its inputs automatically
+  *    provided by the environment (see below)
+  *  - a key map: a collection of mappings from trigger sequence to fn; these define the "user
+  *    interface" of the mode, in that the user will generally interact with a mode by pressing
+  *    keys
+  *
+  * Fns: a fn is a zero-argument method in the `Mode` class which is annotated by [[Fn]]. The name
+  * of the method defines the name of the method as referenced in key maps and as specified
+  * directly by the user when calling fns by name. The name is de-camel-cased by inserting a dash
+  * before every capital letter and making said capital letter lowercase. For example: forwardChar
+  * becomes forward-char.
+  */
 trait Mode {
 
   /** The name of this mode. Displayed to the user. This is generally a simple single word. For

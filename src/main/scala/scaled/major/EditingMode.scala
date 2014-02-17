@@ -9,7 +9,7 @@ import scaled._
 /** A base class for all modes that support interactive text editing. This mode defines all of the
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
-abstract class EditingMode extends MajorMode {
+abstract class EditingMode (view :BufferView) extends MajorMode {
 
   override def keymap = Seq(
     "C-f" -> "forward-char",
@@ -17,13 +17,13 @@ abstract class EditingMode extends MajorMode {
   )
 
   @Fn("Moves the point forward one character.")
-  def forwardChar (view :BufferView) {
+  def forwardChar () {
     // TODO: more efficient version that makes use of line offset
     view.point = view.buffer.loc(view.point.offset+1)
   }
 
   @Fn("Moves the point backward one character.")
-  def backwardChar (view :BufferView) {
+  def backwardChar () {
     // TODO: more efficient version that makes use of line offset
     view.point = view.buffer.loc(view.point.offset-1)
   }
