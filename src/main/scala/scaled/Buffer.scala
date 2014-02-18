@@ -89,4 +89,7 @@ trait RBuffer extends Buffer {
 
   /** A signal emitted when this buffer is edited. */
   def edited :SignalV[Buffer.Edit]
+
+  /** A signal emitted when any of this buffer's lines are edited. */
+  def lineEdited :SignalV[Line.Edit]
 }

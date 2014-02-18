@@ -14,17 +14,16 @@ import javafx.stage.Stage
 class Main extends Application {
 
   override def start (stage :Stage) {
-    // a simple hello world for now to ensure that all the build bits are properly wired
-    stage.setTitle("Scaled Hello World")
-    val root = new BorderPane()
-
-    // TODO: open a tab? for each file passed on the command line
+    // TODO: open a pane/tab for each file passed on the command line
     val buff = BufferImpl.fromFile(new File(getParameters.getRaw.get(0)))
-    val code = new CodeArea(buff)
-    root.setCenter(code)
+    val editor = new EditorPane(buff)
 
-    // TODO: status bar, command entry area, etc.
-    stage.setScene(new Scene(root, 640, 480))
+    // TODO: get stage size from config
+    val scene = new Scene(editor)
+    // TODO: how to support themes, etc.?
+    scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
+    stage.setScene(scene)
+    stage.setTitle("Scaled")
     stage.show()
   }
 }

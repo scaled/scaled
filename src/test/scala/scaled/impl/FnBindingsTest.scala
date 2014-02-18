@@ -14,9 +14,9 @@ class FnBindingsTest {
   @Test def testCollectBindings () {
     val mode = new TextMode(null)
     val binds = new FnBindings(mode)
+    // binds.bindings foreach println
     assertTrue(binds.binding("forward-char").isDefined)
     assertTrue(binds.binding("backward-char").isDefined)
     assertFalse(binds.binding("peanut").isDefined)
-    binds.bindings foreach println
   }
 }

@@ -19,7 +19,9 @@ object LineImpl {
 class LineImpl (
   /** The initial characters on this line. Ownership of this array is taken by this line instance and
     * the array may subsequently be mutated by the line. */
-  initChars :Array[Char]
+  initChars :Array[Char],
+  /** The buffer that owns this line. */
+  buffer :BufferImpl
 ) extends RLine {
 
   private var _chars :Array[Char] = initChars
@@ -49,14 +51,20 @@ class LineImpl (
     prepInsert(pos, 1)
     _chars(pos) = c
     _end += 1
-    _edited.emit(Line.Edit(pos, 0, 1, this))
+    noteEdited(pos, 0, 1)
+  }
+
+  private def noteEdited (offset :Int, deleted :Int, added :Int) {
+    val edit = Line.Edit(offset, deleted, added, this)
+    _edited.emit(edit)
+    buffer.noteEdited(edit)
   }
 
   def insert (pos :Int, cs :Array[Char]) {
     prepInsert(pos, cs.length)
     System.arraycopy(cs, 0, _chars, pos, cs.length)
     _end += cs.length
-    _edited.emit(Line.Edit(pos, 0, cs.length, this))
+    noteEdited(pos, 0, cs.length)
   }
 
   def insert (pos :Int, str :String) {
@@ -68,7 +76,7 @@ class LineImpl (
     assert(pos > 0 && last <= _end)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
     _end -= length
-    _edited.emit(Line.Edit(pos, length, 0, this))
+    noteEdited(pos, length, 0)
   }
 
   def replace (pos :Int, delete :Int, cs :Array[Char]) {
@@ -86,7 +94,7 @@ class LineImpl (
 
     System.arraycopy(cs, 0, _chars, pos, cs.length)
     _end += deltaLength
-    _edited.emit(Line.Edit(pos, delete, cs.length, this))
+    noteEdited(pos, delete, cs.length)
   }
 
   //

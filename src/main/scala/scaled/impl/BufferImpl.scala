@@ -25,10 +25,10 @@ object BufferImpl {
     * the reader if necessary. */
   def apply (name :String, dir :File, reader :Reader) :BufferImpl = {
     val buffed = new BufferedReader(reader)
-    val lines = ArrayBuffer[LineImpl]()
+    val lines = ArrayBuffer[Array[Char]]()
     var line :String = buffed.readLine()
     while (line != null) {
-      lines += new LineImpl(line.toCharArray)
+      lines += line.toCharArray
       line = buffed.readLine()
     }
     new BufferImpl(name, dir, lines)
@@ -50,21 +50,23 @@ object BufferImpl {
 
 /** Implements [Buffer] and [RBuffer]. This is where all the excitement happens. */
 class BufferImpl private (
-  initName :String, initDir :File, initLines :ArrayBuffer[LineImpl]
+  initName :String, initDir :File, initLines :ArrayBuffer[Array[Char]]
 ) extends RBuffer {
   // TODO: character encoding
   // TODO: line endings
 
-  private val _lines = initLines
+  private val _lines = initLines.map(l => new LineImpl(l, this))
   private val _name = Value(initName)
   private val _dir = Value(initDir)
   private val _edited = Signal[Buffer.Edit]()
+  private val _lineEdited = Signal[Line.Edit]()
 
   def name = nameV.get
   def nameV = _name
   def dir = dirV.get
   def dirV = _dir
   def edited = _edited
+  def lineEdited = _lineEdited
   def line (idx :Int) = _lines(idx)
   def lines = _lines
 
@@ -83,6 +85,8 @@ class BufferImpl private (
     }
     seek(offset, 0)
   }
+
+  private[impl] def noteEdited (edit :Line.Edit) = _lineEdited.emit(edit)
 
   override def toString () = s"[dir=${dir}, name=${name}, lines=${lines.size}]"
 }

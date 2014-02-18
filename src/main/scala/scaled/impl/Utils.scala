@@ -10,8 +10,26 @@ import com.sun.javafx.tk.Toolkit
 import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
 
+import scaled._
+
 /** Various utilities used by our controls. */
 object Utils {
+
+  class MaxLengthTracker (buffer :RBuffer) {
+    def maxLength :Int = _maxLength
+    private var _maxLength = buffer.lines.map(_.length).max
+    buffer.lineEdited.onValue { edit =>
+      val nlen = edit.line.length
+      // if this line is longer than our current max length, increase it
+      if (nlen > _maxLength) _maxLength = nlen
+      // otherwise if this line's old length was our max length,
+      // we need to rescan the buffer to find the new longest line
+      else {
+        val olen = nlen - edit.added + edit.deleted
+        if (olen >= _maxLength) _maxLength = buffer.lines.map(_.length).max
+      }
+    }
+  }
 
   def computeTextWidth (font :Font, text :String) :Double = {
     layout.setContent(if (text != null) text else "", font.impl_getNativeFont)
