@@ -71,18 +71,8 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Control 
   override def computeMaxWidth (height :Double) = Double.MaxValue
   override def computeMaxHeight (width :Double) = Double.MaxValue
 
-  override def createDefaultSkin = new CodeArea.Skin(this)
+  override def createDefaultSkin = new CodeArea.Skin(this, disp)
   override def getControlCssMetaData = CodeArea.getClassCssMetaData
-
-  def keyPressed (kev :KeyEvent) {
-    if (kev.getEventType == KeyEvent.KEY_PRESSED) {
-      kev.getCode match {
-        case KeyCode.DOWN => bview.scrollVert(1)
-        case   KeyCode.UP => bview.scrollVert(-1)
-        case            _ => println(s"Pressed $kev")
-      }
-    }
-  }
 
   // mouse events are forwarded here by the skin
   def mousePressed (mev :MouseEvent) {}
@@ -95,7 +85,7 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Control 
 /** [CodeArea] helper classes and whatnot. */
 object CodeArea {
 
-  class Skin (ctrl :CodeArea) extends SkinBase[CodeArea](ctrl) {
+  class Skin (ctrl :CodeArea, disp :KeyDispatcher) extends SkinBase[CodeArea](ctrl) {
 
     private var computedMinWidth = Double.NegativeInfinity
     private var computedMinHeight = Double.NegativeInfinity
@@ -121,7 +111,7 @@ object CodeArea {
 
     // forward key events to the control for dispatching
     private[this] val keyEventListener = new EventHandler[KeyEvent]() {
-      override def handle (e :KeyEvent) = if (!e.isConsumed) ctrl.keyPressed(e)
+      override def handle (e :KeyEvent) = if (!e.isConsumed) disp.keyPressed(e)
     }
     ctrl.addEventHandler(KeyEvent.ANY, keyEventListener)
     // ctrl.focusedProperty().addListener(focusListener)
