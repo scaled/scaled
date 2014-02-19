@@ -68,7 +68,8 @@ class LineImpl (
   }
 
   def insert (pos :Int, str :String) {
-    insert(pos, str.toCharArray)
+    if (str.length == 1) insert(pos, str.charAt(0))
+    else insert(pos, str.toCharArray)
   }
 
   def delete (pos :Int, length :Int) {
@@ -101,7 +102,7 @@ class LineImpl (
   // impl details
 
   private def prepInsert (pos :Int, length :Int) {
-    assert(pos > 0 && pos <= _end)
+    assert(pos >= 0 && pos <= _end)
     val curlen = _chars.length
     val curend = _end
     // if we need to expand our _chars array...

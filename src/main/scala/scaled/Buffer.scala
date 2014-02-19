@@ -17,6 +17,10 @@ case class Loc (
   col :Int) {
   /** Returns a loc adjusted by `deltaRow` rows and `deltaCol` columns. */
   def + (deltaRow :Int, deltaCol :Int) = Loc(row+deltaRow, col+deltaCol)
+  /** Returns a loc on row `row` at this loc's column. */
+  def atRow (row :Int) = Loc(row, col)
+  /** Returns a loc on column `col` at this loc's row. */
+  def atCol (col :Int) = Loc(row, col)
 }
 
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.

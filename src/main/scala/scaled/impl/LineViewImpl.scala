@@ -20,4 +20,9 @@ class LineViewImpl (_line :LineImpl) extends RLineView {
   // node.fontProperty.bind(ctrl.fontProperty)
   // node.fillProperty.bind(textFill)
   // node.impl_selectionFillProperty().bind(highlightTextFill)
+
+  _line.edited.onValue { change =>
+    // TODO: something more efficient?
+    node.setText(line.asString)
+  }
 }

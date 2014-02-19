@@ -69,6 +69,12 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     case _ => view.emitStatus("Beginning of buffer.") // TODO: with beep?
   }
 
+  @Fn("Moves the point to the beginning of the line.")
+  def moveBeginningOfLine () = view.point = view.point.atCol(0)
+
+  @Fn("Moves the point to the end of the line.")
+  def moveEndOfLine () = view.point = view.point.atCol(buffer.line(view.point).length)
+
   @Fn("Scrolls the view up one line.")
   def scrollUp () = view.scrollVert(-1)
 

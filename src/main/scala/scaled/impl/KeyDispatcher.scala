@@ -32,11 +32,23 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
 
   def keyPressed (kev :KeyEvent) {
     println(kev)
-    if (kev.getEventType == KeyEvent.KEY_PRESSED) {
-      val trigger = Seq(KeyPress(kev))
-      _metas.map(_.map.get(trigger)).collectFirst {
-        case Some(fn) => fn.invoke() ; kev.consume()
-      }
+    kev.getEventType match {
+      case KeyEvent.KEY_PRESSED =>
+        val trigger = Seq(KeyPress(kev))
+        _metas.map(_.map.get(trigger)).collectFirst {
+          case Some(fn) => fn.invoke() ; kev.consume()
+        }
+      case KeyEvent.KEY_TYPED =>
+        // TEMP: insert typed characters into the buffer at the point
+        if (!(kev.isControlDown || kev.isMetaDown || kev.isAltDown ||
+          kev.getCharacter == KeyEvent.CHAR_UNDEFINED)) {
+          // insert the typed character
+          view.buffer.line(view.point).insert(view.point.col, kev.getCharacter)
+          // move the point to the right by the appropriate amount
+          view.point = view.point + (0, kev.getCharacter.length)
+          // TODO: should the above be built-into BufferView?
+        }
+      case _ => // key released, don't care
     }
   }
 
