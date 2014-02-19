@@ -31,10 +31,11 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
   }
 
   def keyPressed (kev :KeyEvent) {
+    println(kev)
     if (kev.getEventType == KeyEvent.KEY_PRESSED) {
       val trigger = Seq(KeyPress(kev))
       _metas.map(_.map.get(trigger)).collectFirst {
-        case Some(fn) => fn.invoke()
+        case Some(fn) => fn.invoke() ; kev.consume()
       }
     }
   }
