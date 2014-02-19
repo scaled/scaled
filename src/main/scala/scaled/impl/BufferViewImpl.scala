@@ -4,6 +4,8 @@
 
 package scaled.impl
 
+import scala.collection.mutable.ArrayBuffer
+
 import reactual.{Future, Value}
 
 import scaled._
@@ -13,12 +15,26 @@ import scaled._
   */
 class BufferViewImpl (_buffer :BufferImpl) extends RBufferView {
 
-  override def buffer = _buffer
-  override def lines = Seq() // TODO
+  private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
+  override def buffer :BufferImpl = _buffer
+  override def lines :Seq[LineViewImpl] = _lines
 
   override def minibufferRead (prompt :String, defval :String) =
     Future.failure(new Exception("TODO"))
   // TODO: minibufferRead variant that takes a tab-completer? mode provides?
 
   override def emitStatus (msg :String) = println(s"STATUS: $msg")
+
+  // respond to buffer changes by adding/removing line views
+  _buffer.edited.onValue { change =>
+    if (change.deleted > 0) {
+      // _lines.slice(change.offset, change.offset+change.deleted) foreach onDeleted
+      _lines.remove(change.offset, change.deleted)
+    }
+    if (change.added > 0) {
+      val added = _buffer.lines.slice(change.offset, change.offset+change.added)
+      val newlns = added map(new LineViewImpl(_))
+      _lines.insert(change.offset, newlns :_*)
+    }
+  }
 }

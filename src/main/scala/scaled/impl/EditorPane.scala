@@ -32,13 +32,13 @@ class EditorPane (_buffer :BufferImpl) extends BorderPane {
   val code = new CodeArea(bview, disp)
   setCenter(code)
 
-  // TODO: non-placeholder UI for these bits
-  val statusLine = new Label("Status: TODO")
-  val minibuffer = new TextField("")
-  minibuffer.setEditable(false)
-  setBottom({
-    val vbox = new VBox()
-    vbox.getChildren.addAll(statusLine, minibuffer)
-    vbox
-  })
+  // // TODO: non-placeholder UI for these bits
+  // val statusLine = new Label("Status: TODO")
+  // val minibuffer = new TextField("")
+  // minibuffer.setEditable(false)
+  // setBottom({
+  //   val vbox = new VBox()
+  //   vbox.getChildren.addAll(statusLine, minibuffer)
+  //   vbox
+  // })
 }

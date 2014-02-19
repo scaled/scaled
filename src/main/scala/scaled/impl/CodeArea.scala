@@ -16,7 +16,7 @@ import javafx.scene.Group
 import javafx.scene.control.{Control, ScrollPane, SkinBase}
 import javafx.scene.input.{MouseEvent, KeyCode, KeyEvent}
 import javafx.scene.layout.Region
-import javafx.scene.text.{Font, Text}
+import javafx.scene.text.{Font, Text, TextBoundsType}
 
 import com.sun.javafx.tk.{FontMetrics, Toolkit}
 
@@ -102,7 +102,7 @@ object CodeArea {
     private var computedPrefWidth = Double.NegativeInfinity
     private var computedPrefHeight = Double.NegativeInfinity
     private var characterWidth = 0d
-    var lineHeight = 0d // TEMP viz for scrolling hack
+    private var lineHeight = 0d
 
     // ctrl.prefColumnCountProperty.addListener(new ChangeListener<Number>() {
     //   @Override
@@ -142,7 +142,9 @@ object CodeArea {
       // lineHeight = Utils.getLineHeight(ctrl.font.get, firstLine.getBoundsType)
       val fm = fontMetrics.get
       characterWidth = fm.computeStringWidth("W")
-      lineHeight = fm.getLineHeight
+      // lineHeight = Utils.getLineHeight(ctrl.font.get, TextBoundsType.LOGICAL)
+      lineHeight = math.ceil(fm.getLineHeight)
+      println(s"Updated FM; char = $characterWidth x $lineHeight")
     }
 
     private val maxLenTracker = new Utils.MaxLengthTracker(ctrl.bview.buffer)
@@ -154,13 +156,13 @@ object CodeArea {
     }
 
     ctrl.bview.scrollLeftV.onValue { left =>
-      // TODO: have buffer track max line width
       val range = maxLenTracker.maxLength - ctrl.bview.width
       println(s"Scrolling left to $left ($range)")
       scrollPane.setHvalue(math.min(1, left / range.toDouble))
     }
 
     // TODO: listen for buffer changes and create/update/destroy line nodes as appropriate
+
     // if (USE_MULTIPLE_NODES) {
     //   textArea.getParagraphs().addListener(new ListChangeListener<CharSequence>() {
     //     @Override
@@ -209,14 +211,24 @@ object CodeArea {
     // bind the h/vvalue scroll pane props to the scroll left/top code area props
     scrollPane.hvalueProperty().addListener(new ChangeListener[Number]() {
       override def changed (observable :ObservableValue[_ <: Number], ov :Number, nv :Number) {
-        println(s"TODO: update scrollLeft $ov -> $nv")
-        // getSkinnable.scrollLeft.setValue(nv.doubleValue * getScrollLeftMax)
+        // turn the scrollbar's [0,1] value back into a column number for bview; this will NOOP if
+        // bview is the one that originated the scroll, but if the scroll was originated via the
+        // scrollbars (or two finger trackpad scrolling) then this will ensure that the buffer
+        // view's values reflect the reality of the scroll pane
+        val range = maxLenTracker.maxLength - ctrl.bview.width
+        ctrl.bview.scrollLeftV.update((nv.doubleValue * range).intValue)
+        println(s"Scroller changed hval $ov -> $nv ==> ${ctrl.bview.scrollLeftV.get}")
       }
     })
     scrollPane.vvalueProperty().addListener(new ChangeListener[Number]() {
       override def changed (observable :ObservableValue[_ <: Number], ov :Number, nv :Number) {
-        println(s"TODO: update scrollTop $ov -> $nv")
-        // getSkinnable.scrollTop.setValue(nv.doubleValue * getScrollTopMax)
+        // turn the scrollbar's [0,1] value back into a line number for bview; this will NOOP if
+        // bview is the one that originated the scroll, but if the scroll was originated via the
+        // scrollbars (or two finger trackpad scrolling) then this will ensure that the buffer
+        // view's values reflect the reality of the scroll pane
+        val range = ctrl.bview.buffer.lines.length - ctrl.bview.height
+        ctrl.bview.scrollTopV.update((nv.doubleValue * range).intValue)
+        println(s"Scroller changed vval $ov -> $nv ==> ${ctrl.bview.scrollTopV.get}")
       }
     })
 
@@ -298,8 +310,9 @@ object CodeArea {
 
       override protected def computePrefHeight (width :Double) = {
         if (computedPrefHeight < 0) {
-          val linesHeight = lineNodes.getChildren.map(_.asInstanceOf[Text]).map(
-            t => Utils.getLineHeight(t.getFont, t.getBoundsType)).sum
+          // val linesHeight = lineNodes.getChildren.map(_.asInstanceOf[Text]).map(
+          //   t => Utils.getLineHeight(t.getFont, t.getBoundsType)).sum
+          val linesHeight = lineNodes.getChildren.length * lineHeight
           val prefHeight = linesHeight + snappedTopInset + snappedBottomInset
           val viewPortHeight = scrollPane.getViewportBounds match {
             case null => 0
@@ -333,7 +346,11 @@ object CodeArea {
         (topPadding /: lineNodes.getChildren)((y, n) => {
           n.setLayoutX(leftPadding)
           n.setLayoutY(y)
-          y + n.getBoundsInLocal.getHeight
+          // TODO: getBoundsInLocal.getHeight is larger than lineHeight; it's not clear why, but if
+          // we don't use lineHeight then all of our other calculations are bogus; maybe we need to
+          // measure a line with some stock text and use that as line height, except we sort of do
+          // that in Utils.getLineHeight, but that returns the same thing as lineHeight, so wtf?
+          y + lineHeight // n.getBoundsInLocal.getHeight
         })
 
         // TODO: position caret, update selection-related nodes
@@ -356,8 +373,19 @@ object CodeArea {
     scrollPane.setContent(contentNode)
     getChildren.add(scrollPane)
 
-    // TEMP: create our text nodes based on the contents of our buffer
-    ctrl.bview.buffer.lines.zipWithIndex foreach (addLineNode _).tupled
+    // listen for addition and removal of lines
+    ctrl.bview.buffer.edited.onValue { change =>
+      if (change.deleted > 0) {
+        lineNodes.getChildren.remove(change.offset, change.offset+change.deleted)
+        // TODO: let these nodes know they've been removed so they can cleanup?
+      }
+      if (change.added > 0) {
+        val nodes = ctrl.bview.lines.slice(change.offset, change.offset+change.added).map(_.node)
+        lineNodes.getChildren.addAll(nodes :_*)
+      }
+    }
+    // add all the current lines to the buffer
+    lineNodes.getChildren.addAll(ctrl.bview.lines.map(_.node) :_*)
 
     // now that we've added our lines, we can update our font metrics and our preferred sizes
     updateFontMetrics()
@@ -388,18 +416,6 @@ object CodeArea {
       computedMinHeight = Double.NegativeInfinity
       computedPrefWidth = Double.NegativeInfinity
       computedPrefHeight = Double.NegativeInfinity
-    }
-
-    private def addLineNode (line :LineImpl, idx :Int) {
-      val node = new Text(line.asString)
-      node.setTextOrigin(VPos.TOP)
-      node.setManaged(false)
-      node.getStyleClass.add("text")
-      // node.fontProperty.bind(ctrl.fontProperty)
-      // node.fillProperty.bind(textFill)
-      // node.impl_selectionFillProperty().bind(highlightTextFill)
-      lineNodes.getChildren.add(idx, node)
-      // TODO: add LineViewImpl to bview.lines
     }
 
     private def getScrollTopMax :Double =
