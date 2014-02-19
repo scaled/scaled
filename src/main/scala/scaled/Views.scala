@@ -79,7 +79,7 @@ trait RBufferView extends BufferView {
   override def lines :Seq[RLineView]
 
   /** The current point (aka the cursor position). */
-  val pointV :Value[Loc] = Value(Loc(0, 0, 0))
+  val pointV :Value[Loc] = Value(Loc(0, 0))
 
   /** The current mark, if any. */
   val markV :Value[Option[Loc]] = Value(None)

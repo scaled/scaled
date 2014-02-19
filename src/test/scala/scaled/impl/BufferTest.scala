@@ -26,12 +26,15 @@ class BufferTest {
 
   @Test def testLoc () {
     val buffer = BufferImpl("test", new File(""), new StringReader(text))
-    assertEquals(Loc(5, 0, 5), buffer.loc(5))
-    assertEquals(Loc(18, 1, 0), buffer.loc(18))
-    assertEquals(Loc(22, 1, 4), buffer.loc(22))
+    assertEquals(Loc(0, 5), buffer.loc(5))
+    assertEquals(5, buffer.offset(Loc(0, 5)))
+    assertEquals(Loc(1, 0), buffer.loc(18))
+    assertEquals(18, buffer.offset(Loc(1, 0)))
+    assertEquals(Loc(1, 4), buffer.loc(22))
+    assertEquals(22, buffer.offset(Loc(1, 4)))
     // any offset greater than or equal to the buffer length should resolve to a new blank link at
     // the end of the buffer
-    assertEquals(Loc(text.length, 4, 0), buffer.loc(text.length))
-    assertEquals(Loc(text.length, 4, 0), buffer.loc(text.length+20))
+    assertEquals(Loc(4, 0), buffer.loc(text.length))
+    assertEquals(Loc(4, 0), buffer.loc(text.length+20))
   }
 }

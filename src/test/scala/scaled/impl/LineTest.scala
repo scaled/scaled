@@ -13,7 +13,7 @@ import org.junit.Assert._
 class LineTest {
 
   @Test def insertDeleteReplace () {
-    val buf = BufferImpl("test", new File(""), new StringReader(""))
+    val buf = TestData.buffer("test", "")
     val line = new LineImpl("Every good boy deserves fudge.".toCharArray, buf)
     line.insert(line.asString.indexOf("fudge"), "tasty ")
     assertEquals("Every good boy deserves tasty fudge.", line.asString)

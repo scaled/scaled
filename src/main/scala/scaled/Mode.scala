@@ -37,10 +37,11 @@ trait Mode {
     *  - `C-c`: control-c
     *  - `C-c C-i`: control-c followed by control-i
     *
-    * The fn bindings defined by the mode, by using an [[Fn]] annotation on a method. The name in
-    * the keymap corresponds to the [[Fn.name]] parameter. When a mode refers to its own fns, it
-    * may provide just the name, but if a mode (or a mode hook) refers to another mode's fns, it
-    * must prefix the name by the name of the mode and a colon (e.g. "scala:goto-term").
+    * The fn bindings are defined by the mode, by using the [[Fn]] annotation on methods. The name
+    * in the keymap corresponds to the de-camel-cased method name (see [[Mode]] trait docs). When a
+    * mode refers to its own fns, it may provide just the name, but if a mode (or a mode hook)
+    * refers to another mode's fns, it must prefix the name by the name of the mode and a colon
+    * (e.g. "scala:goto-term").
     *
     * Key bindings are applied in a stack-like fashion:
     *  - start with global key bindings

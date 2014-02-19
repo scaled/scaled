@@ -50,7 +50,7 @@ object KeyPress {
     }
   }
 
-  /** Converts a string into a [[KeyCode]]. */
+  /** Converts a string into a `KeyCode`. */
   def toKeyCode (key :String) :Option[KeyCode] = StringToCode.get(key)
 
   private val KeyStrings = {

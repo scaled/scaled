@@ -11,12 +11,13 @@ import reactual.{SignalV, ValueV}
 /** A location in a buffer. This is a very ephemeral class. Any change to its associated buffer
   * will result in the locations offsets becoming invalid. */
 case class Loc (
-  /** The character offset in the buffer. */
-  offset :Int,
-  /** The index of the line on which this location resides. */
-  lineIdx :Int,
-  /** The character offset into the line. */
-  lineOffset :Int)
+  /** The index of the line on which this location resides, aka the current row. */
+  row :Int,
+  /** The character offset into the line, aka the current column. */
+  col :Int) {
+  /** Returns a loc adjusted by `deltaRow` rows and `deltaCol` columns. */
+  def + (deltaRow :Int, deltaCol :Int) = Loc(row+deltaRow, col+deltaCol)
+}
 
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.
   * Edits that precede the anchor cause it to shift forward or back appropriately. Edits after the
@@ -43,13 +44,19 @@ trait Buffer {
   /** Returns the `idx`th line. Indices are zero based. */
   def line (idx :Int) :Line
 
+  /** Returns the line referenced by `loc`. */
+  def line (loc :Loc) :Line = line(loc.row)
+
   /** A read-only view of the lines in this buffer. */
   def lines :Seq[Line]
 
-  /** Returns a location for the specified offset into the buffer. If `offset` is greater than the
-    * length of the buffer, the returned `Loc` will be positioned after the buffer's final
+  /** Returns a location for the specified character offset into the buffer. If `offset` is greater
+    * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final
     * character. */
   def loc (offset :Int) :Loc
+
+  /** Returns the character offset into the buffer of `loc`. */
+  def offset (loc :Loc) :Int
 
   /** TEMP: Returns the "word" at the specified location. */
   def wordAt (loc :Loc) :String = "TEMP"

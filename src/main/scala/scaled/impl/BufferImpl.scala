@@ -4,9 +4,11 @@
 
 package scaled.impl
 
+import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
+
 import java.io.{Reader, BufferedReader, File, FileReader}
 import reactual.{Signal, SignalV, Value, ValueV}
-import scala.collection.mutable.ArrayBuffer
 
 import scaled._
 
@@ -61,32 +63,40 @@ class BufferImpl private (
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
 
-  def name = nameV.get
-  def nameV = _name
-  def dir = dirV.get
-  def dirV = _dir
-  def edited = _edited
-  def lineEdited = _lineEdited
-  def line (idx :Int) = _lines(idx)
-  def lines = _lines
+  override def name = nameV.get
+  override def nameV = _name
+  override def dir = dirV.get
+  override def dirV = _dir
+  override def edited = _edited
+  override def lineEdited = _lineEdited
+  override def line (idx :Int) = _lines(idx)
+  override def lines = _lines
 
-  def loc (offset :Int) = {
+  override def loc (offset :Int) = {
     assert(offset >= 0)
     def seek (off :Int, idx :Int) :Loc = {
       // if we've spilled past the end of our buffer, trim offset to fit and return a location one
       // line past the last line of our buffer; TODO: what if we don't force trailing newlines?
-      if (idx >= _lines.length) Loc(offset-off, _lines.length, 0)
+      if (idx >= _lines.length) Loc(_lines.length, 0)
       else {
         val len = _lines(idx).length
         // TODO: this assumes a single character line terminator, what about \r\n?
         if (off > len) seek(off-len-1, idx+1)
-        else Loc(offset, idx, off)
+        else Loc(idx, off)
       }
     }
     seek(offset, 0)
   }
 
+  override def offset (loc :Loc) = {
+    @tailrec def offset (row :Int, off :Int) :Int =
+      if (row < 0) off else offset(row-1, lines(row).length+lineSep.length+off)
+    offset(loc.row-1, 0) + loc.col
+  }
+
   private[impl] def noteEdited (edit :Line.Edit) = _lineEdited.emit(edit)
+
+  private val lineSep = "\n" // TODO
 
   override def toString () = s"[dir=${dir}, name=${name}, lines=${lines.size}]"
 }
