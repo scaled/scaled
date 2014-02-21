@@ -16,6 +16,8 @@ import javafx.scene.Group
 import javafx.scene.control.{Control, ScrollPane, SkinBase}
 import javafx.scene.input.{MouseEvent, KeyCode, KeyEvent}
 import javafx.scene.layout.Region
+import javafx.scene.paint.Color
+import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
 import com.sun.javafx.tk.{FontMetrics, Toolkit}
@@ -87,11 +89,11 @@ object CodeArea {
 
   class Skin (ctrl :CodeArea, disp :KeyDispatcher) extends SkinBase[CodeArea](ctrl) {
 
-    private var computedMinWidth = Double.NegativeInfinity
-    private var computedMinHeight = Double.NegativeInfinity
-    private var computedPrefWidth = Double.NegativeInfinity
+    private var computedMinWidth   = Double.NegativeInfinity
+    private var computedMinHeight  = Double.NegativeInfinity
+    private var computedPrefWidth  = Double.NegativeInfinity
     private var computedPrefHeight = Double.NegativeInfinity
-    private var characterWidth = 0d
+    private var charWidth  = 0d
     private var lineHeight = 0d
 
     // ctrl.prefColumnCountProperty.addListener(new ChangeListener<Number>() {
@@ -131,67 +133,28 @@ object CodeArea {
       // val firstLine = lineNodes.getChildren.get(0).asInstanceOf[Text]
       // lineHeight = Utils.getLineHeight(ctrl.font.get, firstLine.getBoundsType)
       val fm = fontMetrics.get
-      characterWidth = fm.computeStringWidth("W")
+      charWidth = fm.computeStringWidth("W")
       // lineHeight = Utils.getLineHeight(ctrl.font.get, TextBoundsType.LOGICAL)
       lineHeight = math.ceil(fm.getLineHeight)
-      println(s"Updated FM; char = $characterWidth x $lineHeight")
+      println(s"Updated FM; char = $charWidth x $lineHeight")
+      // update the size of our cursor
+      cursorBlock.setWidth(charWidth)
+      cursorBlock.setHeight(lineHeight)
     }
 
+    // this tracks the maximum line length in the buffer
     private val maxLenTracker = new Utils.MaxLengthTracker(ctrl.bview.buffer)
 
     ctrl.bview.scrollTopV.onValue { top =>
-      val range = ctrl.bview.buffer.lines.length - ctrl.bview.height
+      val range = ctrl.bview.buffer.lines.length - ctrl.bview.height + 1
       println(s"Scrolling top to $top ($range)")
       scrollPane.setVvalue(math.min(1, top / range.toDouble))
     }
-
     ctrl.bview.scrollLeftV.onValue { left =>
-      val range = maxLenTracker.maxLength - ctrl.bview.width
+      val range = maxLenTracker.maxLength - ctrl.bview.width + 1
       println(s"Scrolling left to $left ($range)")
       scrollPane.setHvalue(math.min(1, left / range.toDouble))
     }
-
-    // TODO: listen for buffer changes and create/update/destroy line nodes as appropriate
-
-    // if (USE_MULTIPLE_NODES) {
-    //   textArea.getParagraphs().addListener(new ListChangeListener<CharSequence>() {
-    //     @Override
-    //       public void onChanged(ListChangeListener.Change<? extends CharSequence> change) {
-    //       while (change.next()) {
-    //         int from = change.getFrom();
-    //         int to = change.getTo();
-    //         List<? extends CharSequence> removed = change.getRemoved();
-    //         if (from < to) {
-
-    //           if (removed.isEmpty()) {
-    //             // This is an add
-    //             for (int i = from, n = to; i < n; i++) {
-    //               addParagraphNode(i, change.getList().get(i).toString());
-    //             }
-    //           } else {
-    //             // This is an update
-    //             for (int i = from, n = to; i < n; i++) {
-    //               Node node = paragraphNodes.getChildren().get(i);
-    //               Text paragraphNode = (Text) node;
-    //               paragraphNode.setText(change.getList().get(i).toString());
-    //             }
-    //           }
-    //         } else {
-    //           // This is a remove
-    //           paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
-    //         }
-    //       }
-    //     }
-    //   });
-    // } else {
-    //   textArea.textProperty().addListener(new InvalidationListener() {
-    //     @Override public void invalidated(Observable observable) {
-    //       invalidateMetrics();
-    //       ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
-    //       contentView.requestLayout();
-    //     }
-    //   });
-    // }
 
     // contains our content node and scrolls and clips it
     private val scrollPane = new ScrollPane()
@@ -205,7 +168,7 @@ object CodeArea {
         // bview is the one that originated the scroll, but if the scroll was originated via the
         // scrollbars (or two finger trackpad scrolling) then this will ensure that the buffer
         // view's values reflect the reality of the scroll pane
-        val range = maxLenTracker.maxLength - ctrl.bview.width
+        val range = maxLenTracker.maxLength - ctrl.bview.width + 1
         ctrl.bview.scrollLeftV.update((nv.doubleValue * range).intValue)
         println(s"Scroller changed hval $ov -> $nv ==> ${ctrl.bview.scrollLeftV.get}")
       }
@@ -216,7 +179,7 @@ object CodeArea {
         // bview is the one that originated the scroll, but if the scroll was originated via the
         // scrollbars (or two finger trackpad scrolling) then this will ensure that the buffer
         // view's values reflect the reality of the scroll pane
-        val range = ctrl.bview.buffer.lines.length - ctrl.bview.height
+        val range = ctrl.bview.buffer.lines.length - ctrl.bview.height + 1
         ctrl.bview.scrollTopV.update((nv.doubleValue * range).intValue)
         println(s"Scroller changed vval $ov -> $nv ==> ${ctrl.bview.scrollTopV.get}")
       }
@@ -237,7 +200,7 @@ object CodeArea {
           }
 
           // update the character width/height in our buffer view
-          ctrl.bview.widthV.update((nw / characterWidth).toInt)
+          ctrl.bview.widthV.update((nw / charWidth).toInt)
           ctrl.bview.heightV.update((nh / lineHeight).toInt)
           println(s"VP resized $nw x $nh -> ${ctrl.bview.width} x ${ctrl.bview.height}")
           // TODO: update scrollTop/scrollLeft if needed?
@@ -250,10 +213,25 @@ object CodeArea {
     private val lineNodes = new Group()
     lineNodes.setManaged(false)
 
-    // contains our line nodes and other decorative nodes (caret, selection, etc.)
+    // create our cursor and bind its position to `bview.point`
+    private val cursorBlock = new Rectangle()
+    // TODO: make the block fill color the same as the default text color
+    cursorBlock.setFill(Color.BLACK)
+    private val cursorText = new Text()
+    cursorText.setTextOrigin(VPos.TOP)
+    cursorText.setManaged(false)
+    // TODO: make the text fill color the same as the default background color
+    cursorText.setFill(Color.WHITE)
+    private val cursor = new Group()
+    cursor.setManaged(false)
+    cursor.getStyleClass.add("cursor")
+    cursor.getChildren.addAll(cursorBlock, cursorText)
+    ctrl.bview.pointV onValue contentNode.updateCursor
+
+    // contains our line nodes and other decorative nodes (cursor, selection, etc.)
     class ContentNode extends Region {
       /*ctor*/ {
-        getStyleClass().add("content")
+        getStyleClass.add("content")
         // forward mouse events to the control
         addEventHandler(MouseEvent.MOUSE_PRESSED, new EventHandler[MouseEvent]() {
           override def handle (event :MouseEvent) {
@@ -279,6 +257,28 @@ object CodeArea {
             updatePrefViewportHeight()
           }
         })
+      }
+
+      def updateCursor (point :Loc) {
+        // TODO: find the line in question, base our height on its y pos, ask the line for the xpos
+        cursor.setLayoutX(snappedLeftInset + point.col * charWidth)
+        cursor.setLayoutY(snappedTopInset + point.row * lineHeight)
+
+        // set the cursor "text" to the character under the point (if any)
+        val cchar = if (point.row >= ctrl.bview.buffer.lines.length) "" else {
+          val line = ctrl.bview.buffer.line(point)
+          if (point.col >= line.length) ""
+          else String.valueOf(line.charAt(point.col))
+        }
+        cursorText.setText(cchar)
+
+        // if the cursor is out of view, scroll it back to the center of the screen
+        val (scrollTop, height) = (ctrl.bview.scrollTopV.get, ctrl.bview.height)
+        val scrollMax = ctrl.bview.buffer.lines.length - ctrl.bview.height + 1
+        if (point.row < scrollTop || point.row >= scrollTop + height)
+          ctrl.bview.scrollTopV.update(math.min(scrollMax, math.max(0, point.row - height/2)))
+        // TODO: same for horizontal scrolling?
+        println(s"Cursor at ${point.col} x ${point.row} => ${cursor.getLayoutX} x ${cursor.getLayoutY}")
       }
 
       // make this visible
@@ -316,7 +316,7 @@ object CodeArea {
       override protected def computeMinWidth (height :Double) = {
         if (computedMinWidth < 0) {
           val hInsets = snappedLeftInset + snappedRightInset
-          computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height))
+          computedMinWidth = Math.min(charWidth + hInsets, computePrefWidth(height))
         }
         computedMinWidth
       }
@@ -336,6 +336,7 @@ object CodeArea {
         (topPadding /: lineNodes.getChildren)((y, n) => {
           n.setLayoutX(leftPadding)
           n.setLayoutY(y)
+          println(s"${n.asInstanceOf[Text].getText} at ${n.getLayoutX} x ${n.getLayoutY}")
           // TODO: getBoundsInLocal.getHeight is larger than lineHeight; it's not clear why, but if
           // we don't use lineHeight then all of our other calculations are bogus; maybe we need to
           // measure a line with some stock text and use that as line height, except we sort of do
@@ -343,7 +344,10 @@ object CodeArea {
           y + lineHeight // n.getBoundsInLocal.getHeight
         })
 
-        // TODO: position caret, update selection-related nodes
+        // position the cursor
+        updateCursor(ctrl.bview.point)
+
+        // TODO: update selection-related nodes
 
         if (scrollPane.getPrefViewportWidth == 0 || scrollPane.getPrefViewportHeight == 0) {
           updatePrefViewportWidth()
@@ -360,6 +364,7 @@ object CodeArea {
 
     // put our scene graph together
     contentNode.getChildren.add(lineNodes)
+    contentNode.getChildren.add(cursor)
     scrollPane.setContent(contentNode)
     getChildren.add(scrollPane)
 
@@ -445,7 +450,7 @@ object CodeArea {
 
     private def updatePrefViewportWidth () {
       val columnCount = 80 // TODO: getSkinnable.getPrefColumnCount
-      scrollPane.setPrefViewportWidth(columnCount * characterWidth +
+      scrollPane.setPrefViewportWidth(columnCount * charWidth +
         contentNode.snappedLeftInset + contentNode.snappedRightInset)
     }
     private def updatePrefViewportHeight () {

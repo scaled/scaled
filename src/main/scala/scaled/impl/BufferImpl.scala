@@ -69,7 +69,6 @@ class BufferImpl private (
   override def dirV = _dir
   override def edited = _edited
   override def lineEdited = _lineEdited
-  override def line (idx :Int) = _lines(idx)
   override def lines = _lines
 
   override def loc (offset :Int) = {

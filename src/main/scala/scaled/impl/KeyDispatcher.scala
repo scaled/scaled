@@ -31,7 +31,7 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
   }
 
   def keyPressed (kev :KeyEvent) {
-    println(kev)
+    // println(kev)
     kev.getEventType match {
       case KeyEvent.KEY_PRESSED =>
         val trigger = Seq(KeyPress(kev))

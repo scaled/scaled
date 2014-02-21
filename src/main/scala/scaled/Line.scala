@@ -7,13 +7,20 @@ package scaled
 import reactual.SignalV
 
 /** Models a single line of text in a buffer. Provides means to read and update said text. */
-trait Line {
+abstract class Line {
 
   /** The length (in characters) of this line. */
   def length :Int
 
   /** Returns the character at `pos`. */
   def charAt (pos :Int) :Char
+
+  /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
+    * of the length because the point can be after the last char on this line). */
+  def bound (col :Int) :Int = math.max(0, math.min(length, col))
+
+  /** Bounds the supplied loc into this line by bounding its column via [[bound(Int)]]. */
+  def bound (loc :Loc) :Loc = loc.atCol(bound(loc.col))
 
   /** Extracts the slice of characters beginning at `start` and ending just before `until`. */
   def slice (start :Int, until :Int) :Array[Char]
@@ -60,7 +67,7 @@ object Line {
 }
 
 /** The reactive version of [Line]. */
-trait RLine extends Line {
+abstract class RLine extends Line {
 
   /** A signal dispatched when this line is edited. */
   def edited :SignalV[Line.Edit]

@@ -37,36 +37,40 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
 
   @Fn("Moves the point forward one character.")
   def forwardChar () {
-    val cp = view.point
-    view.point = if (cp.col < buffer.line(cp).length) cp + (0, 1)
-                 else Loc(cp.row+1, 0) // move down a line
+    val old = view.point
+    // if we're at the end of the current line, move to the next line
+    view.point = if (old.col == buffer.lineLength(old)) Loc(old.row+1, 0)
+                 else old + (0, 1)
+    // if the point didn't change, that means we tried to move past the end of the buffer
+    if (old == view.point) view.emitStatus("End of buffer.")
   }
 
   @Fn("Moves the point backward one character.")
   def backwardChar () {
-    val cp = view.point
-    view.point = if (cp.col > 0) cp + (0, -1)
-                 else Loc(cp.row-1, buffer.lines(cp.row-1).length) // move up a line
+    val old = view.point
+    view.point = if (old.col == 0) Loc(old.row-1, buffer.lineLength(old.row-1))
+                 else old + (0, -1)
+    if (old == view.point) view.emitStatus("Beginning of buffer.")
   }
 
   @Fn("Moves the point down one line.")
-  def nextLine () = view.point.row match {
-    case row if (row < buffer.lines.length) =>
-      // if we're on the last line of the buffer, move to start of blank line following the buffer
-      if (row == buffer.lines.length-1) view.point = Loc(0, row+1)
-      // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
-      // means not bounding the column, but instead coping with a current column that is beyond
-      // the end of the current line (will that be a pandora's box?)
-      else view.point = Loc(row+1, math.min(row, buffer.lines(row+1).length))
-    case _ => view.emitStatus("End of buffer.") // TODO: with beep?
+  def nextLine () {
+    val old = view.point
+    // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
+    // means not bounding the column, but instead coping with a current column that is beyond
+    // the end of the current line (will that be a pandora's box?)
+    view.point = old + (1, 0)
+    if (old == view.point) view.emitStatus("End of buffer.") // TODO: with beep?
   }
 
   @Fn("Moves the point up one line.")
-  def previousLine () = view.point.row match {
-    case row if (row > 0) =>
-      // TODO: see nextLine about preserving "intended" column
-      view.point = Loc(row-1, math.min(row, buffer.lines(row-1).length))
-    case _ => view.emitStatus("Beginning of buffer.") // TODO: with beep?
+  def previousLine () {
+    val old = view.point
+    // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
+    // means not bounding the column, but instead coping with a current column that is beyond
+    // the end of the current line (will that be a pandora's box?)
+    view.point = old + (-1, 0)
+    if (old == view.point) view.emitStatus("Beginning of buffer.") // TODO: with beep?
   }
 
   @Fn("Moves the point to the beginning of the line.")

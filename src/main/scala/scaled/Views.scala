@@ -4,10 +4,10 @@
 
 package scaled
 
-import reactual.{Future, Value}
+import reactual.{Future, Value, ValueV}
 
 /** Visualizes a single line of text, potentially with style information. */
-trait LineView {
+abstract class LineView {
 
   /** The line being displayed by this view. */
   def line :Line
@@ -17,7 +17,7 @@ trait LineView {
 }
 
 /** A reactive version of [LineView], used by modes. */
-trait RLineView extends LineView {
+abstract class RLineView extends LineView {
 
   /** The line being displayed by this view, as a reactive value. */
   override def line :RLine
@@ -32,7 +32,7 @@ trait RLineView extends LineView {
   * Anything other than the data model for the buffer itself (which is encapsulated in [Buffer])
   * will be handled by this view.
   */
-trait BufferView {
+abstract class BufferView {
 
   /** The buffer being displayed by this view. */
   def buffer :Buffer
@@ -43,13 +43,13 @@ trait BufferView {
   /** The current point (aka the cursor position). */
   def point :Loc
 
-  /** Updates the current point. */
+  /** Updates the current point. The point will be [[bound]] into the buffer. */
   def point_= (loc :Loc) :Unit
 
   /** The current mark, if any. */
   def mark :Option[Loc]
 
-  /** Sets the current mark to `loc`. */
+  /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
   def mark_= (loc :Loc) :Unit
 
   /** Clears the current mark. */
@@ -61,6 +61,14 @@ trait BufferView {
   /** The height of the buffer, in characters. */
   def height :Int
 
+  /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`] and its column
+    * bound into the line to which its row was bound. */
+  def bound (loc :Loc) :Loc = {
+    if (loc.row >= lines.size) loc.at(lines.size, 0)
+    else if (loc.row < 0) Loc(0, buffer.lines(0).bound(loc.col))
+    else buffer.lines(loc.row).bound(loc)
+  }
+
   /** Prompts the user to input a string via the minibuffer. */
   def minibufferRead (prompt :String, defval :String) :Future[String]
   // TODO: minibufferRead variant that takes a tab-completer? mode provides?
@@ -70,7 +78,7 @@ trait BufferView {
 }
 
 /** A reactive version of [BufferView], used by modes. */
-trait RBufferView extends BufferView {
+abstract class RBufferView extends BufferView {
 
   /** The (reactive) buffer being displayed by this view. */
   override def buffer :RBuffer
@@ -79,10 +87,10 @@ trait RBufferView extends BufferView {
   override def lines :Seq[RLineView]
 
   /** The current point (aka the cursor position). */
-  val pointV :Value[Loc] = Value(Loc(0, 0))
+  def pointV :ValueV[Loc]
 
   /** The current mark, if any. */
-  val markV :Value[Option[Loc]] = Value(None)
+  def markV :ValueV[Option[Loc]]
 
   /** The width of the buffer view, in characters. */
   val widthV :Value[Int] = Value(0)
@@ -97,7 +105,8 @@ trait RBufferView extends BufferView {
   val scrollLeftV :Value[Int] = Value(0)
 
   /** Adjusts the scroll position of this view by `delta` lines. The scroll position will be bounded
-    * based on the size of the buffer. */
+    * based on the size of the buffer. The point will then be bounded into the visible area of the
+    * buffer. */
   def scrollVert (delta :Int) {
     val ctop = scrollTopV.get
     // bound bottom first, then top; this snaps buffers that are less than one screen tall to top
@@ -105,15 +114,15 @@ trait RBufferView extends BufferView {
     val ntop = math.max(math.min(ctop + delta, buffer.lines.length - height), 0)
     println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
     scrollTopV.update(ntop)
+
+    val p = point
+    if (p.row < ntop) point = p.atRow(ntop)
+    else if (p.row >= ntop + height) point = p.atRow(ntop + height - 1)
   }
 
   // implement some BufferView methods in terms of our reactive values
   override def point = pointV.get
-  override def point_= (loc :Loc) = pointV.update(loc)
-
   override def mark = markV.get
-  override def mark_= (loc :Loc) = markV.update(Some(loc))
-  override def clearMark () = markV.update(None)
 
   override def width = widthV.get
   override def height = heightV.get

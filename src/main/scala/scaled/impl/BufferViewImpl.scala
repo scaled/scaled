@@ -16,6 +16,17 @@ import scaled._
 class BufferViewImpl (_buffer :BufferImpl) extends RBufferView {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
+
+  private val _point = Value(Loc(0, 0))
+  override def pointV = _point
+  override def point_= (loc :Loc) = _point.update(bound(loc))
+
+  private val _mark = Value(None :Option[Loc])
+  override def markV = _mark
+  override def mark_= (loc :Loc) = _mark.update(Some(bound(loc)))
+  override def clearMark () = _mark.update(None)
+
+  // narrow the return types of these guys for our internal friends
   override def buffer :BufferImpl = _buffer
   override def lines :Seq[LineViewImpl] = _lines
 

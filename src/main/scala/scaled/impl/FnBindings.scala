@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import java.lang.reflect.Method
+import java.lang.reflect.{InvocationTargetException, Method}
 
 import scala.collection.mutable.{Map => MMap}
 
@@ -17,7 +17,11 @@ import scaled._
   */
 case class FnBinding (mode :Mode, name :String, meth :Method) {
   /** Invokes this fn binding. */
-  def invoke () = meth.invoke(mode)
+  def invoke () = try meth.invoke(mode) catch {
+    case e :InvocationTargetException => // TODO: better error reporting
+      System.err.println(s"FnBinding choked [mode=${mode.name}, name=$name]")
+      e.getCause.printStackTrace(System.err)
+  }
 }
 
 /** [[FnBindings]] helper methods. */
