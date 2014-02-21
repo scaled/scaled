@@ -35,7 +35,7 @@ import scaled._
 // - how will we support styles? attribute the buffer? probably so because that will cause all
 // views of the buffer to remain in sync as attributes are provided by external intelligence
 
-/** The main implementation of [BufferView].
+/** The main implementation of [[BufferView]].
   */
 class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
 

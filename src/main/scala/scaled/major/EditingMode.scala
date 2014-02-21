@@ -4,6 +4,8 @@
 
 package scaled.major
 
+import scala.annotation.tailrec
+
 import scaled._
 
 /** A base class for all modes that support interactive text editing. This mode defines all of the
@@ -29,10 +31,13 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     "UP"     -> "previous-line",
     "DOWN"   -> "next-line",
 
+    "C-UP"   -> "previous-paragraph",
+    "C-DOWN" -> "next-paragraph",
+
     "S-UP"   -> "scroll-up", // TODO: extend-mark-backward-line
     "S-DOWN" -> "scroll-down", // TODO: extend-mark-forward-line
-    "M-UP"   -> "scroll-up-page",
-    "M-DOWN" -> "scroll-down-page"
+    "M-v"    -> "scroll-up-page",
+    "C-v"    -> "scroll-down-page"
   )
 
   @Fn("Moves the point forward one character.")
@@ -71,6 +76,36 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     // the end of the current line (will that be a pandora's box?)
     view.point = old + (-1, 0)
     if (old == view.point) view.emitStatus("Beginning of buffer.") // TODO: with beep?
+  }
+
+  // TODO: add config: paragraph-ignore-whitespace and treat non-empty lines which contain only
+  // whitespace as paragraph delimiters
+  @Fn("""Moves to the next paragraph. Paragraphs are currently delimited by blank lines.
+    TODO: make this more emacs-like?""")
+  def nextParagraph () {
+    @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
+      if (row >= buffer.lines.size) Loc(row, 0)
+      else {
+        val len = buffer.lineLength(row)
+        if (len == 0 && seenNonBlank) Loc(row, 0)
+        else seek(row+1, seenNonBlank || len > 0)
+      }
+    }
+    view.point = seek(view.point.row, false)
+  }
+
+  @Fn("""Moves to the previous paragraph. Paragraphs are currently delimited by blank lines.
+    TODO: make this more emacs-like?""")
+  def previousParagraph () {
+    @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
+      if (row <= 0) Loc(0, 0)
+      else {
+        val len = buffer.lineLength(row)
+        if (len == 0 && seenNonBlank) Loc(row, 0)
+        else seek(row-1, seenNonBlank || len > 0)
+      }
+    }
+    view.point = seek(view.point.row, false)
   }
 
   @Fn("Moves the point to the beginning of the line.")
