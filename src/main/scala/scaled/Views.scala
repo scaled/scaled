@@ -93,10 +93,10 @@ abstract class RBufferView extends BufferView {
   def markV :ValueV[Option[Loc]]
 
   /** The width of the buffer view, in characters. */
-  val widthV :Value[Int] = Value(0)
+  val widthV :Value[Int] = Value(80) // TODO: get values from config
 
   /** The height of the buffer view, in characters. */
-  val heightV :Value[Int] = Value(0)
+  val heightV :Value[Int] = Value(24) // TODO: get values from config
 
   /** The index of the line at the top of the view. */
   val scrollTopV :Value[Int] = Value(0)
@@ -112,7 +112,7 @@ abstract class RBufferView extends BufferView {
     // bound bottom first, then top; this snaps buffers that are less than one screen tall to top
     // TODO: nix buffer.lines.length, use lines.length when lines is implemented
     val ntop = math.max(math.min(ctop + delta, buffer.lines.length - height), 0)
-    println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
+    // println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
     scrollTopV.update(ntop)
 
     val p = point
