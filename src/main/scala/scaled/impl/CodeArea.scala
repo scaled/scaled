@@ -119,7 +119,18 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
   cursor.setManaged(false)
   cursor.getStyleClass.add("cursor")
   cursor.getChildren.addAll(cursorBlock, cursorText)
+  // move the cursor when the point is updated
   bview.pointV onValue contentNode.updateCursor
+  // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
+  // (TODO: this seems error prone, is there a better way?)
+  bview.buffer.lineEdited.onValue { change =>
+    println(s"Edit intersects line? $change")
+    // TODO: make this more efficient
+    if (bview.buffer.line(bview.point) == change.line && change.deleted > 0)
+      contentNode.updateCursor(bview.point)
+  }
+  // TODO: handle deletion of lines that include the point? that will probably result in the point
+  // being moved, so maybe we don't need to worry about it
 
   // contains our line nodes and other decorative nodes (cursor, selection, etc.)
   class ContentNode extends Region {

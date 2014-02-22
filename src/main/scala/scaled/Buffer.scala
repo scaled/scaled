@@ -69,6 +69,12 @@ abstract class Buffer {
     * the buffer or before its start. */
   def lineLength (loc :Loc) :Int = lineLength(loc.row)
 
+  /** Returns the loc `count` characters forward of `loc`. */
+  def forward (loc :Loc, count :Int) :Loc = this.loc(offset(loc)+count) // TODO: optimize
+
+  /** Returns the loc `count` characters backward of `loc`. */
+  def backward (loc :Loc, count :Int) :Loc = this.loc(offset(loc)-count) // TODO: optimize
+
   /** Returns a location for the specified character offset into the buffer. If `offset` is greater
     * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final
     * character. */

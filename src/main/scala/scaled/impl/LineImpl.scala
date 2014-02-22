@@ -74,7 +74,7 @@ class LineImpl (
 
   def delete (pos :Int, length :Int) {
     val last = pos + length
-    assert(pos > 0 && last <= _end)
+    assert(pos >= 0 && last <= _end)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
     _end -= length
     noteEdited(pos, length, 0)

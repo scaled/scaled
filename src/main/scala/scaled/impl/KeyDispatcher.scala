@@ -36,7 +36,11 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
       case KeyEvent.KEY_PRESSED =>
         val trigger = Seq(KeyPress(kev))
         _metas.map(_.map.get(trigger)).collectFirst {
+          case Some(fn) => fn
+        } match {
           case Some(fn) => fn.invoke() ; kev.consume()
+          // TODO: turn keyCode into a key description
+          case None => view.emitStatus(s"${kev.getCode} is undefined.")
         }
       case KeyEvent.KEY_TYPED =>
         // TEMP: insert typed characters into the buffer at the point

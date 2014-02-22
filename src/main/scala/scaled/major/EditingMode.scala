@@ -16,6 +16,10 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   private[this] val buffer = view.buffer
 
   override def keymap = Seq(
+    "BS"     -> "delete-backward-char",
+    "DEL"    -> "delete-forward-char",
+    "C-d"    -> "delete-forward-char",
+
     "C-b"    -> "backward-char",
     "C-f"    -> "forward-char",
     "LEFT"   -> "backward-char",
@@ -44,8 +48,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   def forwardChar () {
     val old = view.point
     // if we're at the end of the current line, move to the next line
-    view.point = if (old.col == buffer.lineLength(old)) Loc(old.row+1, 0)
-                 else old + (0, 1)
+    view.point = buffer.forward(old, 1)
     // if the point didn't change, that means we tried to move past the end of the buffer
     if (old == view.point) view.emitStatus("End of buffer.")
   }
@@ -53,9 +56,29 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   @Fn("Moves the point backward one character.")
   def backwardChar () {
     val old = view.point
-    view.point = if (old.col == 0) Loc(old.row-1, buffer.lineLength(old.row-1))
-                 else old + (0, -1)
+    view.point = buffer.backward(old, 1)
     if (old == view.point) view.emitStatus("Beginning of buffer.")
+  }
+
+  @Fn("Deletes the character immediately previous to the point.")
+  def deleteBackwardChar () {
+    if (view.point.col == 0) () // TODO: join this line to the previous (delete the newline)
+    else {
+      val del = buffer.backward(view.point, 1)
+      if (del == view.point) view.emitStatus("Beginning of buffer.")
+      else {
+        buffer.line(del).delete(del.col, 1)
+        view.point = del // move the point back one space as well
+      }
+    }
+  }
+
+  @Fn("Deletes the character at the point.")
+  def deleteForwardChar () {
+    val del = view.point
+    if (del.row >= buffer.lines.size) view.emitStatus("End of buffer.")
+    else if (buffer.lineLength(del) == 0) () // TODO: delete this line
+    else buffer.line(del).delete(del.col, 1)
   }
 
   @Fn("Moves the point down one line.")
