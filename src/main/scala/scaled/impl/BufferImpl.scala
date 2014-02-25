@@ -63,6 +63,9 @@ class BufferImpl private (
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
 
+  //
+  // from Buffer and RBuffer API
+
   override def name = nameV.get
   override def nameV = _name
   override def dir = dirV.get
@@ -70,6 +73,9 @@ class BufferImpl private (
   override def edited = _edited
   override def lineEdited = _lineEdited
   override def lines = _lines
+  // refine return type to ease life for internal friends
+  override def line (idx :Int) :LineImpl = _lines(idx)
+  override def line (loc :Loc) :LineImpl = line(loc.row)
 
   override def loc (offset :Int) = {
     assert(offset >= 0)
@@ -92,6 +98,30 @@ class BufferImpl private (
       if (row < 0) off else offset(row-1, lines(row).length+lineSep.length+off)
     offset(loc.row-1, 0) + loc.col
   }
+
+  override def insert (idx :Int, lines :Array[Array[Char]]) {
+    _lines.insert(idx, lines.map(l => new LineImpl(l, this)) :_*)
+    _edited.emit(Buffer.Edit(idx, 0, lines.length, this))
+  }
+
+  override def delete (idx :Int, count :Int) {
+    _lines.remove(idx, count)
+    _edited.emit(Buffer.Edit(idx, count, 0, this))
+  }
+
+  override def split (idx :Int, pos :Int) {
+    _lines.insert(idx+1, _lines(idx).split(pos))
+    _edited.emit(Buffer.Edit(idx+1, 0, 1, this))
+  }
+
+  override def join (idx :Int) {
+    val suff = _lines(idx+1)
+    delete(idx+1, 1)
+    _lines(idx).append(suff)
+  }
+
+  //
+  // impl details
 
   private[impl] def noteEdited (edit :Line.Edit) = _lineEdited.emit(edit)
 

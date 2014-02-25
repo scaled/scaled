@@ -7,7 +7,17 @@ package scaled.impl
 import javafx.scene.input.{KeyCode, KeyEvent}
 
 /** Models a key press and any modifier keys that are held down during the press.  */
-case class KeyPress (code :KeyCode, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean)
+case class KeyPress (code :KeyCode, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean) {
+  override def toString = {
+    import KeyPress._
+    val buf = new StringBuilder
+    if (shift) buf.append(ShiftId).append("-")
+    if (ctrl) buf.append(CtrlId).append("-")
+    if (alt) buf.append(AltId).append("-")
+    if (meta) buf.append(MetaId).append("-")
+    buf.append(code.name.toLowerCase).toString
+  }
+}
 
 /** [[KeyPress]] utilities. */
 object KeyPress {
@@ -29,7 +39,7 @@ object KeyPress {
     */
   def toKeyPresses (onInvalid :String => Unit, seq :String) :Option[Seq[KeyPress]] = {
     def parse (str :String) = toKeyPress(str) match {
-      case None => onInvalid(s"$str in $seq") ; None
+      case None => onInvalid(if (str == seq) str else s"$str in $seq") ; None
       case kp => kp
     }
     val kps = seq.split(" ") map(parse)
@@ -177,7 +187,7 @@ object KeyPress {
       DELETE    -> "DEL",
       NUM_LOCK  -> "",
       SCROLL_LOCK -> "",
-      ENTER     -> "",
+      ENTER     -> "ENTER",
 
       KP_UP    -> "NPUP",
       KP_DOWN  -> "NPDOWN",

@@ -86,6 +86,30 @@ abstract class Buffer {
   /** TEMP: Returns the "word" at the specified location. */
   def wordAt (loc :Loc) :String = "TEMP"
 
+  /** Inserts a single line at index `idx` with `text` as its contents. Note: `text` should not
+    * contain newlines, the caller should split such text into separate lines and use the
+    * multi-line `insert`. */
+  def insert (idx :Int, text :Array[Char]) :Unit = insert(idx, Array(text))
+
+  /** Inserts multiple lines at index `idx`. */
+  def insert (idx :Int, lines :Array[Array[Char]]) :Unit
+
+  /** Deletes `count` lines starting at `idx`. */
+  def delete (idx :Int, count :Int) :Unit
+
+  /** Splits the line at `loc`. The characters up to `loc.col` will remain on the `loc.row`th line,
+    * and the character at `loc.col` and all subsequent characters will be moved to a new line
+    * which immediately follows the `loc.row`th line. */
+  def split (loc :Loc) :Unit = split(loc.row, loc.col)
+
+  /** Splits the `idx`th line at character position `pos`. The characters up to `pos` will remain on
+    * the `idx`th line, and the character at `pos` and all subsequent characters will be moved to a
+    * new line which immediately follows the `idx`th line. */
+  def split (idx :Int, pos :Int) :Unit
+
+  /** Joins the `idx`th line with the line immediately following it. */
+  def join (idx :Int) :Unit
+
   // TODO: methods for inserting, removing and replacing lines
   // TODO: methods for editing based on a pair of Locs
 }

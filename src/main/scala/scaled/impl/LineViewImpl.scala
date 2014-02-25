@@ -23,6 +23,8 @@ class LineViewImpl (_line :LineImpl) extends RLineView {
 
   _line.edited.onValue { change =>
     // TODO: something more efficient?
-    node.setText(line.asString)
+    val text = line.asString
+    assert(!text.contains('\r') && !text.contains('\n'))
+    node.setText(text)
   }
 }

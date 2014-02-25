@@ -35,44 +35,49 @@ class LineImpl (
   /** Returns the contents of this line as a string. */
   def asString :String = new String(_chars, 0, _end)
 
+  /** Splits this line at `pos`. Deletes the data from `pos` onward from this line.
+    * @return a new line which contains the data from `pos` onward. */
+  def split (pos :Int) :LineImpl = {
+    // TODO: if pos is close to zero, just give our internals to the new line and create new
+    // internals for ourselves?
+    val rem = new LineImpl(_chars.slice(pos, _end), buffer)
+    delete(pos, _end-pos)
+    rem
+  }
+
+  /** Appends `line` to this line. */
+  def append (line :LineImpl) {
+    // TODO: append style information as well when we have it
+    insert(_end, line.chars, 0, line.length)
+  }
+
   override def toString () = s"$asString/${_end}/${_chars.length}"
 
   //
   // from Line and RLine API
 
-  def length = _end
-  def charAt (pos :Int) = _chars(pos)
+  override def length = _end
+  override def charAt (pos :Int) = _chars(pos)
   // TODO: document, handle, test boundary conditions? or just throw?
-  def slice (start :Int, until :Int) = _chars.slice(start, until)
-  def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)
-  def edited = _edited
+  override def slice (start :Int, until :Int) = _chars.slice(start, until)
+  override def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)
+  override def edited = _edited
 
-  def insert (pos :Int, c :Char) {
+  override def insert (pos :Int, c :Char) {
     prepInsert(pos, 1)
     _chars(pos) = c
     _end += 1
     noteEdited(pos, 0, 1)
   }
 
-  private def noteEdited (offset :Int, deleted :Int, added :Int) {
-    val edit = Line.Edit(offset, deleted, added, this)
-    _edited.emit(edit)
-    buffer.noteEdited(edit)
+  override def insert (pos :Int, cs :Array[Char], offset :Int, count :Int) {
+    prepInsert(pos, count)
+    System.arraycopy(cs, offset, _chars, pos, count)
+    _end += count
+    noteEdited(pos, 0, count)
   }
 
-  def insert (pos :Int, cs :Array[Char]) {
-    prepInsert(pos, cs.length)
-    System.arraycopy(cs, 0, _chars, pos, cs.length)
-    _end += cs.length
-    noteEdited(pos, 0, cs.length)
-  }
-
-  def insert (pos :Int, str :String) {
-    if (str.length == 1) insert(pos, str.charAt(0))
-    else insert(pos, str.toCharArray)
-  }
-
-  def delete (pos :Int, length :Int) {
+  override def delete (pos :Int, length :Int) {
     val last = pos + length
     assert(pos >= 0 && last <= _end)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
@@ -80,7 +85,7 @@ class LineImpl (
     noteEdited(pos, length, 0)
   }
 
-  def replace (pos :Int, delete :Int, cs :Array[Char]) {
+  override def replace (pos :Int, delete :Int, cs :Array[Char]) {
     val lastDeleted = pos + delete
     assert(lastDeleted <= _end)
     val lastAdded = pos + cs.length
@@ -117,5 +122,11 @@ class LineImpl (
     else if (pos < curend) {
       System.arraycopy(_chars, pos, _chars, pos+length, curend-pos)
     }
+  }
+
+  private def noteEdited (offset :Int, deleted :Int, added :Int) {
+    val edit = Line.Edit(offset, deleted, added, this)
+    _edited.emit(edit)
+    buffer.noteEdited(edit)
   }
 }

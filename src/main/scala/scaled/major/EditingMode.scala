@@ -19,6 +19,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     "BS"     -> "delete-backward-char",
     "DEL"    -> "delete-forward-char",
     "C-d"    -> "delete-forward-char",
+    "ENTER"  -> "newline",
 
     "C-b"    -> "backward-char",
     "C-f"    -> "forward-char",
@@ -62,14 +63,13 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
 
   @Fn("Deletes the character immediately previous to the point.")
   def deleteBackwardChar () {
-    if (view.point.col == 0) () // TODO: join this line to the previous (delete the newline)
+    val vp = view.point
+    val prev = buffer.backward(vp, 1)
+    if (prev == vp) view.emitStatus("Beginning of buffer.")
     else {
-      val del = buffer.backward(view.point, 1)
-      if (del == view.point) view.emitStatus("Beginning of buffer.")
-      else {
-        buffer.line(del).delete(del.col, 1)
-        view.point = del // move the point back one space as well
-      }
+      view.point = prev // move the point back one space
+      if (vp.col == 0) buffer.join(prev.row) // join the previous line to this one
+      else buffer.line(prev).delete(prev.col, 1) // delete the previous character
     }
   }
 
@@ -77,8 +77,15 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   def deleteForwardChar () {
     val del = view.point
     if (del.row >= buffer.lines.size) view.emitStatus("End of buffer.")
-    else if (buffer.lineLength(del) == 0) () // TODO: delete this line
+    else if (buffer.lineLength(del) == del.col) buffer.join(del.row)
     else buffer.line(del).delete(del.col, 1)
+  }
+
+  @Fn("""Inserts a newline at the point.
+    Characters after the point on the current line wil be moved to a new line.""")
+  def newline () {
+    buffer.split(view.point)
+    view.point = Loc(view.point.row+1, 0)
   }
 
   @Fn("Moves the point down one line.")

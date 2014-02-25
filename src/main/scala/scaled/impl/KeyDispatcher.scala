@@ -30,33 +30,51 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
     // key input)
   }
 
-  def keyPressed (kev :KeyEvent) {
-    // println(kev)
-    kev.getEventType match {
-      case KeyEvent.KEY_PRESSED =>
-        val trigger = Seq(KeyPress(kev))
-        _metas.map(_.map.get(trigger)).collectFirst {
-          case Some(fn) => fn
-        } match {
-          case Some(fn) => fn.invoke() ; kev.consume()
-          // TODO: turn keyCode into a key description
-          case None => view.emitStatus(s"${kev.getCode} is undefined.")
-        }
-      case KeyEvent.KEY_TYPED =>
-        // TEMP: insert typed characters into the buffer at the point
-        if (!(kev.isControlDown || kev.isMetaDown || kev.isAltDown ||
-          kev.getCharacter == KeyEvent.CHAR_UNDEFINED)) {
-          // insert the typed character
-          view.buffer.line(view.point).insert(view.point.col, kev.getCharacter)
-          // move the point to the right by the appropriate amount
-          view.point = view.point + (0, kev.getCharacter.length)
-          // TODO: should the above be built-into BufferView?
-        }
-      case _ => // key released, don't care
-    }
+  def keyPressed (kev :KeyEvent) :Unit = kev.getEventType match {
+    case KeyEvent.KEY_PRESSED =>
+      // TODO: accumulate modified keys into a trigger until something matches
+      val trigger = Seq(KeyPress(kev))
+      // look through our stack of keymaps and pick the first one that matches
+      _metas.map(_.map.get(trigger)).collectFirst { case Some(fn) => fn } match {
+        case Some(fn) =>
+          fn.invoke()
+          kev.consume()
+          _insertNext = false
+        case None =>
+          // if they pressed a modified key (held ctrl/alt/meta and pressed a key) and we don't
+          // have a mapping for it, issue a warning since they probably meant it to do something
+          if (isModified(kev) && !isModifier(kev.getCode)) {
+            // TODO: turn keyCode into a key description
+            view.emitStatus(s"${KeyPress(kev)} is undefined.")
+          }
+          // unmodified key presses that don't map to a fn should be inserted into the buffer,
+          // but we won't know what character to insert until the associated KEY_TYPED event
+          // comes in
+          _insertNext = !isModified(kev)
+      }
+
+    case KeyEvent.KEY_TYPED =>
+      // if the KEY_PRESSED event that necessarily preceded this KEY_TYPED event indicated that
+      // the key should be inserted into the buffer, do so (assuming the key maps to a char)
+      if (_insertNext && kev.getCharacter != KeyEvent.CHAR_UNDEFINED) {
+        val p = view.point
+        // insert the typed character at the point
+        view.buffer.line(p).insert(p.col, kev.getCharacter)
+        // move the point to the right by the appropriate amount
+        view.point = p + (0, kev.getCharacter.length)
+        // TODO: should the above be built-into BufferView?
+      }
+
+    case _ => // key released, don't care
   }
 
+  private def isModified (kev :KeyEvent) = kev.isControlDown || kev.isAltDown || kev.isMetaDown
+
   private var _metas = Seq(new Metadata(mode))
+  private var _insertNext = false
+
+  private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
+                               KeyCode.COMMAND, KeyCode.WINDOWS)
 }
 
 /** [[KeyDispatcher]] utilities. */
@@ -73,9 +91,8 @@ object KeyDispatcher {
                    onInvalidFn :String => Unit) :Map[Seq[KeyPress], FnBinding] = {
     Map() ++ keymap flatMap {
       case (key, fn) => (KeyPress.toKeyPresses(onInvalidKey, key), fns.binding(fn)) match {
-        case (None, None)         => onInvalidKey(key) ; onInvalidFn(fn) ; None
-        case (Some(kp), None)     => onInvalidFn(fn)   ; None
-        case (None, Some(fb))     => onInvalidKey(key) ; None
+        case (_, None)            => onInvalidFn(fn)   ; None
+        case (None, Some(fb))     => None
         case (Some(kp), Some(fb)) => Some(kp -> fb)
       }
     }

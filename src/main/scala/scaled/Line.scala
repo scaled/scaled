@@ -32,10 +32,17 @@ abstract class Line {
   def insert (pos :Int, c :Char) :Unit
 
   /** Inserts the characters `cs` into this line at `pos`. */
-  def insert (pos :Int, cs :Array[Char]) :Unit
+  def insert (pos :Int, cs :Array[Char]) :Unit = insert(pos, cs, 0, cs.length)
+
+  /** Inserts the characters `cs` starting at `offset` and extending for `count` characters into this
+    * line at `pos`. */
+  def insert (pos :Int, cs :Array[Char], offset :Int, count :Int) :Unit
 
   /** Inserts the string `str` into this line at `pos`. */
-  def insert (pos :Int, str :String) :Unit
+  def insert (pos :Int, str :String) {
+    if (str.length == 1) insert(pos, str.charAt(0))
+    else insert(pos, str.toCharArray)
+  }
 
   /** Deletes `length` characters starting at `pos`. */
   def delete (pos :Int, length :Int) :Unit
