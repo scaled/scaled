@@ -6,6 +6,8 @@ package scaled.impl
 
 import javafx.scene.input.{KeyCode, KeyEvent}
 
+import scala.collection.mutable.{Set => MSet}
+
 /** Models a key press and any modifier keys that are held down during the press.  */
 case class KeyPress (code :KeyCode, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean) {
   override def toString = {
@@ -50,12 +52,15 @@ object KeyPress {
     * instance. Invalid descriptions yield `None`.
     */
   def toKeyPress (desc :String) :Option[KeyPress] = {
-    val comps = desc.split('-')
-    val (mods, key) = comps.splitAt(comps.length-1)
-    val modSet = mods.toSet
+    val modSet = MSet[String]()
+    var remain = desc
+    while (remain.length > 1 && remain.charAt(1) == '-') {
+      modSet += remain.substring(0, 1)
+      remain = remain.substring(2)
+    }
     // validate that there are no spurious modifiers
     if (!(modSet -- ValidMods).isEmpty) None
-    else toKeyCode(key(0)) map { code =>
+    else toKeyCode(remain) map { code =>
       KeyPress(code, modSet(ShiftId), modSet(CtrlId), modSet(AltId), modSet(MetaId))
     }
   }
