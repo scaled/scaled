@@ -40,6 +40,9 @@ abstract class BufferView {
   /** Views for the lines in this buffer. */
   def lines :Seq[LineView]
 
+  /** That which handles undoing and redoing for this buffer. */
+  def undoer :Undoer
+
   /** The current point (aka the cursor position). */
   def point :Loc
 

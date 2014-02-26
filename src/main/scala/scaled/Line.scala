@@ -6,6 +6,9 @@ package scaled
 
 import reactual.SignalV
 
+// TODO: factor read-only API into LineView; provide LineView for deleted lines, because it is
+// dangerous and weird to allow those to be modified
+
 /** Models a single line of text in a buffer. Provides means to read and update said text. */
 abstract class Line {
 
@@ -60,16 +63,26 @@ object Line {
   case class Edit (
     /** The offset into `line.chars` at which the characters were replaced. */
     offset :Int,
-    /** The number of characters that were deleted. */
-    deleted :Int,
+    /** The characters that were deleted. */
+    deletedChars :Array[Char],
     /** The number of characters that were added. */
     added :Int,
     /** The line that was edited. */
-    line :Line) {
+    line :Line) extends Undoable {
+
+    /** Returns the `idx`th added character. */
+    def addedChar (idx :Int) = line.charAt(offset+idx)
     /** Extracts and returns the characters that were inserted. */
     def addedChars :Array[Char] = line.slice(offset, offset+added)
     /** Extracts and returns, as a string, the characters that were inserted. */
     def addedString :String = line.sliceString(offset, offset+added)
+    /** The number of characters that were deleted. */
+    def deleted = deletedChars.length
+
+    // remove the added characters and add the removed characters
+    override def undo () = line.replace(offset, added, deletedChars)
+
+    override def toString = s"Edit[@$offset -${deletedChars.mkString} +${addedChars.mkString}]"
   }
 }
 

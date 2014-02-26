@@ -21,6 +21,12 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     "C-d"    -> "delete-forward-char",
     "ENTER"  -> "newline",
 
+    "C-/"    -> "undo",
+    "C-\\"   -> "redo",
+    "C-x r"  -> "redo",
+    "C-x u"  -> "undo",
+    "C-S--"  -> "undo", // TODO: make C-_ work
+
     "C-b"    -> "backward-char",
     "C-f"    -> "forward-char",
     "LEFT"   -> "backward-char",
@@ -86,6 +92,16 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   def newline () {
     buffer.split(view.point)
     view.point = Loc(view.point.row+1, 0)
+  }
+
+  @Fn("Undoes the last change to the buffer.")
+  def undo () {
+    if (!view.undoer.undo()) view.emitStatus("Nothing to undo.")
+  }
+
+  @Fn("Redoes the last undone to the buffer.")
+  def redo () {
+    if (!view.undoer.redo()) view.emitStatus("Nothing to redo.")
   }
 
   @Fn("Moves the point down one line.")

@@ -13,6 +13,9 @@ object LineImpl {
 
   /** The number of extra characters padded onto an expanded line. */
   private final val ExpandN = 32
+
+  /** An empty character array used for edits that delete no characters. */
+  private final val NoChars = Array[Char]()
 }
 
 /** Implements [Line] and [RLine]. */
@@ -67,28 +70,30 @@ class LineImpl (
     prepInsert(pos, 1)
     _chars(pos) = c
     _end += 1
-    noteEdited(pos, 0, 1)
+    noteEdited(pos, LineImpl.NoChars, 1)
   }
 
   override def insert (pos :Int, cs :Array[Char], offset :Int, count :Int) {
     prepInsert(pos, count)
     System.arraycopy(cs, offset, _chars, pos, count)
     _end += count
-    noteEdited(pos, 0, count)
+    noteEdited(pos, LineImpl.NoChars, count)
   }
 
   override def delete (pos :Int, length :Int) {
     val last = pos + length
     assert(pos >= 0 && last <= _end)
+    val deletedChars = _chars.slice(pos, pos+length)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
     _end -= length
-    noteEdited(pos, length, 0)
+    noteEdited(pos, deletedChars, 0)
   }
 
   override def replace (pos :Int, delete :Int, cs :Array[Char]) {
     val lastDeleted = pos + delete
     assert(lastDeleted <= _end)
     val lastAdded = pos + cs.length
+    val deletedChars = if (delete > 0) _chars.slice(pos, pos+delete) else LineImpl.NoChars
 
     // if we have a net increase in characters, shift tail right to make room
     val deltaLength = lastAdded - lastDeleted
@@ -100,7 +105,7 @@ class LineImpl (
 
     System.arraycopy(cs, 0, _chars, pos, cs.length)
     _end += deltaLength
-    noteEdited(pos, delete, cs.length)
+    noteEdited(pos, deletedChars, cs.length)
   }
 
   //
@@ -113,7 +118,7 @@ class LineImpl (
     // if we need to expand our _chars array...
     if (curend + length > curlen) {
       // ...tack on an extra N characters in expectation of future expansions
-      val nchars = new Array[Char](_chars.length+length+LineImpl.ExpandN)
+      val nchars = new Array[Char](_chars.length+length + LineImpl.ExpandN)
       System.arraycopy(_chars, 0, nchars, 0, pos)
       System.arraycopy(_chars, pos, nchars, pos+length, curend-pos)
       _chars = nchars
@@ -124,8 +129,8 @@ class LineImpl (
     }
   }
 
-  private def noteEdited (offset :Int, deleted :Int, added :Int) {
-    val edit = Line.Edit(offset, deleted, added, this)
+  private def noteEdited (offset :Int, deletedChars :Array[Char], added :Int) {
+    val edit = Line.Edit(offset, deletedChars, added, this)
     _edited.emit(edit)
     buffer.noteEdited(edit)
   }

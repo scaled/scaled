@@ -17,6 +17,9 @@ class BufferViewImpl (_buffer :BufferImpl) extends RBufferView {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
+  val undoStack = new UndoStack(this)
+  override def undoer = undoStack
+
   private val _point = Value(Loc(0, 0))
   override def pointV = _point
   override def point_= (loc :Loc) = _point.update(bound(loc))

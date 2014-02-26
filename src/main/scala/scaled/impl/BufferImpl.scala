@@ -48,6 +48,9 @@ object BufferImpl {
       reader.close
     }
   }
+
+  /** An empty line sequence used for edits that delete no lines. */
+  private final val NoLines = Seq[Line]()
 }
 
 /** Implements [Buffer] and [RBuffer]. This is where all the excitement happens. */
@@ -99,19 +102,18 @@ class BufferImpl private (
     offset(loc.row-1, 0) + loc.col
   }
 
-  override def insert (idx :Int, lines :Array[Array[Char]]) {
-    _lines.insert(idx, lines.map(l => new LineImpl(l, this)) :_*)
-    _edited.emit(Buffer.Edit(idx, 0, lines.length, this))
+  override def insert (idx :Int, lines :Seq[Array[Char]]) {
+    _lines.insert(idx, lines.map(cs => new LineImpl(cs, this)) :_*)
+    _edited.emit(Buffer.Edit(idx, BufferImpl.NoLines, lines.length, this))
   }
 
   override def delete (idx :Int, count :Int) {
-    _lines.remove(idx, count)
-    _edited.emit(Buffer.Edit(idx, count, 0, this))
+    _edited.emit(Buffer.Edit(idx, deleteLines(idx, count), 0, this))
   }
 
   override def split (idx :Int, pos :Int) {
     _lines.insert(idx+1, _lines(idx).split(pos))
-    _edited.emit(Buffer.Edit(idx+1, 0, 1, this))
+    _edited.emit(Buffer.Edit(idx+1, BufferImpl.NoLines, 1, this))
   }
 
   override def join (idx :Int) {
@@ -119,6 +121,21 @@ class BufferImpl private (
     delete(idx+1, 1)
     _lines(idx).append(suff)
   }
+
+  override private[scaled] def undo (edit :Buffer.Edit) {
+    assert(edit.buffer == this)
+    val undoneLines = deleteLines(edit.offset, edit.added)
+    _lines.insert(edit.offset, edit.deletedLines.map(_.asInstanceOf[LineImpl]) :_*)
+    _edited.emit(Buffer.Edit(edit.offset, undoneLines, edit.deleted, this))
+  }
+
+  private def deleteLines (idx :Int, count :Int) :Seq[Line] =
+    if (count == 0) BufferImpl.NoLines
+    else {
+      val deleted = _lines.slice(idx, idx+count)
+      _lines.remove(idx, count)
+      deleted
+    }
 
   //
   // impl details

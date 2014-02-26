@@ -92,7 +92,7 @@ abstract class Buffer {
   def insert (idx :Int, text :Array[Char]) :Unit = insert(idx, Array(text))
 
   /** Inserts multiple lines at index `idx`. */
-  def insert (idx :Int, lines :Array[Array[Char]]) :Unit
+  def insert (idx :Int, lines :Seq[Array[Char]]) :Unit
 
   /** Deletes `count` lines starting at `idx`. */
   def delete (idx :Int, count :Int) :Unit
@@ -110,7 +110,8 @@ abstract class Buffer {
   /** Joins the `idx`th line with the line immediately following it. */
   def join (idx :Int) :Unit
 
-  // TODO: methods for inserting, removing and replacing lines
+  private[scaled] def undo (edit :Buffer.Edit) :Unit
+
   // TODO: methods for editing based on a pair of Locs
 }
 
@@ -123,14 +124,20 @@ object Buffer {
   case class Edit (
     /** The offset (zero-based line number) in the buffer at which lines were replaced. */
     offset :Int,
-    /** The number of lines that were deleted. */
-    deleted :Int,
+    /** The lines that were deleted. */
+    deletedLines :Seq[Line],
     /** The number of lines that were added. */
     added :Int,
     /** The buffer that was edited. */
-    buffer :Buffer) {
+    buffer :Buffer) extends Undoable {
+
     /** Extracts and returns the lines that were added. */
     def addedLines :Seq[Line] = buffer.lines.slice(offset, offset+added)
+    /** The number of lines that were deleted. */
+    def deleted :Int = deletedLines.size
+
+    /** Undoes this edit. */
+    override def undo () :Unit = buffer.undo(this)
   }
 }
 

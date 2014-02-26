@@ -17,7 +17,7 @@ import scaled._
   * removed) dynamically, but if our major mode is changed we throw everything out and create a new
   * dispatcher.
   */
-class KeyDispatcher (view :BufferView, mode :MajorMode) {
+class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
 
   class Metadata (mode :Mode) {
     val fns = new FnBindings(mode)
@@ -37,9 +37,11 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
       // look through our stack of keymaps and pick the first one that matches
       _metas.map(_.map.get(trigger)).collectFirst { case Some(fn) => fn } match {
         case Some(fn) =>
-          fn.invoke()
-          kev.consume()
           _insertNext = false
+          view.undoStack.actionWillStart()
+          fn.invoke() // TODO: pass log to fn for error reporting
+          view.undoStack.actionDidComplete()
+          kev.consume()
         case None =>
           // if they pressed a modified key (held ctrl/alt/meta and pressed a key) and we don't
           // have a mapping for it, issue a warning since they probably meant it to do something
@@ -57,12 +59,14 @@ class KeyDispatcher (view :BufferView, mode :MajorMode) {
       // if the KEY_PRESSED event that necessarily preceded this KEY_TYPED event indicated that
       // the key should be inserted into the buffer, do so (assuming the key maps to a char)
       if (_insertNext && kev.getCharacter != KeyEvent.CHAR_UNDEFINED) {
-        val p = view.point
+        view.undoStack.actionWillStart()
         // insert the typed character at the point
+        val p = view.point
         view.buffer.line(p).insert(p.col, kev.getCharacter)
         // move the point to the right by the appropriate amount
         view.point = p + (0, kev.getCharacter.length)
         // TODO: should the above be built-into BufferView?
+        view.undoStack.actionDidComplete()
       }
 
     case _ => // key released, don't care
