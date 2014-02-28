@@ -12,10 +12,10 @@ import scaled.{Line, RLine}
 object LineImpl {
 
   /** The number of extra characters padded onto an expanded line. */
-  private final val ExpandN = 32
+  final val ExpandN = 32
 
   /** An empty character array used for edits that delete no characters. */
-  private final val NoChars = Array[Char]()
+  final val NoChars = Array[Char]()
 }
 
 /** Implements [Line] and [RLine]. */
@@ -61,6 +61,7 @@ class LineImpl (
 
   override def length = _end
   override def charAt (pos :Int) = _chars(pos)
+  override def index = buffer.lines.indexOf(this)
   // TODO: document, handle, test boundary conditions? or just throw?
   override def slice (start :Int, until :Int) = _chars.slice(start, until)
   override def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)

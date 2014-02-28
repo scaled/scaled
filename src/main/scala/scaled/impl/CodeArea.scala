@@ -100,8 +100,6 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
   // this tracks the maximum line length in the buffer
   private val maxLenTracker = new Utils.MaxLengthTracker(bview.buffer)
 
-  // TODO:
-
   // contains the Text nodes for each line
   private val lineNodes = new Group()
   lineNodes.setManaged(false)
@@ -124,9 +122,13 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
   // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
   // (TODO: this seems error prone, is there a better way?)
   bview.buffer.lineEdited.onValue { change =>
-    // TODO: make this more efficient
-    if (bview.buffer.line(bview.point) == change.line && change.deleted > 0)
+    // the point may be temporarily invalid while edits are being undone, so NOOP in that case
+    // because the correct point will be restored after the undo is completed
+    val pointValid = bview.point.row < bview.buffer.lines.size
+    // TODO: make this more precise?
+    if (pointValid && bview.buffer.line(bview.point) == change.line && change.deleted > 0) {
       contentNode.updateCursor(bview.point)
+    }
   }
   // TODO: handle deletion of lines that include the point? that will probably result in the point
   // being moved, so maybe we don't need to worry about it

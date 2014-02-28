@@ -18,6 +18,9 @@ abstract class Line {
   /** Returns the character at `pos`. */
   def charAt (pos :Int) :Char
 
+  /** Returns this line's index in the buffer that contains it. Note: this is O(N). */
+  def index :Int
+
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
   def bound (col :Int) :Int = math.max(0, math.min(length, col))
@@ -46,6 +49,12 @@ abstract class Line {
     if (str.length == 1) insert(pos, str.charAt(0))
     else insert(pos, str.toCharArray)
   }
+
+  /** Appends `c` to the end of this line. */
+  def append (c :Char) = insert(length, c)
+
+  /** Appends `cs` to the end of this line. */
+  def append (cs :Array[Char]) = insert(length, cs)
 
   /** Deletes `length` characters starting at `pos`. */
   def delete (pos :Int, length :Int) :Unit
@@ -82,7 +91,9 @@ object Line {
     // remove the added characters and add the removed characters
     override def undo () = line.replace(offset, added, deletedChars)
 
-    override def toString = s"Edit[@$offset -${deletedChars.mkString} +${addedChars.mkString}]"
+    override def toString = s"LEdit[${line.index}@$offset " +
+                            s"-'${deletedChars.mkString}'/$deleted " +
+                            s"+'${addedChars.mkString}'/$added]"
   }
 }
 

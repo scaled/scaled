@@ -64,10 +64,10 @@ abstract class BufferView {
   /** The height of the buffer, in characters. */
   def height :Int
 
-  /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`] and its column
+  /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
     * bound into the line to which its row was bound. */
   def bound (loc :Loc) :Loc = {
-    if (loc.row >= lines.size) loc.at(lines.size, 0)
+    if (loc.row >= lines.size) loc.at(lines.size-1, lines.last.line.length)
     else if (loc.row < 0) Loc(0, buffer.lines(0).bound(loc.col))
     else buffer.lines(loc.row).bound(loc)
   }

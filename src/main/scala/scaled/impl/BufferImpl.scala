@@ -33,14 +33,15 @@ object BufferImpl {
       lines += line.toCharArray
       line = buffed.readLine()
     }
+    // TEMP: tack a blank line on the end to simulate a trailing line sep
+    lines += LineImpl.NoChars
     new BufferImpl(name, dir, lines)
   }
 
   /** Reads the contents of `file` into a buffer. */
   def fromFile (file :File) :BufferImpl = {
-    // TODO: rewrite all this to use a mmap'd file and scan for CR/LF ourselves and construct the
-    // lines directly from the mmap'd file data, which will reduce expense to one read to find
-    // CR/LF and one read to copy the data into one array per line
+    // TODO: use a CharSetDecoder and ByteBuffer + CharBuffer to read things ourselves, and track
+    // where and what the line separators are, and whether there's a trailing line sep
     val reader = new FileReader(file)
     try {
       apply(file.getName, file.getParentFile, reader)
@@ -83,9 +84,9 @@ class BufferImpl private (
   override def loc (offset :Int) = {
     assert(offset >= 0)
     def seek (off :Int, idx :Int) :Loc = {
-      // if we've spilled past the end of our buffer, trim offset to fit and return a location one
-      // line past the last line of our buffer; TODO: what if we don't force trailing newlines?
-      if (idx >= _lines.length) Loc(_lines.length, 0)
+      // if we've spilled past the end of our buffer, roll back to one character past the end of
+      // the last line in our buffer
+      if (idx >= _lines.length) Loc(_lines.length-1, _lines.last.length)
       else {
         val len = _lines(idx).length
         // TODO: this assumes a single character line terminator, what about \r\n?

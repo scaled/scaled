@@ -28,6 +28,11 @@ case class Loc (
     if (this.row == row && this.col == col) this else Loc(row, col)
 }
 
+/** [[Loc]] related utilities. */
+object Loc {
+  val Zero = Loc(0, 0)
+}
+
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.
   * Edits that precede the anchor cause it to shift forward or back appropriately. Edits after the
   * anchor do not cause movement. Deleting the text that includes the anchor causes it to move to
@@ -60,6 +65,11 @@ abstract class Buffer {
   /** Returns the line referenced by `loc`.
     * @throws ArrayIndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def line (loc :Loc) :Line = line(loc.row)
+
+  /** Returns the character at `loc`.
+    * @throws ArrayIndexOutOfBoundsException if `loc.row` is not a valid line index or `loc.col`
+    * is not a valid character index in that line. */
+  def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
 
   /** Returns the length of the line at `idx`, or zero if `idx` represents a line beyond the end of
     * the buffer or before its start. */
@@ -138,6 +148,8 @@ object Buffer {
 
     /** Undoes this edit. */
     override def undo () :Unit = buffer.undo(this)
+
+    override def toString = s"BEdit[@$offset, -${deletedLines.size} +$added"
   }
 }
 
