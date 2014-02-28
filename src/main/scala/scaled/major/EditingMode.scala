@@ -21,6 +21,8 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     "C-d"    -> "delete-forward-char",
     "ENTER"  -> "newline",
 
+    "C-t"    -> "transpose-chars",
+
     "C-/"    -> "undo",
     "C-\\"   -> "redo",
     "C-x r"  -> "redo",
@@ -87,8 +89,47 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     else buffer.line(del).delete(del.col, 1)
   }
 
+  @Fn("""Swaps the character at the point with the character preceding it, and moves the point
+         forward one character. If the point is at the start of a line, the character will be
+         'transposed' with the newline preceding it, effectively moving the character to the
+         previous line. If the point is past the end of a line, the character at the end of the
+         line will be transposed with the preceding character.""")
+  def transposeChars () {
+    // the passages below are a bit twisty, but it (mostly) mimics what emacs does
+    val p = view.point
+    val line = buffer.line(p)
+    // if the point is past the last char, act as if it's on the last char
+    val tp = if (line.length > 0 && p.col >= line.length) p.atCol(line.length-1) else p
+    // if we're at the start of the buffer, this command is meaningless
+    if (tp == Loc.Zero) view.emitStatus("Beginning of buffer.")
+    // if the point is in column zero...
+    else if (tp.col == 0) {
+      val prev = buffer.line(tp.row-1)
+      // transpose the first character of this line with the preceding line's separator (push our
+      // first character onto the end of the previous line)
+      if (line.length > 0) {
+        prev.append(line.charAt(0))
+        line.delete(0, 1)
+        // in this case we don't bump the point fwd because it's already "after" the moved char
+      }
+      // unless the current line has no characters, in which case we pull the last character of the
+      // previous line into this one
+      else if (prev.length > 0) {
+        line.insert(0, prev.charAt(prev.length-1))
+        prev.delete(prev.length-1, 1)
+        view.point = tp + (0, 1)
+      }
+      // unless the previous line is also an empty line, in which case we got nothing
+      else view.emitStatus("Nothing to transpose.")
+    }
+    else {
+      line.replace(tp.col-1, 2, Array(line.charAt(tp.col), line.charAt(tp.col-1)))
+      view.point = tp + (0, 1)
+    }
+  }
+
   @Fn("""Inserts a newline at the point.
-    Characters after the point on the current line wil be moved to a new line.""")
+         Characters after the point on the current line wil be moved to a new line.""")
   def newline () {
     buffer.split(view.point)
     view.point = Loc(view.point.row+1, 0)
@@ -127,7 +168,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   // TODO: add config: paragraph-ignore-whitespace and treat non-empty lines which contain only
   // whitespace as paragraph delimiters
   @Fn("""Moves to the next paragraph. Paragraphs are currently delimited by blank lines.
-    TODO: make this more emacs-like?""")
+         TODO: make this more emacs-like?""")
   def nextParagraph () {
     @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
       if (row >= buffer.lines.size) Loc(row, 0)
@@ -141,7 +182,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   }
 
   @Fn("""Moves to the previous paragraph. Paragraphs are currently delimited by blank lines.
-    TODO: make this more emacs-like?""")
+         TODO: make this more emacs-like?""")
   def previousParagraph () {
     @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
       if (row <= 0) Loc(0, 0)
