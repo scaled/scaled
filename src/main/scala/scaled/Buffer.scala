@@ -8,6 +8,8 @@ import java.io.File
 
 import reactual.{SignalV, ValueV}
 
+import scala.annotation.tailrec
+
 /** A location in a buffer. This is a very ephemeral class. Any change to its associated buffer
   * will result in the locations offsets becoming invalid. */
 case class Loc (
@@ -15,6 +17,10 @@ case class Loc (
   row :Int,
   /** The character offset into the line, aka the current column. */
   col :Int) {
+
+  /** Returns true if this loc is earlier in the buffer than `other` (i.e. less than it).
+    * Naturally both locs must refer to the same buffer. */
+  def < (other :Loc) = (row < other.row) || (row == other.row && col < other.col)
 
   /** Returns a loc adjusted by `deltaRow` rows and `deltaCol` columns. */
   def + (deltaRow :Int, deltaCol :Int) = at(row+deltaRow, col+deltaCol)
@@ -67,8 +73,7 @@ abstract class Buffer {
   def line (loc :Loc) :Line = line(loc.row)
 
   /** Returns the character at `loc`.
-    * @throws ArrayIndexOutOfBoundsException if `loc.row` is not a valid line index or `loc.col`
-    * is not a valid character index in that line. */
+    * @throws ArrayIndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
 
   /** Returns the length of the line at `idx`, or zero if `idx` represents a line beyond the end of
@@ -79,11 +84,36 @@ abstract class Buffer {
     * the buffer or before its start. */
   def lineLength (loc :Loc) :Int = lineLength(loc.row)
 
-  /** Returns the loc `count` characters forward of `loc`. */
-  def forward (loc :Loc, count :Int) :Loc = this.loc(offset(loc)+count) // TODO: optimize
+  /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
+    * exists for symmetry with [[end]]. */
+  def start :Loc = Loc.Zero
 
-  /** Returns the loc `count` characters backward of `loc`. */
-  def backward (loc :Loc, count :Int) :Loc = this.loc(offset(loc)-count) // TODO: optimize
+  /** Returns the position at the end of the buffer. This will be one character past the end of the
+    * last line in the buffer. */
+  def end :Loc = Loc(lines.size-1, lines.last.length)
+
+  /** Returns the loc `count` characters forward of `loc`, or [[end]] if we reach it first. */
+  def forward (loc :Loc, count :Int) :Loc = {
+    @tailrec def seek (row :Int, col :Int, remain :Int) :Loc = {
+      val lcol = col + remain
+      val llen = lines(row).length
+      if (llen >= lcol) Loc(row, lcol)
+      else if (row == lines.length-1) end
+      else seek(row+1, 0, lcol-llen-1) // -1 to account for line separator
+    }
+    seek(loc.row, loc.col, count)
+  }
+
+  /** Returns the loc `count` characters backward of `loc`, or [[start]] if we reach it first. */
+  def backward (loc :Loc, count :Int) :Loc = {
+    @tailrec def seek (row :Int, col :Int, remain :Int) :Loc = {
+      val lcol = col - remain
+      if (lcol >= 0) Loc(row, lcol)
+      else if (row == 0) start
+      else seek(row-1, line(row-1).length, remain-col-1) // -1 to account for line separator
+    }
+    seek(loc.row, loc.col, count)
+  }
 
   /** Returns a location for the specified character offset into the buffer. If `offset` is greater
     * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final

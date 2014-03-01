@@ -22,7 +22,7 @@ class BufferTest {
   def testBuffer (text :String) = BufferImpl("test", new File(""), new StringReader(text))
   @Test def testBasics () {
     val buffer = testBuffer(text)
-    assertEquals(4, buffer.lines.size)
+    assertEquals(5, buffer.lines.size)
   }
 
   @Test def testLoc () {
@@ -51,5 +51,23 @@ class BufferTest {
     buffer.join(1)
     buffer.join(1)
     assertEquals("Every good smelling boy deserves fudge.", buffer.line(1).asString)
+  }
+
+  @Test def testMotion () {
+    val buffer = testBuffer(text)
+    val (start, end) = (buffer.start, buffer.end)
+    val length = buffer.offset(end)
+    for (off <- 0 to length) {
+      val loc = buffer.loc(off)
+      assertEquals(s"$start + $off = $loc", loc, buffer.forward(start, off))
+      assertEquals(s"$loc - $off = $start", start, buffer.backward(loc, off))
+
+      val bloc = buffer.loc(length-off)
+      assertEquals(s"$end - $off = $bloc", bloc, buffer.backward(end, off))
+      assertEquals(s"$bloc + $off = $end", end, buffer.forward(bloc, off))
+    }
+    // check forward past end of buffer and back past start
+    assertEquals(end, buffer.forward(start, length+10))
+    assertEquals(start, buffer.backward(end, length+10))
   }
 }
