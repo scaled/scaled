@@ -60,7 +60,7 @@ class LineImpl (
   // from Line and RLine API
 
   override def length = _end
-  override def charAt (pos :Int) = _chars(pos)
+  override def charAt (pos :Int) = if (pos < _end) _chars(pos) else 0
   override def index = buffer.lines.indexOf(this)
   // TODO: document, handle, test boundary conditions? or just throw?
   override def slice (start :Int, until :Int) = _chars.slice(start, until)

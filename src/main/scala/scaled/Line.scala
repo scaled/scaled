@@ -15,7 +15,7 @@ abstract class Line {
   /** The length (in characters) of this line. */
   def length :Int
 
-  /** Returns the character at `pos`. */
+  /** Returns the character at `pos`. If `pos` is >= [[length]] line 0 is returned. */
   def charAt (pos :Int) :Char
 
   /** Returns this line's index in the buffer that contains it. Note: this is O(N). */
