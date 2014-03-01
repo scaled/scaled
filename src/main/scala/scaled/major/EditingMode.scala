@@ -15,34 +15,50 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
 
   private[this] val buffer = view.buffer
 
+  /** The syntax table in use for this mode. */
+  val syntax :SyntaxTable = createSyntaxTable()
+
+  /** Creates the syntax table used for this mode. Defaults to the default syntax table. A major mode
+    * with special syntax should override this method and return a customized syntax table. */
+  protected def createSyntaxTable () = new SyntaxTable()
+
   override def keymap = Seq(
-    "BS"     -> "delete-backward-char",
-    "DEL"    -> "delete-forward-char",
-    "C-d"    -> "delete-forward-char",
-    "ENTER"  -> "newline",
+    "BS"    -> "delete-backward-char",
+    "DEL"   -> "delete-forward-char",
+    "C-d"   -> "delete-forward-char",
+
+    "ENTER" -> "newline",
+    // TODO: open-line, split-line, ...
 
     "C-t"    -> "transpose-chars",
 
-    "C-/"    -> "undo",
-    "C-\\"   -> "redo",
-    "C-x r"  -> "redo",
-    "C-x u"  -> "undo",
-    "C-S--"  -> "undo", // TODO: make C-_ work
+    // undo commands
+    "C-/"   -> "undo",
+    "C-\\"  -> "redo",
+    "C-x r" -> "redo",
+    "C-x u" -> "undo",
+    "C-S--" -> "undo", // TODO: make C-_ work
 
-    "C-b"    -> "backward-char",
-    "C-f"    -> "forward-char",
-    "LEFT"   -> "backward-char",
-    "RIGHT"  -> "forward-char",
+    // motion commands
+    "C-b"   -> "backward-char",
+    "C-f"   -> "forward-char",
+    "LEFT"  -> "backward-char",
+    "RIGHT" -> "forward-char",
 
-    "C-a"    -> "move-beginning-of-line",
-    "C-e"    -> "move-end-of-line",
-    "HOME"   -> "move-beginning-of-line",
-    "END"    -> "move-end-of-line",
+    "M-b"     -> "backward-word",
+    "M-f"     -> "forward-word",
+    "C-LEFT"  -> "backward-word",
+    "C-RIGHT" -> "forward-word",
 
-    "C-p"    -> "previous-line",
-    "C-n"    -> "next-line",
-    "UP"     -> "previous-line",
-    "DOWN"   -> "next-line",
+    "C-a"  -> "move-beginning-of-line",
+    "C-e"  -> "move-end-of-line",
+    "HOME" -> "move-beginning-of-line",
+    "END"  -> "move-end-of-line",
+
+    "C-p"  -> "previous-line",
+    "C-n"  -> "next-line",
+    "UP"   -> "previous-line",
+    "DOWN" -> "next-line",
 
     "C-UP"   -> "previous-paragraph",
     "C-DOWN" -> "next-paragraph",
@@ -126,6 +142,32 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
       line.replace(tp.col-1, 2, Array(line.charAt(tp.col), line.charAt(tp.col-1)))
       view.point = tp + (0, 1)
     }
+  }
+
+  @Fn("Moves the point forward one word.")
+  def forwardWord () {
+    // move forward until we see a word char, then keep going until we see a non-word char and stop
+    val end = buffer.end
+    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = syntax(buffer.charAt(pos)) match {
+      case Syntax.Word => seek(buffer.forward(pos, 1), true)
+      case _           => if (seenWord || pos == end) pos else seek(buffer.forward(pos, 1), false)
+    }
+    view.point = seek(view.point, false)
+  }
+
+  @Fn("Moves the point backward one word.")
+  def backwardWord () {
+    // move backward until we see a word char, and then keep going until we see a non-word char and
+    // stop on the word char we saw just before
+    val start = buffer.start
+    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = if (pos == start) start else {
+      val ppos = buffer.backward(pos, 1)
+      syntax(buffer.charAt(ppos)) match {
+        case Syntax.Word => seek(ppos, true)
+        case _           => if (seenWord) pos else seek(ppos, false)
+      }
+    }
+    view.point = seek(view.point, false)
   }
 
   @Fn("""Inserts a newline at the point.
