@@ -72,7 +72,7 @@ object KeyPress {
     import KeyCode._
     Seq(
       // printing keys
-      SPACE     -> " ",
+      SPACE     -> "SPACE",
       COMMA     -> ",",
       MINUS     -> "-",
       PERIOD    -> ".",
