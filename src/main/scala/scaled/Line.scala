@@ -6,20 +6,15 @@ package scaled
 
 import reactual.SignalV
 
-// TODO: factor read-only API into LineView; provide LineView for deleted lines, because it is
-// dangerous and weird to allow those to be modified
-
-/** Models a single line of text in a buffer. Provides means to read and update said text. */
-abstract class Line {
+/** Provides the read-only API to a single line of text in a buffer. This is extended by [[Line]]
+  * which provides a means to mutate lines. */
+abstract class LineV {
 
   /** The length (in characters) of this line. */
   def length :Int
 
   /** Returns the character at `pos`. If `pos` is >= [[length]] line 0 is returned. */
   def charAt (pos :Int) :Char
-
-  /** Returns this line's index in the buffer that contains it. Note: this is O(N). */
-  def index :Int
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
@@ -33,6 +28,13 @@ abstract class Line {
 
   /** Returns `slice(start, until)` as a String (more efficiently). */
   def sliceString (start :Int, until :Int) :String
+}
+
+/** Provides the read-write API for a single line of text in a buffer. */
+abstract class Line extends LineV {
+
+  /** Returns this line's index in the buffer that contains it. Note: this is O(N). */
+  def index :Int
 
   /** Inserts the single character `c` into this line at `pos`. */
   def insert (pos :Int, c :Char) :Unit

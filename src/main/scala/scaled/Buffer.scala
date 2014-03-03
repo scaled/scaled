@@ -165,7 +165,7 @@ object Buffer {
     /** The offset (zero-based line number) in the buffer at which lines were replaced. */
     offset :Int,
     /** The lines that were deleted. */
-    deletedLines :Seq[Line],
+    deletedLines :Seq[LineV],
     /** The number of lines that were added. */
     added :Int,
     /** The buffer that was edited. */
