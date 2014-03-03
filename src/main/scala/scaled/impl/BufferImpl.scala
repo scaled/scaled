@@ -83,6 +83,17 @@ class BufferImpl private (
   override def line (idx :Int) :LineImpl = _lines(idx)
   override def line (loc :Loc) :LineImpl = line(loc.row)
 
+  override def region (start :Loc, until :Loc) = if (until < start) region(until, start) else {
+    if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
+    else {
+      val middle = lines.slice(start.row+1, until.row).map(_.copy)
+      val s = line(start)
+      s.slice(start.col) +=: middle
+      middle += line(until).slice(0, until.col)
+      middle.toSeq
+    }
+  }
+
   override def loc (offset :Int) = {
     assert(offset >= 0)
     def seek (off :Int, idx :Int) :Loc = {
@@ -108,6 +119,17 @@ class BufferImpl private (
   override def insert (idx :Int, lines :Seq[Array[Char]]) {
     _lines.insert(idx, lines.map(cs => new LineImpl(cs, this)) :_*)
     _edited.emit(Buffer.Edit(idx, BufferImpl.NoLines, lines.length, this))
+  }
+
+  override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
+    case 0 => // nada
+    case 1 =>
+      _lines(loc.row).insert(loc.col, region.head)
+    case _ =>
+      val tail = _lines(loc.row).split(loc.col)
+      _lines(loc.row).append(region.head)
+      _lines.insertAll(loc.row+1, region.drop(1).map(_.asInstanceOf[LineImpl].copy()))
+      _lines(loc.row+region.size-1).append(tail)
   }
 
   override def delete (idx :Int, count :Int) {

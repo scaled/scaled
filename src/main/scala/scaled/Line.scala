@@ -23,11 +23,19 @@ abstract class LineV {
   /** Bounds the supplied loc into this line by bounding its column via [[bound(Int)]]. */
   def bound (loc :Loc) :Loc = loc.atCol(bound(loc.col))
 
-  /** Extracts the slice of characters beginning at `start` and ending just before `until`. */
-  def slice (start :Int, until :Int) :Array[Char]
+  /** Extracts the specified region of this line into a new line.
+    * @param start the index of the first character to include in the slice.
+    * @param until one past the index of the last character to include in the slice. */
+  def slice (start :Int, until :Int = length) :Line
 
-  /** Returns `slice(start, until)` as a String (more efficiently). */
-  def sliceString (start :Int, until :Int) :String
+  /** Extracts the slice of characters beginning at `start` and ending just before `until`. */
+  def sliceChars (start :Int, until :Int = length) :Array[Char]
+
+  /** Returns `sliceChars(start, until)` as a String (more efficiently). */
+  def sliceString (start :Int, until :Int = length) :String
+
+  /** Returns the contents of this line as a string. */
+  def asString :String = sliceString(0, length)
 }
 
 /** Provides the read-write API for a single line of text in a buffer. */
@@ -38,13 +46,16 @@ abstract class Line extends LineV {
 
   /** Inserts the single character `c` into this line at `pos`. */
   def insert (pos :Int, c :Char) :Unit
-
   /** Inserts the characters `cs` into this line at `pos`. */
   def insert (pos :Int, cs :Array[Char]) :Unit = insert(pos, cs, 0, cs.length)
-
   /** Inserts the characters `cs` starting at `offset` and extending for `count` characters into this
     * line at `pos`. */
   def insert (pos :Int, cs :Array[Char], offset :Int, count :Int) :Unit
+
+  /** Inserts the contents of `line` into this line at `pos`. */
+  def insert (pos :Int, line :LineV) :Unit = insert(pos, line, 0, line.length)
+  /** Inserts the contents of `line` into this line at `pos`. */
+  def insert (pos :Int, line :LineV, offset :Int, count :Int) :Unit
 
   /** Inserts the string `str` into this line at `pos`. */
   def insert (pos :Int, str :String) {
@@ -52,11 +63,19 @@ abstract class Line extends LineV {
     else insert(pos, str.toCharArray)
   }
 
-  /** Appends `c` to the end of this line. */
+  /** Appends `c` to this line. */
   def append (c :Char) = insert(length, c)
-
-  /** Appends `cs` to the end of this line. */
+  /** Appends `cs` to this line. */
   def append (cs :Array[Char]) = insert(length, cs)
+  /** Appends `line` to this line. */
+  def append (line :LineV) :Unit = insert(length, line)
+
+  /** Prepends `c` to this line. */
+  def prepend (c :Char) = insert(0, c)
+  /** Prepends `cs` to this line. */
+  def prepend (cs :Array[Char]) = insert(0, cs)
+  /** Prepends `line` to this line. */
+  def prepend (line :LineV) :Unit = insert(0, line)
 
   /** Deletes `length` characters starting at `pos`. */
   def delete (pos :Int, length :Int) :Unit
@@ -84,7 +103,7 @@ object Line {
     /** Returns the `idx`th added character. */
     def addedChar (idx :Int) = line.charAt(offset+idx)
     /** Extracts and returns the characters that were inserted. */
-    def addedChars :Array[Char] = line.slice(offset, offset+added)
+    def addedChars :Array[Char] = line.sliceChars(offset, offset+added)
     /** Extracts and returns, as a string, the characters that were inserted. */
     def addedString :String = line.sliceString(offset, offset+added)
     /** The number of characters that were deleted. */

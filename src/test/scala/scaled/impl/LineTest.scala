@@ -33,7 +33,7 @@ class LineTest {
   @Test def slicing () {
     val buf = BufferImpl("test", new File(""), new StringReader(""))
     val line = new LineImpl("Every good boy deserves fudge.".toCharArray, buf)
-    assertTrue(Arrays.equals("good".toCharArray, line.slice(6, 6+4)))
+    assertTrue(Arrays.equals("good".toCharArray, line.sliceChars(6, 6+4)))
     assertEquals("good", line.sliceString(6, 6+4))
     // TODO: boundary conditions?
   }

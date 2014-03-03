@@ -95,6 +95,10 @@ abstract class Buffer {
     * the buffer or before its start. */
   def lineLength (loc :Loc) :Int = lineLength(loc.row)
 
+  /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
+    * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
+  def region (start :Loc, until :Loc) :Seq[LineV]
+
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
     * exists for symmetry with [[end]]. */
   def start :Loc = Loc.Zero
@@ -102,6 +106,14 @@ abstract class Buffer {
   /** Returns the position at the end of the buffer. This will be one character past the end of the
     * last line in the buffer. */
   def end :Loc = Loc(lines.size-1, lines.last.length)
+
+  /** Returns a location for the specified character offset into the buffer. If `offset` is greater
+    * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final
+    * character. */
+  def loc (offset :Int) :Loc
+
+  /** Returns the character offset into the buffer of `loc`. */
+  def offset (loc :Loc) :Int
 
   /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
     * bound into the line to which its row was bound. */
@@ -134,17 +146,6 @@ abstract class Buffer {
     seek(loc.row, loc.col, count)
   }
 
-  /** Returns a location for the specified character offset into the buffer. If `offset` is greater
-    * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final
-    * character. */
-  def loc (offset :Int) :Loc
-
-  /** Returns the character offset into the buffer of `loc`. */
-  def offset (loc :Loc) :Int
-
-  /** TEMP: Returns the "word" at the specified location. */
-  def wordAt (loc :Loc) :String = "TEMP"
-
   /** Inserts a single line at index `idx` with `text` as its contents. Note: `text` should not
     * contain newlines, the caller should split such text into separate lines and use the
     * multi-line `insert`. */
@@ -152,6 +153,12 @@ abstract class Buffer {
 
   /** Inserts multiple lines at index `idx`. */
   def insert (idx :Int, lines :Seq[Array[Char]]) :Unit
+
+  /** Inserts a region (generally obtained from [[region]]) into this buffer at `loc`. `loc.row` will
+    * be [[split]] at `loc.col` and the first line of the region will be appended to the newly
+    * split line at `loc.row`. The remaining lines will be inserted after that line and the second
+    * half of the split line will be appended to the final line of `region`. */
+  def insert (loc :Loc, region :Seq[LineV]) :Unit
 
   /** Deletes `count` lines starting at `idx`. */
   def delete (idx :Int, count :Int) :Unit

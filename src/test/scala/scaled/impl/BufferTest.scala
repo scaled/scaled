@@ -13,13 +13,14 @@ import scaled._
 
 class BufferTest {
 
-  val text = """Who was that man?
-    |Now is the time for all good citizens to come to the aid of their country.
-    |Every good boy deserves fudge.
-    |The quick brown fox jumped over the lazy dog.
-    |""".stripMargin
+  val WHO = "Who was that man?"
+  val NOW = "Now is the time for all good citizens to come to the aid of their country."
+  val EGBDF = "Every good boy deserves fudge."
+  val ABC = "The quick brown fox jumped over the lazy dog."
+  val text = s"$WHO\n$NOW\n$EGBDF\n$ABC\n"
 
   def testBuffer (text :String) = BufferImpl("test", new File(""), new StringReader(text))
+
   @Test def testBasics () {
     val buffer = testBuffer(text)
     assertEquals(5, buffer.lines.size)
@@ -33,8 +34,7 @@ class BufferTest {
     assertEquals(18, buffer.offset(Loc(1, 0)))
     assertEquals(Loc(1, 4), buffer.loc(22))
     assertEquals(22, buffer.offset(Loc(1, 4)))
-    // any offset greater than or equal to the buffer length should
-    // resolve to a new blank link at the end of the buffer
+    // any offset beyond the end of the buffer should resolve to the last valid buffer pos
     assertEquals(Loc(4, 0), buffer.loc(text.length))
     assertEquals(Loc(4, 0), buffer.loc(text.length+20))
   }
@@ -42,7 +42,7 @@ class BufferTest {
   @Test def testMutate () {
     val buffer = testBuffer(text)
     buffer.delete(1, 1)
-    assertTrue(buffer.line(1).asString.startsWith("Every good"))
+    assertEquals(EGBDF, buffer.line(1).asString)
     buffer.split(1, "Every good".length)
     // TODO: ensure that the proper events are emitted?
     assertEquals("Every good", buffer.line(1).asString)
@@ -69,5 +69,53 @@ class BufferTest {
     // check forward past end of buffer and back past start
     assertEquals(end, buffer.forward(start, length+10))
     assertEquals(start, buffer.backward(end, length+10))
+  }
+
+  @Test def testRegion () {
+    val buffer = testBuffer(text)
+
+    // slice out some regions and make sure they look sane
+    val r0 = buffer.region(Loc(0, 0), Loc(1, 0))
+    val r1 = buffer.region(Loc(0, 0), Loc(0, 3))
+    val r2 = buffer.region(Loc(0, 16), Loc(1, 6))
+    val r3 = buffer.region(Loc(0, 16), Loc(2, 5))
+
+    def checkregions () {
+      assertEquals(2, r0.length)
+      assertEquals(WHO, r0(0).asString)
+      assertEquals(0, r0(1).length)
+      assertEquals(1, r1.length)
+      assertEquals(WHO.substring(0, 3), r1(0).asString)
+      assertEquals(2, r2.length)
+      assertEquals(Seq(WHO.substring(16), NOW.substring(0, 6)), r2.map(_.asString))
+      assertEquals(3, r3.length)
+      assertEquals(Seq(WHO.substring(16), NOW, EGBDF.substring(0, 5)), r3.map(_.asString))
+    }
+    checkregions()
+
+    // mutate the buffer by inserting regions and make sure that looks reasonable
+    val i0size = buffer.lines.size + r0.size - 1
+    buffer.insert(Loc(1, 0), r0)
+    assertEquals(i0size, buffer.lines.size)
+    // we should now have two copies of the first line
+    assertEquals(Seq(WHO, WHO, NOW), buffer.lines.slice(0, 3).map(_.asString))
+
+    // try inserting a single line region
+    val rwas = buffer.region(Loc(0, 4), Loc(0, 8))
+    val rwassize = buffer.lines.size
+    buffer.insert(Loc(0, 4), rwas)
+    assertEquals(rwassize, buffer.lines.size)
+    assertEquals("Who was was that man?", buffer.line(0).asString)
+
+    // insert a ragged region and make sure the first and last lines are properly merged (the code
+    // path executed is the same as i0 above, but hey, writing test code is fun!)
+    val tbuffer = testBuffer(text)
+    val i3size = tbuffer.lines.size + r3.size - 1
+    tbuffer.insert(Loc(0, 16), r3)
+    assertEquals(i3size, tbuffer.lines.size)
+    assertEquals(Seq(WHO, NOW, "Every?", NOW), tbuffer.lines.slice(0, 4).map(_.asString))
+
+    // finally make sure the originally extracted regions didn't change out from under us
+    checkregions()
   }
 }

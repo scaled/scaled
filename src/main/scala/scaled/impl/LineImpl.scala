@@ -6,7 +6,7 @@ package scaled.impl
 
 import reactual.{Signal, SignalV}
 
-import scaled.{Line, RLine}
+import scaled._
 
 /** [LineImpl] related types and utilities. */
 object LineImpl {
@@ -35,9 +35,6 @@ class LineImpl (
     * efficiency. Be sure to use [length], not `chars.length`. */
   def chars :Array[Char] = _chars
 
-  /** Returns the contents of this line as a string. */
-  def asString :String = new String(_chars, 0, _end)
-
   /** Splits this line at `pos`. Deletes the data from `pos` onward from this line.
     * @return a new line which contains the data from `pos` onward. */
   def split (pos :Int) :LineImpl = {
@@ -54,6 +51,9 @@ class LineImpl (
     insert(_end, line.chars, 0, line.length)
   }
 
+  /** Duplicates this line. */
+  def copy () :LineImpl = new LineImpl(_chars.clone(), buffer) // TODO: attributes too
+
   override def toString () = s"$asString/${_end}/${_chars.length}"
 
   //
@@ -63,7 +63,8 @@ class LineImpl (
   override def charAt (pos :Int) = if (pos < _end) _chars(pos) else 0
   override def index = buffer.lines.indexOf(this)
   // TODO: document, handle, test boundary conditions? or just throw?
-  override def slice (start :Int, until :Int) = _chars.slice(start, until)
+  override def slice (start :Int, until :Int) = new LineImpl(_chars.slice(start, until), buffer)
+  override def sliceChars (start :Int, until :Int) = _chars.slice(start, until)
   override def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)
   override def edited = _edited
 
@@ -79,6 +80,11 @@ class LineImpl (
     System.arraycopy(cs, offset, _chars, pos, count)
     _end += count
     noteEdited(pos, LineImpl.NoChars, count)
+  }
+
+  override def insert (pos :Int, line :LineV, offset :Int, count :Int) {
+    // TODO: style info too!
+    insert(pos, line.asInstanceOf[LineImpl].chars, offset, count)
   }
 
   override def delete (pos :Int, length :Int) {
