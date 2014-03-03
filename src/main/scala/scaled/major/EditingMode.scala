@@ -23,14 +23,34 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   protected def createSyntaxTable () = new SyntaxTable()
 
   override def keymap = Seq(
-    "BS"    -> "delete-backward-char",
-    "DEL"   -> "delete-forward-char",
-    "C-d"   -> "delete-forward-char",
+    "BS"    -> "delete-backward-char", // TODO: make this delete back to mark (if set)
+    "DEL"   -> "delete-forward-char", // ...forward to mark (if set)
+    "C-d"   -> "delete-forward-char", // this should be delete-char and ignore mark
 
     "ENTER" -> "newline",
     // TODO: open-line, split-line, ...
 
     "C-t"    -> "transpose-chars",
+
+    // mark manipulation commands
+    "C-SPACE" -> "set-mark-command", // TODO: make this push-mark instead?
+    "C-@"     -> "set-mark-command",
+    "C-x C-x" -> "exchange-point-and-mark",
+
+    // killing and yanking commands
+    // "C-k"     -> "kill-line",
+    // "C-S-BS"  -> "kill-whole-line",
+    // "C-w"     -> "kill-region",
+    // "M-w"     -> "kill-ring-save", // do we care about copy-region-as-kill? make it an alias?
+    // "M-d"     -> "kill-word",
+    // "M-DEL"   -> "backward-kill-word", // also "C-BS"
+    // "M-z"     -> "zap-to-char",
+    // "M-k"     -> "kill-sentence", // do we want?
+    // "C-x DEL" -> "backward-kill-sentence", // do we want?
+    // "C-M-k"   -> "kill-balanced-sexp", // do we want?
+
+    // "C-y" -> "yank"
+    // "M-y" -> "yank-pop"
 
     // undo commands
     "C-/"   -> "undo",
@@ -175,6 +195,24 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   def newline () {
     buffer.split(view.point)
     view.point = Loc(view.point.row+1, 0)
+  }
+
+  @Fn("Sets the mark to the current point.")
+  def setMarkCommand () {
+    // TODO: push old mark onto local (buffer?) and global mark ring?
+    buffer.mark = view.point
+    view.emitStatus("Mark set.")
+  }
+
+  @Fn("Sets the mark to the current point and moves the point to the previous mark.")
+  def exchangePointAndMark () {
+    buffer.mark match {
+      case Some(m) =>
+        buffer.mark = view.point
+        view.point = m
+      case None =>
+        view.emitStatus("No mark set in this buffer.")
+    }
   }
 
   @Fn("Undoes the last change to the buffer.")
