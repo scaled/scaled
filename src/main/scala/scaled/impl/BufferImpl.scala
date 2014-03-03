@@ -64,16 +64,18 @@ class BufferImpl private (
   private val _lines = initLines.map(l => new LineImpl(l, this))
   private val _name = Value(initName)
   private val _dir = Value(initDir)
+  private val _mark = Value(None :Option[Loc])
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
 
   //
   // from Buffer and RBuffer API
 
-  override def name = nameV.get
   override def nameV = _name
-  override def dir = dirV.get
   override def dirV = _dir
+  override def markV = _mark
+  override def mark_= (loc :Loc) = _mark.update(Some(bound(loc)))
+  override def clearMark () = _mark.update(None)
   override def edited = _edited
   override def lineEdited = _lineEdited
   override def lines = _lines

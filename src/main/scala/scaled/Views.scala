@@ -46,31 +46,14 @@ abstract class BufferView {
   /** The current point (aka the cursor position). */
   def point :Loc
 
-  /** Updates the current point. The point will be [[bound]] into the buffer. */
+  /** Updates the current point. The point will be [[Buffer.bound]] into the buffer. */
   def point_= (loc :Loc) :Unit
-
-  /** The current mark, if any. */
-  def mark :Option[Loc]
-
-  /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
-  def mark_= (loc :Loc) :Unit
-
-  /** Clears the current mark. */
-  def clearMark () :Unit
 
   /** The width of the buffer, in characters. */
   def width :Int
 
   /** The height of the buffer, in characters. */
   def height :Int
-
-  /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
-    * bound into the line to which its row was bound. */
-  def bound (loc :Loc) :Loc = {
-    if (loc.row >= lines.size) loc.at(lines.size-1, lines.last.line.length)
-    else if (loc.row < 0) Loc(0, buffer.lines(0).bound(loc.col))
-    else buffer.lines(loc.row).bound(loc)
-  }
 
   /** Prompts the user to input a string via the minibuffer. */
   def minibufferRead (prompt :String, defval :String) :Future[String]
@@ -91,9 +74,6 @@ abstract class RBufferView extends BufferView {
 
   /** The current point (aka the cursor position). */
   def pointV :ValueV[Loc]
-
-  /** The current mark, if any. */
-  def markV :ValueV[Option[Loc]]
 
   /** The width of the buffer view, in characters. */
   val widthV :Value[Int] = Value(80) // TODO: get values from config
@@ -125,8 +105,6 @@ abstract class RBufferView extends BufferView {
 
   // implement some BufferView methods in terms of our reactive values
   override def point = pointV.get
-  override def mark = markV.get
-
   override def width = widthV.get
   override def height = heightV.get
 }

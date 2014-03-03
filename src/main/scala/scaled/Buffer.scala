@@ -50,6 +50,8 @@ trait Anchor {
   def loc :Loc
 }
 
+// TODO: factor read-only methods into BufferV?
+
 /** Manages a sequence of characters, providing a line-by-line view and the means to translate
   * between character offset and line offset plus (intra-line) character offset.
   */
@@ -60,6 +62,15 @@ abstract class Buffer {
 
   /** The directory from which this buffer was loaded, or to which it was most recently saved. */
   def dir :File
+
+  /** The current mark, if any. */
+  def mark :Option[Loc]
+
+  /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
+  def mark_= (loc :Loc) :Unit
+
+  /** Clears the current mark. */
+  def clearMark () :Unit
 
   /** A read-only view of the lines in this buffer. */
   def lines :Seq[Line]
@@ -91,6 +102,14 @@ abstract class Buffer {
   /** Returns the position at the end of the buffer. This will be one character past the end of the
     * last line in the buffer. */
   def end :Loc = Loc(lines.size-1, lines.last.length)
+
+  /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
+    * bound into the line to which its row was bound. */
+  def bound (loc :Loc) :Loc = {
+    if (loc.row >= lines.size) loc.at(lines.size-1, lines.last.length)
+    else if (loc.row < 0) Loc(0, lines(0).bound(loc.col))
+    else lines(loc.row).bound(loc)
+  }
 
   /** Returns the loc `count` characters forward of `loc`, or [[end]] if we reach it first. */
   def forward (loc :Loc, count :Int) :Loc = {
@@ -192,9 +211,17 @@ abstract class RBuffer extends Buffer {
   /** A reactive view of [dir]. */
   def dirV :ValueV[File]
 
+  /** The current mark, if any. */
+  def markV :ValueV[Option[Loc]]
+
   /** A signal emitted when this buffer is edited. */
   def edited :SignalV[Buffer.Edit]
 
   /** A signal emitted when any of this buffer's lines are edited. */
   def lineEdited :SignalV[Line.Edit]
+
+  // implement some Buffer methods in terms of our reactive values
+  override def name = nameV.get
+  override def dir = dirV.get
+  override def mark = markV.get
 }
