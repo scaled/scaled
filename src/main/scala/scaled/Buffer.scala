@@ -32,6 +32,15 @@ case class Loc (
     * the specified coordinates. Useful for bounding locations without superfluous allocation. */
   def at (row :Int, col :Int) =
     if (this.row == row && this.col == col) this else Loc(row, col)
+
+  /** Returns the loc directly to the left of this loc. */
+  def prevC = at(row, col-1)
+  /** Returns the loc directly to the right of this loc. */
+  def nextC = at(row, col+1)
+  /** Returns the loc directly above this loc. */
+  def prevL = at(row-1, col)
+  /** Returns the loc directly below this loc. */
+  def nextL = at(row+1, col)
 }
 
 /** [[Loc]] related utilities. */
@@ -50,12 +59,21 @@ trait Anchor {
   def loc :Loc
 }
 
-// TODO: factor read-only methods into BufferV?
-
 /** Manages a sequence of characters, providing a line-by-line view and the means to translate
-  * between character offset and line offset plus (intra-line) character offset.
+  * between character offset and line offset plus (intra-line) character offset. This isolates the
+  * read-only API, see [[Buffer]] for the mutable API and [[RBuffer]] for the reactive-mutable API.
+  *
+  * Note: there's only one implementation of buffers, but the API factorization exists to allow
+  * differing degrees of control to be exposed depending on the circumstances. If someone should
+  * not be allowed to mutate a buffer, they can be supplied with a `BufferV` reference. If they can
+  * mutate, but should not be allowed to register (possibly memory leak-inducing) reactive
+  * handlers, they can be supplied with a `Buffer` reference. If they should have all the games and
+  * all the puzzles, they get an `RBuffer` reference.
+  *
+  * For better and worse, the JVM allows you to downcast to the more powerful type. That's a bad
+  * idea. Don't do it. Consider yourself warned.
   */
-abstract class Buffer {
+abstract class BufferV {
 
   /** The name of this buffer. Tends to be the name of the file from which it was read. */
   def name :String
@@ -65,39 +83,6 @@ abstract class Buffer {
 
   /** The current mark, if any. */
   def mark :Option[Loc]
-
-  /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
-  def mark_= (loc :Loc) :Unit
-
-  /** Clears the current mark. */
-  def clearMark () :Unit
-
-  /** A read-only view of the lines in this buffer. */
-  def lines :Seq[Line]
-
-  /** Returns the `idx`th line. Indices are zero based.
-    * @throws ArrayIndexOutOfBoundsException if `idx` is not a valid line index. */
-  def line (idx :Int) :Line = lines(idx)
-
-  /** Returns the line referenced by `loc`.
-    * @throws ArrayIndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def line (loc :Loc) :Line = line(loc.row)
-
-  /** Returns the character at `loc`.
-    * @throws ArrayIndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
-
-  /** Returns the length of the line at `idx`, or zero if `idx` represents a line beyond the end of
-    * the buffer or before its start. */
-  def lineLength (idx :Int) :Int = if (idx < 0 || idx >= lines.length) 0 else lines(idx).length
-
-  /** Returns the length of the line at `loc`, or zero if `loc` represents a line beyond the end of
-    * the buffer or before its start. */
-  def lineLength (loc :Loc) :Int = lineLength(loc.row)
-
-  /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
-    * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
-  def region (start :Loc, until :Loc) :Seq[LineV]
 
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
     * exists for symmetry with [[end]]. */
@@ -114,6 +99,45 @@ abstract class Buffer {
 
   /** Returns the character offset into the buffer of `loc`. */
   def offset (loc :Loc) :Int
+
+  /** A read-only view of the lines in this buffer. */
+  def lines :Seq[LineV]
+
+  /** Returns the `idx`th line. Indices are zero based.
+    * @throws IndexOutOfBoundsException if `idx` is not a valid line index. */
+  def line (idx :Int) :LineV = lines(idx)
+
+  /** Returns the line referenced by `loc`.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def line (loc :Loc) :LineV = line(loc.row)
+
+  /** Returns the length of the line at `idx`, or zero if `idx` represents a line beyond the end of
+    * the buffer or before its start. */
+  def lineLength (idx :Int) :Int = if (idx < 0 || idx >= lines.length) 0 else lines(idx).length
+
+  /** Returns the length of the line at `loc`, or zero if `loc` represents a line beyond the end of
+    * the buffer or before its start. */
+  def lineLength (loc :Loc) :Int = lineLength(loc.row)
+
+  /** Returns the character at `loc`.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
+
+  /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
+    * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
+  def region (start :Loc, until :Loc) :Seq[Line]
+
+  /** Returns the start of the line at `row`. */
+  def start (row :Int) :Loc = Loc(row, 0)
+
+  /** Returns the start of the line at `loc.row`. */
+  def start (loc :Loc) :Loc = loc.atCol(0)
+
+  /** Returns the end of the line at `row`. */
+  def end (row :Int) :Loc = Loc(row, lineLength(row))
+
+  /** Returns the end of the line at `loc.row`. */
+  def end (loc :Loc) :Loc = loc.atCol(lineLength(loc.row))
 
   /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
     * bound into the line to which its row was bound. */
@@ -145,36 +169,63 @@ abstract class Buffer {
     }
     seek(loc.row, loc.col, count)
   }
+}
 
-  /** Inserts a single line at index `idx` with `text` as its contents. Note: `text` should not
-    * contain newlines, the caller should split such text into separate lines and use the
-    * multi-line `insert`. */
-  def insert (idx :Int, text :Array[Char]) :Unit = insert(idx, Array(text))
+/** Extends [[BufferV]] with a mutation API. See [[RBuffer]] for a further extension which provides
+  * the ability to register to react to changes.
+  */
+abstract class Buffer extends BufferV {
 
-  /** Inserts multiple lines at index `idx`. */
-  def insert (idx :Int, lines :Seq[Array[Char]]) :Unit
+  /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
+  def mark_= (loc :Loc) :Unit
+  /** Clears the current mark. */
+  def clearMark () :Unit
 
-  /** Inserts a region (generally obtained from [[region]]) into this buffer at `loc`. `loc.row` will
-    * be [[split]] at `loc.col` and the first line of the region will be appended to the newly
-    * split line at `loc.row`. The remaining lines will be inserted after that line and the second
-    * half of the split line will be appended to the final line of `region`. */
+  /** Inserts the single character `c` into this buffer at `loc`. */
+  def insert (loc :Loc, c :Char) :Unit
+
+  /** Inserts the raw string `s` into this buffer at `loc`. */
+  def insert (loc :Loc, s :String) {
+    if (s.length == 1) insert(loc, s.charAt(0))
+    else insert(loc, new Line(s))
+  }
+
+  /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
+    * into the line at `loc`, a new line will not be created. If you wish to create a new line,
+    * [[split]] at `loc` and then insert into the appropriate half. */
+  def insert (loc :Loc, line :LineV) :Unit
+
+  /** Inserts `region` into this buffer at `loc`. `region` will often have come from a call to
+    * [[region]] or [[delete(Loc,Loc)]].
+    *
+    * The lines will be spliced into the line at `loc` which is almost certainly what you want.
+    * This means the line at `loc` will be [[split]] in two, the first line in `region` will be
+    * appended to the first half of the split line, and the last line `region` will be prepended to
+    * the last half of the split line; the lines in between (if any) are inserted as is. If
+    * `region` is length 1 this has the same effect as [[insert(Loc,Line)]].
+    */
   def insert (loc :Loc, region :Seq[LineV]) :Unit
 
-  /** Deletes `count` lines starting at `idx`. */
-  def delete (idx :Int, count :Int) :Unit
+  /** Deletes `count` characters from the line at `loc`.
+    * @return the deleted chars as a line. */
+  def delete (loc :Loc, count :Int) :Line
+
+  /** Deletes the data between `[start, until)` from the buffer. Returns a copy of the deleted data.
+    * Note: the last line does not conceptually include a trailing newline, and [[insert(Region)]]
+    * takes this into account. */
+  def delete (start :Loc, until :Loc) :Seq[Line]
+
+  /** Replaces `delete` characters in the line at `loc` with the `line`.
+    * @return the replaced characters as a line. */
+  def replace (loc :Loc, delete :Int, line :Line) :Line
 
   /** Splits the line at `loc`. The characters up to `loc.col` will remain on the `loc.row`th line,
     * and the character at `loc.col` and all subsequent characters will be moved to a new line
     * which immediately follows the `loc.row`th line. */
-  def split (loc :Loc) :Unit = split(loc.row, loc.col)
+  def split (loc :Loc) :Unit
 
-  /** Splits the `idx`th line at character position `pos`. The characters up to `pos` will remain on
-    * the `idx`th line, and the character at `pos` and all subsequent characters will be moved to a
-    * new line which immediately follows the `idx`th line. */
-  def split (idx :Int, pos :Int) :Unit
-
-  /** Joins the `idx`th line with the line immediately following it. */
-  def join (idx :Int) :Unit
+  /** Joins the `row`th line with the line immediately following it. */
+  def join (row :Int) :Unit
 
   private[scaled] def undo (edit :Buffer.Edit) :Unit
 
@@ -191,14 +242,14 @@ object Buffer {
     /** The offset (zero-based line number) in the buffer at which lines were replaced. */
     offset :Int,
     /** The lines that were deleted. */
-    deletedLines :Seq[LineV],
+    deletedLines :Seq[Line],
     /** The number of lines that were added. */
     added :Int,
     /** The buffer that was edited. */
     buffer :Buffer) extends Undoable {
 
     /** Extracts and returns the lines that were added. */
-    def addedLines :Seq[Line] = buffer.lines.slice(offset, offset+added)
+    def addedLines :Seq[LineV] = buffer.lines.slice(offset, offset+added)
     /** The number of lines that were deleted. */
     def deleted :Int = deletedLines.size
 

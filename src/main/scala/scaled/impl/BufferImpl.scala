@@ -34,7 +34,7 @@ object BufferImpl {
       line = buffed.readLine()
     }
     // TEMP: tack a blank line on the end to simulate a trailing line sep
-    lines += LineImpl.NoChars
+    lines += MutableLine.NoChars
     new BufferImpl(name, dir, lines)
   }
 
@@ -61,7 +61,7 @@ class BufferImpl private (
   // TODO: character encoding
   // TODO: line endings
 
-  private val _lines = initLines.map(l => new LineImpl(l, this))
+  private val _lines = initLines.map(new MutableLine(this, _))
   private val _name = Value(initName)
   private val _dir = Value(initDir)
   private val _mark = Value(None :Option[Loc])
@@ -80,19 +80,8 @@ class BufferImpl private (
   override def lineEdited = _lineEdited
   override def lines = _lines
   // refine return type to ease life for internal friends
-  override def line (idx :Int) :LineImpl = _lines(idx)
-  override def line (loc :Loc) :LineImpl = line(loc.row)
-
-  override def region (start :Loc, until :Loc) = if (until < start) region(until, start) else {
-    if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
-    else {
-      val middle = lines.slice(start.row+1, until.row).map(_.copy)
-      val s = line(start)
-      s.slice(start.col) +=: middle
-      middle += line(until).slice(0, until.col)
-      middle.toSeq
-    }
-  }
+  override def line (idx :Int) :MutableLine = _lines(idx)
+  override def line (loc :Loc) :MutableLine = _lines(loc.row)
 
   override def loc (offset :Int) = {
     assert(offset >= 0)
@@ -116,56 +105,91 @@ class BufferImpl private (
     offset(loc.row-1, 0) + loc.col
   }
 
-  override def insert (idx :Int, lines :Seq[Array[Char]]) {
-    _lines.insert(idx, lines.map(cs => new LineImpl(cs, this)) :_*)
-    _edited.emit(Buffer.Edit(idx, BufferImpl.NoLines, lines.length, this))
+  override def region (start :Loc, until :Loc) = if (until < start) region(until, start) else {
+    if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
+    else {
+      val middle = lines.slice(start.row+1, until.row).map(_.slice(0))
+      val s = line(start)
+      s.slice(start.col) +=: middle
+      middle += _lines(until.row).slice(0, until.col)
+      middle.toSeq
+    }
   }
+
+  override def insert (loc :Loc, c :Char) = _lines(loc.row).insert(loc, c)
+  override def insert (loc :Loc, line :LineV) = _lines(loc.row).insert(loc, line)
 
   override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
     case 0 => // nada
     case 1 =>
-      _lines(loc.row).insert(loc.col, region.head)
+      line(loc).insert(loc, region.head)
+      // no new lines inserted, so no need to emit a buffer edit
     case _ =>
-      val tail = _lines(loc.row).split(loc.col)
-      _lines(loc.row).append(region.head)
-      _lines.insertAll(loc.row+1, region.drop(1).map(_.asInstanceOf[LineImpl].copy()))
-      _lines(loc.row+region.size-1).append(tail)
+      // split the first line in twain
+      val tail = line(loc).split(loc)
+      // merge the first half of the split line with the first line of the region
+      line(loc).append(loc, region.head)
+      // merge the last line of the region with the second half of the split line
+      tail.insertSilent(0, region.last, 0, region.last.length)
+      // finally add the middle lines (unmodified) and the merged last line into the buffer
+      val rest = region.slice(1, region.length-1).map(new MutableLine(this, _)) :+ tail
+      _lines.insertAll(loc.row+1, rest)
+      _edited.emit(Buffer.Edit(loc.row+1, BufferImpl.NoLines, rest.length, this))
   }
 
-  override def delete (idx :Int, count :Int) {
-    _edited.emit(Buffer.Edit(idx, deleteLines(idx, count), 0, this))
+  override def delete (loc :Loc, count :Int) = line(loc).delete(loc, count)
+
+  override def delete (start :Loc, until :Loc) = if (until < start) delete(until, start) else {
+    if (start.row == until.row) Seq(line(start).delete(start, until.col))
+    else {
+      val (fst, last) = (line(start), line(until))
+      // replace the deleted part of the first line with the retained part of the last line
+      val head = fst.replace(start, fst.length-start.col, last.slice(until.col))
+      // then delete all the intervening lines
+      val deleted = delete(start.row+1, until.row-start.row)
+      // truncate the last deleted line at the until column, otherwise we'd erroneously report the
+      // retained part of that line as part of the deleted region
+      deleted.dropRight(1) :+ deleted.last.slice(0, until.col)
+    }
   }
 
-  override def split (idx :Int, pos :Int) {
-    _lines.insert(idx+1, _lines(idx).split(pos))
-    _edited.emit(Buffer.Edit(idx+1, BufferImpl.NoLines, 1, this))
+  override def replace (loc :Loc, delete :Int, line :Line) =
+    _lines(loc.row).replace(loc, delete, line)
+
+  override def split (loc :Loc) {
+    _lines.insert(loc.row+1, line(loc).split(loc))
+    _edited.emit(Buffer.Edit(loc.row+1, BufferImpl.NoLines, 1, this))
   }
 
-  override def join (idx :Int) {
-    val suff = _lines(idx+1)
-    delete(idx+1, 1)
-    _lines(idx).append(suff)
+  override def join (row :Int) {
+    val suff = _lines(row+1)
+    val deleted = delete(row+1, 1)
+    _edited.emit(Buffer.Edit(row+1, deleted, 0, this))
+    line(row).append(Loc(row, 0), suff)
   }
 
   override private[scaled] def undo (edit :Buffer.Edit) {
     assert(edit.buffer == this)
-    val undoneLines = deleteLines(edit.offset, edit.added)
-    _lines.insert(edit.offset, edit.deletedLines.map(_.asInstanceOf[LineImpl]) :_*)
-    _edited.emit(Buffer.Edit(edit.offset, undoneLines, edit.deleted, this))
+    val undoneInserts = delete(edit.offset, edit.added)
+    _lines.insertAll(edit.offset, edit.deletedLines.map(new MutableLine(this, _)))
+    _edited.emit(Buffer.Edit(edit.offset, undoneInserts, edit.deleted, this))
   }
-
-  private def deleteLines (idx :Int, count :Int) :Seq[Line] =
-    if (count == 0) BufferImpl.NoLines
-    else {
-      val deleted = _lines.slice(idx, idx+count)
-      _lines.remove(idx, count)
-      deleted
-    }
 
   //
   // impl details
 
-  private[impl] def noteEdited (edit :Line.Edit) = _lineEdited.emit(edit)
+  private def delete (row :Int, count :Int) :Seq[Line] =
+    if (count == 0) BufferImpl.NoLines
+    else {
+      val deleted = _lines.slice(row, row+count)
+      _lines.remove(row, count)
+      // TODO: variant of slice that relinquishes the char array instead of copying it; since we're
+      // giving up these lines their data can be bequeathed to immutable lines
+      deleted.map(_.slice(0))
+    }
+
+  private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) =
+    _lineEdited.emit(Line.Edit(loc, deleted, added, this))
 
   private val lineSep = "\n" // TODO
 

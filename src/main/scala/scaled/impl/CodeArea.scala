@@ -119,14 +119,21 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
   cursor.getChildren.addAll(cursorBlock, cursorText)
   // move the cursor when the point is updated
   bview.pointV onValue contentNode.updateCursor
-  // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
-  // (TODO: this seems error prone, is there a better way?)
+  // react to line edits by updating our views
   bview.buffer.lineEdited.onValue { change =>
+    // refresh the line that was edited (TODO: something more efficient?)
+    val text = change.buffer.line(change.loc).asString
+    assert(!text.contains('\r') && !text.contains('\n'))
+    bview.lines(change.loc.row).node.setText(text)
+
+    // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
+    // (TODO: this seems error prone, is there a better way?)
+
     // the point may be temporarily invalid while edits are being undone, so NOOP in that case
     // because the correct point will be restored after the undo is completed
     val pointValid = bview.point.row < bview.buffer.lines.size
     // TODO: make this more precise?
-    if (pointValid && bview.buffer.line(bview.point) == change.line && change.deleted > 0) {
+    if (pointValid && bview.point.row == change.loc.row && change.deleted > 0) {
       contentNode.updateCursor(bview.point)
     }
   }

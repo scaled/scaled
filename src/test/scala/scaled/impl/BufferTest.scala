@@ -41,14 +41,14 @@ class BufferTest {
 
   @Test def testMutate () {
     val buffer = testBuffer(text)
-    buffer.delete(1, 1)
+    buffer.delete(Loc(1, 0), Loc(2, 0))
     assertEquals(EGBDF, buffer.line(1).asString)
-    buffer.split(1, "Every good".length)
+    val sp = Loc(1, "Every good".length)
+    buffer.split(sp)
     // TODO: ensure that the proper events are emitted?
     assertEquals("Every good", buffer.line(1).asString)
     assertEquals(" boy deserves fudge.", buffer.line(2).asString)
-    buffer.insert(2, " smelling".toCharArray)
-    buffer.join(1)
+    buffer.insert(buffer.end(sp), new Line(" smelling"))
     buffer.join(1)
     assertEquals("Every good smelling boy deserves fudge.", buffer.line(1).asString)
   }

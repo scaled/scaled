@@ -7,9 +7,9 @@ package scaled.impl
 import javafx.geometry.VPos
 import javafx.scene.text.Text
 
-import scaled.RLineView
+import scaled._
 
-class LineViewImpl (_line :LineImpl) extends RLineView {
+class LineViewImpl (_line :LineV) extends LineView {
 
   override def line = _line
 
@@ -20,11 +20,4 @@ class LineViewImpl (_line :LineImpl) extends RLineView {
   // node.fontProperty.bind(ctrl.fontProperty)
   // node.fillProperty.bind(textFill)
   // node.impl_selectionFillProperty().bind(highlightTextFill)
-
-  _line.edited.onValue { change =>
-    // TODO: something more efficient?
-    val text = line.asString
-    assert(!text.contains('\r') && !text.contains('\n'))
-    node.setText(text)
-  }
 }

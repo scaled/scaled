@@ -62,7 +62,7 @@ class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
         view.undoStack.actionWillStart()
         // insert the typed character at the point
         val p = view.point
-        view.buffer.line(p).insert(p.col, kev.getCharacter)
+        view.buffer.insert(p, kev.getCharacter)
         // move the point to the right by the appropriate amount
         view.point = p + (0, kev.getCharacter.length)
         // TODO: should the above be built-into BufferView?

@@ -6,8 +6,13 @@ package scaled
 
 import reactual.SignalV
 
-/** Provides the read-only API to a single line of text in a buffer. This is extended by [[Line]]
-  * which provides a means to mutate lines. */
+/** Models a single line of text, which may or may not be part of a buffer.
+  *
+  * Lines may be created externally from character or string data or they may be obtained as part
+  * of a buffer. In the former case they are immutable and will have type [[Line]], in the latter
+  * case they are a view on mutable data and have type [[LineV]]. Do not retain a reference to a
+  * [[LineV]] as it may change after you relinquish control of the editor thread.
+  */
 abstract class LineV {
 
   /** The length (in characters) of this line. */
@@ -23,104 +28,70 @@ abstract class LineV {
   /** Bounds the supplied loc into this line by bounding its column via [[bound(Int)]]. */
   def bound (loc :Loc) :Loc = loc.atCol(bound(loc.col))
 
+  /** Returns a view of the specified slice of this line. */
+  def view (start :Int, until :Int = length) :LineV
+
   /** Extracts the specified region of this line into a new line.
     * @param start the index of the first character to include in the slice.
     * @param until one past the index of the last character to include in the slice. */
   def slice (start :Int, until :Int = length) :Line
 
-  /** Extracts the slice of characters beginning at `start` and ending just before `until`. */
-  def sliceChars (start :Int, until :Int = length) :Array[Char]
-
-  /** Returns `sliceChars(start, until)` as a String (more efficiently). */
-  def sliceString (start :Int, until :Int = length) :String
+  /** Copies `[start, until)` from this line into `cs` at `offset`. */
+  def sliceInto (start :Int, until :Int, cs :Array[Char], offset :Int) :Unit
 
   /** Returns the contents of this line as a string. */
-  def asString :String = sliceString(0, length)
+  def asString :String
 }
 
-/** Provides the read-write API for a single line of text in a buffer. */
-abstract class Line extends LineV {
+/** Models a single immutable line of text that is not associated with a buffer.
+  *
+  * The constructor takes ownership of `cs`. Do not mutate it after using it to create a `Line`.
+  * Pass `cs.clone` if the caller needs to retain the ability to mutate the array.
+  */
+class Line (_cs :Array[Char], _offset :Int, val length :Int) extends LineV {
+  def this (cs :Array[Char]) = this(cs, 0, cs.length)
+  def this (s :String) = this(s.toCharArray)
+  // TODO: style info
 
-  /** Returns this line's index in the buffer that contains it. Note: this is O(N). */
-  def index :Int
-
-  /** Inserts the single character `c` into this line at `pos`. */
-  def insert (pos :Int, c :Char) :Unit
-  /** Inserts the characters `cs` into this line at `pos`. */
-  def insert (pos :Int, cs :Array[Char]) :Unit = insert(pos, cs, 0, cs.length)
-  /** Inserts the characters `cs` starting at `offset` and extending for `count` characters into this
-    * line at `pos`. */
-  def insert (pos :Int, cs :Array[Char], offset :Int, count :Int) :Unit
-
-  /** Inserts the contents of `line` into this line at `pos`. */
-  def insert (pos :Int, line :LineV) :Unit = insert(pos, line, 0, line.length)
-  /** Inserts the contents of `line` into this line at `pos`. */
-  def insert (pos :Int, line :LineV, offset :Int, count :Int) :Unit
-
-  /** Inserts the string `str` into this line at `pos`. */
-  def insert (pos :Int, str :String) {
-    if (str.length == 1) insert(pos, str.charAt(0))
-    else insert(pos, str.toCharArray)
+  override def charAt (pos :Int) = if (pos < length) _cs(pos+_offset) else 0
+  override def view (start :Int, until :Int) =
+    if (start == 0 && until == length) this else slice(start, until)
+  override def slice (start :Int, until :Int) = new Line(_cs, _offset+start, until-start)
+  override def sliceInto (start :Int, until :Int, cs :Array[Char], offset :Int) {
+    System.arraycopy(_cs, _offset+start, cs, offset, until-start)
   }
-
-  /** Appends `c` to this line. */
-  def append (c :Char) = insert(length, c)
-  /** Appends `cs` to this line. */
-  def append (cs :Array[Char]) = insert(length, cs)
-  /** Appends `line` to this line. */
-  def append (line :LineV) :Unit = insert(length, line)
-
-  /** Prepends `c` to this line. */
-  def prepend (c :Char) = insert(0, c)
-  /** Prepends `cs` to this line. */
-  def prepend (cs :Array[Char]) = insert(0, cs)
-  /** Prepends `line` to this line. */
-  def prepend (line :LineV) :Unit = insert(0, line)
-
-  /** Deletes `length` characters starting at `pos`. */
-  def delete (pos :Int, length :Int) :Unit
-
-  /** Replaces `delete` characters starting at `pos` with the characters in `cs`. */
-  def replace (pos :Int, delete :Int, cs :Array[Char]) :Unit
+  override def asString :String = new String(_cs, _offset, length)
 }
 
 /** `Line` related types and utilities. */
 object Line {
 
   /** An event emitted when one or more characters are deleted from a line and replaced by one or
-    * more characters. The removed characters will have already been removed and the added
-    * characters added when this edit is dispatched. */
+    * more characters. The change will already have been applied when this event is dispatched. */
   case class Edit (
-    /** The offset into `line.chars` at which the characters were replaced. */
-    offset :Int,
-    /** The characters that were deleted. */
-    deletedChars :Array[Char],
+    /** The location in the buffer at which the edited line resides (`row`) and the offset into that
+      * line at which characters were replaced (`col`). */
+    loc :Loc,
+    /** The characters that were deleted, as a line. */
+    deletedLine :Line,
     /** The number of characters that were added. */
     added :Int,
-    /** The line that was edited. */
-    line :Line) extends Undoable {
+    /** The buffer that contains the line that was edited. */
+    buffer :Buffer) extends Undoable {
 
     /** Returns the `idx`th added character. */
-    def addedChar (idx :Int) = line.charAt(offset+idx)
-    /** Extracts and returns the characters that were inserted. */
-    def addedChars :Array[Char] = line.sliceChars(offset, offset+added)
-    /** Extracts and returns, as a string, the characters that were inserted. */
-    def addedString :String = line.sliceString(offset, offset+added)
+    def addedChar (idx :Int) = buffer.line(loc).charAt(loc.col+idx)
+    /** The characters that were added as a line view. */
+    def addedLine :LineV = buffer.line(loc).view(loc.col, added)
     /** The number of characters that were deleted. */
-    def deleted = deletedChars.length
+    def deleted = deletedLine.length
 
     // remove the added characters and add the removed characters
-    override def undo () = line.replace(offset, added, deletedChars)
+    override def undo () = buffer.replace(loc, added, deletedLine)
 
-    override def toString = s"LEdit[${line.index}@$offset " +
-                            s"-'${deletedChars.mkString}'/$deleted " +
-                            s"+'${addedChars.mkString}'/$added]"
+    override def toString = s"LEdit[$loc -'$deletedLine +'$addedLine]"
   }
-}
 
-/** The reactive version of [Line]. */
-abstract class RLine extends Line {
-
-  /** A signal dispatched when this line is edited. */
-  def edited :SignalV[Line.Edit]
+  /** An empty line. */
+  final val Empty = new Line(Array[Char]())
 }

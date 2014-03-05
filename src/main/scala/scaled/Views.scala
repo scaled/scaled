@@ -10,17 +10,10 @@ import reactual.{Future, Value, ValueV}
 abstract class LineView {
 
   /** The line being displayed by this view. */
-  def line :Line
+  def line :LineV
 
   // TODO: style runs, margin decorations
   // TOOD: access to the JavaFX scene graph Node on which to anchor bits?
-}
-
-/** A reactive version of [LineView], used by modes. */
-abstract class RLineView extends LineView {
-
-  /** The line being displayed by this view, as a reactive value. */
-  override def line :RLine
 }
 
 /** The visualization of a text buffer. It also manages the UX for manipulating and editing the
@@ -68,9 +61,6 @@ abstract class RBufferView extends BufferView {
 
   /** The (reactive) buffer being displayed by this view. */
   override def buffer :RBuffer
-
-  /** Reactive views for the lines in this buffer. */
-  override def lines :Seq[RLineView]
 
   /** The current point (aka the cursor position). */
   def pointV :ValueV[Loc]

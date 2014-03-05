@@ -113,7 +113,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     else {
       view.point = prev // move the point back one space
       if (vp.col == 0) buffer.join(prev.row) // join the previous line to this one
-      else buffer.line(prev).delete(prev.col, 1) // delete the previous character
+      else buffer.delete(prev, 1) // delete the previous character
     }
   }
 
@@ -122,7 +122,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     val del = view.point
     if (del.row >= buffer.lines.size) view.emitStatus("End of buffer.")
     else if (buffer.lineLength(del) == del.col) buffer.join(del.row)
-    else buffer.line(del).delete(del.col, 1)
+    else buffer.delete(del, 1)
   }
 
   @Fn("""Swaps the character at the point with the character preceding it, and moves the point
@@ -133,34 +133,39 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
   def transposeChars () {
     // the passages below are a bit twisty, but it (mostly) mimics what emacs does
     val p = view.point
-    val line = buffer.line(p)
+    val lineLen = buffer.lineLength(p)
     // if the point is past the last char, act as if it's on the last char
-    val tp = if (line.length > 0 && p.col >= line.length) p.atCol(line.length-1) else p
+    val tp = if (lineLen > 0 && p.col >= lineLen) p.atCol(lineLen-1) else p
     // if we're at the start of the buffer, this command is meaningless
     if (tp == Loc.Zero) view.emitStatus("Beginning of buffer.")
     // if the point is in column zero...
     else if (tp.col == 0) {
-      val prev = buffer.line(tp.row-1)
+      val prev = tp.row - 1
       // transpose the first character of this line with the preceding line's separator (push our
       // first character onto the end of the previous line)
-      if (line.length > 0) {
-        prev.append(line.charAt(0))
-        line.delete(0, 1)
+      if (lineLen > 0) {
+        val p0 = buffer.start(p)
+        buffer.insert(buffer.end(prev), buffer.charAt(p0))
+        buffer.delete(p0, 1)
         // in this case we don't bump the point fwd because it's already "after" the moved char
       }
-      // unless the current line has no characters, in which case we pull the last character of the
-      // previous line into this one
-      else if (prev.length > 0) {
-        line.insert(0, prev.charAt(prev.length-1))
-        prev.delete(prev.length-1, 1)
-        view.point = tp + (0, 1)
+      // unless the current line has no characters...
+      else buffer.lineLength(prev) match {
+        // if the previous line is also an empty line, we got nothing
+        case 0 =>  view.emitStatus("Nothing to transpose.")
+        // otherwise pull the last character of the previous line into this one
+        case len =>
+          val last = Loc(prev, len-1)
+          buffer.insert(buffer.start(p), buffer.charAt(last))
+          buffer.delete(last, 1)
+          view.point = tp.nextC
       }
-      // unless the previous line is also an empty line, in which case we got nothing
-      else view.emitStatus("Nothing to transpose.")
     }
+    // otherwise we have a normal transpose: swap the char under the point with the prev char
     else {
-      line.replace(tp.col-1, 2, Array(line.charAt(tp.col), line.charAt(tp.col-1)))
-      view.point = tp + (0, 1)
+      val swap = tp.prevC
+      buffer.replace(swap, 2, new Line(Array(buffer.charAt(tp), buffer.charAt(swap))))
+      view.point = tp.nextC
     }
   }
 
@@ -231,7 +236,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
     // means not bounding the column, but instead coping with a current column that is beyond
     // the end of the current line (will that be a pandora's box?)
-    view.point = old + (1, 0)
+    view.point = old.nextL
     if (old == view.point) view.emitStatus("End of buffer.") // TODO: with beep?
   }
 
@@ -241,7 +246,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
     // means not bounding the column, but instead coping with a current column that is beyond
     // the end of the current line (will that be a pandora's box?)
-    view.point = old + (-1, 0)
+    view.point = old.prevL
     if (old == view.point) view.emitStatus("Beginning of buffer.") // TODO: with beep?
   }
 
