@@ -11,7 +11,7 @@ import org.junit.Assert._
 
 import scaled._
 
-class BufferTest {
+object BufferTest {
 
   val WHO = "Who was that man?"
   val NOW = "Now is the time for all good citizens to come to the aid of their country."
@@ -20,6 +20,11 @@ class BufferTest {
   val text = s"$WHO\n$NOW\n$EGBDF\n$ABC\n"
 
   def testBuffer (text :String) = BufferImpl("test", new File(""), new StringReader(text))
+  def testBuffer () :BufferImpl = testBuffer(text)
+}
+
+class BufferTest {
+  import BufferTest._
 
   @Test def testBasics () {
     val buffer = testBuffer(text)
