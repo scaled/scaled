@@ -11,15 +11,23 @@ import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.stage.Stage
 
+import scaled.Editor
+
 class Main extends Application {
+
+  val editor = new Editor {
+    override val killRing = new KillRingImpl(40) // TODO: get size from config
+    override def showURL (url :String) = getHostServices.showDocument(url)
+    override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
+  }
 
   override def start (stage :Stage) {
     // TODO: open a pane/tab for each file passed on the command line
     val buff = BufferImpl.fromFile(new File(getParameters.getRaw.get(0)))
-    val editor = new EditorPane(buff)
+    val epane = new EditorPane(editor, buff)
 
     // TODO: get stage size from config
-    val scene = new Scene(editor)
+    val scene = new Scene(epane)
     // TODO: how to support themes, etc.?
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     stage.setScene(scene)

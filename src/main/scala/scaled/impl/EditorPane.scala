@@ -20,12 +20,12 @@ import scaled.major.TextMode
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (_buffer :BufferImpl) extends BorderPane {
+class EditorPane (editor :Editor, _buffer :BufferImpl) extends BorderPane {
 
   val bview = new BufferViewImpl(_buffer)
 
   // TODO: determine the proper mode based on user customizable mechanism
-  val mode = new TextMode(bview)
+  val mode = new TextMode(editor, bview)
 
   val disp = new KeyDispatcher(bview, mode)
 

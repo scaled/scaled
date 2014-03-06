@@ -11,7 +11,7 @@ import scaled._
 /** A base class for all modes that support interactive text editing. This mode defines all of the
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
-abstract class EditingMode (view :RBufferView) extends MajorMode {
+abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode {
 
   private[this] val buffer = view.buffer
 
@@ -40,7 +40,7 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     // killing and yanking commands
     // "C-k"     -> "kill-line",
     // "C-S-BS"  -> "kill-whole-line",
-    // "C-w"     -> "kill-region",
+    "C-w"     -> "kill-region",
     // "M-w"     -> "kill-ring-save", // do we care about copy-region-as-kill? make it an alias?
     // "M-d"     -> "kill-word",
     // "M-DEL"   -> "backward-kill-word", // also "C-BS"
@@ -49,8 +49,8 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     // "C-x DEL" -> "backward-kill-sentence", // do we want?
     // "C-M-k"   -> "kill-balanced-sexp", // do we want?
 
-    // "C-y" -> "yank"
-    // "M-y" -> "yank-pop"
+    "C-y" -> "yank",
+    // "M-y" -> "yank-pop",
 
     // undo commands
     "C-/"   -> "undo",
@@ -89,21 +89,9 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
     "C-v"    -> "scroll-down-page"
   )
 
-  @Fn("Moves the point forward one character.")
-  def forwardChar () {
-    val old = view.point
-    // if we're at the end of the current line, move to the next line
-    view.point = buffer.forward(old, 1)
-    // if the point didn't change, that means we tried to move past the end of the buffer
-    if (old == view.point) view.emitStatus("End of buffer.")
-  }
-
-  @Fn("Moves the point backward one character.")
-  def backwardChar () {
-    val old = view.point
-    view.point = buffer.backward(old, 1)
-    if (old == view.point) view.emitStatus("Beginning of buffer.")
-  }
+  //
+  // CHARACTER EDITING
+  //
 
   @Fn("Deletes the character immediately previous to the point.")
   def deleteBackwardChar () {
@@ -167,6 +155,61 @@ abstract class EditingMode (view :RBufferView) extends MajorMode {
       buffer.replace(swap, 2, new Line(Array(buffer.charAt(tp), buffer.charAt(swap))))
       view.point = tp.nextC
     }
+  }
+
+  //
+  // KILLING AND YANKING
+  //
+
+  @Fn("""Kills the text between the point and the mark. This deletes the text from the buffer and
+         saves it in the kill ring.""")
+  def killRegion () {
+    buffer.mark match {
+      case None => view.emitStatus("The mark is not set now, so there is no region.")
+      case Some(mp) =>
+        val vp = view.point
+        // move the point and mark to whichever loc was earlier in the buffer
+        val np = view.point lesser mp
+        view.point = np
+        buffer.mark = np
+        val killed = buffer.delete(vp, mp)
+        println(s"Killed $killed ($vp $mp)")
+        editor.killRing add killed
+    }
+  }
+
+  @Fn("""Reinserts the most recently killed text. The point is placed at the end of the yanked
+         text, and the mark is set at its beginning.""")
+  def yank () {
+    editor.killRing.entry(0) match {
+      case None         => view.emitStatus("Kill ring is empty.")
+      case Some(region) =>
+        val ins = view.point
+        val end = buffer.insert(ins, region)
+        println(s"Inserted $region ($ins $end)")
+        buffer.mark = ins
+        view.point = end
+    }
+  }
+
+  //
+  // MOTION COMMANDS
+  //
+
+  @Fn("Moves the point forward one character.")
+  def forwardChar () {
+    val old = view.point
+    // if we're at the end of the current line, move to the next line
+    view.point = buffer.forward(old, 1)
+    // if the point didn't change, that means we tried to move past the end of the buffer
+    if (old == view.point) view.emitStatus("End of buffer.")
+  }
+
+  @Fn("Moves the point backward one character.")
+  def backwardChar () {
+    val old = view.point
+    view.point = buffer.backward(old, 1)
+    if (old == view.point) view.emitStatus("Beginning of buffer.")
   }
 
   @Fn("Moves the point forward one word.")

@@ -121,6 +121,7 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
   bview.pointV onValue contentNode.updateCursor
   // react to line edits by updating our views
   bview.buffer.lineEdited.onValue { change =>
+    // println(s"Chars @${change.loc} +${change.added} -${change.deleted}")
     // refresh the line that was edited (TODO: something more efficient?)
     val text = change.buffer.line(change.loc).asString
     assert(!text.contains('\r') && !text.contains('\n'))
@@ -195,7 +196,9 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
       if (point.row < scrollTop || point.row >= scrollTop + height)
         bview.scrollTopV.update(math.min(scrollMax, math.max(0, point.row - height/2)))
       // TODO: same for horizontal scrolling?
-      // println(s"Cursor at ${point.col} x ${point.row} => ${cursor.getLayoutX} x ${cursor.getLayoutY}")
+
+      // println(s"Cursor at ${point.col} x ${point.row} => " +
+      //         s"${cursor.getLayoutX} x ${cursor.getLayoutY}")
     }
 
     // make this visible
@@ -253,6 +256,7 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
 
   // listen for addition and removal of lines
   bview.buffer.edited.onValue { change =>
+    // println(s"Lines @${change.offset} +${change.added} -${change.deleted}")
     if (change.deleted > 0) {
       lineNodes.getChildren.remove(change.offset, change.offset+change.deleted)
       // TODO: let these nodes know they've been removed so they can cleanup?
