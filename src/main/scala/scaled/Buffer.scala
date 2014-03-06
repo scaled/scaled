@@ -22,6 +22,9 @@ case class Loc (
     * Naturally both locs must refer to the same buffer. */
   def < (other :Loc) = (row < other.row) || (row == other.row && col < other.col)
 
+  /** Returns the lesser (earlier in the buffer) of `this` and `other`. */
+  def lesser (other :Loc) = if (this < other) this else other
+
   /** Returns a loc adjusted by `deltaRow` rows and `deltaCol` columns. */
   def + (deltaRow :Int, deltaCol :Int) = at(row+deltaRow, col+deltaCol)
   /** Returns a loc on row `row` at this loc's column. */
@@ -192,8 +195,10 @@ abstract class Buffer extends BufferV {
 
   /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
     * into the line at `loc`, a new line will not be created. If you wish to create a new line,
-    * [[split]] at `loc` and then insert into the appropriate half. */
-  def insert (loc :Loc, line :LineV) :Unit
+    * [[split]] at `loc` and then insert into the appropriate half.
+    *
+    * @return the buffer location just after the inserted line. */
+  def insert (loc :Loc, line :LineV) :Loc
 
   /** Inserts `region` into this buffer at `loc`. `region` will often have come from a call to
     * [[region]] or [[delete(Loc,Loc)]].
@@ -203,8 +208,10 @@ abstract class Buffer extends BufferV {
     * appended to the first half of the split line, and the last line `region` will be prepended to
     * the last half of the split line; the lines in between (if any) are inserted as is. If
     * `region` is length 1 this has the same effect as [[insert(Loc,Line)]].
+    *
+    * @return the buffer location just after the end of the inserted region.
     */
-  def insert (loc :Loc, region :Seq[LineV]) :Unit
+  def insert (loc :Loc, region :Seq[LineV]) :Loc
 
   /** Deletes `count` characters from the line at `loc`.
     * @return the deleted chars as a line. */

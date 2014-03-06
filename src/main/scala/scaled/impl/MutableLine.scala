@@ -83,13 +83,14 @@ class MutableLine (buffer :BufferImpl, initChars :Array[Char]) extends LineV {
   }
 
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
-  def insert (loc :Loc, line :LineV, offset :Int, count :Int) {
+  def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = {
     insertSilent(loc.col, line, offset, count)
     buffer.noteLineEdited(loc, Line.Empty, count)
+    loc + (0, count)
   }
 
   /** Inserts `line` into this line at `loc`. */
-  def insert (loc :Loc, line :LineV) :Unit = insert(loc, line, 0, line.length)
+  def insert (loc :Loc, line :LineV) :Loc = insert(loc, line, 0, line.length)
 
   /** Appends `line` to this line. */
   def append (loc :Loc, line :LineV) :Unit = insert(loc.atCol(_end), line)
