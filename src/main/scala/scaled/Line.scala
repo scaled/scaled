@@ -4,6 +4,8 @@
 
 package scaled
 
+import scala.annotation.tailrec
+
 import reactual.SignalV
 
 /** Models a single line of text, which may or may not be part of a buffer.
@@ -41,6 +43,19 @@ abstract class LineV {
 
   /** Returns the contents of this line as a string. */
   def asString :String
+
+  override def equals (other :Any) = other match {
+    case ol :LineV =>
+      @tailrec def loop (ii :Int) :Boolean = (ii < 0) || (charAt(ii) == ol.charAt(ii) && loop(ii-1))
+      length == ol.length && loop(length-1)
+    case _ => false
+  }
+
+  override def hashCode = {
+    @tailrec def loop (code :Int, ii :Int) :Int =
+      if (ii < 0) code else loop(31*code + charAt(ii), ii-1)
+    loop(1, length-1)
+  }
 }
 
 /** Models a single immutable line of text that is not associated with a buffer.
@@ -53,6 +68,14 @@ class Line (_cs :Array[Char], _offset :Int, val length :Int) extends LineV {
   def this (s :String) = this(s.toCharArray)
   // TODO: style info
 
+  /** Returns a new line which contains `other` appended to `this`. */
+  def merge (other :Line) :Line = {
+    val cs = Array.ofDim[Char](length + other.length)
+    sliceInto(0, length, cs, 0)
+    other.sliceInto(0, other.length, cs, length)
+    new Line(cs)
+  }
+
   override def charAt (pos :Int) = if (pos < length) _cs(pos+_offset) else 0
   override def view (start :Int, until :Int) =
     if (start == 0 && until == length) this else slice(start, until)
@@ -61,6 +84,7 @@ class Line (_cs :Array[Char], _offset :Int, val length :Int) extends LineV {
     System.arraycopy(_cs, _offset+start, cs, offset, until-start)
   }
   override def asString :String = new String(_cs, _offset, length)
+  override def toString () = s"$asString [${_offset}:$length/${_cs.length}]"
 }
 
 /** `Line` related types and utilities. */
