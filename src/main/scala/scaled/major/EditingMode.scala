@@ -38,9 +38,9 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     "C-x C-x" -> "exchange-point-and-mark",
 
     // killing and yanking commands
-    // "C-k"     -> "kill-line",
-    // "C-S-BS"  -> "kill-whole-line",
     "C-w"     -> "kill-region",
+    "C-k"     -> "kill-line",
+    "C-S-BS"  -> "kill-whole-line",
     // "M-w"     -> "kill-ring-save", // do we care about copy-region-as-kill? make it an alias?
     // "M-d"     -> "kill-word",
     // "M-DEL"   -> "backward-kill-word", // also "C-BS"
@@ -132,8 +132,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
       // transpose the first character of this line with the preceding line's separator (push our
       // first character onto the end of the previous line)
       if (lineLen > 0) {
-        val p0 = buffer.start(p)
-        buffer.insert(buffer.end(prev), buffer.charAt(p0))
+        val p0 = buffer.lineStart(p)
+        buffer.insert(buffer.lineEnd(prev), buffer.charAt(p0))
         buffer.delete(p0, 1)
         // in this case we don't bump the point fwd because it's already "after" the moved char
       }
@@ -144,7 +144,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
         // otherwise pull the last character of the previous line into this one
         case len =>
           val last = Loc(prev, len-1)
-          buffer.insert(buffer.start(p), buffer.charAt(last))
+          buffer.insert(buffer.lineStart(p), buffer.charAt(last))
           buffer.delete(last, 1)
           view.point = tp.nextC
       }
@@ -161,34 +161,52 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   // KILLING AND YANKING
   //
 
-  @Fn("""Kills the text between the point and the mark. This deletes the text from the buffer and
-         saves it in the kill ring.""")
+  @Fn("""Kills the rest of the current line, adding it to the kill ring. If the point is at the end
+         of the line, the newline is killed instead.""")
+  def killLine () {
+    val p = view.point
+    val eol = buffer.lineEnd(p)
+    // if we're at the end of the line, kill to the first line of the next char (the newline)
+    // otherwise kill to the end of the line
+    val region = buffer.delete(p, if (p == eol) buffer.forward(p, 1) else eol)
+    // if the previous fn was kill-line, then append this kill to the last kill-ring entry rather
+    // than adding a new kill-ring entry
+    if (view.repeatedFn > 0) editor.killRing.append(region) else editor.killRing.add(region)
+  }
+
+  @Fn("""Kills the entire current line.""")
+  def killWholeLine () {
+    val start = buffer.lineStart(view.point)
+    val region = buffer.delete(start, buffer.forward(buffer.lineEnd(view.point), 1))
+    // if the previous fn was kill-whole-line, then append this kill to the last kill-ring entry
+    // rather than adding a new kill-ring entry
+    if (view.repeatedFn > 0) editor.killRing.append(region) else editor.killRing.add(region)
+    view.point = start
+  }
+
+  @Fn("""Kills the text between the point and the mark. This removes the text from the buffer and
+         adds it to the kill ring. The point and mark are moved to the start of the killed
+         region.""")
   def killRegion () {
     buffer.mark match {
       case None => view.emitStatus("The mark is not set now, so there is no region.")
       case Some(mp) =>
         val vp = view.point
         // move the point and mark to whichever loc was earlier in the buffer
-        val np = view.point lesser mp
-        view.point = np
-        buffer.mark = np
-        val killed = buffer.delete(vp, mp)
-        println(s"Killed $killed ($vp $mp)")
-        editor.killRing add killed
+        view.point = view.point lesser mp
+        buffer.mark = view.point
+        editor.killRing add buffer.delete(vp, mp)
     }
   }
 
-  @Fn("""Reinserts the most recently killed text. The point is placed at the end of the yanked
-         text, and the mark is set at its beginning.""")
+  @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
+         moved to the end if the inserted text.""")
   def yank () {
     editor.killRing.entry(0) match {
       case None         => view.emitStatus("Kill ring is empty.")
       case Some(region) =>
-        val ins = view.point
-        val end = buffer.insert(ins, region)
-        println(s"Inserted $region ($ins $end)")
-        buffer.mark = ins
-        view.point = end
+        buffer.mark = view.point
+        view.point = buffer.insert(view.point, region)
     }
   }
 
