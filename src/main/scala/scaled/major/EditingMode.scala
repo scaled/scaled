@@ -39,11 +39,12 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
     // killing and yanking commands
     "C-w"     -> "kill-region",
+    "M-w"     -> "kill-ring-save", // do we care about copy-region-as-kill? make it an alias?
     "C-k"     -> "kill-line",
     "C-S-BS"  -> "kill-whole-line",
-    // "M-w"     -> "kill-ring-save", // do we care about copy-region-as-kill? make it an alias?
-    // "M-d"     -> "kill-word",
-    // "M-DEL"   -> "backward-kill-word", // also "C-BS"
+    "M-d"     -> "kill-word",
+    "M-DEL"   -> "backward-kill-word",
+    "C-BS"    -> "backward-kill-word",
     // "M-z"     -> "zap-to-char",
     // "M-k"     -> "kill-sentence", // do we want?
     // "C-x DEL" -> "backward-kill-sentence", // do we want?
@@ -89,8 +90,54 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     "C-v"    -> "scroll-down-page"
   )
 
+  /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
+    * and then keeps going until a non-word char is seen (or the end of the buffer is reached), and
+    * that point is returned.
+    */
+  def forwardWord (p :Loc) :Loc = {
+    val end = buffer.end
+    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = syntax(buffer.charAt(pos)) match {
+      case Syntax.Word => seek(buffer.forward(pos, 1), true)
+      case _           => if (seenWord || pos == end) pos else seek(buffer.forward(pos, 1), false)
+    }
+    seek(p, false)
+  }
+
+  /** Seeks backward to the start of a word. Moves backward from `p` until at least one word char is
+    * seen (whether `p` is a word char is not relevant), and then keeps going until a non-word char
+    * is seen (or the start of the buffer is reached), and returns the loc of the last seen word
+    * char.
+    */
+  def backwardWord (p :Loc) :Loc = {
+    val start = buffer.start
+    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = if (pos == start) start else {
+      val ppos = buffer.backward(pos, 1)
+      syntax(buffer.charAt(ppos)) match {
+        case Syntax.Word => seek(ppos, true)
+        case _           => if (seenWord) pos else seek(ppos, false)
+      }
+    }
+    seek(p, false)
+  }
+
+  /** Delets the region from `from` to `to` from the buffer and adds it to the kill-ring. If `to` is
+    * earlier in the buffer than `from` the arguments will automatically be swapped.
+    *
+    * Checks `view.repeatedFn` to determine whether we should automatically append the kill rather
+    * than creating a new kill-ring entry.
+    *
+    * @return the start of the killed region (the smaller of `from` and `to`).
+    */
+  def kill (from :Loc, to :Loc) :Loc = {
+    if (from != to) {
+      val region = buffer.delete(from, to) // delete handles swapping from/to as needed
+      if (view.repeatedFn > 0) editor.killRing append region else editor.killRing add region
+    }
+    from lesser to
+  }
+
   //
-  // CHARACTER EDITING
+  // CHARACTER EDITING FNS
   //
 
   @Fn("Deletes the character immediately previous to the point.")
@@ -158,8 +205,24 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   }
 
   //
-  // KILLING AND YANKING
-  //
+  // KILLING AND YANKING FNS
+
+  @Fn("""Kills the text between the point and the mark. This removes the text from the buffer and
+         adds it to the kill ring. The point and mark are moved to the start of the killed
+         region.""")
+  def killRegion () = buffer.mark match {
+    case None => view.emitStatus("The mark is not set now, so there is no region.")
+    case Some(mp) =>
+      view.point = kill(view.point, mp)
+      buffer.mark = view.point
+  }
+
+  @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
+         The point and mark remain unchanged.""")
+  def killRingSave () = buffer.mark match {
+    case None => view.emitStatus("The mark is not set now, so there is no region.")
+    case Some(mp) => editor.killRing add buffer.region(view.point, mp)
+  }
 
   @Fn("""Kills the rest of the current line, adding it to the kill ring. If the point is at the end
          of the line, the newline is killed instead.""")
@@ -168,42 +231,29 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     val eol = buffer.lineEnd(p)
     // if we're at the end of the line, kill to the first line of the next char (the newline)
     // otherwise kill to the end of the line
-    val region = buffer.delete(p, if (p == eol) buffer.forward(p, 1) else eol)
-    // if the previous fn was kill-line, then append this kill to the last kill-ring entry rather
-    // than adding a new kill-ring entry
-    if (view.repeatedFn > 0) editor.killRing.append(region) else editor.killRing.add(region)
+    kill(p, if (p == eol) buffer.forward(p, 1) else eol)
   }
 
   @Fn("""Kills the entire current line.""")
   def killWholeLine () {
-    val start = buffer.lineStart(view.point)
-    val region = buffer.delete(start, buffer.forward(buffer.lineEnd(view.point), 1))
-    // if the previous fn was kill-whole-line, then append this kill to the last kill-ring entry
-    // rather than adding a new kill-ring entry
-    if (view.repeatedFn > 0) editor.killRing.append(region) else editor.killRing.add(region)
-    view.point = start
+    view.point = kill(buffer.lineStart(view.point), buffer.forward(buffer.lineEnd(view.point), 1))
   }
 
-  @Fn("""Kills the text between the point and the mark. This removes the text from the buffer and
-         adds it to the kill ring. The point and mark are moved to the start of the killed
-         region.""")
-  def killRegion () {
-    buffer.mark match {
-      case None => view.emitStatus("The mark is not set now, so there is no region.")
-      case Some(mp) =>
-        val vp = view.point
-        // move the point and mark to whichever loc was earlier in the buffer
-        view.point = view.point lesser mp
-        buffer.mark = view.point
-        editor.killRing add buffer.delete(vp, mp)
-    }
+  @Fn("""Kills characters forward until encountering the end of a word.""")
+  def killWord () {
+    kill(view.point, forwardWord(view.point))
+  }
+
+  @Fn("""Kills characters backward until encountering the beginning of a word.""")
+  def backwardKillWord () {
+    view.point = kill(backwardWord(view.point), view.point)
   }
 
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
          moved to the end if the inserted text.""")
   def yank () {
     editor.killRing.entry(0) match {
-      case None         => view.emitStatus("Kill ring is empty.")
+      case None => view.emitStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point
         view.point = buffer.insert(view.point, region)
@@ -211,7 +261,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   }
 
   //
-  // MOTION COMMANDS
+  // MOTION FNS
   //
 
   @Fn("Moves the point forward one character.")
@@ -232,28 +282,12 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
   @Fn("Moves the point forward one word.")
   def forwardWord () {
-    // move forward until we see a word char, then keep going until we see a non-word char and stop
-    val end = buffer.end
-    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = syntax(buffer.charAt(pos)) match {
-      case Syntax.Word => seek(buffer.forward(pos, 1), true)
-      case _           => if (seenWord || pos == end) pos else seek(buffer.forward(pos, 1), false)
-    }
-    view.point = seek(view.point, false)
+    view.point = forwardWord(view.point)
   }
 
   @Fn("Moves the point backward one word.")
   def backwardWord () {
-    // move backward until we see a word char, and then keep going until we see a non-word char and
-    // stop on the word char we saw just before
-    val start = buffer.start
-    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = if (pos == start) start else {
-      val ppos = buffer.backward(pos, 1)
-      syntax(buffer.charAt(ppos)) match {
-        case Syntax.Word => seek(ppos, true)
-        case _           => if (seenWord) pos else seek(ppos, false)
-      }
-    }
-    view.point = seek(view.point, false)
+    view.point = backwardWord(view.point)
   }
 
   @Fn("""Inserts a newline at the point.
@@ -346,6 +380,10 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
   @Fn("Moves the point to the end of the line.")
   def moveEndOfLine () = view.point = view.point.atCol(buffer.line(view.point).length)
+
+  //
+  // SCROLLING FNS
+  //
 
   @Fn("Scrolls the view up one line.")
   def scrollUp () = view.scrollVert(-1)
