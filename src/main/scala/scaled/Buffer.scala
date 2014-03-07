@@ -131,16 +131,16 @@ abstract class BufferV {
   def region (start :Loc, until :Loc) :Seq[Line]
 
   /** Returns the start of the line at `row`. */
-  def start (row :Int) :Loc = Loc(row, 0)
+  def lineStart (row :Int) :Loc = Loc(row, 0)
 
   /** Returns the start of the line at `loc.row`. */
-  def start (loc :Loc) :Loc = loc.atCol(0)
+  def lineStart (loc :Loc) :Loc = loc.atCol(0)
 
   /** Returns the end of the line at `row`. */
-  def end (row :Int) :Loc = Loc(row, lineLength(row))
+  def lineEnd (row :Int) :Loc = Loc(row, lineLength(row))
 
   /** Returns the end of the line at `loc.row`. */
-  def end (loc :Loc) :Loc = loc.atCol(lineLength(loc.row))
+  def lineEnd (loc :Loc) :Loc = loc.atCol(lineLength(loc.row))
 
   /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
     * bound into the line to which its row was bound. */
