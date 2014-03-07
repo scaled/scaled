@@ -39,6 +39,10 @@ class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
         case Some(fn) =>
           _insertNext = false
           view.undoStack.actionWillStart()
+          // note whether this is a repeated fn invocation
+          view.willExecuteFn(_lastFn eq fn)
+          _lastFn = fn
+          // actually invoke the fn
           fn.invoke() // TODO: pass log to fn for error reporting
           view.undoStack.actionDidComplete()
           kev.consume()
@@ -53,6 +57,8 @@ class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
           // but we won't know what character to insert until the associated KEY_TYPED event
           // comes in
           _insertNext = !isModified(kev)
+          // clear our last fn as we executed an "error fn"
+          _lastFn = null
       }
 
     case KeyEvent.KEY_TYPED =>
@@ -76,6 +82,7 @@ class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
 
   private var _metas = Seq(new Metadata(mode))
   private var _insertNext = false
+  private var _lastFn :FnBinding = _
 
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
                                KeyCode.COMMAND, KeyCode.WINDOWS)

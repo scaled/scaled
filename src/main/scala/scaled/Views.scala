@@ -62,6 +62,12 @@ abstract class RBufferView extends BufferView {
   /** The (reactive) buffer being displayed by this view. */
   override def buffer :RBuffer
 
+  /** The number of times the currently executing fn has been repeatedly executed. Normally this is
+    * zero, but will be positive for each repeated execution of a fn. This is a minor hack to allow
+    * fns to behave specially if they are invoked repeatedly by the user (with no intervening
+    * actions). */
+  def repeatedFn :Int
+
   /** The current point (aka the cursor position). */
   def pointV :ValueV[Loc]
 

@@ -17,6 +17,12 @@ class BufferViewImpl (_buffer :BufferImpl) extends RBufferView {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
+  private var _repeatedFn = 0
+  override def repeatedFn = _repeatedFn
+  def willExecuteFn (isRepeat :Boolean) {
+    _repeatedFn = if (isRepeat) _repeatedFn + 1 else 0
+  }
+
   val undoStack = new UndoStack(this)
   override def undoer = undoStack
 
