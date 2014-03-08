@@ -27,4 +27,7 @@ abstract class KillRing (val size :Int) {
 
   /** Appends `region` to the youngest kill ring entry. */
   def append (region :Seq[Line]) :Unit
+
+  /** Prepends `region` to the youngest kill ring entry. */
+  def prepend (region :Seq[Line]) :Unit
 }

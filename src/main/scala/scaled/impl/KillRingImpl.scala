@@ -30,6 +30,11 @@ class KillRingImpl (size :Int) extends KillRing(size) {
     else _entries(_pos) = merge(_entries(_pos), region)
   }
 
+  override def prepend (region :Seq[Line]) {
+    if (_pos < 0) add(region)
+    else _entries(_pos) = merge(region, _entries(_pos))
+  }
+
   private def merge (as :Seq[Line], bs :Seq[Line]) =
     (as.dropRight(1) :+ as.last.merge(bs.head)) ++ bs.drop(1)
 }

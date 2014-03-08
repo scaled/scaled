@@ -136,7 +136,10 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     if (from != to) {
       val region = buffer.delete(from, to) // delete handles swapping from/to as needed
       val append = view.prevFn == view.curFn || view.prevFn == "append-next-kill"
-      if (append) editor.killRing append region else editor.killRing add region
+      val prepend = append && (view.curFn startsWith "backward-") // TODO: less hacky?
+      if (prepend)     editor.killRing prepend region
+      else if (append) editor.killRing append region
+      else             editor.killRing add    region
     }
     from lesser to
   }
