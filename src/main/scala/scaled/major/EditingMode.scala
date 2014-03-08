@@ -41,6 +41,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
     // killing and yanking commands
     "C-w"     -> "kill-region",
+    "C-M-w"   -> "append-next-kill",
     "M-w"     -> "kill-ring-save", // do we care about copy-region-as-kill? make it an alias?
     "C-k"     -> "kill-line",
     "C-S-BS"  -> "kill-whole-line",
@@ -134,7 +135,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   def kill (from :Loc, to :Loc) :Loc = {
     if (from != to) {
       val region = buffer.delete(from, to) // delete handles swapping from/to as needed
-      if (view.prevFn == view.curFn) editor.killRing append region else editor.killRing add region
+      val append = view.prevFn == view.curFn || view.prevFn == "append-next-kill"
+      if (append) editor.killRing append region else editor.killRing add region
     }
     from lesser to
   }
@@ -227,6 +229,13 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     case Some(mp) =>
       view.point = kill(view.point, mp)
       buffer.mark = view.point
+  }
+
+  @Fn("""Causes the following command, if it kills, to append to the previous kill rather than
+         creating a new kill-ring entry.""")
+  def appendNextKill () {
+    view.emitStatus("If next command is a kill, it will append.")
+    // kill() will note that the prevFn is append-next-kill and append appropriately
   }
 
   @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
