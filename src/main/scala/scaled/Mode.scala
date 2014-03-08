@@ -84,6 +84,11 @@ trait Mode {
   */
 abstract class MajorMode extends Mode {
 
+  /** The default fn to invoke for a key press for which no mapping exists. This will only be called
+    * for key presses that result in a "typed" character. Key presses that do not generate
+    * characters (i.e. F1, HOME) will not be passed to the default fn. They must be explicitly
+    * bounds. */
+  def defaultFn :Option[String] = None
 }
 
 /** Provides the foundation for a minor editing mode. A minor editing mode customizes the behavior

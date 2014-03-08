@@ -22,6 +22,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     * with special syntax should override this method and return a customized syntax table. */
   protected def createSyntaxTable () = new SyntaxTable()
 
+  override def defaultFn = Some("self-insert-command")
+
   override def keymap = Seq(
     "BS"    -> "delete-backward-char", // TODO: make this delete back to mark (if set)
     "DEL"   -> "delete-forward-char", // ...forward to mark (if set)
@@ -51,7 +53,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     // "C-M-k"   -> "kill-balanced-sexp", // do we want?
 
     "C-y" -> "yank",
-    // "M-y" -> "yank-pop",
+    "M-y" -> "yank-pop",
 
     // undo commands
     "C-/"   -> "undo",
@@ -123,15 +125,16 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   /** Delets the region from `from` to `to` from the buffer and adds it to the kill-ring. If `to` is
     * earlier in the buffer than `from` the arguments will automatically be swapped.
     *
-    * Checks `view.repeatedFn` to determine whether we should automatically append the kill rather
-    * than creating a new kill-ring entry.
+    * Uses `view.curFn` and `view.prevFn` to determine whether this kill is due to a repeated
+    * command, in which case the killed region is appended to the most recently killed region
+    * instead of added to the kill-ring as a new entry.
     *
     * @return the start of the killed region (the smaller of `from` and `to`).
     */
   def kill (from :Loc, to :Loc) :Loc = {
     if (from != to) {
       val region = buffer.delete(from, to) // delete handles swapping from/to as needed
-      if (view.repeatedFn > 0) editor.killRing append region else editor.killRing add region
+      if (view.prevFn == view.curFn) editor.killRing append region else editor.killRing add region
     }
     from lesser to
   }
@@ -139,6 +142,15 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   //
   // CHARACTER EDITING FNS
   //
+
+  @Fn("Inserts the character you typed.")
+  def selfInsertCommand (typed :String) {
+    // insert the typed character at the point
+    val p = view.point
+    view.buffer.insert(p, typed)
+    // move the point to the right by the appropriate amount
+    view.point = p + (0, typed.length)
+  }
 
   @Fn("Deletes the character immediately previous to the point.")
   def deleteBackwardChar () {
@@ -259,6 +271,24 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
         view.point = buffer.insert(view.point, region)
     }
   }
+
+  @Fn("""Replaces the just-yanked stretch of killed text with a different stretch.""")
+  def yankPop () {
+    if (!yanks(view.prevFn)) view.emitStatus(s"Previous command was not a yank (${view.prevFn}).")
+    else {
+      yankCount = if (view.prevFn == "yank-pop") yankCount + 1 else 1
+      editor.killRing.entry(yankCount) match {
+        case None => view.emitStatus("Kill ring is empty.")
+        case Some(region) =>
+          // since the last command was a yank, the mark must be set
+          val mark = buffer.mark.get
+          buffer.mark = view.point lesser mark
+          view.point = buffer.replace(view.point, mark, region)
+      }
+    }
+  }
+  private var yankCount = 0
+  private val yanks = Set("yank", "yank-pop")
 
   //
   // MOTION FNS

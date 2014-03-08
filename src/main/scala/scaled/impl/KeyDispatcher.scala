@@ -17,10 +17,10 @@ import scaled._
   * removed) dynamically, but if our major mode is changed we throw everything out and create a new
   * dispatcher.
   */
-class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
+class KeyDispatcher (view :BufferViewImpl, major :MajorMode) {
 
   class Metadata (mode :Mode) {
-    val fns = new FnBindings(mode)
+    val fns = new FnBindings(mode, view.emitStatus)
     val map = KeyDispatcher.parseKeyMap(
       mode.keymap, fns,
       (key :String) => view.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
@@ -30,62 +30,65 @@ class KeyDispatcher (view :BufferViewImpl, mode :MajorMode) {
     // key input)
   }
 
+  /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = kev.getEventType match {
     case KeyEvent.KEY_PRESSED =>
       // TODO: accumulate modified keys into a trigger until something matches
-      val trigger = Seq(KeyPress(kev))
-      // look through our stack of keymaps and pick the first one that matches
-      _metas.map(_.map.get(trigger)).collectFirst { case Some(fn) => fn } match {
-        case Some(fn) =>
-          _insertNext = false
-          view.undoStack.actionWillStart()
-          // note whether this is a repeated fn invocation
-          view.willExecuteFn(_lastFn eq fn)
-          _lastFn = fn
-          // actually invoke the fn
-          fn.invoke() // TODO: pass log to fn for error reporting
-          view.undoStack.actionDidComplete()
-          kev.consume()
-        case None =>
-          // if they pressed a modified key (held ctrl/alt/meta and pressed a key) and we don't
-          // have a mapping for it, issue a warning since they probably meant it to do something
-          if (isModified(kev) && !isModifier(kev.getCode)) {
-            // TODO: turn keyCode into a key description
-            view.emitStatus(s"${KeyPress(kev)} is undefined.")
-          }
-          // unmodified key presses that don't map to a fn should be inserted into the buffer,
-          // but we won't know what character to insert until the associated KEY_TYPED event
-          // comes in
-          _insertNext = !isModified(kev)
-          // clear our last fn as we executed an "error fn"
-          _lastFn = null
-      }
+      val press = KeyPress.fromPressed(kev)
+      val trigger = Seq(press)
+      val fnOpt = resolve(trigger, _metas)
+      // if we don't have a fn for this key-press-based trigger; try again when the associated key
+      // typed event comes in (if any); we'll build a new trigger based on the typed character and
+      // that may match, or be a candidate for default-fn dispatch
+      _dispatchTyped = !fnOpt.isDefined
+      if (!_dispatchTyped) dispatch(trigger, fnOpt)
 
     case KeyEvent.KEY_TYPED =>
-      // if the KEY_PRESSED event that necessarily preceded this KEY_TYPED event indicated that
-      // the key should be inserted into the buffer, do so (assuming the key maps to a char)
-      if (_insertNext && kev.getCharacter != KeyEvent.CHAR_UNDEFINED) {
-        view.undoStack.actionWillStart()
-        // insert the typed character at the point
-        val p = view.point
-        view.buffer.insert(p, kev.getCharacter)
-        // move the point to the right by the appropriate amount
-        view.point = p + (0, kev.getCharacter.length)
-        // TODO: should the above be built-into BufferView?
-        view.undoStack.actionDidComplete()
+      if (_dispatchTyped) {
+        val press = KeyPress.fromTyped(kev)
+        // TODO: replace the last press of the current trigger sequence with press
+        val trigger = Seq(press)
+        val defFn = if (!press.textValid || press.isModified) None else defaultFn
+        dispatch(trigger, resolve(trigger, _metas) orElse defFn)
+        // TODO: reset _dispatchTyped? can we have two TYPED events without an intervening PRESSED
+        // event? I don't think so, but I may be wrong
       }
 
     case _ => // key released, don't care
   }
 
-  private def isModified (kev :KeyEvent) = kev.isControlDown || kev.isAltDown || kev.isMetaDown
+  /** Resolves the fn binding for a trigger sequence. Mainly a helper for [[keyPressed]]. */
+  def resolve (trigger :Seq[KeyPress], modes :List[Metadata]) :Option[FnBinding] = modes match {
+    case Nil     => None
+    case m :: ms => m.map.get(trigger) match {
+      case None   => resolve(trigger, ms)
+      case somefn => somefn
+    }
+  }
 
-  private var _metas = Seq(new Metadata(mode))
-  private var _insertNext = false
-  private var _lastFn :FnBinding = _
+  /** Dispatches the supplied trigger sequence to the matched fn, if any. If no fn was matched (i.e.
+    * `fnOpt` is `None`) feedback will be emitted indicating that `trigger` is undefined and
+    * appropriate bookkeeping will be performed.
+    */
+  def dispatch (trigger :Seq[KeyPress], fnOpt :Option[FnBinding]) = fnOpt match {
+    case Some(fn) =>
+      view.willExecFn(fn)
+      fn.invoke(trigger.last.text) // TODO: pass view to fn for error reporting?
+      view.didExecFn(fn)
+
+    case None =>
+      view.emitStatus(s"${trigger.mkString(" ")} is undefined.")
+      view.didMissFn() // let the view know that we executed an "error fn"
+  }
 
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
                                KeyCode.COMMAND, KeyCode.WINDOWS)
+
+  private val majorMeta = new Metadata(major)
+  private val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
+
+  private var _metas = List(majorMeta)
+  private var _dispatchTyped = false
 }
 
 /** [[KeyDispatcher]] utilities. */

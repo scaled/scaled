@@ -53,7 +53,7 @@ class BufferTest {
     // TODO: ensure that the proper events are emitted?
     assertEquals("Every good", buffer.line(1).asString)
     assertEquals(" boy deserves fudge.", buffer.line(2).asString)
-    buffer.insert(buffer.end(sp), new Line(" smelling"))
+    buffer.insert(buffer.lineEnd(sp), new Line(" smelling"))
     buffer.join(1)
     assertEquals("Every good smelling boy deserves fudge.", buffer.line(1).asString)
   }

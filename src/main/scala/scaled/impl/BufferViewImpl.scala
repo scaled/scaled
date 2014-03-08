@@ -10,6 +10,9 @@ import reactual.{Future, Value}
 
 import scaled._
 
+// TODO: should the point be automatically adjusted when text is inserted into the buffer before
+// the point?
+
 /** Implements [[BufferView]] and [[RBufferView]]. This class mainly defines the model, and
   * [[CodeArea]] etc. actually visualize the model and handle UX.
   */
@@ -17,10 +20,27 @@ class BufferViewImpl (_buffer :BufferImpl) extends RBufferView {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
-  private var _repeatedFn = 0
-  override def repeatedFn = _repeatedFn
-  def willExecuteFn (isRepeat :Boolean) {
-    _repeatedFn = if (isRepeat) _repeatedFn + 1 else 0
+  private var _curFn :String = _
+  private var _prevFn :String = _
+  override def curFn = _curFn
+  override def prevFn = _prevFn
+
+  /** Called by [[KeyDispatcher]] just before it invokes a fn. */
+  def willExecFn (fn :FnBinding) {
+    _curFn = fn.name
+    undoStack.actionWillStart()
+  }
+
+  /** Called by [[KeyDispatcher]] just after it invokes a fn. */
+  def didExecFn (fn :FnBinding) {
+    undoStack.actionDidComplete()
+    _prevFn = _curFn
+    _curFn = null
+  }
+
+  /** Called by [[KeyDispatcher]] when the user presses an undefined key combination. */
+  def didMissFn () {
+    _prevFn = null
   }
 
   val undoStack = new UndoStack(this)

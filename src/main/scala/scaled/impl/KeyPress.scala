@@ -9,15 +9,22 @@ import javafx.scene.input.{KeyCode, KeyEvent}
 import scala.collection.mutable.{Set => MSet}
 
 /** Models a key press and any modifier keys that are held down during the press.  */
-case class KeyPress (code :KeyCode, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean) {
+case class KeyPress (text :String, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean) {
+
+  /** Returns true if this key press is modified by a function key (ctrl, alt, meta). */
+  def isModified :Boolean = ctrl || alt || meta
+
+  /** Returns whether this key press's text could meaningfully be inserted into a buffer. */
+  def textValid = text.length > 0 && text != KeyEvent.CHAR_UNDEFINED
+
   override def toString = {
     import KeyPress._
     val buf = new StringBuilder
     if (shift) buf.append(ShiftId).append("-")
-    if (ctrl) buf.append(CtrlId).append("-")
-    if (alt) buf.append(AltId).append("-")
-    if (meta) buf.append(MetaId).append("-")
-    buf.append(code.name.toLowerCase).toString
+    if (ctrl ) buf.append(CtrlId ).append("-")
+    if (alt  ) buf.append(AltId  ).append("-")
+    if (meta ) buf.append(MetaId ).append("-")
+    buf.append(text).toString
   }
 }
 
@@ -31,9 +38,20 @@ object KeyPress {
   final val MetaId  = "M"
   final val ValidMods = Set(ShiftId, CtrlId, AltId, MetaId)
 
-  /** Converts a `KeyEvent` to a `KeyPress`. */
-  def apply (kev :KeyEvent) :KeyPress = KeyPress(
-    kev.getCode, kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
+  /** Converts a key pressed event into a `KeyPress`. */
+  def fromPressed (kev :KeyEvent) :KeyPress = KeyPress(
+    toKeyText(kev.getCode), kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
+
+  /** Converts a key typed event into a `KeyPress`. */
+  def fromTyped (kev :KeyEvent) :KeyPress = KeyPress(
+    // TODO: right now key typed events DO NOT provide the actual typed character if any modifier
+    // is pressed in addition to SHIFT; for example shift-= yield + as the typed character (on a US
+    // keyboard), but ctrl-shift-= yields = as the typed character; this seems like a bug to me,
+    // and it prevents us from treating ctrl-shift-= as ctrl-+ (which we'd like to), so hopefully
+    // the JavaFX team will see our side of the issue and provide some way to get the "real" typed
+    // character; if they do, then we can use false instead of isShiftDown here and key mappings
+    // that use modified shifted characters will magically start working
+    kev.getCharacter, kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
 
   /** Parses a key press sequence (e.g. `C-c C-j`, `a`, `M-.`) into [[KeyPress]]es. If any key press
     * in the sequence is invalid, `None` will be returned. All invalid key presses will be reported
@@ -61,12 +79,15 @@ object KeyPress {
     // validate that there are no spurious modifiers
     if (!(modSet -- ValidMods).isEmpty) None
     else toKeyCode(remain) map { code =>
-      KeyPress(code, modSet(ShiftId), modSet(CtrlId), modSet(AltId), modSet(MetaId))
+      KeyPress(remain, modSet(ShiftId), modSet(CtrlId), modSet(AltId), modSet(MetaId))
     }
   }
 
   /** Converts a string into a `KeyCode`. */
   def toKeyCode (key :String) :Option[KeyCode] = StringToCode.get(key)
+
+  /** Converts a `KeyCode` into a string. */
+  def toKeyText (code :KeyCode) = CodeToString.getOrElse(code, code.name.toLowerCase)
 
   private val KeyStrings = {
     import KeyCode._
