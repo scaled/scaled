@@ -134,15 +134,35 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     */
   def kill (from :Loc, to :Loc) :Loc = {
     if (from != to) {
-      val region = buffer.delete(from, to) // delete handles swapping from/to as needed
-      val append = view.prevFn == view.curFn || view.prevFn == "append-next-kill"
-      val prepend = append && (view.curFn startsWith "backward-") // TODO: less hacky?
-      if (prepend)     editor.killRing prepend region
-      else if (append) editor.killRing append region
-      else             editor.killRing add    region
+      // delete handles swapping from/to as needed
+      val region = buffer.delete(from, to)
+      // if the previous fn was any sort of kill fn, we append instead of add
+      if ((view.prevFn != null) && isKillFn(view.prevFn)) {
+        if (isBackwardKill(view.curFn)) editor.killRing prepend region
+        else                            editor.killRing append  region
+      }
+      // otherwise create a new kill ring entry
+      else editor.killRing add region
     }
     from lesser to
   }
+
+  /** Used by [[kill]] to determine if the previous fn was a kill fn, in which case the kill will be
+    * appended to the previous kill rather than used to create a new kill-ring entry.
+    *
+    * Defaults to fns that start with `kill-`, end with `-kill` or contain `-kill-`. Modes may wish
+    * to customize this behavior if they introduce kill commands that do not follow this naming
+    * scheme, but wish for them to participate in kill accumulation.
+    */
+  def isKillFn (name :String) :Boolean =
+    (name startsWith "kill-") || (name endsWith "-kill") || (name contains "-kill-")
+
+  /** Used by [[kill]] to determine if a fn kills backwards instead of forwards.
+    *
+    * Defaults to checking whether `name` starts with `backward-`. Modes may wish to customize this
+    * behavior if they introduce backwards kill commands that do not follow this naming scheme.
+    */
+  def isBackwardKill (name :String) = name startsWith "backward-"
 
   //
   // CHARACTER EDITING FNS
