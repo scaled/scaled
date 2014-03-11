@@ -9,10 +9,19 @@ import javafx.scene.input.{KeyCode, KeyEvent}
 import scala.collection.mutable.{Set => MSet}
 
 /** Models a key press and any modifier keys that are held down during the press.  */
-case class KeyPress (text :String, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean) {
+class KeyPress (
+  /** The key identifier (e.g. TAB, a, 7). This is what is used in keymap strings. */
+  val id :String,
+  /** The text to be inserted in the buffer if this keypress results in `self-insert-command`. */
+  val text :String,
+  val shift :Boolean, val ctrl :Boolean, val alt :Boolean, val meta :Boolean) {
 
   /** Returns true if this key press is modified by a function key (ctrl, alt, meta). */
   def isModified :Boolean = ctrl || alt || meta
+
+  /** Whether or not this key press represents a character that the user might actually want inserted
+    * into their buffer. */
+  def isPrintable :Boolean = !isModified && text != KeyEvent.CHAR_UNDEFINED
 
   override def toString = {
     import KeyPress._
@@ -21,8 +30,17 @@ case class KeyPress (text :String, shift :Boolean, ctrl :Boolean, alt :Boolean, 
     if (ctrl ) buf.append(CtrlId ).append("-")
     if (alt  ) buf.append(AltId  ).append("-")
     if (meta ) buf.append(MetaId ).append("-")
-    buf.append(text).toString
+    buf.append(id).toString
   }
+
+  override def equals (o :Any) = o match {
+    case kp :KeyPress =>
+      id == kp.id && shift == kp.shift && ctrl == kp.ctrl && alt == kp.alt && meta == kp.meta
+    case _ => false
+  }
+
+  override def hashCode =
+    id.hashCode ^ shift.hashCode ^ ctrl.hashCode ^ alt.hashCode ^ meta.hashCode
 }
 
 /** [[KeyPress]] utilities. */
@@ -35,20 +53,14 @@ object KeyPress {
   final val MetaId  = "M"
   final val ValidMods = Set(ShiftId, CtrlId, AltId, MetaId)
 
-  /** Converts a key pressed event into a `KeyPress`. */
-  def fromPressed (kev :KeyEvent) :KeyPress = KeyPress(
-    toKeyText(kev.getCode), kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
+  /** Creates a key press from a key code and modifier flags. */
+  def fromCode (code :KeyCode, shift :Boolean, ctrl :Boolean, alt :Boolean, meta :Boolean) =
+    new KeyPress(toKeyId(code), KeyEvent.CHAR_UNDEFINED, shift, ctrl, alt, meta)
 
-  /** Converts a key typed event into a `KeyPress`. */
-  def fromTyped (kev :KeyEvent) :KeyPress = KeyPress(
-    // TODO: right now key typed events DO NOT provide the actual typed character if any modifier
-    // is pressed in addition to SHIFT; for example shift-= yield + as the typed character (on a US
-    // keyboard), but ctrl-shift-= yields = as the typed character; this seems like a bug to me,
-    // and it prevents us from treating ctrl-shift-= as ctrl-+ (which we'd like to), so hopefully
-    // the JavaFX team will see our side of the issue and provide some way to get the "real" typed
-    // character; if they do, then we can use false instead of isShiftDown here and key mappings
-    // that use modified shifted characters will magically start working
-    kev.getCharacter, kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
+  /** Converts a key pressed event into a `KeyPress`. */
+  def fromPressed (kev :KeyEvent) :KeyPress = new KeyPress(
+    toKeyId(kev.getCode), kev.getCharacter,
+    kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
 
   /** Parses a key press sequence (e.g. `C-c C-j`, `a`, `M-.`) into [[KeyPress]]es. If any key press
     * in the sequence is invalid, `None` will be returned. All invalid key presses will be reported
@@ -76,17 +88,17 @@ object KeyPress {
     // validate that there are no spurious modifiers
     if (!(modSet -- ValidMods).isEmpty) None
     else toKeyCode(remain) map { code =>
-      KeyPress(remain, modSet(ShiftId), modSet(CtrlId), modSet(AltId), modSet(MetaId))
+      new KeyPress(remain, remain, modSet(ShiftId), modSet(CtrlId), modSet(AltId), modSet(MetaId))
     }
   }
 
   /** Converts a string into a `KeyCode`. */
-  def toKeyCode (key :String) :Option[KeyCode] = StringToCode.get(key)
+  def toKeyCode (key :String) :Option[KeyCode] = IdToCode.get(key)
 
-  /** Converts a `KeyCode` into a string. */
-  def toKeyText (code :KeyCode) = CodeToString.getOrElse(code, code.name.toLowerCase)
+  /** Converts a `KeyCode` into a `KeyPress.id`. */
+  def toKeyId (code :KeyCode) = CodeToId.getOrElse(code, code.name)
 
-  private val KeyStrings = {
+  private val KeyIds = {
     import KeyCode._
     Seq(
       // printing keys
@@ -330,8 +342,8 @@ object KeyPress {
     );
   }
 
-  private val CodeToString = Map[KeyCode,String]() ++ KeyStrings
-  private val StringToCode = Map[String,KeyCode]() ++ KeyStrings.collect {
+  private val CodeToId = Map[KeyCode,String]() ++ KeyIds
+  private val IdToCode = Map[String,KeyCode]() ++ KeyIds.collect {
     case (code, str) if (str != "") => (str, code)
   }
 }
