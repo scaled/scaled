@@ -37,7 +37,7 @@ import scaled._
 
 /** The main implementation of [[BufferView]].
   */
-class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
+class BufferArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
 
   val font :StyleableObjectProperty[Font] = new StyleableObjectProperty[Font](Font.getDefault()) {
     private var fontSetByCss = false
@@ -60,8 +60,8 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
       if (value != get()) super.set(value)
     }
 
-    override def getCssMetaData = CodeArea.StyleableProperties.FONT
-    override def getBean = CodeArea.this
+    override def getCssMetaData = BufferArea.StyleableProperties.FONT
+    override def getBean = BufferArea.this
     override def getName = "font"
 
     override protected def invalidated () {
@@ -125,7 +125,7 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
     // refresh the line that was edited (TODO: something more efficient?)
     val text = change.buffer.line(change.loc).asString
     assert(!text.contains('\r') && !text.contains('\n'))
-    bview.lines(change.loc.row).node.setText(text)
+    bview.lines(change.loc.row).setText(text)
 
     // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
     // (TODO: this seems error prone, is there a better way?)
@@ -178,9 +178,10 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
     }
 
     def updateCursor (point :Loc) {
-      // TODO: find the line in question, base our height on its y pos, ask the line for the xpos
-      cursor.setLayoutX(snappedLeftInset + point.col * charWidth)
-      cursor.setLayoutY(snappedTopInset + point.row * lineHeight)
+      // use the line to determine the layout coordinates of the cursor
+      val line = bview.lines(point.row)
+      cursor.setLayoutX(line.cursorX(point.col, charWidth))
+      cursor.setLayoutY(line.node.getLayoutY)
 
       // set the cursor "text" to the character under the point (if any)
       val cchar = if (point.row >= bview.buffer.lines.length) "" else {
@@ -308,7 +309,7 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
     }
   }
 
-  override def getCssMetaData = CodeArea.getClassCssMetaData
+  override def getCssMetaData = BufferArea.getClassCssMetaData
 
   // mouse events are forwarded here by the skin
   def mousePressed (mev :MouseEvent) {}
@@ -316,13 +317,13 @@ class CodeArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
   def mouseReleased (mev :MouseEvent) {}
 }
 
-/** [CodeArea] helper classes and whatnot. */
-object CodeArea {
+/** [BufferArea] helper classes and whatnot. */
+object BufferArea {
 
   object StyleableProperties {
-    val FONT = new FontCssMetaData[CodeArea]("-fx-font", Font.getDefault()) {
-      override def isSettable (n :CodeArea) = (n.font == null) || !n.font.isBound
-      override def getStyleableProperty (n :CodeArea) :StyleableProperty[Font] = n.font
+    val FONT = new FontCssMetaData[BufferArea]("-fx-font", Font.getDefault()) {
+      override def isSettable (n :BufferArea) = (n.font == null) || !n.font.isBound
+      override def getStyleableProperty (n :BufferArea) :StyleableProperty[Font] = n.font
     }
 
     val STYLEABLES :java.util.List[CssMetaData[_ <: Styleable, _]] = {

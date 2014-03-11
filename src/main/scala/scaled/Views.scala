@@ -65,7 +65,7 @@ abstract class BufferView {
 }
 
 /** A reactive version of [BufferView], used by modes. */
-abstract class RBufferView extends BufferView {
+abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView {
 
   /** The (reactive) buffer being displayed by this view. */
   override def buffer :RBuffer
@@ -74,10 +74,10 @@ abstract class RBufferView extends BufferView {
   def pointV :ValueV[Loc]
 
   /** The width of the buffer view, in characters. */
-  val widthV :Value[Int] = Value(80) // TODO: get values from config
+  val widthV :Value[Int] = Value(initWidth)
 
   /** The height of the buffer view, in characters. */
-  val heightV :Value[Int] = Value(24) // TODO: get values from config
+  val heightV :Value[Int] = Value(initHeight)
 
   /** The index of the line at the top of the view. */
   val scrollTopV :Value[Int] = Value(0)

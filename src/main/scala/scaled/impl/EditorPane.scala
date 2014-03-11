@@ -22,23 +22,25 @@ import scaled.major.TextMode
   */
 class EditorPane (editor :Editor, _buffer :BufferImpl) extends BorderPane {
 
-  val bview = new BufferViewImpl(_buffer)
-
+  val view = new BufferViewImpl(_buffer, 80, 24) // TODO: get values from config
   // TODO: determine the proper mode based on user customizable mechanism
-  val mode = new TextMode(editor, bview)
+  val mode = new TextMode(editor, view)
+  val disp = new KeyDispatcher(view, mode)
+  val area = new BufferArea(view, disp)
+  setCenter(area)
 
-  val disp = new KeyDispatcher(bview, mode)
+  // TODO: non-placeholder UI for the status line
+  val statusLine = new Label("Status: TODO")
 
-  val code = new CodeArea(bview, disp)
-  setCenter(code)
-
-  // // TODO: non-placeholder UI for these bits
-  // val statusLine = new Label("Status: TODO")
-  // val minibuffer = new TextField("")
-  // minibuffer.setEditable(false)
-  // setBottom({
-  //   val vbox = new VBox()
-  //   vbox.getChildren.addAll(statusLine, minibuffer)
-  //   vbox
-  // })
+  val miniView = new BufferViewImpl(BufferImpl.minibuffer(), 80, 1)
+  val miniMode = new TextMode(editor, miniView) // TODO
+  val miniDisp = new KeyDispatcher(miniView, miniMode)
+  val miniArea = new BufferArea(miniView, miniDisp)
+  // miniArea.setEditable(false)
+  miniArea.setFocusTraversable(false)
+  setBottom({
+    val vbox = new VBox()
+    vbox.getChildren.addAll(statusLine, miniArea)
+    vbox
+  })
 }

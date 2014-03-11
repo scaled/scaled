@@ -14,9 +14,9 @@ import scaled._
 // the point?
 
 /** Implements [[BufferView]] and [[RBufferView]]. This class mainly defines the model, and
-  * [[CodeArea]] etc. actually visualize the model and handle UX.
+  * [[BufferArea]] etc. actually visualize the model and handle UX.
   */
-class BufferViewImpl (_buffer :BufferImpl) extends RBufferView {
+class BufferViewImpl (_buffer :BufferImpl, iwid :Int, ihei :Int) extends RBufferView(iwid, ihei) {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 

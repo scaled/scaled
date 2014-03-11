@@ -20,7 +20,7 @@ class FnBindingsTest {
   }
 
   @Test def testCollectBindings () {
-    val mode = new TextMode(editor, new BufferViewImpl(TestData.buffer("test", "")))
+    val mode = new TextMode(editor, new BufferViewImpl(TestData.buffer("test", ""), 80, 24))
     val binds = new FnBindings(mode, System.err.println)
     // binds.bindings foreach println
     assertTrue(binds.binding("forward-char").isDefined)
