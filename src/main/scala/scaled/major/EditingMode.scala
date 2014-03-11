@@ -61,7 +61,9 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     "C-\\"  -> "redo",
     "C-x r" -> "redo",
     "C-x u" -> "undo",
-    "C-S--" -> "undo", // TODO: make C-_ work
+    "C-_"   -> "undo",
+    // TEMP: until we sort out ctrl'd shifted keys
+    "C-S--" -> "undo",
 
     // motion commands
     "C-b"   -> "backward-char",
@@ -87,10 +89,19 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     "C-UP"   -> "previous-paragraph",
     "C-DOWN" -> "next-paragraph",
 
+    "M-<"    -> "beginning-of-buffer",
+    "M->"    -> "end-of-buffer",
+    // TEMP: until we sort out meta'd shifted keys
+    "M-S-,"  -> "beginning-of-buffer",
+    "M-S-."  -> "end-of-buffer",
+
+    // view commands (scrolling, etc.)
     "S-UP"   -> "scroll-up", // TODO: extend-mark-backward-line
     "S-DOWN" -> "scroll-down", // TODO: extend-mark-forward-line
     "M-v"    -> "scroll-up-page",
-    "C-v"    -> "scroll-down-page"
+    "C-v"    -> "scroll-down-page",
+
+    "C-l"    -> "recenter"
   )
 
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
@@ -442,8 +453,14 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   @Fn("Moves the point to the end of the line.")
   def moveEndOfLine () = view.point = view.point.atCol(buffer.line(view.point).length)
 
+  @Fn("Moves the point to the beginning of the buffer.")
+  def beginningOfBuffer () = view.point = buffer.start
+
+  @Fn("Moves the point to the end of the buffer.")
+  def endOfBuffer () = view.point = buffer.end
+
   //
-  // SCROLLING FNS
+  // VIEW/SCROLLING FNS
   //
 
   @Fn("Scrolls the view up one line.")
@@ -453,8 +470,12 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   def scrollDown () = view.scrollVert(1)
 
   @Fn("Scrolls the view up one page.")
-  def scrollUpPage () = view.scrollVert(-(view.height-1))
+  def scrollUpPage () = view.scrollVert(1-view.height)
 
   @Fn("Scrolls the view down one page.")
   def scrollDownPage () = view.scrollVert(view.height-1)
+
+  @Fn("""Adjusts the scroll offset of the current window so that the line that contains the point
+         is centered therein.""")
+  def recenter () = view.scrollTopV.update(math.max(view.point.row - view.height/2, 0))
 }
