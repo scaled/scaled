@@ -169,6 +169,12 @@ object KeyPress {
       NUMBER_SIGN   -> "#",
       PLUS          -> "+",
       UNDERSCORE    -> "_",
+      // TODO: are these right?
+      STAR          -> "*",
+      POUND         -> "#",
+
+      // the dreaded tab
+      TAB -> "TAB",
 
       // arrow keys
       LEFT  -> "LEFT",
@@ -218,10 +224,7 @@ object KeyPress {
       SUBTRACT  -> "NP-",
       DECIMAL   -> "NP.",
       DIVIDE    -> "NP/",
-      SEPARATOR -> "",
       DELETE    -> "DEL",
-      NUM_LOCK  -> "",
-      SCROLL_LOCK -> "",
       ENTER     -> "ENTER",
 
       KP_UP    -> "NPUP",
@@ -254,23 +257,35 @@ object KeyPress {
       PAGE_DOWN   -> "PGDN",
       END         -> "END",
       HOME        -> "HOME",
-      TAB         -> "TAB",
+      BEGIN       -> "BEGIN",
       PAUSE       -> "PAUSE",
       ESCAPE      -> "ESC",
       BACK_SPACE  -> "BS",
-      INSERT      -> "INS",
+      INSERT      -> "INSERT",
+      NUM_LOCK    -> "NUMLOCK",
+      SCROLL_LOCK -> "SCRLOCK",
 
       // modifier keys (handled specially)
-      META         -> "",
-      SHIFT        -> "",
-      CONTROL      -> "",
-      ALT          -> "",
-      CAPS         -> "",
-      WINDOWS      -> "",
-      CONTEXT_MENU -> "",
-      COMMAND      -> "",
+      SHIFT        -> "<shift>",
+      CONTROL      -> "<control>",
+      ALT          -> "<alt>",
+      META         -> "<meta>",
+      COMMAND      -> "<command>",
+      CAPS         -> "<capslock>",
+      WINDOWS      -> "<windows>",
+      CONTEXT_MENU -> "<context>",
+      SHORTCUT     -> "<shortcut>",
 
-      // alt-shift-meta-cokebottle
+      // TODO: these look useful
+      CUT -> "",
+      COPY -> "",
+      PASTE -> "",
+      UNDO -> "",
+      FIND -> "",
+      AGAIN -> "",
+
+      // alt-shift-meta-cokebottle (TODO)
+      SEPARATOR -> "",
       CANCEL -> "",
       CLEAR -> "",
       FINAL -> "",
@@ -292,18 +307,10 @@ object KeyPress {
       JAPANESE_ROMAN -> "",
       KANA_LOCK -> "",
       INPUT_METHOD_ON_OFF -> "",
-      CUT -> "",
-      COPY -> "",
-      PASTE -> "",
-      UNDO -> "",
-      AGAIN -> "",
-      FIND -> "",
       PROPS -> "",
       STOP -> "",
       COMPOSE -> "",
       ALT_GRAPH -> "",
-      BEGIN -> "",
-      UNDEFINED -> "",
       SOFTKEY_0 -> "",
       SOFTKEY_1 -> "",
       SOFTKEY_2 -> "",
@@ -318,8 +325,6 @@ object KeyPress {
       GAME_B -> "",
       GAME_C -> "",
       GAME_D -> "",
-      STAR -> "",
-      POUND -> "",
       POWER -> "",
       INFO -> "",
       COLORED_KEY_0 -> "",
@@ -338,7 +343,9 @@ object KeyPress {
       VOLUME_UP -> "",
       VOLUME_DOWN -> "",
       MUTE -> "",
-      SHORTCUT -> ""
+
+      // whatchu talkin' 'bout willis?
+      UNDEFINED -> ""
     );
   }
 
