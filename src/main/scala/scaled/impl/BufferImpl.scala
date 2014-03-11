@@ -51,7 +51,7 @@ object BufferImpl {
   }
 
   /** Returns a buffer for use by the minibuffer view. */
-  def minibuffer () :BufferImpl = apply("*minibuffer*", new File(""), new StringReader(""))
+  def minibuffer (name :String) :BufferImpl = apply(name, new File(""), new StringReader(""))
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()

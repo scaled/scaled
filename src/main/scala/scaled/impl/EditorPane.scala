@@ -4,10 +4,13 @@
 
 package scaled.impl
 
-import javafx.scene.control.Label
-import javafx.scene.control.TextField
-import javafx.scene.layout.BorderPane
-import javafx.scene.layout.VBox
+import java.io.File
+
+import javafx.application.{Application, Platform}
+import javafx.scene.control.{Label, Tab, TabPane}
+import javafx.scene.layout.{BorderPane, HBox, VBox}
+
+import reactual.Future
 
 import scaled._
 import scaled.major.TextMode
@@ -20,27 +23,53 @@ import scaled.major.TextMode
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (editor :Editor, _buffer :BufferImpl) extends BorderPane {
+class EditorPane (app :Application) extends BorderPane {
 
-  val view = new BufferViewImpl(_buffer, 80, 24) // TODO: get values from config
-  // TODO: determine the proper mode based on user customizable mechanism
-  val mode = new TextMode(editor, view)
-  val disp = new KeyDispatcher(view, mode)
-  val area = new BufferArea(view, disp)
-  setCenter(area)
+  val editor = new Editor {
+    override val killRing = new KillRingImpl(40) // TODO: get size from config
+    override def showURL (url :String) = app.getHostServices.showDocument(url)
+    override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
+    override def miniRead (prompt :String, defval :String) = mini.read(prompt, defval)
+    override def emitStatus (msg :String) = mini.emitStatus(msg)
+  }
 
+  val mini :Minibuffer.Area = new Minibuffer.Area(editor)
+  val tabs = new TabPane()
   // TODO: non-placeholder UI for the status line
   val statusLine = new Label("Status: TODO")
 
-  val miniView = new BufferViewImpl(BufferImpl.minibuffer(), 80, 1)
-  val miniMode = new TextMode(editor, miniView) // TODO
-  val miniDisp = new KeyDispatcher(miniView, miniMode)
-  val miniArea = new BufferArea(miniView, miniDisp)
-  // miniArea.setEditable(false)
-  miniArea.setFocusTraversable(false)
+  def openTab (file :File) {
+    val view = new BufferViewImpl(BufferImpl.fromFile(file), 80, 24)
+    // TODO: determine the proper mode based on user customizable mechanism
+    val mode = new TextMode(editor, view)
+    val area = new BufferArea(editor, view, mode)
+
+    val tab = new Tab()
+    tab.setText(file.getName)
+    tab.setContent(area)
+    // TODO: this doesn't work for mouse based selection; need to implement hacky workaround, or
+    // maybe we'll roll our own TabPane since we don't want a lot of the other fiddly business
+    tab.selectedProperty.addListener(onChangeB { isSel =>
+      if (isSel) deferredFocus(area)
+    })
+    tabs.getTabs.add(tab)
+  }
+
+  setCenter(tabs)
   setBottom({
+    val minirow = new HBox()
+    minirow.getChildren.addAll(mini.prompt, mini)
     val vbox = new VBox()
-    vbox.getChildren.addAll(statusLine, miniArea)
+    vbox.getChildren.addAll(statusLine, minirow)
     vbox
   })
+
+  private def deferredFocus (area :BufferArea) {
+    Platform.runLater(new Runnable() {
+      override def run () = {
+        println("Focusing " + area)
+        area.requestFocus()
+      }
+    })
+  }
 }

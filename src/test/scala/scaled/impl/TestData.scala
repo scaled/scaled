@@ -6,8 +6,20 @@ package scaled.impl
 
 import java.io.{File, StringReader}
 
+import reactual.Future
+
+import scaled.Editor
+
 /** Helper methods for creating test instances of things. */
 object TestData {
+
+  val editor = new Editor {
+    val killRing = new KillRingImpl(10)
+    def showURL (url :String) {}
+    def miniRead (prompt :String, defval :String) = Future.success("test")
+    def emitStatus (msg :String) = println(msg)
+    def exit (code :Int) {}
+  }
 
   /** Creates a test buffer. For testing! */
   def buffer (name :String, text :String) =

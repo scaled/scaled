@@ -30,6 +30,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     "C-d"   -> "delete-forward-char", // this should be delete-char and ignore mark
 
     "ENTER" -> "newline",
+    "TAB"   -> "indent-for-tab-command",
     // TODO: open-line, split-line, ...
 
     "C-t"    -> "transpose-chars",
@@ -197,7 +198,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   def deleteBackwardChar () {
     val vp = view.point
     val prev = buffer.backward(vp, 1)
-    if (prev == vp) view.emitStatus("Beginning of buffer.")
+    if (prev == vp) editor.emitStatus("Beginning of buffer.")
     else buffer.delete(prev, vp)
     // move the point back one space (TODO: should this be necessary?; I get the idea that buffer
     // deletions prior to the point in Emacs just cause the point to move)
@@ -208,7 +209,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   def deleteForwardChar () {
     val del = view.point
     val next = buffer.forward(del, 1)
-    if (del == next) view.emitStatus("End of buffer.")
+    if (del == next) editor.emitStatus("End of buffer.")
     else buffer.delete(del, next)
   }
 
@@ -224,7 +225,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     // if the point is past the last char, act as if it's on the last char
     val tp = if (lineLen > 0 && p.col >= lineLen) p.atCol(lineLen-1) else p
     // if we're at the start of the buffer, this command is meaningless
-    if (tp == Loc.Zero) view.emitStatus("Beginning of buffer.")
+    if (tp == Loc.Zero) editor.emitStatus("Beginning of buffer.")
     // if the point is in column zero...
     else if (tp.col == 0) {
       val prev = tp.row - 1
@@ -239,7 +240,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
       // unless the current line has no characters...
       else buffer.lineLength(prev) match {
         // if the previous line is also an empty line, we got nothing
-        case 0 =>  view.emitStatus("Nothing to transpose.")
+        case 0 =>  editor.emitStatus("Nothing to transpose.")
         // otherwise pull the last character of the previous line into this one
         case len =>
           val last = Loc(prev, len-1)
@@ -263,7 +264,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
          adds it to the kill ring. The point and mark are moved to the start of the killed
          region.""")
   def killRegion () = buffer.mark match {
-    case None => view.emitStatus("The mark is not set now, so there is no region.")
+    case None => editor.emitStatus("The mark is not set now, so there is no region.")
     case Some(mp) =>
       view.point = kill(view.point, mp)
       buffer.mark = view.point
@@ -272,14 +273,14 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   @Fn("""Causes the following command, if it kills, to append to the previous kill rather than
          creating a new kill-ring entry.""")
   def appendNextKill () {
-    view.emitStatus("If next command is a kill, it will append.")
+    editor.emitStatus("If next command is a kill, it will append.")
     // kill() will note that the prevFn is append-next-kill and append appropriately
   }
 
   @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
          The point and mark remain unchanged.""")
   def killRingSave () = buffer.mark match {
-    case None => view.emitStatus("The mark is not set now, so there is no region.")
+    case None => editor.emitStatus("The mark is not set now, so there is no region.")
     case Some(mp) => editor.killRing add buffer.region(view.point, mp)
   }
 
@@ -312,7 +313,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
          moved to the end if the inserted text.""")
   def yank () {
     editor.killRing.entry(0) match {
-      case None => view.emitStatus("Kill ring is empty.")
+      case None => editor.emitStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point
         view.point = buffer.insert(view.point, region)
@@ -321,11 +322,11 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
   @Fn("""Replaces the just-yanked stretch of killed text with a different stretch.""")
   def yankPop () {
-    if (!yanks(view.prevFn)) view.emitStatus(s"Previous command was not a yank (${view.prevFn}).")
+    if (!yanks(view.prevFn)) editor.emitStatus(s"Previous command was not a yank (${view.prevFn}).")
     else {
       yankCount = if (view.prevFn == "yank-pop") yankCount + 1 else 1
       editor.killRing.entry(yankCount) match {
-        case None => view.emitStatus("Kill ring is empty.")
+        case None => editor.emitStatus("Kill ring is empty.")
         case Some(region) =>
           // since the last command was a yank, the mark must be set
           val mark = buffer.mark.get
@@ -347,14 +348,14 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     // if we're at the end of the current line, move to the next line
     view.point = buffer.forward(old, 1)
     // if the point didn't change, that means we tried to move past the end of the buffer
-    if (old == view.point) view.emitStatus("End of buffer.")
+    if (old == view.point) editor.emitStatus("End of buffer.")
   }
 
   @Fn("Moves the point backward one character.")
   def backwardChar () {
     val old = view.point
     view.point = buffer.backward(old, 1)
-    if (old == view.point) view.emitStatus("Beginning of buffer.")
+    if (old == view.point) editor.emitStatus("Beginning of buffer.")
   }
 
   @Fn("Moves the point forward one word.")
@@ -374,11 +375,16 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     view.point = Loc(view.point.row+1, 0)
   }
 
+  @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
+  def indentForTabCommand () {
+    editor.emitStatus("TODO: tabs!")
+  }
+
   @Fn("Sets the mark to the current point.")
   def setMarkCommand () {
     // TODO: push old mark onto local (buffer?) and global mark ring?
     buffer.mark = view.point
-    view.emitStatus("Mark set.")
+    editor.emitStatus("Mark set.")
   }
 
   @Fn("Sets the mark to the current point and moves the point to the previous mark.")
@@ -388,18 +394,18 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
         buffer.mark = view.point
         view.point = m
       case None =>
-        view.emitStatus("No mark set in this buffer.")
+        editor.emitStatus("No mark set in this buffer.")
     }
   }
 
   @Fn("Undoes the last change to the buffer.")
   def undo () {
-    if (!view.undoer.undo()) view.emitStatus("Nothing to undo.")
+    if (!view.undoer.undo()) editor.emitStatus("Nothing to undo.")
   }
 
   @Fn("Redoes the last undone to the buffer.")
   def redo () {
-    if (!view.undoer.redo()) view.emitStatus("Nothing to redo.")
+    if (!view.undoer.redo()) editor.emitStatus("Nothing to redo.")
   }
 
   @Fn("Moves the point down one line.")
@@ -409,7 +415,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     // means not bounding the column, but instead coping with a current column that is beyond
     // the end of the current line (will that be a pandora's box?)
     view.point = old.nextL
-    if (old == view.point) view.emitStatus("End of buffer.") // TODO: with beep?
+    if (old == view.point) editor.emitStatus("End of buffer.") // TODO: with beep?
   }
 
   @Fn("Moves the point up one line.")
@@ -419,7 +425,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     // means not bounding the column, but instead coping with a current column that is beyond
     // the end of the current line (will that be a pandora's box?)
     view.point = old.prevL
-    if (old == view.point) view.emitStatus("Beginning of buffer.") // TODO: with beep?
+    if (old == view.point) editor.emitStatus("Beginning of buffer.") // TODO: with beep?
   }
 
   // TODO: add config: paragraph-ignore-whitespace and treat non-empty lines which contain only

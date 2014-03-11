@@ -37,7 +37,9 @@ import scaled._
 
 /** The main implementation of [[BufferView]].
   */
-class BufferArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region {
+class BufferArea (editor :Editor, bview :BufferViewImpl, mode :MajorMode) extends Region {
+
+  val keyDisp = new KeyDispatcher(editor, bview, mode)
 
   val font :StyleableObjectProperty[Font] = new StyleableObjectProperty[Font](Font.getDefault()) {
     private var fontSetByCss = false
@@ -91,11 +93,17 @@ class BufferArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region
 
   // forward key events to the control for dispatching
   private[this] val keyEventListener = new EventHandler[KeyEvent]() {
-    override def handle (e :KeyEvent) = if (!e.isConsumed) disp.keyPressed(e)
+    override def handle (e :KeyEvent) = if (!e.isConsumed) keyDisp.keyPressed(e)
   }
-  focusTraversableProperty().setValue(true)
   addEventHandler(KeyEvent.ANY, keyEventListener)
-  // focusedProperty().addListener(focusListener)
+
+  // listen for changes in focus
+  focusTraversableProperty().setValue(true)
+  focusedProperty.addListener(onChangeB(onFocusChange))
+  private def onFocusChange (focused :Boolean) {
+    cursorBlock.setVisible(focused) // TODO: change to an outline around the char; except the
+                                    // minibuffer which should make the cursor actually invisible
+  }
 
   // this tracks the maximum line length in the buffer
   private val maxLenTracker = new Utils.MaxLengthTracker(bview.buffer)
@@ -312,8 +320,14 @@ class BufferArea (val bview :BufferViewImpl, disp :KeyDispatcher) extends Region
   override def getCssMetaData = BufferArea.getClassCssMetaData
 
   // mouse events are forwarded here by the skin
-  def mousePressed (mev :MouseEvent) {}
-  def mouseDragged (mev :MouseEvent) {}
+  def mousePressed (mev :MouseEvent) {
+    // TODO: update view.point to the clicked Loc
+    // TODO: also note the clicked Loc so that if we drag, we can use it to set the region
+    if (!isFocused()) requestFocus() // TODO: is this the right place to do this?
+  }
+  def mouseDragged (mev :MouseEvent) {
+    // TODO: adjust the point and mark to set the active region to the dragged area
+  }
   def mouseReleased (mev :MouseEvent) {}
 }
 

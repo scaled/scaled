@@ -16,7 +16,8 @@ import scaled._
 /** Implements [[BufferView]] and [[RBufferView]]. This class mainly defines the model, and
   * [[BufferArea]] etc. actually visualize the model and handle UX.
   */
-class BufferViewImpl (_buffer :BufferImpl, iwid :Int, ihei :Int) extends RBufferView(iwid, ihei) {
+class BufferViewImpl (_buffer :BufferImpl, initWid :Int, initHei :Int)
+    extends RBufferView(initWid, initHei) {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
@@ -53,12 +54,6 @@ class BufferViewImpl (_buffer :BufferImpl, iwid :Int, ihei :Int) extends RBuffer
   // narrow the return types of these guys for our internal friends
   override def buffer :BufferImpl = _buffer
   override def lines :Seq[LineViewImpl] = _lines
-
-  override def minibufferRead (prompt :String, defval :String) =
-    Future.failure(new Exception("TODO"))
-  // TODO: minibufferRead variant that takes a tab-completer? mode provides?
-
-  override def emitStatus (msg :String) = println(s"STATUS: $msg")
 
   // respond to buffer changes by adding/removing line views
   _buffer.edited.onValue { change =>
