@@ -91,6 +91,9 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
     "M-<"    -> "beginning-of-buffer",
     "M->"    -> "end-of-buffer",
+    "C-HOME" -> "beginning-of-buffer",
+    "C-END"  -> "end-of-buffer",
+    "BEGIN"  -> "beginning-of-buffer",
     // TEMP: until we sort out meta'd shifted keys
     "M-S-,"  -> "beginning-of-buffer",
     "M-S-."  -> "end-of-buffer",
@@ -100,6 +103,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     "S-DOWN" -> "scroll-down", // TODO: extend-mark-forward-line
     "M-v"    -> "scroll-up-page",
     "C-v"    -> "scroll-down-page",
+    "PGUP"   -> "scroll-up-page",
+    "PGDN"   -> "scroll-down-page",
 
     "C-l"    -> "recenter"
   )
