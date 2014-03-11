@@ -240,9 +240,6 @@ abstract class Buffer extends BufferV {
     * which immediately follows the `loc.row`th line. */
   def split (loc :Loc) :Unit
 
-  /** Joins the `row`th line with the line immediately following it. */
-  def join (row :Int) :Unit
-
   private[scaled] def undo (edit :Buffer.Edit) :Unit
 
   // TODO: methods for editing based on a pair of Locs

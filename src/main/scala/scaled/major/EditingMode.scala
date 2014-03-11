@@ -36,7 +36,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
     // mark manipulation commands
     "C-SPACE" -> "set-mark-command", // TODO: make this push-mark instead?
-    "C-@"     -> "set-mark-command",
+    "C-@"     -> "set-mark-command", // needs to be C-S-2? meh.
     "C-x C-x" -> "exchange-point-and-mark",
 
     // killing and yanking commands
@@ -182,19 +182,18 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     val vp = view.point
     val prev = buffer.backward(vp, 1)
     if (prev == vp) view.emitStatus("Beginning of buffer.")
-    else {
-      view.point = prev // move the point back one space
-      if (vp.col == 0) buffer.join(prev.row) // join the previous line to this one
-      else buffer.delete(prev, 1) // delete the previous character
-    }
+    else buffer.delete(prev, vp)
+    // move the point back one space (TODO: should this be necessary?; I get the idea that buffer
+    // deletions prior to the point in Emacs just cause the point to move)
+    view.point = prev
   }
 
   @Fn("Deletes the character at the point.")
   def deleteForwardChar () {
     val del = view.point
-    if (del.row >= buffer.lines.size) view.emitStatus("End of buffer.")
-    else if (buffer.lineLength(del) == del.col) buffer.join(del.row)
-    else buffer.delete(del, 1)
+    val next = buffer.forward(del, 1)
+    if (del == next) view.emitStatus("End of buffer.")
+    else buffer.delete(del, next)
   }
 
   @Fn("""Swaps the character at the point with the character preceding it, and moves the point

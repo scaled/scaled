@@ -7,7 +7,7 @@ package scaled.impl
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
-import java.io.{Reader, BufferedReader, File, FileReader}
+import java.io.{Reader, BufferedReader, File, FileReader, StringReader}
 import reactual.{Signal, SignalV, Value, ValueV}
 
 import scaled._
@@ -49,6 +49,9 @@ object BufferImpl {
       reader.close
     }
   }
+
+  /** Returns a buffer for use by the minibuffer view. */
+  def minibuffer () :BufferImpl = apply("*minibuffer*", new File(""), new StringReader(""))
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()
@@ -159,12 +162,6 @@ class BufferImpl private (
   override def split (loc :Loc) {
     _lines.insert(loc.row+1, line(loc).split(loc))
     _edited.emit(Buffer.Edit(loc.row+1, BufferImpl.NoLines, 1, this))
-  }
-
-  override def join (row :Int) {
-    val suff = _lines(row+1)
-    deleteEmit(row+1, 1)
-    line(row).append(Loc(row, 0), suff)
   }
 
   override private[scaled] def undo (edit :Buffer.Edit) {
