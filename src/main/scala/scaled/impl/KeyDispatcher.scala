@@ -33,23 +33,35 @@ class KeyDispatcher (view :BufferViewImpl, major :MajorMode) {
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = kev.getEventType match {
     case KeyEvent.KEY_PRESSED =>
-      // TODO: accumulate modified keys into a trigger until something matches
-      val press = KeyPress.fromPressed(kev)
-      val trigger = Seq(press)
-      val fnOpt = resolve(trigger, _metas)
-      // if we don't have a fn for this key-press-based trigger; try again when the associated key
-      // typed event comes in (if any); we'll build a new trigger based on the typed character and
-      // that may match, or be a candidate for default-fn dispatch
-      _dispatchTyped = !fnOpt.isDefined
-      if (!_dispatchTyped) dispatch(trigger, fnOpt)
+      // TODO: accumulate modified keys into a trigger prefix while said modified keys match a
+      // trigger prefix known to exist in our keymaps
+      val key = KeyPress.fromPressed(kev)
+      val trigger = Seq(key)
+      resolve(trigger, _metas) match {
+        case Some(fn) => _deferredKey = null ; invoke(trigger, fn)
+        // if we don't have a fn for this key-press-based trigger; try again when the associated
+        // key typed event comes in (if any); we'll build a new trigger based on the typed
+        // character and that may match, or it may be a candidate for default-fn dispatch
+        case None     => _deferredKey = key
+      }
 
     case KeyEvent.KEY_TYPED =>
-      if (_dispatchTyped) {
-        val press = KeyPress.fromTyped(kev)
-        // TODO: replace the last press of the current trigger sequence with press
-        val trigger = Seq(press)
-        val defFn = if (!press.textValid || press.isModified) None else defaultFn
-        dispatch(trigger, resolve(trigger, _metas) orElse defFn)
+      if (_deferredKey != null) {
+        // create a press from the typed key (which will use the UTF8 character provided by the OS
+        // rather than the character "printed on the key" to to speak); in this case we ignore
+        // modifiers because the modifiers were interpreted by the OS to determine the typed key
+        // (except META which seems not to influence the typed character; TODO: learn more)
+        val typed = kev.getCharacter
+        val key = if (typed.length == 0 || Character.isISOControl(typed.charAt(0))) _deferredKey
+                  else KeyPress(typed, shift=false, ctrl=false, alt=false, meta=kev.isMetaDown)
+        val trigger = Seq(key) // TODO: proper trigger
+        val defFn = if (key.isModified) None else defaultFn
+        resolve(trigger, _metas) orElse defFn match {
+          case Some(fn) => invoke(trigger, fn)
+          case None =>
+            view.emitStatus(s"${trigger.mkString(" ")} is undefined.")
+            view.didMissFn() // let the view know that we executed an "error fn"
+        }
         // TODO: reset _dispatchTyped? can we have two TYPED events without an intervening PRESSED
         // event? I don't think so, but I may be wrong
       }
@@ -66,19 +78,11 @@ class KeyDispatcher (view :BufferViewImpl, major :MajorMode) {
     }
   }
 
-  /** Dispatches the supplied trigger sequence to the matched fn, if any. If no fn was matched (i.e.
-    * `fnOpt` is `None`) feedback will be emitted indicating that `trigger` is undefined and
-    * appropriate bookkeeping will be performed.
-    */
-  def dispatch (trigger :Seq[KeyPress], fnOpt :Option[FnBinding]) = fnOpt match {
-    case Some(fn) =>
-      view.willExecFn(fn)
-      fn.invoke(trigger.last.text) // TODO: pass view to fn for error reporting?
-      view.didExecFn(fn)
-
-    case None =>
-      view.emitStatus(s"${trigger.mkString(" ")} is undefined.")
-      view.didMissFn() // let the view know that we executed an "error fn"
+  /** Dispatches the supplied trigger sequence to `fn`. */
+  def invoke (trigger :Seq[KeyPress], fn :FnBinding) {
+    view.willExecFn(fn)
+    fn.invoke(trigger.last.text) // TODO: pass view to fn for error reporting?
+    view.didExecFn(fn)
   }
 
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
@@ -88,7 +92,7 @@ class KeyDispatcher (view :BufferViewImpl, major :MajorMode) {
   private val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
 
   private var _metas = List(majorMeta)
-  private var _dispatchTyped = false
+  private var _deferredKey :KeyPress = _
 }
 
 /** [[KeyDispatcher]] utilities. */

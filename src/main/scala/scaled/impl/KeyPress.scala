@@ -14,9 +14,6 @@ case class KeyPress (text :String, shift :Boolean, ctrl :Boolean, alt :Boolean, 
   /** Returns true if this key press is modified by a function key (ctrl, alt, meta). */
   def isModified :Boolean = ctrl || alt || meta
 
-  /** Returns whether this key press's text could meaningfully be inserted into a buffer. */
-  def textValid = text.length > 0 && text != KeyEvent.CHAR_UNDEFINED
-
   override def toString = {
     import KeyPress._
     val buf = new StringBuilder
