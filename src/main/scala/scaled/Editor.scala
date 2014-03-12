@@ -4,6 +4,8 @@
 
 package scaled
 
+import java.io.File
+
 import reactual.Future
 
 /** Provides access to certain global functionality that doesn't fit nicely elsewhere. */
@@ -39,4 +41,22 @@ trait Editor {
     *                  entire values, not suffixes to be appended to the prefix.
     */
   def miniRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String]
+
+  /** Returns a view on all open buffers. The buffers will be returned in order of most recent
+    * activation. */
+  def buffers :Seq[BufferV]
+
+  /** Opens `file` into a new buffer. If another buffer is already visiting `file` that buffer is
+    * made active instead. */
+  def newBuffer (file :File) :Unit
+
+  /** Makes the buffer with the specified name the active buffer.
+    * @return true if `buffer` exists and was made active, false if no such buffer exists. */
+  def openBuffer (buffer :String) :Boolean
+
+  /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
+    * to buffer kill hooks which can abort the kill.
+    * @return true if `buffer` exists and the request was initiated, false if no such buffer
+    * exists. */
+  def killBuffer (buffer :String) :Boolean
 }

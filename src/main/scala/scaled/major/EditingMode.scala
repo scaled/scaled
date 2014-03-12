@@ -25,9 +25,6 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   override def defaultFn = Some("self-insert-command")
 
   override def keymap = Seq(
-    // meta commands
-    "M-x"   -> "execute-extended-command",
-
     // character editing commands
     "BS"    -> "delete-backward-char", // TODO: make this delete back to mark (if set)
     "DEL"   -> "delete-forward-char", // ...forward to mark (if set)
@@ -113,7 +110,15 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     "PGUP"   -> "scroll-up-page",
     "PGDN"   -> "scroll-down-page",
 
-    "C-l"    -> "recenter"
+    "C-l"    -> "recenter",
+
+    // buffer commands
+    "C-x b"   -> "switch-to-buffer",
+    "C-x k"   -> "kill-buffer",
+    "C-x C-f" -> "find-file",
+
+    // meta commands
+    "M-x" -> "execute-extended-command"
   )
 
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
@@ -186,16 +191,6 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     * behavior if they introduce backwards kill commands that do not follow this naming scheme.
     */
   def isBackwardKill (name :String) = name startsWith "backward-"
-
-  //
-  // META FNS
-
-  @Fn("Reads fn name then invokes it.")
-  def executeExtendedCommand () {
-    editor.miniRead("M-x", "", disp.completeFn) onSuccess { fn =>
-      if (!disp.invoke(fn)) editor.emitStatus(s"Unknown fn: $fn")
-    }
-  }
 
   //
   // CHARACTER EDITING FNS
@@ -516,4 +511,55 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   @Fn("""Adjusts the scroll offset of the current window so that the line that contains the point
          is centered therein.""")
   def recenter () = view.scrollTopV.update(math.max(view.point.row - view.height/2, 0))
+
+  //
+  // BUFFER FNS
+
+  @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
+  def switchToBuffer () {
+    val last = editor.buffers.drop(1).headOption.map(_.name) getOrElse ""
+    val defprompt = if (last == "") "" else s" (default $last)"
+    editor.miniRead(s"Switch to buffer$defprompt:", "", completeBuffer) onSuccess { readBuffer =>
+      val buffer = if (readBuffer == "") last else readBuffer
+      if (!editor.openBuffer(buffer)) {
+        // TODO: if no such buffer exists, create one?
+      }
+    }
+  }
+
+  @Fn("""Reads a buffer name from the minibuffer and kills (closes) it.""")
+  def killBuffer () {
+    val current = editor.buffers.head.name
+    editor.miniRead(s"Kill buffer (default $current):", "", completeBuffer) onSuccess { readBuffer =>
+      val buffer = if (readBuffer == "") current else readBuffer
+      if (!editor.killBuffer(buffer)) editor.emitStatus(s"No buffer named: $buffer")
+    }
+
+    // TODO: document our process when we have one:
+
+    // The functions in `kill-buffer-query-functions' are called with the buffer to be killed as
+    // the current buffer. If any of them returns nil, the buffer is not killed. The hook
+    // `kill-buffer-hook' is run before the buffer is actually killed. The buffer being killed will
+    // be current while the hook is running. Functions called by any of these hooks are supposed to
+    // not change the current buffer.
+  }
+
+  @Fn("""Reads a filename from the minibuffer and switches to a filename visiting it.""")
+  def findFile () {
+    // TODO
+  }
+
+  //
+  // META FNS
+
+  @Fn("Reads fn name then invokes it.")
+  def executeExtendedCommand () {
+    editor.miniRead("M-x", "", disp.completeFn) onSuccess { fn =>
+      if (!disp.invoke(fn)) editor.emitStatus(s"Unknown fn: $fn")
+    }
+  }
+
+  private def completeBuffer (prefix :String) = Set() ++ editor.buffers.collect {
+    case (buf) if (buf.name startsWith prefix) => buf.name
+  }
 }

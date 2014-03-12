@@ -78,11 +78,12 @@ trait Anchor {
   */
 abstract class BufferV {
 
-  /** The name of this buffer. Tends to be the name of the file from which it was read. */
+  /** The name of this buffer. Tends to be the name of the file from which it was read, but may
+    * differ if two buffers exist with the same file name. */
   def name :String
 
-  /** The directory from which this buffer was loaded, or to which it was most recently saved. */
-  def dir :File
+  /** The file being edited by this buffer. */
+  def file :File
 
   /** The current mark, if any. */
   def mark :Option[Loc]
@@ -279,8 +280,8 @@ abstract class RBuffer extends Buffer {
   /** A reactive view of [name]. */
   def nameV :ValueV[String]
 
-  /** A reactive view of [dir]. */
-  def dirV :ValueV[File]
+  /** A reactive view of [file]. */
+  def fileV :ValueV[File]
 
   /** The current mark, if any. */
   def markV :ValueV[Option[Loc]]
@@ -293,6 +294,6 @@ abstract class RBuffer extends Buffer {
 
   // implement some Buffer methods in terms of our reactive values
   override def name = nameV.get
-  override def dir = dirV.get
+  override def file = fileV.get
   override def mark = markV.get
 }

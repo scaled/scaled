@@ -21,6 +21,9 @@ object TestData {
     def emitStatus (msg :String) = println(msg)
     def clearStatus () {}
     def exit (code :Int) {}
+    def buffers = Seq()
+    def openBuffer (buffer :String) = false
+    def newBuffer (file :File) {}
   }
 
   /** Creates a test buffer. For testing! */

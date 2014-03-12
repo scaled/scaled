@@ -25,7 +25,7 @@ object BufferImpl {
 
   /** Reads the contents of `reader` info a buffer. Note that the caller is responsible for closing
     * the reader if necessary. */
-  def apply (name :String, dir :File, reader :Reader) :BufferImpl = {
+  def apply (name :String, file :File, reader :Reader) :BufferImpl = {
     val buffed = new BufferedReader(reader)
     val lines = ArrayBuffer[Array[Char]]()
     var line :String = buffed.readLine()
@@ -35,7 +35,7 @@ object BufferImpl {
     }
     // TEMP: tack a blank line on the end to simulate a trailing line sep
     lines += MutableLine.NoChars
-    new BufferImpl(name, dir, lines)
+    new BufferImpl(name, file, lines)
   }
 
   /** Reads the contents of `file` into a buffer. */
@@ -44,7 +44,7 @@ object BufferImpl {
     // where and what the line separators are, and whether there's a trailing line sep
     val reader = new FileReader(file)
     try {
-      apply(file.getName, file.getParentFile, reader)
+      apply(file.getName, file, reader)
     } finally {
       reader.close
     }
@@ -59,14 +59,14 @@ object BufferImpl {
 
 /** Implements [Buffer] and [RBuffer]. This is where all the excitement happens. */
 class BufferImpl private (
-  initName :String, initDir :File, initLines :ArrayBuffer[Array[Char]]
+  initName :String, initFile :File, initLines :ArrayBuffer[Array[Char]]
 ) extends RBuffer {
   // TODO: character encoding
   // TODO: line endings
 
   private val _lines = initLines.map(new MutableLine(this, _))
   private val _name = Value(initName)
-  private val _dir = Value(initDir)
+  private val _file = Value(initFile)
   private val _mark = Value(None :Option[Loc])
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
@@ -75,7 +75,7 @@ class BufferImpl private (
   // from Buffer and RBuffer API
 
   override def nameV = _name
-  override def dirV = _dir
+  override def fileV = _file
   override def markV = _mark
   override def mark_= (loc :Loc) = _mark.update(Some(bound(loc)))
   override def clearMark () = _mark.update(None)
@@ -195,5 +195,5 @@ class BufferImpl private (
 
   private val lineSep = "\n" // TODO
 
-  override def toString () = s"[dir=${dir}, name=${name}, lines=${lines.size}]"
+  override def toString () = s"[file=${file}, name=${name}, lines=${lines.size}]"
 }

@@ -20,7 +20,7 @@ class Main extends Application {
   override def start (stage :Stage) {
     val epane = new EditorPane(this)
     // open a pane/tab for each file passed on the command line
-    getParameters.getRaw foreach { p => epane.openTab(new File(p)) }
+    getParameters.getRaw foreach { p => epane.newBuffer(new File(p)) }
 
     // TODO: get stage size from config
     val scene = new Scene(epane)
