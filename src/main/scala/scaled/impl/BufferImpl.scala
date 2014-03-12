@@ -50,8 +50,8 @@ object BufferImpl {
     }
   }
 
-  /** Returns a buffer for use by the minibuffer view. */
-  def minibuffer (name :String) :BufferImpl = apply(name, new File(""), new StringReader(""))
+  /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
+  def scratch (name :String) :BufferImpl = apply(name, new File(""), new StringReader(""))
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()

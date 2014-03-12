@@ -13,8 +13,10 @@ class FnBindingsTest {
 
   @Test def testCollectBindings () {
     val view = new BufferViewImpl(TestData.editor, TestData.buffer("test", ""), 80, 24)
-    val mode = new TextMode(TestData.editor, view)
-    val binds = new FnBindings(mode, System.err.println)
+    val disp = new DispatcherImpl(TestData.editor, view) {
+      override def createMode () = new TextMode(TestData.editor, view, this)
+    }
+    val binds = new FnBindings(disp.major, System.err.println)
     // binds.bindings foreach println
     assertTrue(binds.binding("forward-char").isDefined)
     assertTrue(binds.binding("backward-char").isDefined)

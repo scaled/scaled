@@ -42,14 +42,6 @@ abstract class BufferView {
   /** Updates the current point. The point will be [[Buffer.bound]] into the buffer. */
   def point_= (loc :Loc) :Unit
 
-  /** The name of the currently executing fn. Is null when no fn is executing. */
-  def curFn :String
-
-  /** The name of the previously executed fn. Will be null until at least one fn has been executed.
-    * Used by certain fns to specialize their behavior when invoked repeatedly, and for other
-    * nefarious reasons. */
-  def prevFn :String
-
   /** The width of the buffer, in characters. */
   def width :Int
 

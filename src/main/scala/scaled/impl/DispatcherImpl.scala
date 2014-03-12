@@ -16,7 +16,27 @@ import scaled._
   * @param mode the major mode which defines our primary key mappings. Minor modes are added (and
   * removed) dynamically, but a dispatcher's major mode never changes.
   */
-class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
+abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dispatcher {
+
+  /** The major mode with which we interact. */
+  val major :MajorMode = createMode()
+
+  // because the major mode needs a dispatcher reference and the dispatcher needs a major mode
+  // reference, this lives in an abstract field so that we can tie the Gordian knot
+  protected def createMode () :MajorMode
+
+  private var _curFn :String = _
+  private var _prevFn :String = _
+  override def curFn = _curFn
+  override def prevFn = _prevFn
+
+  override def completeFn (fnPre :String) =
+    (Set[String]() /: _metas)((fns, meta) => fns ++ meta.fns.complete(fnPre))
+
+  override def invoke (fn :String) = _metas.flatMap(_.fns.binding(fn)).headOption match {
+    case Some(fn) => invoke(fn, "") ; true
+    case None => false
+  }
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = {
@@ -36,7 +56,7 @@ class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
           if (_prefixes(_trigger)) deferDisplayPrefix(_trigger)
           // otherwise resolve the fn bound to this trigger (if any)
           else resolve(_trigger, _metas) match {
-            case Some(fn) => invoke(fn)
+            case Some(fn) => invoke(fn, _trigger.last.text)
             // if we don't find one, wait until the associated key typed event comes in
             case None     => _dispatchTyped = true
           }
@@ -55,7 +75,7 @@ class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
           }
           val defFn = if (_trigger.size > 1 || _trigger.last.isModified) None else defaultFn
           resolve(_trigger, _metas) orElse defFn match {
-            case Some(fn) => invoke(fn)
+            case Some(fn) => invoke(fn, _trigger.last.text)
             case None     => invokeMissed()
           }
         }
@@ -77,24 +97,25 @@ class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
       if (fnopt.isDefined) fnopt else resolve(trigger, modes.tail)
     }
 
-  /** Resolves the fn binding for the specified name. */
-  def resolve (fn :String, modes :List[ModeMeta]) :Option[FnBinding] =
-    // we could do modes.flatMap(_.fns.binding(fn)).headOption but we want zero garbage
-    if (modes.isEmpty) None else {
-      val fnopt = modes.head.fns.binding(fn)
-      if (fnopt.isDefined) fnopt else resolve(fn, modes.tail)
-    }
+  private def invoke (fn :FnBinding, typed :String) {
+    // prepare to invoke our fn
+    _curFn = fn.name
+    editor.clearStatus()
+    view.undoStack.actionWillStart()
 
-  private def invoke (fn :FnBinding) {
-    view.willExecFn(fn)
-    fn.invoke(_trigger.last.text) // TODO: pass view to fn for error reporting?
-    view.didExecFn(fn)
+    // TODO: pass view to fn for (internal) error reporting?
+    fn.invoke(typed)
+
+    // finish up after invoking our fn
+    view.undoStack.actionDidComplete()
+    _prevFn = _curFn
+    _curFn = null
     didInvoke()
   }
 
   private def invokeMissed () {
     editor.emitStatus(s"${_trigger.mkString(" ")} is undefined.")
-    view.didMissFn() // let the view know that we executed an "error fn"
+    _prevFn = null
     didInvoke()
   }
 
@@ -112,7 +133,7 @@ class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
 
   private class ModeMeta (mode :Mode) {
     val fns = new FnBindings(mode, editor.emitStatus)
-    val map = Dispatcher.parseKeyMap(
+    val map = DispatcherImpl.parseKeyMap(
       mode.keymap, fns,
       (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
       (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
@@ -134,8 +155,8 @@ class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
   private var _dispatchTyped = false
 }
 
-/** [[Dispatcher]] utilities. */
-object Dispatcher {
+/** [[DispatcherImpl]] utilities. */
+object DispatcherImpl {
 
   /** Parses a keymap description, resolving the trigger sequences into `Seq[KeyPress]` and the fn
     * bindings to `FnBinding` from `fns`. Invalid mappings are omitted from the results after

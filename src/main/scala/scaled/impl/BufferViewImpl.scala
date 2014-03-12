@@ -21,30 +21,6 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
-  private var _curFn :String = _
-  private var _prevFn :String = _
-  override def curFn = _curFn
-  override def prevFn = _prevFn
-
-  /** Called by [[Dispatcher]] just before it invokes a fn. */
-  def willExecFn (fn :FnBinding) {
-    _curFn = fn.name
-    editor.clearStatus()
-    undoStack.actionWillStart()
-  }
-
-  /** Called by [[Dispatcher]] just after it invokes a fn. */
-  def didExecFn (fn :FnBinding) {
-    undoStack.actionDidComplete()
-    _prevFn = _curFn
-    _curFn = null
-  }
-
-  /** Called by [[Dispatcher]] when the user presses an undefined key combination. */
-  def didMissFn () {
-    _prevFn = null
-  }
-
   val undoStack = new UndoStack(this)
   override def undoer = undoStack
 

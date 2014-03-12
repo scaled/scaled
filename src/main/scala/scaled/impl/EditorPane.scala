@@ -54,8 +54,10 @@ class EditorPane (app :Application) extends BorderPane {
   def openTab (file :File) {
     val view = new BufferViewImpl(editor, BufferImpl.fromFile(file), 80, 24)
     // TODO: determine the proper mode based on user customizable mechanism
-    val mode = new TextMode(editor, view)
-    val area = new BufferArea(editor, view, mode)
+    val disp = new DispatcherImpl(editor, view) {
+      override def createMode () = new TextMode(editor, view, this)
+    }
+    val area = new BufferArea(editor, view, disp)
 
     val tab = new Tab()
     tab.setText(file.getName)

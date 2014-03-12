@@ -11,7 +11,7 @@ import scaled._
 /** A base class for all modes that support interactive text editing. This mode defines all of the
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
-abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode {
+abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher) extends MajorMode {
 
   private[this] val buffer = view.buffer
 
@@ -147,7 +147,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   /** Delets the region from `from` to `to` from the buffer and adds it to the kill-ring. If `to` is
     * earlier in the buffer than `from` the arguments will automatically be swapped.
     *
-    * Uses `view.curFn` and `view.prevFn` to determine whether this kill is due to a repeated
+    * Uses `disp.curFn` and `disp.prevFn` to determine whether this kill is due to a repeated
     * command, in which case the killed region is appended to the most recently killed region
     * instead of added to the kill-ring as a new entry.
     *
@@ -158,8 +158,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
       // delete handles swapping from/to as needed
       val region = buffer.delete(from, to)
       // if the previous fn was any sort of kill fn, we append instead of add
-      if ((view.prevFn != null) && isKillFn(view.prevFn)) {
-        if (isBackwardKill(view.curFn)) editor.killRing prepend region
+      if ((disp.prevFn != null) && isKillFn(disp.prevFn)) {
+        if (isBackwardKill(disp.curFn)) editor.killRing prepend region
         else                            editor.killRing append  region
       }
       // otherwise create a new kill ring entry
@@ -191,9 +191,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
-    editor.miniRead("M-x", "") onSuccess { fn =>
-      editor.emitStatus(s"TODO: invoke $fn")
-    }
+    // TODO: proper tab-completion
+    editor.miniRead("M-x", "") onSuccess { fn => disp.invoke(fn) }
   }
 
   //
@@ -337,9 +336,9 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
 
   @Fn("""Replaces the just-yanked stretch of killed text with a different stretch.""")
   def yankPop () {
-    if (!yanks(view.prevFn)) editor.emitStatus(s"Previous command was not a yank (${view.prevFn}).")
+    if (!yanks(disp.prevFn)) editor.emitStatus(s"Previous command was not a yank (${disp.prevFn}).")
     else {
-      yankCount = if (view.prevFn == "yank-pop") yankCount + 1 else 1
+      yankCount = if (disp.prevFn == "yank-pop") yankCount + 1 else 1
       editor.killRing.entry(yankCount) match {
         case None => editor.emitStatus("Kill ring is empty.")
         case Some(region) =>

@@ -21,12 +21,17 @@ object Minibuffer {
 
   def create (editor :Editor) :(Label, Area) = {
     val prompt = new Label()
-    val view = new BufferViewImpl(editor, BufferImpl.minibuffer(bufName), 80, 1)
-    val mode = new Mode(editor, view, prompt)
-    (prompt, new Area(editor, view, mode))
+    val view = new BufferViewImpl(editor, BufferImpl.scratch(bufName), 80, 1)
+    val disp = new DispatcherImpl(editor, view) {
+      override def createMode () = new Mode(editor, view, this, prompt)
+    }
+    (prompt, new Area(editor, view, disp))
   }
 
-  class Area (ed :Editor, view :BufferViewImpl, mode :Mode) extends BufferArea(ed, view, mode) {
+  class Area (editor :Editor, view :BufferViewImpl, disp :DispatcherImpl)
+      extends BufferArea(editor, view, disp) {
+    private[this] val mode = disp.major.asInstanceOf[Mode]
+
     def read (prompt :String, defval :String) :Future[String] = {
       requestFocus()
       mode.pushRead(prompt, defval)
@@ -35,7 +40,8 @@ object Minibuffer {
     def clearStatus () = mode.clearStatus()
   }
 
-  private class Mode (ed :Editor, bv :BufferViewImpl, prompt :Label) extends EditingMode(ed, bv) {
+  private class Mode (editor :Editor, view :BufferViewImpl, disp :DispatcherImpl, prompt :Label)
+      extends EditingMode(editor, view, disp) {
     override def name = "minibuffer"
     override def dispose () {}  // nothing to dispose
 
@@ -87,12 +93,12 @@ object Minibuffer {
 
       def activate () {
         setPrompt(prompt)
-        bv.buffer.replace(bv.buffer.start, bv.buffer.end, _curval)
-        bv.point = bv.buffer.end
+        view.buffer.replace(view.buffer.start, view.buffer.end, _curval)
+        view.point = view.buffer.end
       }
       def deactivate () {
-        _curval = bv.buffer.delete(bv.buffer.start, bv.buffer.end)
-        bv.point = bv.buffer.start
+        _curval = view.buffer.delete(view.buffer.start, view.buffer.end)
+        view.point = view.buffer.start
       }
 
       def succeed () = result.succeed(curval)

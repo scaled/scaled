@@ -37,9 +37,7 @@ import scaled._
 
 /** The main implementation of [[BufferView]].
   */
-class BufferArea (editor :Editor, bview :BufferViewImpl, mode :MajorMode) extends Region {
-
-  val keyDisp = new Dispatcher(editor, bview, mode)
+class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) extends Region {
 
   val font :StyleableObjectProperty[Font] = new StyleableObjectProperty[Font](Font.getDefault()) {
     private var fontSetByCss = false
@@ -93,7 +91,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, mode :MajorMode) extend
 
   // forward key events to the control for dispatching
   private[this] val keyEventListener = new EventHandler[KeyEvent]() {
-    override def handle (e :KeyEvent) = if (!e.isConsumed) keyDisp.keyPressed(e)
+    override def handle (e :KeyEvent) = if (!e.isConsumed) disp.keyPressed(e)
   }
   addEventHandler(KeyEvent.ANY, keyEventListener)
 
