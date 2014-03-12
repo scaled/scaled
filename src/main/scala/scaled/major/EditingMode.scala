@@ -13,7 +13,7 @@ import scaled._
   */
 abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher) extends MajorMode {
 
-  private[this] val buffer = view.buffer
+  @inline protected def buffer = view.buffer // for great brevity
 
   /** The syntax table in use for this mode. */
   val syntax :SyntaxTable = createSyntaxTable()
@@ -103,6 +103,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     "M-S-,"  -> "beginning-of-buffer",
     "M-S-."  -> "end-of-buffer",
 
+    "M-g"    -> "goto-line",
+
     // view commands (scrolling, etc.)
     "S-UP"   -> "scroll-up", // TODO: extend-mark-backward-line
     "S-DOWN" -> "scroll-down", // TODO: extend-mark-forward-line
@@ -187,17 +189,16 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
 
   //
   // META FNS
-  //
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
-    // TODO: proper tab-completion
-    editor.miniRead("M-x", "") onSuccess { fn => disp.invoke(fn) }
+    editor.miniRead("M-x", "", disp.completeFn) onSuccess { fn =>
+      if (!disp.invoke(fn)) editor.emitStatus(s"Unknown fn: $fn")
+    }
   }
 
   //
   // CHARACTER EDITING FNS
-  //
 
   @Fn("Inserts the character you typed.")
   def selfInsertCommand (typed :String) {
@@ -354,7 +355,6 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
 
   //
   // MOTION FNS
-  //
 
   @Fn("Moves the point forward one character.")
   def forwardChar () {
@@ -484,9 +484,22 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   @Fn("Moves the point to the end of the buffer.")
   def endOfBuffer () = view.point = buffer.end
 
+  @Fn("""Reads line number from minibuffer and goes to that line, counting from line 1 at
+         beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
+         it will be set to the point prior to moving to the new line. """")
+  def gotoLine () {
+    editor.miniRead("Goto line:", "", a => Set(a)) onSuccess { lineStr =>
+      val line = try { lineStr.toInt } catch {
+        case e :Throwable => 1 // this is what emacs does, seems fine to me
+      }
+      if (!buffer.mark.isDefined) buffer.mark = view.point
+      view.point = Loc(line-1, 0)
+      recenter()
+    }
+  }
+
   //
   // VIEW/SCROLLING FNS
-  //
 
   @Fn("Scrolls the view up one line.")
   def scrollUp () = view.scrollVert(-1)
