@@ -58,9 +58,8 @@ object Minibuffer {
       pushRead(new Status(msg))
       // TODO: set a timer to clear this status if we have other reads
     }
-    def clearStatus () = _reads match {
-      case (h :Status) ::t => popRead(h, t)
-      case _               => // no status on top, NOOP!
+    def clearStatus () {
+      if (!_reads.isEmpty && _reads.head.isInstanceOf[Status]) popRead()
     }
     def pushRead (prompt :String, defval :String) :Future[String] =
       pushRead(new Read(prompt, defval)).result
@@ -69,20 +68,15 @@ object Minibuffer {
     // Fns
 
     @Fn("Completes the current minibuffer read.")
-    def completeRead () = _reads match {
-      case Nil    => flashStatus("Minibuffer read completed but have no pending read?!")
-      case h :: t =>
-        popRead(h, t)
-        h.succeed()
+    def completeRead () {
+      if (_reads.isEmpty) flashStatus("Minibuffer read completed but have no pending read?!")
+      else popRead().succeed()
     }
 
     @Fn("Aborts the current minibuffer read.")
-    def abortRead () = _reads match {
-      case Nil    => flashStatus("Minibuffer read aborted but have no pending read?!")
-      case h :: t =>
-        popRead(h, t)
-        flashStatus("Quit")
-        h.abort()
+    def abortRead () {
+      if (_reads.isEmpty) flashStatus("Minibuffer read aborted but have no pending read?!")
+      else popRead().abort()
     }
 
     //
@@ -102,14 +96,17 @@ object Minibuffer {
       }
 
       def succeed () = result.succeed(curval)
-      def abort () = result.fail(new Exception("Aborted"))
+      def abort () {
+        flashStatus("Quit")
+        result.fail(new Exception("Aborted"))
+      }
 
       def curval :String = _curval.map(_.asString).mkString("\n")
 
-      private var _curval = Seq(new Line(defval))
+      private[this] var _curval = Seq(new Line(defval))
     }
     private class Status (msg :String) extends Read("", msg)
-    private var _reads :List[Read] = Nil
+    private[this] var _reads :List[Read] = Nil
 
     private def pushRead (read :Read) :Read = {
       if (!_reads.isEmpty) _reads.head.deactivate()
@@ -118,11 +115,13 @@ object Minibuffer {
       read
     }
 
-    private def popRead (head :Read, tail :List[Read]) {
+    private def popRead () :Read = {
+      val head = _reads.head ; val tail = _reads.tail
       head.deactivate()
       _reads = tail
       if (tail.isEmpty) setPrompt("")
       else tail.head.activate()
+      head
     }
 
     private def setPrompt (text :String) {
