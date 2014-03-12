@@ -39,7 +39,7 @@ import scaled._
   */
 class BufferArea (editor :Editor, bview :BufferViewImpl, mode :MajorMode) extends Region {
 
-  val keyDisp = new KeyDispatcher(editor, bview, mode)
+  val keyDisp = new Dispatcher(editor, bview, mode)
 
   val font :StyleableObjectProperty[Font] = new StyleableObjectProperty[Font](Font.getDefault()) {
     private var fontSetByCss = false

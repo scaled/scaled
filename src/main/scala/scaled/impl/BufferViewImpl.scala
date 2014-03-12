@@ -26,21 +26,21 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
   override def curFn = _curFn
   override def prevFn = _prevFn
 
-  /** Called by [[KeyDispatcher]] just before it invokes a fn. */
+  /** Called by [[Dispatcher]] just before it invokes a fn. */
   def willExecFn (fn :FnBinding) {
     _curFn = fn.name
     editor.clearStatus()
     undoStack.actionWillStart()
   }
 
-  /** Called by [[KeyDispatcher]] just after it invokes a fn. */
+  /** Called by [[Dispatcher]] just after it invokes a fn. */
   def didExecFn (fn :FnBinding) {
     undoStack.actionDidComplete()
     _prevFn = _curFn
     _curFn = null
   }
 
-  /** Called by [[KeyDispatcher]] when the user presses an undefined key combination. */
+  /** Called by [[Dispatcher]] when the user presses an undefined key combination. */
   def didMissFn () {
     _prevFn = null
   }

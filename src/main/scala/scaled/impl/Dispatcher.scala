@@ -16,7 +16,7 @@ import scaled._
   * @param mode the major mode which defines our primary key mappings. Minor modes are added (and
   * removed) dynamically, but a dispatcher's major mode never changes.
   */
-class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
+class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = {
@@ -69,14 +69,21 @@ class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
     kev.consume()
   }
 
-  /** Resolves the fn binding for a trigger sequence. Mainly a helper for [[keyPressed]]. */
-  def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] = modes match {
-    case Nil     => None
-    case m :: ms => m.map.get(trigger) match {
-      case None   => resolve(trigger, ms)
-      case somefn => somefn
+  /** Resolves the fn binding for a trigger sequence. */
+  def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] =
+    // we could do modes.flatMap(_.map.get(trigger)).headOption but we want zero garbage
+    if (modes.isEmpty) None else {
+      val fnopt = modes.head.map.get(trigger)
+      if (fnopt.isDefined) fnopt else resolve(trigger, modes.tail)
     }
-  }
+
+  /** Resolves the fn binding for the specified name. */
+  def resolve (fn :String, modes :List[ModeMeta]) :Option[FnBinding] =
+    // we could do modes.flatMap(_.fns.binding(fn)).headOption but we want zero garbage
+    if (modes.isEmpty) None else {
+      val fnopt = modes.head.fns.binding(fn)
+      if (fnopt.isDefined) fnopt else resolve(fn, modes.tail)
+    }
 
   private def invoke (fn :FnBinding) {
     view.willExecFn(fn)
@@ -105,7 +112,7 @@ class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
 
   private class ModeMeta (mode :Mode) {
     val fns = new FnBindings(mode, editor.emitStatus)
-    val map = KeyDispatcher.parseKeyMap(
+    val map = Dispatcher.parseKeyMap(
       mode.keymap, fns,
       (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
       (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
@@ -127,8 +134,8 @@ class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
   private var _dispatchTyped = false
 }
 
-/** [[KeyDispatcher]] utilities. */
-object KeyDispatcher {
+/** [[Dispatcher]] utilities. */
+object Dispatcher {
 
   /** Parses a keymap description, resolving the trigger sequences into `Seq[KeyPress]` and the fn
     * bindings to `FnBinding` from `fns`. Invalid mappings are omitted from the results after
