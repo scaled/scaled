@@ -16,7 +16,8 @@ object TestData {
   val editor = new Editor {
     val killRing = new KillRingImpl(10)
     def showURL (url :String) {}
-    def miniRead (prompt :String, defval :String) = Future.success("test")
+    def miniRead (prompt :String, defval :String, completer :String => Set[String]) =
+      Future.success("test")
     def emitStatus (msg :String) = println(msg)
     def clearStatus () {}
     def exit (code :Int) {}

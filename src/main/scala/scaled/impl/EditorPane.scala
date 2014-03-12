@@ -34,9 +34,9 @@ class EditorPane (app :Application) extends BorderPane {
     override def emitStatus (msg :String) = mini.emitStatus(msg)
     override def clearStatus () = mini.clearStatus()
 
-    override def miniRead (prompt :String, defval :String) = {
+    override def miniRead (prompt :String, defval :String, completer :String => Set[String]) = {
       val tab = tabs.getSelectionModel.getSelectedItem
-      mini.read(prompt, defval) onComplete { _ =>
+      mini.read(prompt, defval, completer) onComplete { _ =>
         // restore the selected tab (and focus) on read completion
         tabs.getSelectionModel.select(tab)
         deferredFocus(tab.getContent.asInstanceOf[BufferArea])

@@ -29,7 +29,14 @@ trait Editor {
     * status message. */
   def clearStatus () :Unit
 
-  /** Prompts the user to input a string via the minibuffer. */
-  def miniRead (prompt :String, defval :String) :Future[String]
-  // TODO: miniRead variant that takes a tab-completer?
+  /** Prompts the user to input a string via the minibuffer.
+    *
+    * @param prompt the text to display to the left of the minibuffer when requesting input.
+    * @param defval the default value with which to populate the minibuffer.
+    * @param completer a completion function used to generate completions when the user presses TAB.
+    *                  It will be passed the current minibuffer contents (the prefix) and should
+    *                  return the set of all valid completions. The completions should be the
+    *                  entire values, not suffixes to be appended to the prefix.
+    */
+  def miniRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String]
 }
