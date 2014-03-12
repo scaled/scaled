@@ -54,6 +54,7 @@ object Minibuffer {
     // "public" API
 
     def flashStatus (msg :String) {
+      clearStatus()
       pushRead(new Status(msg))
       // TODO: set a timer to clear this status if we have other reads
     }

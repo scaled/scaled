@@ -106,8 +106,8 @@ class Dispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
   /** Sets a timer that displays the current command prefix in the minibuffer after a short delay.
     * Thus if a user types a command prefix, we wait for the rest of the command, but we also
     * eventually provide some feedback as to what's going on in case they did it unwittingly. */
-  def deferDisplayPrefix (trigger :Seq[KeyPress]) {
-    // println(s"Current prefix $trigger")
+  private def deferDisplayPrefix (trigger :Seq[KeyPress]) {
+    editor.emitStatus(trigger.mkString(" "))
   }
 
   private class ModeMeta (mode :Mode) {
