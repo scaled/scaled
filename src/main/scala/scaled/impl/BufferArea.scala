@@ -101,8 +101,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, mode :MajorMode) extend
   focusTraversableProperty().setValue(true)
   focusedProperty.addListener(onChangeB(onFocusChange))
   private def onFocusChange (focused :Boolean) {
-    cursorBlock.setVisible(focused) // TODO: change to an outline around the char; except the
-                                    // minibuffer which should make the cursor actually invisible
+    cursor.setVisible(focused) // TODO: change to an outline around the char; except the
+                               // minibuffer which should make the cursor actually invisible
   }
 
   // this tracks the maximum line length in the buffer
@@ -125,6 +125,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, mode :MajorMode) extend
   cursor.setManaged(false)
   cursor.getStyleClass.add("cursor")
   cursor.getChildren.addAll(cursorBlock, cursorText)
+  cursor.setVisible(false) // default cursor to invisible
   // move the cursor when the point is updated
   bview.pointV onValue contentNode.updateCursor
   // react to line edits by updating our views
