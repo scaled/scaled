@@ -49,16 +49,23 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
         // reporting the missed fn here
         else if (_dispatchTyped) invokeMissed()
         else {
-          // tack this key onto our currently accumulating trigger
-          val key = KeyPress.fromPressed(kev)
-          _trigger :+= key
-          // if it matches a known command prefix, then wait for the rest of the command to come in
-          if (_prefixes(_trigger)) deferDisplayPrefix(_trigger)
-          // otherwise resolve the fn bound to this trigger (if any)
-          else resolve(_trigger, _metas) match {
-            case Some(fn) => invoke(fn, _trigger.last.text)
-            // if we don't find one, wait until the associated key typed event comes in
-            case None     => _dispatchTyped = true
+          val key = KeyPress.fromPressed(kev).metafy(_escapeNext)
+          // we handle ESC specially; it causes the next key press to be modified with meta
+          if (key.id == "ESC" && !key.isModified) {
+            deferDisplayPrefix(_trigger :+ key)
+            _escapeNext = true
+          }
+          else {
+            // tack this key onto our currently accumulating trigger
+            _trigger :+= key
+            // if it matches a known command prefix, then wait for the rest of the command to come in
+            if (_prefixes(_trigger)) deferDisplayPrefix(_trigger)
+            // otherwise resolve the fn bound to this trigger (if any)
+            else resolve(_trigger, _metas) match {
+              case Some(fn) => invoke(fn, _trigger.last.text)
+              // if we don't find one, wait until the associated key typed event comes in
+              case None     => _dispatchTyped = true
+            }
           }
         }
 
@@ -70,8 +77,9 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
           // (except META which seems not to influence the typed character; TODO: learn more)
           val typed = kev.getCharacter
           if (typed.length > 0 && !Character.isISOControl(typed.charAt(0))) {
-            _trigger = _trigger.dropRight(1) :+ new KeyPress(
-              typed, typed, shift=false, ctrl=false, alt=false, meta=kev.isMetaDown)
+            val key = new KeyPress(typed, typed, shift=false, ctrl=false, alt=false,
+                                   meta=kev.isMetaDown).metafy(_escapeNext)
+            _trigger = _trigger.dropRight(1) :+ key
           }
           val defFn = if (_trigger.size > 1 || _trigger.last.isModified) None else defaultFn
           resolve(_trigger, _metas) orElse defFn match {
@@ -122,6 +130,7 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
   private def didInvoke () {
     _trigger = Seq()
     _dispatchTyped = false
+    _escapeNext = false
   }
 
   /** Sets a timer that displays the current command prefix in the minibuffer after a short delay.
@@ -153,6 +162,7 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
 
   private var _trigger = Seq[KeyPress]()
   private var _dispatchTyped = false
+  private var _escapeNext = false
 }
 
 /** [[DispatcherImpl]] utilities. */

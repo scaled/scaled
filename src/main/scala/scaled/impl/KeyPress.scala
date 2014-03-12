@@ -23,6 +23,11 @@ class KeyPress (
     * into their buffer. */
   def isPrintable :Boolean = !isModified && text != KeyEvent.CHAR_UNDEFINED
 
+  /** Forces `meta` to true if `wantMeta` is true; if `meta` is already true or `wantMeta` is false,
+    * returns `this` key press. This is used to 'metafy' the key press following ESC. */
+  def metafy (wantMeta :Boolean) :KeyPress =
+    if (!wantMeta || meta) this else new KeyPress(id, text, shift, ctrl, alt, true)
+
   override def toString = {
     import KeyPress._
     val buf = new StringBuilder
