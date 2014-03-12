@@ -22,7 +22,12 @@ trait Editor {
 
   /** Briefly displays a status message in the minibuffer. The status message will also be appeneded
     * to an editor-wide messages list. */
-  def emitStatus (msg :String)
+  def emitStatus (msg :String) :Unit
+
+  /** Clears any lingering status message. A status message usually remains visible until the user
+    * types the next key, so this allows any buffer which receives key input to clear the last
+    * status message. */
+  def clearStatus () :Unit
 
   /** Prompts the user to input a string via the minibuffer. */
   def miniRead (prompt :String, defval :String) :Future[String]

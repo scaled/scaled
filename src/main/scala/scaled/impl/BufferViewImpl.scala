@@ -16,7 +16,7 @@ import scaled._
 /** Implements [[BufferView]] and [[RBufferView]]. This class mainly defines the model, and
   * [[BufferArea]] etc. actually visualize the model and handle UX.
   */
-class BufferViewImpl (_buffer :BufferImpl, initWid :Int, initHei :Int)
+class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei :Int)
     extends RBufferView(initWid, initHei) {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
@@ -29,6 +29,7 @@ class BufferViewImpl (_buffer :BufferImpl, initWid :Int, initHei :Int)
   /** Called by [[KeyDispatcher]] just before it invokes a fn. */
   def willExecFn (fn :FnBinding) {
     _curFn = fn.name
+    editor.clearStatus()
     undoStack.actionWillStart()
   }
 

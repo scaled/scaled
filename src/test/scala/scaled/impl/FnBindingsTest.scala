@@ -12,7 +12,8 @@ import scaled.major.TextMode
 class FnBindingsTest {
 
   @Test def testCollectBindings () {
-    val mode = new TextMode(TestData.editor, new BufferViewImpl(TestData.buffer("test", ""), 80, 24))
+    val view = new BufferViewImpl(TestData.editor, TestData.buffer("test", ""), 80, 24)
+    val mode = new TextMode(TestData.editor, view)
     val binds = new FnBindings(mode, System.err.println)
     // binds.bindings foreach println
     assertTrue(binds.binding("forward-char").isDefined)

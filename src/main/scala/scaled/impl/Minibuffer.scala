@@ -5,7 +5,6 @@
 package scaled.impl
 
 import javafx.scene.control.Label
-import javafx.scene.layout.Region
 
 import reactual.{Future, Promise}
 
@@ -18,25 +17,25 @@ import scaled.major.EditingMode
   */
 object Minibuffer {
 
-  val bufferName = "*minibuffer*"
+  val bufName = "*minibuffer*"
 
-  class Area private (ed :Editor, bv :BufferViewImpl, mode :Mode) extends BufferArea(ed, bv, mode) {
-    private def this (ed :Editor, view :BufferViewImpl) = this(ed, view, new Mode(ed, view))
-    def this (ed :Editor) = this(ed, new BufferViewImpl(BufferImpl.minibuffer(bufferName), 80, 1))
+  def create (editor :Editor) :(Label, Area) = {
+    val prompt = new Label()
+    val view = new BufferViewImpl(editor, BufferImpl.minibuffer(bufName), 80, 1)
+    val mode = new Mode(editor, view, prompt)
+    (prompt, new Area(editor, view, mode))
+  }
 
-    /** The label that should be displayed to the left of the minibuffer area. The minibuffer will
-      * manage it (setting its text when we have a prompt and making it invisible when we don't). */
-    def prompt = mode.prompt
-
+  class Area (ed :Editor, view :BufferViewImpl, mode :Mode) extends BufferArea(ed, view, mode) {
     def read (prompt :String, defval :String) :Future[String] = {
       requestFocus()
       mode.pushRead(prompt, defval)
     }
-
     def emitStatus (msg :String) = mode.flashStatus(msg)
+    def clearStatus () = mode.clearStatus()
   }
 
-  private class Mode (editor :Editor, view :BufferViewImpl) extends EditingMode(editor, view) {
+  private class Mode (ed :Editor, bv :BufferViewImpl, prompt :Label) extends EditingMode(ed, bv) {
     override def name = "minibuffer"
     override def dispose () {}  // nothing to dispose
 
@@ -51,48 +50,28 @@ object Minibuffer {
       // looks like that might be WED
     )
 
-    val prompt = new Label("")
+    //
+    // "public" API
 
-    case class Read (prompt :String, defval :String) { // TODO: mode
-      val result = Promise[String]
-
-      def activate () {
-        setPrompt(prompt)
-        view.buffer.replace(view.buffer.start, view.buffer.end, _curval)
-      }
-
-      def deactivate () {
-        _curval = view.buffer.delete(view.buffer.start, view.buffer.end)
-        view.point = view.buffer.start
-      }
-
-      def succeed () = result.succeed(_curval.head.asString)
-      def abort () = result.fail(new Exception("Aborted"))
-
-      private var _curval :Seq[Line] = Seq(new Line(defval))
+    def flashStatus (msg :String) {
+      pushRead(new Status(msg))
+      // TODO: set a timer to clear this status if we have other reads
     }
-    var _reads :List[Read] = Nil
-
-    def setPrompt (text :String) {
-      prompt.setText(text)
-      prompt.setVisible(!text.isEmpty)
+    def clearStatus () = _reads match {
+      case (h :Status) ::t => popRead(h, t)
+      case _               => // no status on top, NOOP!
     }
+    def pushRead (prompt :String, defval :String) :Future[String] =
+      pushRead(new Read(prompt, defval)).result
 
-    def flashStatus (msg :String) :Unit = println(s"Status: $msg")
-
-    def pushRead (prompt :String, defval :String) :Future[String] = {
-      val read = Read(prompt, defval)
-      _reads = read :: _reads
-      read.activate()
-      read.result
-    }
+    //
+    // Fns
 
     @Fn("Completes the current minibuffer read.")
     def completeRead () = _reads match {
       case Nil    => flashStatus("Minibuffer read completed but have no pending read?!")
       case h :: t =>
-        h.deactivate()
-        popRead(t)
+        popRead(h, t)
         h.succeed()
     }
 
@@ -100,19 +79,54 @@ object Minibuffer {
     def abortRead () = _reads match {
       case Nil    => flashStatus("Minibuffer read aborted but have no pending read?!")
       case h :: t =>
-        h.deactivate()
-        popRead(t)
+        popRead(h, t)
         flashStatus("Quit")
         h.abort()
     }
 
-    private def popRead (reads :List[Read]) = reads match {
-      case Nil =>
-        _reads = Nil
-        setPrompt("")
-      case h :: t =>
-        _reads = reads
-        h.activate()
+    //
+    // Implementation details
+
+    private class Read (prompt :String, defval :String) { // TODO: mode
+      val result = Promise[String]
+
+      def activate () {
+        setPrompt(prompt)
+        bv.buffer.replace(bv.buffer.start, bv.buffer.end, _curval)
+        bv.point = bv.buffer.end
+      }
+      def deactivate () {
+        _curval = bv.buffer.delete(bv.buffer.start, bv.buffer.end)
+        bv.point = bv.buffer.start
+      }
+
+      def succeed () = result.succeed(curval)
+      def abort () = result.fail(new Exception("Aborted"))
+
+      def curval :String = _curval.map(_.asString).mkString("\n")
+
+      private var _curval = Seq(new Line(defval))
+    }
+    private class Status (msg :String) extends Read("", msg)
+    private var _reads :List[Read] = Nil
+
+    private def pushRead (read :Read) :Read = {
+      if (!_reads.isEmpty) _reads.head.deactivate()
+      _reads = read :: _reads
+      read.activate()
+      read
+    }
+
+    private def popRead (head :Read, tail :List[Read]) {
+      head.deactivate()
+      _reads = tail
+      if (tail.isEmpty) setPrompt("")
+      else tail.head.activate()
+    }
+
+    private def setPrompt (text :String) {
+      prompt.setText(text)
+      prompt.setVisible(!text.isEmpty)
     }
   }
 }

@@ -32,6 +32,8 @@ class EditorPane (app :Application) extends BorderPane {
     override val killRing = new KillRingImpl(40) // TODO: get size from config
 
     override def emitStatus (msg :String) = mini.emitStatus(msg)
+    override def clearStatus () = mini.clearStatus()
+
     override def miniRead (prompt :String, defval :String) = {
       val tab = tabs.getSelectionModel.getSelectedItem
       mini.read(prompt, defval) onComplete { _ =>
@@ -42,7 +44,7 @@ class EditorPane (app :Application) extends BorderPane {
     }
   }
 
-  val mini :Minibuffer.Area = new Minibuffer.Area(editor)
+  val (miniPrompt :Label, mini :Minibuffer.Area) = Minibuffer.create(editor)
   val tabs = new TabPane()
   // TODO: non-placeholder UI for the status line
   val statusLine = new Label("Status: TODO")
@@ -50,7 +52,7 @@ class EditorPane (app :Application) extends BorderPane {
   statusLine.setMaxWidth(Double.MaxValue)
 
   def openTab (file :File) {
-    val view = new BufferViewImpl(BufferImpl.fromFile(file), 80, 24)
+    val view = new BufferViewImpl(editor, BufferImpl.fromFile(file), 80, 24)
     // TODO: determine the proper mode based on user customizable mechanism
     val mode = new TextMode(editor, view)
     val area = new BufferArea(editor, view, mode)
@@ -70,7 +72,7 @@ class EditorPane (app :Application) extends BorderPane {
   setBottom({
     val minirow = new HBox(4)
     HBox.setHgrow(mini, Priority.ALWAYS)
-    minirow.getChildren.addAll(mini.prompt, mini)
+    minirow.getChildren.addAll(miniPrompt, mini)
     val vbox = new VBox()
     vbox.setFillWidth(true)
     vbox.getChildren.addAll(statusLine, minirow)
