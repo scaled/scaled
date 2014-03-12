@@ -25,6 +25,10 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
   override def defaultFn = Some("self-insert-command")
 
   override def keymap = Seq(
+    // meta commands
+    "M-x"   -> "execute-extended-command",
+
+    // character editing commands
     "BS"    -> "delete-backward-char", // TODO: make this delete back to mark (if set)
     "DEL"   -> "delete-forward-char", // ...forward to mark (if set)
     "C-d"   -> "delete-forward-char", // this should be delete-char and ignore mark
@@ -180,6 +184,17 @@ abstract class EditingMode (editor :Editor, view :RBufferView) extends MajorMode
     * behavior if they introduce backwards kill commands that do not follow this naming scheme.
     */
   def isBackwardKill (name :String) = name startsWith "backward-"
+
+  //
+  // META FNS
+  //
+
+  @Fn("Reads fn name then invokes it.")
+  def executeExtendedCommand () {
+    editor.miniRead("M-x", "") onSuccess { fn =>
+      editor.emitStatus(s"TODO: invoke $fn")
+    }
+  }
 
   //
   // CHARACTER EDITING FNS

@@ -8,7 +8,8 @@ import java.io.File
 
 import javafx.application.{Application, Platform}
 import javafx.scene.control.{Label, Tab, TabPane}
-import javafx.scene.layout.{BorderPane, HBox, VBox}
+import javafx.scene.layout.{BorderPane, HBox, Priority, VBox}
+import javafx.scene.paint.Color
 
 import reactual.Future
 
@@ -26,17 +27,27 @@ import scaled.major.TextMode
 class EditorPane (app :Application) extends BorderPane {
 
   val editor = new Editor {
-    override val killRing = new KillRingImpl(40) // TODO: get size from config
-    override def showURL (url :String) = app.getHostServices.showDocument(url)
     override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
-    override def miniRead (prompt :String, defval :String) = mini.read(prompt, defval)
+    override def showURL (url :String) = app.getHostServices.showDocument(url)
+    override val killRing = new KillRingImpl(40) // TODO: get size from config
+
     override def emitStatus (msg :String) = mini.emitStatus(msg)
+    override def miniRead (prompt :String, defval :String) = {
+      val tab = tabs.getSelectionModel.getSelectedItem
+      mini.read(prompt, defval) onComplete { _ =>
+        // restore the selected tab (and focus) on read completion
+        tabs.getSelectionModel.select(tab)
+        deferredFocus(tab.getContent.asInstanceOf[BufferArea])
+      }
+    }
   }
 
   val mini :Minibuffer.Area = new Minibuffer.Area(editor)
   val tabs = new TabPane()
   // TODO: non-placeholder UI for the status line
   val statusLine = new Label("Status: TODO")
+  statusLine.getStyleClass.add("status")
+  statusLine.setMaxWidth(Double.MaxValue)
 
   def openTab (file :File) {
     val view = new BufferViewImpl(BufferImpl.fromFile(file), 80, 24)
@@ -57,19 +68,18 @@ class EditorPane (app :Application) extends BorderPane {
 
   setCenter(tabs)
   setBottom({
-    val minirow = new HBox()
+    val minirow = new HBox(4)
+    HBox.setHgrow(mini, Priority.ALWAYS)
     minirow.getChildren.addAll(mini.prompt, mini)
     val vbox = new VBox()
+    vbox.setFillWidth(true)
     vbox.getChildren.addAll(statusLine, minirow)
     vbox
   })
 
   private def deferredFocus (area :BufferArea) {
     Platform.runLater(new Runnable() {
-      override def run () = {
-        println("Focusing " + area)
-        area.requestFocus()
-      }
+      override def run () = area.requestFocus()
     })
   }
 }

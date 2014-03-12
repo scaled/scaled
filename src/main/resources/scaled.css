@@ -3,3 +3,8 @@
   -fx-font-family: "Menlo";
   -fx-font-size: 12px;
 }
+
+.status {
+  -fx-text-fill: white;
+  -fx-background-color: black;
+}
