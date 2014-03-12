@@ -70,7 +70,7 @@ class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
   }
 
   /** Resolves the fn binding for a trigger sequence. Mainly a helper for [[keyPressed]]. */
-  def resolve (trigger :Seq[KeyPress], modes :List[Metadata]) :Option[FnBinding] = modes match {
+  def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] = modes match {
     case Nil     => None
     case m :: ms => m.map.get(trigger) match {
       case None   => resolve(trigger, ms)
@@ -103,7 +103,7 @@ class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
     // println(s"Current prefix $trigger")
   }
 
-  private class Metadata (mode :Mode) {
+  private class ModeMeta (mode :Mode) {
     val fns = new FnBindings(mode, editor.emitStatus)
     val map = KeyDispatcher.parseKeyMap(
       mode.keymap, fns,
@@ -117,7 +117,7 @@ class KeyDispatcher (editor :Editor, view :BufferViewImpl, major :MajorMode) {
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
                                KeyCode.COMMAND, KeyCode.WINDOWS)
 
-  private val majorMeta = new Metadata(major)
+  private val majorMeta = new ModeMeta(major)
   private val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
 
   private var _metas = List(majorMeta) // the stack of active modes (major last)
