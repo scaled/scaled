@@ -85,7 +85,11 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) e
     // val firstLine = lineNodes.getChildren.get(0).asInstanceOf[Text]
     // lineHeight = Utils.getLineHeight(font.get, firstLine.getBoundsType)
     // lineHeight = Utils.getLineHeight(font.get, TextBoundsType.LOGICAL)
-    lineHeight = math.ceil(fm.getLineHeight)
+
+    // TODO: for some reason JavaFX always ends up one pixel taller when measuring text height; I
+    // don't know where this magical pixel comes in, but until I can figure it out, I'm just
+    // hacking in a pixel here; yay!
+    lineHeight = math.ceil(fm.getLineHeight)+1
     // update the size of our cursor
     cursorBlock.setWidth(charWidth)
     cursorBlock.setHeight(lineHeight)
