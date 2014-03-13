@@ -24,6 +24,7 @@ object TestData {
     def buffers = Seq()
     def openBuffer (buffer :String) = false
     def newBuffer (file :File) {}
+    def killBuffer (buffer :String) = false
   }
 
   /** Creates a test buffer. For testing! */
