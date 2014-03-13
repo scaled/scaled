@@ -10,11 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 
 import javafx.application.{Application, Platform}
 import javafx.event.{Event, EventHandler}
+import javafx.scene.Node
 import javafx.scene.control.{Label, Tab, TabPane}
 import javafx.scene.layout.{BorderPane, HBox, Priority, VBox}
 import javafx.scene.paint.Color
 
-import reactual.Future
+import reactual.{Future, Value}
 
 import scaled._
 import scaled.major.TextMode
@@ -36,6 +37,7 @@ class EditorPane (app :Application) extends BorderPane with Editor {
   private val _buffers = ArrayBuffer[OpenBuffer]()
 
   private val _tabs = new TabPane()
+
   private val _mini :Minibuffer.Area = {
     val (miniPrompt :Label, mini :Minibuffer.Area) = Minibuffer.create(this)
     // TODO: non-placeholder UI for the status line
@@ -54,6 +56,10 @@ class EditorPane (app :Application) extends BorderPane with Editor {
     mini
   }
 
+  // we manage focus specially, via this reactive value
+  private val _focus = Value[OpenBuffer](null)
+  _focus onValue onFocusChange
+
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override val killRing = new KillRingImpl(40) // TODO: get size from config
@@ -62,18 +68,17 @@ class EditorPane (app :Application) extends BorderPane with Editor {
   override def clearStatus () = _mini.clearStatus()
 
   override def miniRead (prompt :String, defval :String, completer :String => Set[String]) = {
-    val tab = _tabs.getSelectionModel.getSelectedItem // note the selected tab
+    val ofocus = _focus.get // note the current focus
+    _focus.update(null)     // focus the minibuffer
     _mini.read(prompt, defval, completer) onComplete { _ =>
-      // restore the selected tab (and focus) on read completion
-      deferredFocus(tab.getContent.asInstanceOf[BufferArea])
-      _tabs.getSelectionModel.select(tab)
+      _focus.update(ofocus) // restore the focus on read completion
     }
   }
 
   override def buffers = _buffers.map(_.buffer)
 
   override def openBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
-    case Some(ob) => _tabs.getSelectionModel.select(ob.tab) ; true
+    case Some(ob) => _focus.update(ob) ; true
     case None     => false
   }
 
@@ -101,12 +106,7 @@ class EditorPane (app :Application) extends BorderPane with Editor {
     // TODO: this doesn't work for mouse based selection; need to implement hacky workaround, or
     // maybe we'll roll our own TabPane since we don't want a lot of the other fiddly business
     tab.selectedProperty.addListener(onChangeB { isSel =>
-      if (isSel) {
-        deferredFocus(area)
-        // move our open buffer to the head of the list
-        _buffers -= obuf
-        _buffers prepend obuf
-      }
+      if (isSel) _focus.update(obuf)
     })
     _tabs.getTabs.add(tab)
     _buffers prepend obuf
@@ -120,9 +120,22 @@ class EditorPane (app :Application) extends BorderPane with Editor {
     // TODO: if our last buffer is killed, add a scratch buffer?
   }
 
-  private def deferredFocus (area :BufferArea) {
-    Platform.runLater(new Runnable() {
-      override def run () = area.requestFocus()
-    })
+  private def onFocusChange (buf :OpenBuffer) {
+    if (buf == null) _mini.requestFocus()
+    else {
+      // make sure the focused buffer's tab is visible and has JavaFX focus
+      if (_tabs.getSelectionModel.getSelectedItem == buf.tab) deferredFocus(buf)
+      else _tabs.getSelectionModel.select(buf.tab)
+      // also move the focused buffer to the head of the buffers
+      _buffers -= buf
+      _buffers prepend buf
+    }
   }
+
+  private def deferredFocus (buf :OpenBuffer) = Platform.runLater(new Runnable() {
+    override def run () {
+      // focus may have changed out from under us again before we got here, so double check
+      if (_focus.get == buf) buf.tab.getContent.requestFocus()
+    }
+  })
 }
