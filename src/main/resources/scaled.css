@@ -2,9 +2,29 @@
   /** TODO: per-platform default stylesheets? or is there a way to fallback? */
   -fx-font-family: "Menlo";
   -fx-font-size: 12px;
+  -fx-background-color: #424242;
+  -fx-text-fill: white;
 }
 
 .status {
-  -fx-text-fill: white;
-  -fx-background-color: black;
+  -fx-text-fill: #424242;
+  -fx-background-color: #DBDBDB;
+  -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
+}
+
+.prompt {
+  -fx-padding: 0 5 0 0;
+  -fx-text-fill: #00FCFF;
+}
+
+.cursorBlock {
+  -fx-fill: white;
+}
+
+.cursorText {
+  -fx-fill: #424242;
+}
+
+.buffer .text {
+  -fx-fill: white;
 }

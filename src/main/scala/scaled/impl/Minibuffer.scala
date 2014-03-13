@@ -23,6 +23,7 @@ object Minibuffer {
 
   def create (editor :Editor) :(Label, Area) = {
     val prompt = new Label()
+    prompt.getStyleClass.add("prompt")
     val view = new BufferViewImpl(editor, BufferImpl.scratch(bufName), 80, 1)
     val disp = new DispatcherImpl(editor, view) {
       override def createMode () = new Mode(editor, view, this, prompt)

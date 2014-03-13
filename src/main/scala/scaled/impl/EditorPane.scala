@@ -45,13 +45,11 @@ class EditorPane (app :Application) extends BorderPane with Editor {
 
     setCenter(_tabs)
     setBottom({
-      val minirow = new HBox(4)
-      HBox.setHgrow(mini, Priority.ALWAYS)
-      minirow.getChildren.addAll(miniPrompt, mini)
-      val vbox = new VBox()
-      vbox.setFillWidth(true)
-      vbox.getChildren.addAll(statusLine, minirow)
-      vbox
+      val bits = new BorderPane()
+      bits.setTop(statusLine)
+      bits.setLeft(miniPrompt)
+      bits.setCenter(mini)
+      bits
     })
     mini
   }
@@ -67,8 +65,8 @@ class EditorPane (app :Application) extends BorderPane with Editor {
     val tab = _tabs.getSelectionModel.getSelectedItem // note the selected tab
     _mini.read(prompt, defval, completer) onComplete { _ =>
       // restore the selected tab (and focus) on read completion
-      _tabs.getSelectionModel.select(tab)
       deferredFocus(tab.getContent.asInstanceOf[BufferArea])
+      _tabs.getSelectionModel.select(tab)
     }
   }
 

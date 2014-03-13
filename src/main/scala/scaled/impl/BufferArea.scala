@@ -39,6 +39,8 @@ import scaled._
   */
 class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) extends Region {
 
+  getStyleClass.add("buffer")
+
   val font :StyleableObjectProperty[Font] = new StyleableObjectProperty[Font](Font.getDefault()) {
     private var fontSetByCss = false
 
@@ -112,16 +114,13 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) e
 
   // create our cursor and bind its position to `bview.point`
   private val cursorBlock = new Rectangle()
-  // TODO: make the block fill color the same as the default text color
-  cursorBlock.setFill(Color.BLACK)
+  cursorBlock.getStyleClass.add("cursorBlock")
   private val cursorText = new Text()
   cursorText.setTextOrigin(VPos.TOP)
   cursorText.setManaged(false)
-  // TODO: make the text fill color the same as the default background color
-  cursorText.setFill(Color.WHITE)
+  cursorText.getStyleClass.add("cursorText")
   private val cursor = new Group()
   cursor.setManaged(false)
-  cursor.getStyleClass.add("cursor")
   cursor.getChildren.addAll(cursorBlock, cursorText)
   cursor.setVisible(false) // default cursor to invisible
   // move the cursor when the point is updated
