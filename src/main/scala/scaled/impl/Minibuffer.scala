@@ -167,7 +167,7 @@ object Minibuffer {
 
     private def setPrompt (text :String) {
       prompt.setText(text)
-      prompt.setVisible(text != "")
+      prompt.setManaged(text != "")
     }
 
     private def clearRead () = {
