@@ -14,6 +14,7 @@ import javafx.scene.Node
 import javafx.scene.control.{Label, Tab, TabPane}
 import javafx.scene.layout.{BorderPane, HBox, Priority, VBox}
 import javafx.scene.paint.Color
+import javafx.stage.Stage
 
 import reactual.{Future, Value}
 
@@ -28,7 +29,7 @@ import scaled.major.TextMode
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (app :Application) extends BorderPane with Editor {
+class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor {
 
   private case class OpenBuffer (tab :Tab, view :BufferViewImpl) {
     def buffer = view.buffer
