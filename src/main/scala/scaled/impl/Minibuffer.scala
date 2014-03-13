@@ -35,10 +35,8 @@ object Minibuffer {
       extends BufferArea(editor, view, disp) {
     private[this] val mode = disp.major.asInstanceOf[Mode]
 
-    def read (prompt :String, defval :String, completer :String => Set[String]) :Future[String] = {
-      requestFocus()
-      mode.pushRead(prompt, defval, completer)
-    }
+    def read (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
+      mode.read(prompt, defval, completer)
     def emitStatus (msg :String) = mode.flashStatus(msg)
     def clearStatus () = mode.clearStatus()
   }
@@ -64,35 +62,44 @@ object Minibuffer {
     // "public" API
 
     def flashStatus (msg :String) {
-      clearStatus()
-      pushRead(new Status(msg))
+      if (_read != null) _read.deactivate()
+      setPrompt("")
+      setBuffer(msg)
       // TODO: set a timer to clear this status if we have other reads
     }
     def clearStatus () {
-      if (!_reads.isEmpty && _reads.head.isInstanceOf[Status]) popRead()
+      if (_read == null) clear()
+      else if (!_read.active) _read.activate()
     }
-    def pushRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
-      pushRead(new Read(prompt, defval, completer)).result
+    def read (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
+      if (_read == null) {
+        _read = new Read(prompt, defval, completer)
+        _read.activate()
+        _read.result
+      } else {
+        flashStatus("Command attempted to use minibuffer while in minibuffer.")
+        Future.failure(new Exception("minibuffer in use"))
+      }
 
     //
     // Fns
 
     @Fn("Succeeds the current minibuffer read with its current contents.")
     def succeedRead () {
-      if (_reads.isEmpty) flashStatus("Minibuffer read completed but have no active read?!")
-      else popRead().succeed()
+      if (_read == null) flashStatus("Minibuffer read completed but have no active read?!")
+      else clearRead().succeed()
     }
 
     @Fn("Aborts the current minibuffer read.")
     def abortRead () {
-      if (_reads.isEmpty) flashStatus("Minibuffer read aborted but have no active read?!")
-      else popRead().abort()
+      if (_read == null) flashStatus("Minibuffer read aborted but have no active read?!")
+      else clearRead().abort()
     }
 
     @Fn("Completes the minibuffer contents as much as possible.")
     def complete () {
-      if (_reads.isEmpty) flashStatus("Minibuffer complete requested but have no active read?!")
-      else _reads.head.complete()
+      if (_read == null) flashStatus("Minibuffer complete requested but have no active read?!")
+      else _read.complete()
     }
 
     //
@@ -101,13 +108,16 @@ object Minibuffer {
     private class Read (prompt :String, defval :String, completer :String => Set[String]) {
       val result = Promise[String]
 
+      def active :Boolean = _curval == null
       def activate () {
+        assert(!active)
         setPrompt(prompt)
         setBuffer(_curval)
+        _curval = null
       }
       def deactivate () {
+        assert(active)
         _curval = view.buffer.delete(view.buffer.start, view.buffer.end)
-        view.point = view.buffer.start
       }
 
       def complete () {
@@ -121,12 +131,6 @@ object Minibuffer {
             println(s"Matches $comps")
           case pre => setBuffer(pre)
         }
-      }
-
-      def setBuffer (text :String) :Unit = setBuffer(Seq(new Line(text)))
-      def setBuffer (text :Seq[Line]) {
-        view.buffer.replace(view.buffer.start, view.buffer.end, text)
-        view.point = view.buffer.end
       }
 
       def succeed () = result.succeed(curval)
@@ -153,28 +157,31 @@ object Minibuffer {
 
       private[this] var _curval = Seq(new Line(defval))
     }
-    private class Status (msg :String) extends Read("", msg, null)
-    private[this] var _reads :List[Read] = Nil
+    private[this] var _read :Read = _
 
-    private def pushRead (read :Read) :Read = {
-      if (!_reads.isEmpty) _reads.head.deactivate()
-      _reads = read :: _reads
-      read.activate()
-      read
-    }
-
-    private def popRead () :Read = {
-      val head = _reads.head ; val tail = _reads.tail
-      head.deactivate()
-      _reads = tail
-      if (tail.isEmpty) setPrompt("")
-      else tail.head.activate()
-      head
+    private def setBuffer (text :String) :Unit = setBuffer(Seq(new Line(text)))
+    private def setBuffer (text :Seq[Line]) {
+      view.buffer.replace(view.buffer.start, view.buffer.end, text)
+      view.point = view.buffer.end
     }
 
     private def setPrompt (text :String) {
       prompt.setText(text)
-      prompt.setVisible(!text.isEmpty)
+      prompt.setVisible(text != "")
+    }
+
+    private def clearRead () = {
+      val read = _read
+      _read = null
+      read.deactivate()
+      clear()
+      read
+    }
+
+    private def clear () {
+      assert(_read == null)
+      setPrompt("")
+      setBuffer("")
     }
   }
 }
