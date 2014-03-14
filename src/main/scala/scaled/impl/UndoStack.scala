@@ -18,27 +18,35 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
 
   def actionWillStart (point :Loc) {
     _point = point
-    _wasDirty = buffer.dirty
+    // if the buffer is currently clean, move the undo clean pointer here
+    if (!buffer.dirty) {
+      _cleanUndoIdx = _actions.size
+      _cleanRedoIdx = -1 // and wipe the clean redo index
+    }
   }
 
   def actionDidComplete () :Unit = if (!_edits.isEmpty) {
     accumTo(_edits, _actions)
     // since we've applied one or more normal edits, clear the redo buffer
     _redoActions.clear()
+    _cleanRedoIdx = -1
   }
 
   override def undo () :Option[Loc] = {
     if (_actions.isEmpty) None
     else {
+      // if the buffer is clean prior this undo, move the redo clean pointer here
+      if (!buffer.dirty) _cleanRedoIdx = _redoActions.size
+      // pop the most recent action from the undo stack and undo it
+      val action = pop(_actions)
       _undoing = true
-      val action = _actions.last
-      _actions.trimEnd(1)
-      try {
-        action.undo()
-        accumTo(_redoEdits, _redoActions)
-      } finally {
-        _undoing = false
-      }
+      try action.undo()
+      finally _undoing = false
+      // accumulate the undone edits to the redo stack as a redo action
+      accumTo(_redoEdits, _redoActions)
+      // if we just undid to the last clean pointer, mark the buffer clean
+      if (_cleanUndoIdx == _actions.size) buffer.dirtyV() = false
+      // finally return the point associated with this undone action
       Some(action.point)
     }
   }
@@ -46,15 +54,22 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   override def redo () :Option[Loc] = {
     if (_redoActions.isEmpty) None
     else {
-      val action = _redoActions.last
-      _redoActions.trimEnd(1)
+      // pop the most recent action from the redo stack and undo it (undoing and undo)
+      val action = pop(_redoActions)
       action.undo()
-      // accumulate the redone actions immediately so that the actionDidComplete that naturally
-      // follows a redo does not see uncommitted edits and think that the user just made a normal
+      // accumulate the redone edits immediately so that the actionDidComplete (that naturally
+      // follows a redo) does not see uncommitted edits and think that the user just made a normal
       // edit (which would clear the redo list)
       accumTo(_edits, _actions)
+      // if we just redid to the last clean pointer, mark the buffer clean
+      if (_cleanRedoIdx == _redoActions.size) buffer.dirtyV() = false
+      // finally return the point associated with this redone action
       Some(action.point)
     }
+  }
+
+  private def pop (actions :ArrayBuffer[Action]) = {
+    val action = actions.last ; actions.trimEnd(1) ; action
   }
 
   // returns the buffer onto which to accumulate buffer edits; normally we accumulate to the edits
@@ -81,7 +96,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
         actions.trimEnd(1)
         accum
       }
-      else Action(_point, _wasDirty, isTyping, Seq() ++ edits)
+      else Action(_point, isTyping, Seq() ++ edits)
       actions += action
       edits.clear()
     }
@@ -94,19 +109,15 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   private val _redoEdits = ArrayBuffer[Undoable]()
   private val _redoActions = ArrayBuffer[Action]()
   private var _point = Loc(0, 0)
-  private var _wasDirty = false
   private var _undoing = false
   private var _redoing = false
+  private var _cleanUndoIdx = 0
+  private var _cleanRedoIdx = -1
 
-  private case class Action (point :Loc, wasDirty :Boolean, isTyping :Boolean,
-                             edits :Seq[Undoable]) {
-    def undo () {
-      // undo the edits in the reverse of the order they were accumulated
-      edits.reverse.foreach { _.undo() }
-      // then restore the dirty state of the buffer
-      buffer.dirtyV.update(wasDirty)
-    }
+  private case class Action (point :Loc, isTyping :Boolean, edits :Seq[Undoable]) {
+    // undo the edits in the reverse of the order they were accumulated
+    def undo () = edits.reverse.foreach { _.undo() }
     // accumulates additional edits to this action
-    def accum (edits :Seq[Undoable]) = Action(point, wasDirty, isTyping, this.edits ++ edits)
+    def accum (edits :Seq[Undoable]) = Action(point, isTyping, this.edits ++ edits)
   }
 }
