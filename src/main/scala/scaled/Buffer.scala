@@ -305,8 +305,8 @@ abstract class RBuffer extends Buffer {
   def lineEdited :SignalV[Line.Edit]
 
   // implement some Buffer methods in terms of our reactive values
-  override def name = nameV.get
-  override def file = fileV.get
-  override def mark = markV.get
-  override def dirty = dirtyV.get
+  override def name = nameV()
+  override def file = fileV()
+  override def mark = markV()
+  override def dirty = dirtyV()
 }

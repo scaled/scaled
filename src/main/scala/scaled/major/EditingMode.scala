@@ -519,7 +519,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
 
   @Fn("""Adjusts the scroll offset of the current window so that the line that contains the point
          is centered therein.""")
-  def recenter () = view.scrollTopV.update(math.max(view.point.row - view.height/2, 0))
+  def recenter () = view.scrollTopV() = math.max(view.point.row - view.height/2, 0)
 
   //
   // BUFFER FNS

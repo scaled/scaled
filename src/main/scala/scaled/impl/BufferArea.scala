@@ -237,7 +237,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     })
     // move our lines when scrollTop/Left change
     bview.scrollTopV.onValue { top =>
-      contentNode.setLayoutY(-bview.scrollTopV.get*lineHeight) // TODO: put this in updateVizLines?
+      contentNode.setLayoutY(-bview.scrollTopV()*lineHeight) // TODO: put this in updateVizLines?
       updateVizLines()
     }
     bview.scrollLeftV.onValue { left =>
@@ -263,10 +263,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       cursorText.setText(cchar)
 
       // if the cursor is out of view, scroll it back to the center of the screen
-      val (scrollTop, height) = (bview.scrollTopV.get, bview.height)
+      val (scrollTop, height) = (bview.scrollTopV(), bview.height)
       val scrollMax = bview.buffer.lines.length - bview.height + 1
       if (point.row < scrollTop || point.row >= scrollTop + height)
-        bview.scrollTopV.update(math.min(scrollMax, math.max(0, point.row - height/2)))
+        bview.scrollTopV() = math.min(scrollMax, math.max(0, point.row - height/2))
       // TODO: same for horizontal scrolling?
 
       // println(s"Cursor at ${point.col} x ${point.row} => " +
@@ -304,7 +304,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     }
 
     def updateVizLines () {
-      val (top, left) = (bview.scrollTopV.get, bview.scrollLeftV.get)
+      val (top, left) = (bview.scrollTopV(), bview.scrollLeftV())
       val (bot, right) = (top+bview.height, left+bview.width)
       // println(s"Updating viz lines top=$top left=$left bot=$bot right=$right")
 
@@ -367,8 +367,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     val nhc = (nh / lineHeight).toInt
     if (nwc != bview.width || nhc != bview.height) {
       // update the character width/height in our buffer view
-      bview.widthV.update(nwc)
-      bview.heightV.update(nhc)
+      bview.widthV() = nwc
+      bview.heightV() = nhc
       // println(s"VP resized $nw x $nh -> ${bview.width} x ${bview.height}")
 
       // TODO: update scrollTop/scrollLeft if needed?

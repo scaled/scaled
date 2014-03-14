@@ -71,12 +71,12 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
     * based on the size of the buffer. The point will then be bounded into the visible area of the
     * buffer. */
   def scrollVert (delta :Int) {
-    val ctop = scrollTopV.get
+    val ctop = scrollTopV()
     // bound bottom first, then top; this snaps buffers that are less than one screen tall to top
     // TODO: nix buffer.lines.length, use lines.length when lines is implemented
     val ntop = math.max(math.min(ctop + delta, buffer.lines.length - height), 0)
     // println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
-    scrollTopV.update(ntop)
+    scrollTopV() = ntop
 
     val p = point
     if (p.row < ntop) point = p.atRow(ntop)
@@ -87,7 +87,7 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
   val popup :OptValue[Popup] = OptValue()
 
   // implement some BufferView methods in terms of our reactive values
-  override def point = pointV.get
-  override def width = widthV.get
-  override def height = heightV.get
+  override def point = pointV()
+  override def width = widthV()
+  override def height = heightV()
 }

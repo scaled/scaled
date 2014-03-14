@@ -125,14 +125,14 @@ object Minibuffer {
         val current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
         val comps = completer(current)
         if (comps.isEmpty) {
-          view.popup.update(Popup(Seq("No match."), Popup.UpRight(0, 0), true))
+          view.popup() = Popup(Seq("No match."), Popup.UpRight(0, 0), true)
         }
         else if (comps.size == 1) {
           view.popup.clear()
           setBuffer(comps.head)
         }
         else {
-          view.popup.update(Popup(comps.toSeq.sorted, Popup.UpRight(0, 0), false))
+          view.popup() = Popup(comps.toSeq.sorted, Popup.UpRight(0, 0), false)
           val pre = longestPrefix(comps)
           if (pre != current) setBuffer(pre)
         }

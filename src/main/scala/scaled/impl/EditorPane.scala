@@ -72,17 +72,17 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   override def clearStatus () = _mini.clearStatus()
 
   override def miniRead (prompt :String, defval :String, completer :String => Set[String]) = {
-    val ofocus = _focus.get // note the current focus
-    _focus.update(null)     // focus the minibuffer
+    val ofocus = _focus() // note the current focus
+    _focus() = null         // focus the minibuffer
     _mini.read(prompt, defval, completer) onComplete { _ =>
-      _focus.update(ofocus) // restore the focus on read completion
+      _focus() = ofocus // restore the focus on read completion
     }
   }
 
   override def buffers = _buffers.map(_.buffer)
 
   override def openBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
-    case Some(ob) => _focus.update(ob)
+    case Some(ob) => _focus() = ob
     // if we find no buffer, create a new one with the specified name
     case None =>
       val file = _buffers.headOption map(_.buffer.dir) getOrElse(cwd())
@@ -96,7 +96,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   // if another buffer exists that is visiting this file, just open it
   override def newBuffer (file :File) = _buffers.find(_.buffer.file == file) match {
-    case Some(ob) => _focus.update(ob)
+    case Some(ob) => _focus() = ob
     case None =>
       if (file.exists) newBuffer(BufferImpl.fromFile(file))
       else {
@@ -138,7 +138,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
     val obuf = OpenBuffer(content, area, view)
     _buffers prepend obuf
-    _focus.update(obuf)
+    _focus() = obuf
   }
 
   private def killBuffer (obuf :OpenBuffer) {
@@ -148,7 +148,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     // if our last buffer is killed, create a new scratch buffer
     if (_buffers.isEmpty) newScratch()
     // otherwise if the killed buffer was focused, display the most recently edited buffer
-    else if (_focus.get == obuf) _focus.update(_buffers.head)
+    else if (_focus() == obuf) _focus() = _buffers.head
   }
 
   private def onFocusChange (buf :OpenBuffer) {

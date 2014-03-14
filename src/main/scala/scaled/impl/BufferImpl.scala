@@ -84,8 +84,8 @@ class BufferImpl private (
   override def nameV = _name
   override def fileV = _file
   override def markV = _mark
-  override def mark_= (loc :Loc) = _mark.update(Some(bound(loc)))
-  override def clearMark () = _mark.update(None)
+  override def mark_= (loc :Loc) = _mark() = Some(bound(loc))
+  override def clearMark () = _mark() = None
   override def undoer = undoStack
   override def edited = _edited
   override def lineEdited = _lineEdited
@@ -200,12 +200,12 @@ class BufferImpl private (
   }
 
   private def noteEdited (row :Int, deletedLines :Seq[Line], added :Int) {
-    _dirty.update(true)
+    _dirty() = true
     _edited.emit(Buffer.Edit(row, deletedLines, added, this))
   }
 
   private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) {
-    _dirty.update(true)
+    _dirty() = true
     _lineEdited.emit(Line.Edit(loc, deleted, added, this))
   }
 

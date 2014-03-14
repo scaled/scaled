@@ -23,7 +23,7 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
 
   private val _point = Value(Loc(0, 0))
   override def pointV = _point
-  override def point_= (loc :Loc) = _point.update(_buffer.bound(loc))
+  override def point_= (loc :Loc) = _point() = _buffer.bound(loc)
 
   // narrow the return types of these guys for our internal friends
   override def buffer :BufferImpl = _buffer
