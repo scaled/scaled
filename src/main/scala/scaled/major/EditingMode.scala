@@ -4,6 +4,8 @@
 
 package scaled.major
 
+import java.io.File
+
 import scala.annotation.tailrec
 
 import scaled._
@@ -527,7 +529,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     val fstb = editor.buffers.head.name
     val defb = editor.buffers.drop(1).headOption.map(_.name) getOrElse fstb
     val defp = if (defb == "") "" else s" (default $defb)"
-    editor.miniRead(s"Switch to buffer$defp:", "", completeBuffer(Set(fstb))) onSuccess { read =>
+    val comp = Completers.buffer(editor, Set(fstb))
+    editor.miniRead(s"Switch to buffer$defp:", "", comp) onSuccess { read =>
       editor.openBuffer(if (read == "") defb else read)
     }
   }
@@ -536,7 +539,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   def killBuffer () {
     val current = editor.buffers.head.name
     val prompt = s"Kill buffer (default $current):"
-    editor.miniRead(prompt, "", completeBuffer(Set())) onSuccess { read =>
+    editor.miniRead(prompt, "", Completers.buffer(editor)) onSuccess { read =>
       val buffer = if (read == "") current else read
       if (!editor.killBuffer(buffer)) editor.emitStatus(s"No buffer named: $buffer")
     }
@@ -552,7 +555,13 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
 
   @Fn("""Reads a filename from the minibuffer and switches to a filename visiting it.""")
   def findFile () {
-    // TODO
+    val bufwd = buffer.dir.getAbsolutePath + File.separator
+    editor.miniRead("Find file:", bufwd, Completers.file) onSuccess { path =>
+      val file = new File(path)
+      if (file.isDirectory) editor.emitStatus(
+        "Scaled does not support editing directories. Use Emacs.")
+      else editor.newBuffer(file)
+    }
   }
 
   //
@@ -571,9 +580,4 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
       if (!disp.invoke(fn)) editor.emitStatus(s"Unknown fn: $fn")
     }
   }
-
-  private def completeBuffer (except :Set[String])(prefix :String) =
-    Set() ++ editor.buffers.collect {
-      case (buf) if (!except(buf.name) && (buf.name startsWith prefix)) => buf.name
-    }
 }
