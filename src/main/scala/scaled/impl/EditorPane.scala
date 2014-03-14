@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import javafx.application.Application
 import javafx.scene.control.Label
-import javafx.scene.layout.BorderPane
+import javafx.scene.layout.{BorderPane, Region}
 import javafx.stage.Stage
 
 import reactual.Value
@@ -26,7 +26,7 @@ import scaled.major.TextMode
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor {
+class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   private case class OpenBuffer (content :BorderPane, area :BufferArea, view :BufferViewImpl) {
     def buffer = view.buffer
@@ -35,16 +35,24 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   }
   private val _buffers = ArrayBuffer[OpenBuffer]()
 
+  private var _active :OpenBuffer = _
+  private def setBuffer (buf :OpenBuffer) {
+    if (_active == buf) _active.content.toFront()
+    else {
+      if (_active != null) getChildren.remove(_active.content)
+      _active = buf
+      getChildren.add(_active.content)
+    }
+  }
+
+  private val _minirow = new BorderPane()
   private val _mini :Minibuffer.Area = {
     val (miniPrompt :Label, mini :Minibuffer.Area) = Minibuffer.create(this)
-    setBottom({
-      val minirow = new BorderPane()
-      minirow.setLeft(miniPrompt)
-      minirow.setCenter(mini)
-      minirow
-    })
+    _minirow.setLeft(miniPrompt)
+    _minirow.setCenter(mini)
     mini
   }
+  getChildren.add(_minirow)
 
   // we manage focus specially, via this reactive value
   private val _focus = Value[OpenBuffer](null)
@@ -95,6 +103,23 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
       }
   }
 
+  // we manage layout manually so that we can manage the relative z-order of the buffer view versus
+  // the minibuffer view (so that popups hover over everything properly)
+  override protected def computeMinWidth (height :Double) = _active.content.minWidth(-1)
+  override protected def computeMinHeight (height :Double) =
+    _active.content.minHeight(-1) + _minirow.minHeight(-1)
+  override protected def computePrefWidth (height :Double) = _active.content.prefWidth(-1)
+  override protected def computePrefHeight (width :Double) =
+    _active.content.prefHeight(-1) + _minirow.prefHeight(-1)
+  override protected def computeMaxWidth (height :Double) = Double.MaxValue
+  override protected def computeMaxHeight (width :Double) = Double.MaxValue
+  override def layoutChildren () {
+    val pw = _active.content.prefWidth(-1); val ph = _active.content.prefHeight(-1)
+    _active.content.resize(pw, ph)
+    _minirow.resize(pw, _minirow.prefHeight(-1))
+    _minirow.setLayoutY(ph)
+  }
+
   private def newBuffer (buf :BufferImpl) {
     val view = new BufferViewImpl(this, buf, 80, 24)
     // TODO: determine the proper mode based on user customizable mechanism
@@ -123,9 +148,11 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   }
 
   private def onFocusChange (buf :OpenBuffer) {
-    if (buf == null) _mini.requestFocus()
-    else {
-      setCenter(buf.content)
+    if (buf == null) {
+      _mini.requestFocus()
+      _minirow.toFront()
+    } else {
+      setBuffer(buf)
       buf.area.requestFocus()
       // also move the focused buffer to the head of the buffers
       _buffers -= buf
