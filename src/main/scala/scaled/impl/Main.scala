@@ -27,9 +27,6 @@ class Main extends Application {
 object Main {
 
   def main (args :Array[String]) {
-    if (args.isEmpty) {
-      println("Usage: scaled [file ...]")
-      sys.exit(255)
-    } else Application.launch(classOf[Main], args :_*)
+    Application.launch(classOf[Main], args :_*)
   }
 }

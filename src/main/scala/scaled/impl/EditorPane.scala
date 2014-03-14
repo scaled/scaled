@@ -58,6 +58,8 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   private val _focus = Value[OpenBuffer](null)
   _focus onValue onFocusChange
 
+  newScratch() // always start with a scratch buffer
+
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override val killRing = new KillRingImpl(40) // TODO: get size from config
@@ -120,6 +122,8 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     _minirow.setLayoutY(ph)
   }
 
+  private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
+
   private def newBuffer (buf :BufferImpl) {
     val view = new BufferViewImpl(this, buf, 80, 24)
     // TODO: determine the proper mode based on user customizable mechanism
@@ -142,7 +146,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     _buffers -= obuf
 
     // if our last buffer is killed, create a new scratch buffer
-    if (_buffers.isEmpty) newBuffer(BufferImpl.scratch("*scratch*"))
+    if (_buffers.isEmpty) newScratch()
     // otherwise if the killed buffer was focused, display the most recently edited buffer
     else if (_focus.get == obuf) _focus.update(_buffers.head)
   }
