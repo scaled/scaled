@@ -12,17 +12,16 @@ import javafx.beans.{InvalidationListener, Observable}
 import javafx.css.{CssMetaData, FontCssMetaData}
 import javafx.css.{Styleable, StyleableProperty, StyleOrigin, StyleableObjectProperty}
 import javafx.event.EventHandler
-import javafx.geometry.{Bounds, Rectangle2D, VPos}
-import javafx.geometry.Insets
+import javafx.geometry.{Bounds, Insets, Rectangle2D, VPos}
 import javafx.scene.Group
-import javafx.scene.control.{Control, SkinBase}
+import javafx.scene.control.{Control, Label, SkinBase}
 import javafx.scene.input.{MouseEvent, KeyCode, KeyEvent}
 import javafx.scene.layout.{Region, VBox}
 import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
-import com.sun.javafx.tk.{FontMetrics, Toolkit}
+import com.sun.javafx.tk.Toolkit
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -32,14 +31,15 @@ import scaled._
 // TODO
 //
 // - support passing in start and end anchors and only displaying the part of the buffer between
-// those anchors
+// those anchors (actually make this an attribute of the BufferView)
 //
 // - how will we support styles? attribute the buffer? probably so because that will cause all
 // views of the buffer to remain in sync as attributes are provided by external intelligence
 
-/** The main implementation of [[BufferView]].
+/** Brings everything together into one all singing, all dancing text editing extravaganza.
   */
-class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) extends Region {
+class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
+    extends Region {
 
   getStyleClass.add("buffer")
 

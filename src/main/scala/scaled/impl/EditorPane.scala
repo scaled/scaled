@@ -39,21 +39,15 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   private val _buffers = ArrayBuffer[OpenBuffer]()
 
   private val _tabs = new TabPane()
+  setCenter(_tabs)
 
   private val _mini :Minibuffer.Area = {
     val (miniPrompt :Label, mini :Minibuffer.Area) = Minibuffer.create(this)
-    // TODO: non-placeholder UI for the status line
-    val statusLine = new Label("Status: TODO")
-    statusLine.getStyleClass.add("status")
-    statusLine.setMaxWidth(Double.MaxValue)
-
-    setCenter(_tabs)
     setBottom({
-      val bits = new BorderPane()
-      bits.setTop(statusLine)
-      bits.setLeft(miniPrompt)
-      bits.setCenter(mini)
-      bits
+      val minirow = new BorderPane()
+      minirow.setLeft(miniPrompt)
+      minirow.setCenter(mini)
+      minirow
     })
     mini
   }
@@ -105,9 +99,13 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
     val disp = new DispatcherImpl(this, view) {
       override def createMode () = new TextMode(EditorPane.this, view, this)
     }
-    val area = new BufferArea(this, view, disp)
 
     val tab = new Tab()
+    val content = new BorderPane()
+    content.setCenter(new BufferArea(this, view, disp))
+    content.setBottom(new ModeLine(this, view))
+    tab.setContent(content)
+
     val obuf = OpenBuffer(tab, view)
     tab.setOnCloseRequest(new EventHandler[Event]() {
       def handle (ev :Event) = { killBuffer(obuf) ; ev.consume() }
@@ -115,7 +113,7 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
     _buffers prepend obuf
     // TODO: if this tab is closed via the UI, remove our OB from _buffers
     view.buffer.nameV onValueNotify tab.setText
-    tab.setContent(area)
+
     // TODO: this doesn't work for mouse based selection; need to implement hacky workaround, or
     // maybe we'll roll our own TabPane since we don't want a lot of the other fiddly business
     tab.selectedProperty.addListener(onChangeB { isSel =>

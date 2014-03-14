@@ -6,7 +6,7 @@
   -fx-text-fill: white;
 }
 
-.status {
+.modeLine {
   -fx-text-fill: #424242;
   -fx-background-color: #DBDBDB;
   -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
