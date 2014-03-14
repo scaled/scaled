@@ -291,7 +291,9 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
          The point and mark remain unchanged.""")
   def killRingSave () = buffer.mark match {
     case None => editor.emitStatus("The mark is not set now, so there is no region.")
-    case Some(mp) => editor.killRing add buffer.region(view.point, mp)
+    case Some(mp) =>
+      editor.killRing add buffer.region(view.point, mp)
+      editor.emitStatus("Region added to kill ring.")
   }
 
   @Fn("""Kills the rest of the current line, adding it to the kill ring. If the point is at the end
