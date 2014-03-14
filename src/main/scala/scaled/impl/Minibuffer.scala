@@ -65,6 +65,7 @@ object Minibuffer {
       if (_read != null) _read.deactivate()
       setPrompt("")
       setBuffer(msg)
+      view.popup.clear()
       // TODO: set a timer to clear this status if we have other reads
     }
     def clearStatus () {
@@ -123,13 +124,17 @@ object Minibuffer {
       def complete () {
         val current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
         val comps = completer(current)
-        if (comps.isEmpty) flashStatus("No match.")
-        else if (comps.size == 1) setBuffer(comps.head)
-        else longestPrefix(comps) match {
-          case pre if (pre == "" || pre == current)  =>
-            flashStatus(s"TODO: show ${comps.size} matches")
-            println(s"Matches $comps")
-          case pre => setBuffer(pre)
+        if (comps.isEmpty) {
+          view.popup.update(Popup(Seq("No match."), Popup.UpRight(0, 0), true))
+        }
+        else if (comps.size == 1) {
+          view.popup.clear()
+          setBuffer(comps.head)
+        }
+        else {
+          view.popup.update(Popup(comps.toSeq.sorted, Popup.UpRight(0, 0), false))
+          val pre = longestPrefix(comps)
+          if (pre != current) setBuffer(pre)
         }
       }
 
@@ -182,6 +187,7 @@ object Minibuffer {
       assert(_read == null)
       setPrompt("")
       setBuffer("")
+      view.popup.clear() // clear any active popup
     }
   }
 }

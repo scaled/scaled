@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import javafx.application.Platform
 import javafx.beans.binding.ObjectBinding
 import javafx.beans.property.{DoubleProperty, ObjectProperty, SimpleDoubleProperty}
 import javafx.beans.value.{ChangeListener, ObservableObjectValue, ObservableValue}
@@ -12,10 +13,11 @@ import javafx.css.{CssMetaData, FontCssMetaData}
 import javafx.css.{Styleable, StyleableProperty, StyleOrigin, StyleableObjectProperty}
 import javafx.event.EventHandler
 import javafx.geometry.{Bounds, Rectangle2D, VPos}
+import javafx.geometry.Insets
 import javafx.scene.Group
 import javafx.scene.control.{Control, SkinBase}
 import javafx.scene.input.{MouseEvent, KeyCode, KeyEvent}
-import javafx.scene.layout.Region
+import javafx.scene.layout.{Region, VBox}
 import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
@@ -151,6 +153,65 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) e
   // TODO: handle deletion of lines that include the point? that will probably result in the point
   // being moved, so maybe we don't need to worry about it
 
+  // wire up the display of popups
+  class PopWin extends VBox() {
+    setManaged(false)
+    getStyleClass.add("popup")
+    setPadding(new Insets(3))
+
+    private[this] var _ax = 0d
+    private[this] var _ay = 0d
+    private[this] var _pos :Popup.Pos = _
+
+    def display (pop :Popup) {
+      clear() // clear any previous bits
+
+      if (pop.isError) getStyleClass.add("errpop")
+      else getStyleClass.remove("errpop")
+
+      pop.text.foreach { line =>
+        val text = new Text(line)
+        text.setTextOrigin(VPos.TOP)
+        getChildren.add(text)
+      }
+
+      val line = bview.lines(pop.pos.y)
+      _ax = line.charX(pop.pos.x, charWidth)
+      _ay = line.node.getLayoutY
+      _pos = pop.pos
+    }
+
+    def clear () {
+      popup.getChildren.clear()
+      popup.setVisible(false)
+      _pos = null
+    }
+
+    // we have to do some special jiggery pokery here because we can't just size and show ourselves
+    // in display() because (for whatever stupid reason) our CSS font is not properly configured at
+    // that point, so we have to wait for a deferred layout to come in after things are configured
+    // and then if we're not at our preferred size, size, position and show ourselves
+    override def layoutChildren () {
+      if (_pos != null) {
+        val pw = prefWidth(-1) ; val ph = prefHeight(-1)
+        // we can't just call resize() directly here because JavaFX doesn't take kindly to a Node
+        // resizing itself during the layout process, so we defer it
+        if (pw != getWidth || ph != getHeight) defer { resize(pw, ph) }
+        else {
+          super.layoutChildren()
+          setLayoutX(_pos.vx(_ax, pw, getPadding.getLeft, getPadding.getRight))
+          setLayoutY(_pos.vy(_ay, ph, lineHeight))
+          setVisible(true)
+        }
+      }
+    }
+  }
+  private val popup = new PopWin()
+  bview.popup.onValueNotify { _ match {
+    case None      => popup.clear()
+    case Some(pop) => popup.display(pop)
+  }}
+
   // contains our line nodes and other decorative nodes (cursor, selection, etc.)
   class ContentNode extends Region {
     getStyleClass.add("content")
@@ -190,7 +251,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) e
     def updateCursor (point :Loc) {
       // use the line to determine the layout coordinates of the cursor
       val line = bview.lines(point.row)
-      cursor.setLayoutX(line.cursorX(point.col, charWidth))
+      cursor.setLayoutX(line.charX(point.col, charWidth))
       cursor.setLayoutY(line.node.getLayoutY)
 
       // set the cursor "text" to the character under the point (if any)
@@ -262,7 +323,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl) e
   contentNode.setManaged(false)
 
   // put our scene graph together
-  contentNode.getChildren.addAll(lineNodes, cursor)
+  contentNode.getChildren.addAll(lineNodes, cursor, popup)
   getChildren.add(contentNode)
 
   // listen for addition and removal of lines

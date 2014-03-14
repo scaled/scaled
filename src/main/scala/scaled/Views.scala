@@ -4,7 +4,7 @@
 
 package scaled
 
-import reactual.{Future, Value, ValueV}
+import reactual.{Future, OptValue, Value, ValueV}
 
 /** Visualizes a single line of text, potentially with style information. */
 abstract class LineView {
@@ -85,6 +85,9 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
     if (p.row < ntop) point = p.atRow(ntop)
     else if (p.row >= ntop + height) point = p.atRow(ntop + height - 1)
   }
+
+  /** The popup being displayed by this buffer, if any. */
+  val popup :OptValue[Popup] = OptValue()
 
   // implement some BufferView methods in terms of our reactive values
   override def point = pointV.get

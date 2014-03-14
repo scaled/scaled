@@ -30,7 +30,7 @@ class LineViewImpl (_line :LineV) extends LineView {
   /** Returns the x position of character at the specified column.
     * @param charWidth the current width of the (fixed) view font.
     */
-  def cursorX (col :Int, charWidth :Double) :Double = {
+  def charX (col :Int, charWidth :Double) :Double = {
     // TODO: handle tabs, other funny business?
     node.getLayoutX + col*charWidth
   }

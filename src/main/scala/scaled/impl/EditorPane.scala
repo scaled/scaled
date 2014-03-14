@@ -124,19 +124,16 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   private def onFocusChange (buf :OpenBuffer) {
     if (buf == null) _mini.requestFocus()
     else {
-      // make sure the focused buffer's tab is visible and has JavaFX focus
-      if (_tabs.getSelectionModel.getSelectedItem == buf.tab) deferredFocus(buf)
+      // make sure the focused buffer's tab is visible and has JavaFX focus (note: we can't request
+      // focus immediately, we have to defer it to the next FX UI tick)
+      if (_tabs.getSelectionModel.getSelectedItem == buf.tab) defer {
+        // focus may have changed while we were being deferred, so double check
+        if (_focus.get == buf) buf.tab.getContent.requestFocus()
+      }
       else _tabs.getSelectionModel.select(buf.tab)
       // also move the focused buffer to the head of the buffers
       _buffers -= buf
       _buffers prepend buf
     }
   }
-
-  private def deferredFocus (buf :OpenBuffer) = Platform.runLater(new Runnable() {
-    override def run () {
-      // focus may have changed out from under us again before we got here, so double check
-      if (_focus.get == buf) buf.tab.getContent.requestFocus()
-    }
-  })
 }

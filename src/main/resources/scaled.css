@@ -28,3 +28,16 @@
 .buffer .text {
   -fx-fill: white;
 }
+
+.popup {
+  -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
+  -fx-background-color: #DBDBDB;
+  -fx-background-radius: 5;
+  -fx-border-radius: 5;
+  -fx-effect: dropshadow( one-pass-box , black , 8 , 0.0 , 2 , 0 );
+}
+
+.errpop {
+  -fx-border-color: #FFE3E3 #FFA5A5 #FFA5A5 #FFE3E3;
+  -fx-background-color: #FFDBDB;
+}
