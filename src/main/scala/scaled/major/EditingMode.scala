@@ -524,21 +524,20 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
 
   @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
   def switchToBuffer () {
-    val last = editor.buffers.drop(1).headOption.map(_.name) getOrElse ""
-    val defprompt = if (last == "") "" else s" (default $last)"
-    editor.miniRead(s"Switch to buffer$defprompt:", "", completeBuffer) onSuccess { readBuffer =>
-      val buffer = if (readBuffer == "") last else readBuffer
-      if (!editor.openBuffer(buffer)) {
-        // TODO: if no such buffer exists, create one?
-      }
+    val fstb = editor.buffers.head.name
+    val defb = editor.buffers.drop(1).headOption.map(_.name) getOrElse fstb
+    val defp = if (defb == "") "" else s" (default $defb)"
+    editor.miniRead(s"Switch to buffer$defp:", "", completeBuffer(Set(fstb))) onSuccess { read =>
+      editor.openBuffer(if (read == "") defb else read)
     }
   }
 
   @Fn("""Reads a buffer name from the minibuffer and kills (closes) it.""")
   def killBuffer () {
     val current = editor.buffers.head.name
-    editor.miniRead(s"Kill buffer (default $current):", "", completeBuffer) onSuccess { readBuffer =>
-      val buffer = if (readBuffer == "") current else readBuffer
+    val prompt = s"Kill buffer (default $current):"
+    editor.miniRead(prompt, "", completeBuffer(Set())) onSuccess { read =>
+      val buffer = if (read == "") current else read
       if (!editor.killBuffer(buffer)) editor.emitStatus(s"No buffer named: $buffer")
     }
 
@@ -573,7 +572,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     }
   }
 
-  private def completeBuffer (prefix :String) = Set() ++ editor.buffers.collect {
-    case (buf) if (buf.name startsWith prefix) => buf.name
-  }
+  private def completeBuffer (except :Set[String])(prefix :String) =
+    Set() ++ editor.buffers.collect {
+      case (buf) if (!except(buf.name) && (buf.name startsWith prefix)) => buf.name
+    }
 }

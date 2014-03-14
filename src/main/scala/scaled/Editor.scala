@@ -50,9 +50,9 @@ trait Editor {
     * made active instead. */
   def newBuffer (file :File) :Unit
 
-  /** Makes the buffer with the specified name the active buffer.
-    * @return true if `buffer` exists and was made active, false if no such buffer exists. */
-  def openBuffer (buffer :String) :Boolean
+  /** Makes the buffer with the specified name the active buffer. If no buffer exists with that
+    * name, a new empty buffer will be created with that name.. */
+  def openBuffer (buffer :String) :Unit
 
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
     * to buffer kill hooks which can abort the kill.

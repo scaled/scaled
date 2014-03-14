@@ -51,7 +51,11 @@ object BufferImpl {
   }
 
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
-  def scratch (name :String) :BufferImpl = apply(name, new File(""), new StringReader(""))
+  def scratch (name :String) :BufferImpl = apply(name, cwd(), new StringReader(""))
+
+  /** Returns an empty buffer with the specified `name` and `file`. The file is expected not to
+    * exist. */
+  def empty (name :String, file :File) :BufferImpl = apply(name, file, new StringReader(""))
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()

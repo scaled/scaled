@@ -2,6 +2,8 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
+import java.io.File
+
 import javafx.application.Platform
 import javafx.beans.value.ObservableValue
 import javafx.beans.value.ChangeListener
@@ -26,5 +28,8 @@ package scaled {
     def defer (op : =>Unit) :Unit = Platform.runLater(new Runnable() {
       override def run () = op
     })
+
+    /** Returns the current working directory of the editor process. */
+    def cwd () = new File(System.getProperty("user.dir"))
   }
 }

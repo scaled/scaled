@@ -84,8 +84,12 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   override def buffers = _buffers.map(_.buffer)
 
   override def openBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
-    case Some(ob) => _focus.update(ob) ; true
-    case None     => false
+    case Some(ob) => _focus.update(ob)
+    // if we find no buffer, create a new one with the specified name
+    case None =>
+      def dirFor (file :File) = if (file.isDirectory) file else file.getParentFile
+      val file = _buffers.headOption map(_.buffer.file) map(dirFor) getOrElse(cwd())
+      newBuffer(BufferImpl.empty(buffer, file))
   }
 
   override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
