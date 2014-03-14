@@ -23,15 +23,15 @@ object Completers {
   /** A completer on file system files. */
   val file :String => Set[String] = path => path lastIndexOf File.separatorChar match {
     case -1  => expand(File.listRoots.head /*TODO*/, path)
-    case idx => expand(new File(path.substring(0, idx)), path.substring(idx+1))
+    case idx => expand(new File(path.substring(0, idx+1)), path.substring(idx+1))
   }
 
   private def expand (dir :File, prefix :String) :Set[String] = {
+    val matches = Set() ++ dir.listFiles filter(_.getName startsWith prefix) map(format)
     val file = new File(dir, prefix)
-    if (file.exists) {
-      if (file.isDirectory) Set() ++ file.listFiles map(format)
-      else Set(format(file))
-    } else Set() ++ dir.listFiles filter(_.getName startsWith prefix) map(format)
+    if (!file.exists) matches
+    else if (file.isDirectory && matches.size == 1) Set() ++ file.listFiles map(format)
+    else matches
   }
 
   private def format (file :File) = {
