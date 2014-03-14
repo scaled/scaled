@@ -72,6 +72,7 @@ class BufferImpl private (
   private val _name = Value(initName)
   private val _file = Value(initFile)
   private val _mark = Value(None :Option[Loc])
+  private val _dirty = Value(false)
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
 
@@ -90,6 +91,7 @@ class BufferImpl private (
   override def lineEdited = _lineEdited
   override def lines = _lines
   // refine return type to ease life for internal friends
+  override def dirtyV :Value[Boolean] = _dirty
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
 

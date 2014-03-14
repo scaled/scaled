@@ -11,12 +11,15 @@ import scaled._
 /** Tracks changes to a buffer, aggregating sequences of individual changes into single undoable
   * actions. Then handles reversing said actions, on request.
   */
-class UndoStack (buffer :RBuffer) extends Undoer {
+class UndoStack (buffer :BufferImpl) extends Undoer {
 
   buffer.edited.onValue { edit => accum += edit }
   buffer.lineEdited.onValue { edit => accum += edit }
 
-  def actionWillStart (point :Loc) :Unit = _point = point
+  def actionWillStart (point :Loc) {
+    _point = point
+    _wasDirty = buffer.dirty
+  }
 
   def actionDidComplete () :Unit = if (!_edits.isEmpty) {
     accumTo(_edits, _actions)
@@ -78,7 +81,7 @@ class UndoStack (buffer :RBuffer) extends Undoer {
         actions.trimEnd(1)
         accum
       }
-      else Action(_point, Seq() ++ edits, isTyping)
+      else Action(_point, _wasDirty, isTyping, Seq() ++ edits)
       actions += action
       edits.clear()
     }
@@ -91,13 +94,19 @@ class UndoStack (buffer :RBuffer) extends Undoer {
   private val _redoEdits = ArrayBuffer[Undoable]()
   private val _redoActions = ArrayBuffer[Action]()
   private var _point = Loc(0, 0)
+  private var _wasDirty = false
   private var _undoing = false
   private var _redoing = false
 
-  private case class Action (point :Loc, edits :Seq[Undoable], isTyping :Boolean) {
-    // undo the edits in the reverse of the order they were accumulated
-    def undo () :Unit = edits.reverse.foreach { _.undo() }
+  private case class Action (point :Loc, wasDirty :Boolean, isTyping :Boolean,
+                             edits :Seq[Undoable]) {
+    def undo () {
+      // undo the edits in the reverse of the order they were accumulated
+      edits.reverse.foreach { _.undo() }
+      // then restore the dirty state of the buffer
+      buffer.dirtyV.update(_wasDirty)
+    }
     // accumulates additional edits to this action
-    def accum (edits :Seq[Undoable]) = Action(point, this.edits ++ edits, isTyping)
+    def accum (edits :Seq[Undoable]) = Action(point, wasDirty, isTyping, this.edits ++ edits)
   }
 }

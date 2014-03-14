@@ -88,6 +88,9 @@ abstract class BufferV {
   /** The current mark, if any. */
   def mark :Option[Loc]
 
+  /** Whether or not this buffer has been modified since it was loaded or last saved. */
+  def dirty :Boolean
+
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
     * exists for symmetry with [[end]]. */
   def start :Loc = Loc.Zero
@@ -280,14 +283,17 @@ object Buffer {
 /** The reactive version of [Buffer]. */
 abstract class RBuffer extends Buffer {
 
-  /** A reactive view of [name]. */
+  /** A reactive view of [[name]]. */
   def nameV :ValueV[String]
 
-  /** A reactive view of [file]. */
+  /** A reactive view of [[file]]. */
   def fileV :ValueV[File]
 
   /** The current mark, if any. */
   def markV :ValueV[Option[Loc]]
+
+  /** A reactive view of [[dirty]]. */
+  def dirtyV :ValueV[Boolean]
 
   /** A signal emitted when this buffer is edited. */
   def edited :SignalV[Buffer.Edit]
@@ -299,4 +305,5 @@ abstract class RBuffer extends Buffer {
   override def name = nameV.get
   override def file = fileV.get
   override def mark = markV.get
+  override def dirty = dirtyV.get
 }
