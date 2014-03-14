@@ -117,6 +117,9 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     "C-x k"   -> "kill-buffer",
     "C-x C-f" -> "find-file",
 
+    // editor commands
+    "C-x C-c" -> "save-buffers-kill-editor",
+
     // meta commands
     "M-x" -> "execute-extended-command"
   )
@@ -410,13 +413,15 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   }
 
   @Fn("Undoes the last change to the buffer.")
-  def undo () {
-    if (!view.undoer.undo()) editor.emitStatus("Nothing to undo.")
+  def undo () = buffer.undoer.undo() match {
+    case None    => editor.emitStatus("Nothing to undo.")
+    case Some(p) => view.point = p
   }
 
   @Fn("Redoes the last undone to the buffer.")
-  def redo () {
-    if (!view.undoer.redo()) editor.emitStatus("Nothing to redo.")
+  def redo () = buffer.undoer.redo() match {
+    case None    => editor.emitStatus("Nothing to redo.")
+    case Some(p) => view.point = p
   }
 
   @Fn("Moves the point down one line.")
@@ -549,6 +554,13 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   @Fn("""Reads a filename from the minibuffer and switches to a filename visiting it.""")
   def findFile () {
     // TODO
+  }
+
+  //
+  // EDITOR FNS
+
+  @Fn("""Offers to save any unsaved buffers, then kills this editor.""")
+  def saveBuffersKillEditor () {
   }
 
   //

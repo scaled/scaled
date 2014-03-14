@@ -71,6 +71,8 @@ class BufferImpl private (
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
 
+  val undoStack = new UndoStack(this)
+
   //
   // from Buffer and RBuffer API
 
@@ -79,6 +81,7 @@ class BufferImpl private (
   override def markV = _mark
   override def mark_= (loc :Loc) = _mark.update(Some(bound(loc)))
   override def clearMark () = _mark.update(None)
+  override def undoer = undoStack
   override def edited = _edited
   override def lineEdited = _lineEdited
   override def lines = _lines

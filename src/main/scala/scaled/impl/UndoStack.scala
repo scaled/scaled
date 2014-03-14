@@ -11,12 +11,12 @@ import scaled._
 /** Tracks changes to a buffer, aggregating sequences of individual changes into single undoable
   * actions. Then handles reversing said actions, on request.
   */
-class UndoStack (view :RBufferView) extends Undoer {
+class UndoStack (buffer :RBuffer) extends Undoer {
 
-  view.buffer.edited.onValue { edit => accum += edit }
-  view.buffer.lineEdited.onValue { edit => accum += edit }
+  buffer.edited.onValue { edit => accum += edit }
+  buffer.lineEdited.onValue { edit => accum += edit }
 
-  def actionWillStart () :Unit = _point = view.point
+  def actionWillStart (point :Loc) :Unit = _point = point
 
   def actionDidComplete () :Unit = if (!_edits.isEmpty) {
     accumTo(_edits, _actions)
@@ -24,31 +24,33 @@ class UndoStack (view :RBufferView) extends Undoer {
     _redoActions.clear()
   }
 
-  override def undo () :Boolean = {
-    if (_actions.isEmpty) false
+  override def undo () :Option[Loc] = {
+    if (_actions.isEmpty) None
     else {
       _undoing = true
+      val action = _actions.last
+      _actions.trimEnd(1)
       try {
-        _actions.last.undo()
-        _actions.trimEnd(1)
+        action.undo()
         accumTo(_redoEdits, _redoActions)
       } finally {
         _undoing = false
       }
-      true
+      Some(action.point)
     }
   }
 
-  override def redo () :Boolean = {
-    if (_redoActions.isEmpty) false
+  override def redo () :Option[Loc] = {
+    if (_redoActions.isEmpty) None
     else {
-      _redoActions.last.undo()
+      val action = _redoActions.last
       _redoActions.trimEnd(1)
+      action.undo()
       // accumulate the redone actions immediately so that the actionDidComplete that naturally
       // follows a redo does not see uncommitted edits and think that the user just made a normal
       // edit (which would clear the redo list)
       accumTo(_edits, _actions)
-      true
+      Some(action.point)
     }
   }
 
@@ -93,13 +95,8 @@ class UndoStack (view :RBufferView) extends Undoer {
   private var _redoing = false
 
   private case class Action (point :Loc, edits :Seq[Undoable], isTyping :Boolean) {
-    def undo () :Unit = {
-      // undo the edits in the reverse of the order they were accumulated
-      edits.reverse.foreach { _.undo() }
-      // then restore the point
-      view.point = point
-    }
-
+    // undo the edits in the reverse of the order they were accumulated
+    def undo () :Unit = edits.reverse.foreach { _.undo() }
     // accumulates additional edits to this action
     def accum (edits :Seq[Undoable]) = Action(point, this.edits ++ edits, isTyping)
   }

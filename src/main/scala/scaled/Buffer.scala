@@ -185,6 +185,9 @@ abstract class Buffer extends BufferV {
   /** Clears the current mark. */
   def clearMark () :Unit
 
+  /** That which handles undoing and redoing for this buffer. */
+  def undoer :Undoer
+
   /** Inserts the single character `c` into this buffer at `loc`. */
   def insert (loc :Loc, c :Char) :Unit
 
