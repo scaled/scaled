@@ -145,7 +145,7 @@ class BufferImpl private (
       // finally add the middle lines (unmodified) and the merged last line into the buffer
       val rest = region.slice(1, region.length-1).map(new MutableLine(this, _)) :+ tail
       _lines.insertAll(loc.row+1, rest)
-      _edited.emit(Buffer.Edit(loc.row+1, BufferImpl.NoLines, rest.length, this))
+      noteEdited(loc.row+1, BufferImpl.NoLines, rest.length)
       // return the location at the end of the inserted region
       Loc(loc.row+region.length-1, region.last.length)
   }
@@ -170,14 +170,14 @@ class BufferImpl private (
 
   override def split (loc :Loc) {
     _lines.insert(loc.row+1, line(loc).split(loc))
-    _edited.emit(Buffer.Edit(loc.row+1, BufferImpl.NoLines, 1, this))
+    noteEdited(loc.row+1, BufferImpl.NoLines, 1)
   }
 
   override private[scaled] def undo (edit :Buffer.Edit) {
     assert(edit.buffer == this)
     val undoneInserts = delete(edit.offset, edit.added)
     _lines.insertAll(edit.offset, edit.deletedLines.map(new MutableLine(this, _)))
-    _edited.emit(Buffer.Edit(edit.offset, undoneInserts, edit.deleted, this))
+    noteEdited(edit.offset, undoneInserts, edit.deleted)
   }
 
   //
@@ -195,12 +195,19 @@ class BufferImpl private (
 
   private def deleteEmit (row :Int, count :Int) :Seq[Line] = {
     val deleted = delete(row, count)
-    if (!deleted.isEmpty) _edited.emit(Buffer.Edit(row, deleted, 0, this))
+    if (!deleted.isEmpty) noteEdited(row, deleted, 0)
     deleted
   }
 
-  private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) =
+  private def noteEdited (row :Int, deletedLines :Seq[Line], added :Int) {
+    _dirty.update(true)
+    _edited.emit(Buffer.Edit(row, deletedLines, added, this))
+  }
+
+  private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) {
+    _dirty.update(true)
     _lineEdited.emit(Line.Edit(loc, deleted, added, this))
+  }
 
   private val lineSep = "\n" // TODO
 

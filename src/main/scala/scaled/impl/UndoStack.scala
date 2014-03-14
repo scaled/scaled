@@ -104,7 +104,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
       // undo the edits in the reverse of the order they were accumulated
       edits.reverse.foreach { _.undo() }
       // then restore the dirty state of the buffer
-      buffer.dirtyV.update(_wasDirty)
+      buffer.dirtyV.update(wasDirty)
     }
     // accumulates additional edits to this action
     def accum (edits :Seq[Undoable]) = Action(point, wasDirty, isTyping, this.edits ++ edits)
