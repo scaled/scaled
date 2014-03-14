@@ -85,6 +85,9 @@ abstract class BufferV {
   /** The file being edited by this buffer. */
   def file :File
 
+  /** The directory that contains the file being edited by this buffer. */
+  def dir :File = if (file.isDirectory) file else file.getParentFile
+
   /** The current mark, if any. */
   def mark :Option[Loc]
 
