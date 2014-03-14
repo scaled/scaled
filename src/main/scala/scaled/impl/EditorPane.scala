@@ -65,7 +65,11 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override val killRing = new KillRingImpl(40) // TODO: get size from config
 
-  override def emitStatus (msg :String) = _mini.emitStatus(msg)
+  override def emitStatus (msg :String) {
+    // we might be asked to emit status while creating the minibuffer, so don't freak out if that's
+    // the case; just don't display anything, but add the status to our history (when that exists)
+    if (_mini != null) _mini.emitStatus(msg)
+  }
   override def clearStatus () = _mini.clearStatus()
 
   override def miniRead (prompt :String, defval :String, completer :String => Set[String]) = {
@@ -88,8 +92,10 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
     case None     => false
   }
 
-  override def newBuffer (file :File) {
-    val view = new BufferViewImpl(this, BufferImpl.fromFile(file), 80, 24)
+  override def newBuffer (file :File) = newBuffer(BufferImpl.fromFile(file))
+
+  private def newBuffer (buf :BufferImpl) {
+    val view = new BufferViewImpl(this, buf, 80, 24)
     // TODO: determine the proper mode based on user customizable mechanism
     val disp = new DispatcherImpl(this, view) {
       override def createMode () = new TextMode(EditorPane.this, view, this)
@@ -118,7 +124,8 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
     _buffers -= obuf
     _tabs.getTabs.remove(obuf.tab)
 
-    // TODO: if our last buffer is killed, add a scratch buffer?
+    // if our last buffer is killed, create a new scratch buffer
+    if (_tabs.getTabs.isEmpty) newBuffer(BufferImpl.scratch("*scratch*"))
   }
 
   private def onFocusChange (buf :OpenBuffer) {
