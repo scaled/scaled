@@ -34,6 +34,7 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   private case class OpenBuffer (tab :Tab, view :BufferViewImpl) {
     def buffer = view.buffer
     def name = view.buffer.name
+    override def toString = name
   }
   private val _buffers = ArrayBuffer[OpenBuffer]()
 
@@ -107,6 +108,7 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
     tab.setOnCloseRequest(new EventHandler[Event]() {
       def handle (ev :Event) = { killBuffer(obuf) ; ev.consume() }
     })
+    _buffers prepend obuf
     // TODO: if this tab is closed via the UI, remove our OB from _buffers
     view.buffer.nameV onValueNotify tab.setText
     tab.setContent(area)
@@ -116,7 +118,7 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
       if (isSel) _focus.update(obuf)
     })
     _tabs.getTabs.add(tab)
-    _buffers prepend obuf
+    _focus.update(obuf)
   }
 
   private def killBuffer (obuf :OpenBuffer) {
