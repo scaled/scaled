@@ -84,7 +84,16 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
     case None     => false
   }
 
-  override def newBuffer (file :File) = newBuffer(BufferImpl.fromFile(file))
+  // if another buffer exists that is visiting this file, just open it
+  override def newBuffer (file :File) = _buffers.find(_.buffer.file == file) match {
+    case Some(ob) => _focus.update(ob)
+    case None =>
+      if (file.exists) newBuffer(BufferImpl.fromFile(file))
+      else {
+        newBuffer(BufferImpl.empty(file.getName, file))
+        emitStatus("(New file)")
+      }
+  }
 
   private def newBuffer (buf :BufferImpl) {
     val view = new BufferViewImpl(this, buf, 80, 24)
@@ -114,13 +123,9 @@ class EditorPane (app :Application, stage :Stage) extends BorderPane with Editor
   }
 
   private def onFocusChange (buf :OpenBuffer) {
-    if (buf == null) {
-      _mini.requestFocus()
-      _mini.toFront()
-    }
+    if (buf == null) _mini.requestFocus()
     else {
       setCenter(buf.content)
-      buf.content.toFront()
       buf.area.requestFocus()
       // also move the focused buffer to the head of the buffers
       _buffers -= buf

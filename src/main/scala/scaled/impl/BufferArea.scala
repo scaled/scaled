@@ -386,7 +386,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   def mousePressed (mev :MouseEvent) {
     // TODO: update view.point to the clicked Loc
     // TODO: also note the clicked Loc so that if we drag, we can use it to set the region
-    if (!isFocused()) requestFocus() // TODO: is this the right place to do this?
   }
   def mouseDragged (mev :MouseEvent) {
     // TODO: adjust the point and mark to set the active region to the dragged area
