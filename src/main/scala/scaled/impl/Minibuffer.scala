@@ -178,7 +178,8 @@ object Minibuffer {
       private def longestPrefix (comps :Set[String]) = comps reduce sharedPrefix
     }
 
-    private class YorNRead (prompt :String) extends Read[Boolean](prompt, "") {
+    // TODO: in the distant future we'll want to i18n this somehow...
+    private class YorNRead (prompt :String) extends Read[Boolean](prompt + " (y or n)", "") {
       override def insert (typed :String) = typed match {
         // TODO: having to clearRead() here feels fragile, is there a better way?
         case "y" => clearRead() ; result.succeed(true)
