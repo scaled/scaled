@@ -6,6 +6,8 @@ package scaled.major
 
 import java.io.File
 
+import reactual.Future
+
 import scala.annotation.tailrec
 
 import scaled._
@@ -119,6 +121,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     "C-x k"   -> "kill-buffer",
     "C-x C-s" -> "save-buffer",
     "C-x C-f" -> "find-file",
+    "C-x C-w" -> "write-file",
 
     // editor commands
     "C-x C-c" -> "save-buffers-kill-editor",
@@ -565,7 +568,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     }
   }
 
-  @Fn("""Saves current buffer in visited file, if modified.""")
+  @Fn("""Saves current buffer to the currently visited file, if modified.""")
   def saveBuffer () {
     if (!buffer.dirty) editor.emitStatus("No changes need to be saved.")
     else {
@@ -573,6 +576,31 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
       // what else does emacs do?
       buffer.save()
       editor.emitStatus(s"Wrote: ${buffer.file.getAbsolutePath}")
+    }
+  }
+
+  @Fn("""Saves the buffer to a filename read from the minibuffer. This makes the buffer visit that
+         file. If you specify just a directory, the buffer will be saved to its current filename
+         in the specified directory.""")
+  def writeFile () {
+    val bufwd = buffer.dir.getAbsolutePath + File.separator
+    editor.miniRead("Write file:", bufwd, Completers.file) onSuccess { path =>
+      val file = new File(path).getCanonicalFile
+      // require confirmation if another buffer is visiting the specified file; if they proceed,
+      // the buffer will automatically be renamed (by internals) after it is saved
+      (if (!editor.buffers.exists(_.file == file)) Future.success(true)
+      else editor.miniReadYN(s"A buffer is visiting '$path'; proceed?")) onSuccess {
+        case false => editor.emitStatus("Canceled.")
+        case true =>
+          // require confirmation if the target file already exists
+          (if (!file.exists) Future.success(true)
+          else editor.miniReadYN(s"File '$path' exists; overwrite?")) onSuccess {
+            case false => editor.emitStatus("Canceled.")
+            case true =>
+              buffer.saveTo(file)
+              editor.emitStatus(s"Wrote: ${buffer.file.getAbsolutePath}")
+          }
+      }
     }
   }
 
