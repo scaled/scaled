@@ -31,7 +31,8 @@ trait Editor {
     * status message. */
   def clearStatus () :Unit
 
-  /** Prompts the user to input a string via the minibuffer.
+  /** Prompts the user to input a string via the minibuffer. Returns a future which will yield the
+    * entered string, or which will fail if input was canceled.
     *
     * @param prompt the text to display to the left of the minibuffer when requesting input.
     * @param defval the default value with which to populate the minibuffer.
@@ -41,6 +42,13 @@ trait Editor {
     *                  entire values, not suffixes to be appended to the prefix.
     */
   def miniRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String]
+
+  /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield true
+    * for 'y', false for 'n', and which will fail if input was canceled.
+    *
+    * @param prompt the text to display when requesting input.
+    */
+  def miniReadYN (prompt :String) :Future[Boolean]
 
   /** Returns a view on all open buffers. The buffers will be returned in order of most recent
     * activation. */

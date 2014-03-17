@@ -40,11 +40,12 @@ object BufferImpl {
 
   /** Reads the contents of `file` into a buffer. */
   def fromFile (file :File) :BufferImpl = {
+    val cfile = file.getCanonicalFile
     // TODO: use a CharSetDecoder and ByteBuffer + CharBuffer to read things ourselves, and track
     // where and what the line separators are, and whether there's a trailing line sep
     val reader = new FileReader(file)
     try {
-      apply(file.getName, file, reader)
+      apply(cfile.getName, cfile, reader)
     } finally {
       reader.close
     }

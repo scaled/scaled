@@ -13,7 +13,7 @@ import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region}
 import javafx.stage.Stage
 
-import reactual.Value
+import reactual.{Future, Value}
 
 import scaled._
 import scaled.major.TextMode
@@ -71,12 +71,15 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   }
   override def clearStatus () = _mini.clearStatus()
 
-  override def miniRead (prompt :String, defval :String, completer :String => Set[String]) = {
-    val ofocus = _focus() // note the current focus
-    _focus() = null         // focus the minibuffer
-    _mini.read(prompt, defval, completer) onComplete { _ =>
-      _focus() = ofocus // restore the focus on read completion
-    }
+  override def miniRead (prompt :String, defval :String, completer :String => Set[String]) =
+    withMiniFocus(_mini.read(prompt, defval, completer))
+
+  override def miniReadYN (prompt :String) = withMiniFocus(_mini.readYN(prompt))
+
+  private def withMiniFocus[T] (action : => Future[T]) :Future[T] = {
+    val ofocus = _focus()                        // note the current focus
+    _focus() = null                              // focus the minibuffer
+    action onComplete { _ => _focus() = ofocus } // restore the focus on completion
   }
 
   override def buffers = _buffers.map(_.buffer)

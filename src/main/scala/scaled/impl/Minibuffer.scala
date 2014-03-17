@@ -37,6 +37,7 @@ object Minibuffer {
 
     def read (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
       mode.read(prompt, defval, completer)
+    def readYN (prompt :String) :Future[Boolean] = mode.readYN(prompt)
     def emitStatus (msg :String) = mode.flashStatus(msg)
     def clearStatus () = mode.clearStatus()
   }
@@ -46,10 +47,12 @@ object Minibuffer {
     override def name = "minibuffer"
     override def dispose () {}  // nothing to dispose
 
+    override def defaultFn = Some("default-insert")
+
     override def keymap = super.keymap ++ Seq(
-      "ENTER" -> "succeed-read",
-      "C-g"   -> "abort-read",
-      "TAB"   -> "complete"
+      "ENTER" -> "commit-read",
+      "TAB"   -> "complete",
+      "C-g"   -> "abort-read"
 
       // TODO: history commands
 
@@ -73,22 +76,23 @@ object Minibuffer {
       else if (!_read.active) _read.activate()
     }
     def read (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
-      if (_read == null) {
-        _read = new Read(prompt, defval, completer)
-        _read.activate()
-        _read.result
-      } else {
-        flashStatus("Command attempted to use minibuffer while in minibuffer.")
-        Future.failure(new Exception("minibuffer in use"))
-      }
+      setRead(new ReadString(prompt, defval, completer))
+    def readYN (prompt :String) :Future[Boolean] =
+      setRead(new YorNRead(prompt))
 
     //
     // Fns
 
-    @Fn("Succeeds the current minibuffer read with its current contents.")
-    def succeedRead () {
+    @Fn("Handles insertion of typed characters into minibuffer.")
+    def defaultInsert (typed :String) {
+      if (_read == null) selfInsertCommand(typed)
+      else _read.insert(typed)
+    }
+
+    @Fn("Commits the current minibuffer read with its current contents.")
+    def commitRead () {
       if (_read == null) flashStatus("Minibuffer read completed but have no active read?!")
-      else clearRead().succeed()
+      else clearRead().commit()
     }
 
     @Fn("Aborts the current minibuffer read.")
@@ -106,8 +110,8 @@ object Minibuffer {
     //
     // Implementation details
 
-    private class Read (prompt :String, defval :String, completer :String => Set[String]) {
-      val result = Promise[String]
+    private abstract class Read[T] (prompt :String, defval :String) {
+      val result = Promise[T]
 
       def active :Boolean = _curval == null
       def activate () {
@@ -121,7 +125,27 @@ object Minibuffer {
         _curval = view.buffer.delete(view.buffer.start, view.buffer.end)
       }
 
-      def complete () {
+      def insert (typed :String) :Unit
+      def complete () :Unit
+
+      def commit () :Unit
+      def abort () {
+        flashStatus("Quit")
+        result.fail(new Exception("Aborted"))
+      }
+
+      def curval :String = mkString(_curval)
+      protected def mkString (lines :Seq[Line]) = lines.map(_.asString).mkString("\n")
+
+      private[this] var _curval = Seq(new Line(defval))
+    }
+
+    private class ReadString (prompt :String, defval :String, completer :String => Set[String])
+        extends Read[String](prompt, defval) {
+
+      override def insert (typed :String) = selfInsertCommand(typed)
+
+      override def complete () {
         val current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
         val comps = completer(current)
         if (comps.isEmpty) {
@@ -138,14 +162,7 @@ object Minibuffer {
         }
       }
 
-      def succeed () = result.succeed(curval)
-      def abort () {
-        flashStatus("Quit")
-        result.fail(new Exception("Aborted"))
-      }
-
-      def curval :String = mkString(_curval)
-      private def mkString (lines :Seq[Line]) = lines.map(_.asString).mkString("\n")
+      override def commit () = result.succeed(curval)
 
       private def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
         val buf = new StringBuilder
@@ -159,10 +176,20 @@ object Minibuffer {
         buf.toString
       }
       private def longestPrefix (comps :Set[String]) = comps reduce sharedPrefix
-
-      private[this] var _curval = Seq(new Line(defval))
     }
-    private[this] var _read :Read = _
+
+    private class YorNRead (prompt :String) extends Read[Boolean](prompt, "") {
+      override def insert (typed :String) = typed match {
+        // TODO: having to clearRead() here feels fragile, is there a better way?
+        case "y" => clearRead() ; result.succeed(true)
+        case "n" => clearRead() ; result.succeed(false)
+        case _   => setPrompt(s"Please answer y or n. $prompt")
+      }
+      override def complete () = insert("	") // ditto
+      override def commit () = insert("\n") // will trigger 'need y or n'
+    }
+
+    private[this] var _read :Read[_] = _
 
     private def setBuffer (text :String) :Unit = setBuffer(Seq(new Line(text)))
     private def setBuffer (text :Seq[Line]) {
@@ -173,6 +200,18 @@ object Minibuffer {
     private def setPrompt (text :String) {
       prompt.setText(text)
       prompt.setManaged(text != "")
+    }
+
+    private def setRead[T] (read :Read[T]) :Future[T] = {
+      if (_read == null) {
+        _read = read
+        read.activate()
+        read.result
+      } else {
+        flashStatus("Command attempted to use minibuffer while in minibuffer.")
+        Future.failure(new Exception("minibuffer in use"))
+      }
+
     }
 
     private def clearRead () = {
