@@ -134,6 +134,10 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
       override def createMode () = new TextMode(EditorPane.this, view, this)
     }
 
+    // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
+    // also set up a listener on it such that if it is written to a new file and that new file has
+    // a name that conflicts with an existing buffer, we name<2> it then as well
+
     val content = new BorderPane()
     val area = new BufferArea(this, view, disp)
     content.setCenter(area)
