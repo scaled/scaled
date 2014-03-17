@@ -186,6 +186,15 @@ abstract class BufferV {
   */
 abstract class Buffer extends BufferV {
 
+  /** Saves this buffer to its current file. If the buffer is not dirty, NOOPs. */
+  def save () {
+    // the caller should check dirty and provide feedback, but let's nip funny biz in the bud
+    if (dirty) saveTo(file)
+  }
+
+  /** Saves this buffer to `file`, updating [[file]] and [[name]] appropriately. */
+  def saveTo (file :File) :Unit
+
   /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
   def mark_= (loc :Loc) :Unit
   /** Clears the current mark. */

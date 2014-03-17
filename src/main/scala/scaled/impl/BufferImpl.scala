@@ -7,7 +7,7 @@ package scaled.impl
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
-import java.io.{Reader, BufferedReader, File, FileReader, StringReader}
+import java.io.{Reader, BufferedReader, BufferedWriter, File, FileReader, FileWriter, StringReader}
 import reactual.{Signal, SignalV, Value, ValueV}
 
 import scaled._
@@ -94,6 +94,31 @@ class BufferImpl private (
   override def dirtyV :Value[Boolean] = _dirty
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
+
+  override def saveTo (file :File) {
+    // TODO: file encoding?
+    val temp = new File(file.getParentFile, file.getName() + "~")
+    val out = new BufferedWriter(new FileWriter(temp))
+    try {
+      def write (idx :Int) {
+        if (idx < lines.length) {
+          val l = lines(idx)
+          if (idx > 0) out.newLine() // TODO: use newlines we detected when reading the file
+          out.write(l.chars, 0, l.length)
+          write(idx+1)
+        }
+      }
+      write(0)
+      out.close()
+      temp.renameTo(file)
+    } finally {
+      temp.delete()
+    }
+
+    _file() = file
+    _name() = file.getName
+    _dirty() = false
+  }
 
   override def loc (offset :Int) = {
     assert(offset >= 0)

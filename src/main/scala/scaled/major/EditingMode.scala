@@ -117,6 +117,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     // buffer commands
     "C-x b"   -> "switch-to-buffer",
     "C-x k"   -> "kill-buffer",
+    "C-x C-s" -> "save-buffer",
     "C-x C-f" -> "find-file",
 
     // editor commands
@@ -564,11 +565,24 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
     }
   }
 
+  @Fn("""Saves current buffer in visited file, if modified.""")
+  def saveBuffer () {
+    if (!buffer.dirty) editor.emitStatus("No changes need to be saved.")
+    else {
+      // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
+      // what else does emacs do?
+      buffer.save()
+      editor.emitStatus(s"Wrote: ${buffer.file.getAbsolutePath}")
+    }
+  }
+
   //
   // EDITOR FNS
 
   @Fn("""Offers to save any unsaved buffers, then kills this editor.""")
   def saveBuffersKillEditor () {
+    // TODO: save buffers!
+    editor.exit(0)
   }
 
   //
