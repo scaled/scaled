@@ -154,7 +154,7 @@ class BufferImpl private (
     }
   }
 
-  override def insert (loc :Loc, c :Char) = _lines(loc.row).insert(loc, c)
+  override def insert (loc :Loc, c :Char, f :Face) = _lines(loc.row).insert(loc, c, f)
   override def insert (loc :Loc, line :LineV) = _lines(loc.row).insert(loc, line)
   override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
     case 0 => loc
@@ -169,7 +169,7 @@ class BufferImpl private (
       // merge the last line of the region with the second half of the split line
       tail.insertSilent(0, region.last, 0, region.last.length)
       // finally add the middle lines (unmodified) and the merged last line into the buffer
-      val rest = region.slice(1, region.length-1).map(new MutableLine(this, _)) :+ tail
+      val rest = region.slice(1, region.length-1).map(MutableLine(this, _)) :+ tail
       _lines.insertAll(loc.row+1, rest)
       noteEdited(loc.row+1, BufferImpl.NoLines, rest.length)
       // return the location at the end of the inserted region
@@ -202,7 +202,7 @@ class BufferImpl private (
   override private[scaled] def undo (edit :Buffer.Edit) {
     assert(edit.buffer == this)
     val undoneInserts = delete(edit.offset, edit.added)
-    _lines.insertAll(edit.offset, edit.deletedLines.map(new MutableLine(this, _)))
+    _lines.insertAll(edit.offset, edit.deletedLines.map(MutableLine(this, _)))
     noteEdited(edit.offset, undoneInserts, edit.deleted)
   }
 

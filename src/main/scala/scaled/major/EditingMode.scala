@@ -208,7 +208,7 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   def selfInsertCommand (typed :String) {
     // insert the typed character at the point
     val p = view.point
-    view.buffer.insert(p, typed)
+    view.buffer.insert(p, typed, Face.defaultFace)
     // move the point to the right by the appropriate amount
     view.point = p + (0, typed.length)
   }
@@ -252,8 +252,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
       // first character onto the end of the previous line)
       if (lineLen > 0) {
         val p0 = buffer.lineStart(p)
-        buffer.insert(buffer.lineEnd(prev), buffer.charAt(p0))
-        buffer.delete(p0, 1)
+        val deleted = buffer.delete(p0, 1)
+        buffer.insert(buffer.lineEnd(prev), deleted)
         // in this case we don't bump the point fwd because it's already "after" the moved char
       }
       // unless the current line has no characters...
@@ -263,15 +263,16 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
         // otherwise pull the last character of the previous line into this one
         case len =>
           val last = Loc(prev, len-1)
-          buffer.insert(buffer.lineStart(p), buffer.charAt(last))
-          buffer.delete(last, 1)
+          val deleted = buffer.delete(last, 1)
+          buffer.insert(buffer.lineStart(p), deleted)
           view.point = tp.nextC
       }
     }
     // otherwise we have a normal transpose: swap the char under the point with the prev char
     else {
       val swap = tp.prevC
-      buffer.replace(swap, 2, new Line(Array(buffer.charAt(tp), buffer.charAt(swap))))
+      buffer.replace(swap, 2, new Line(Array(buffer.charAt(tp), buffer.charAt(swap)),
+                                       Array(buffer.faceAt(tp), buffer.faceAt(swap))))
       view.point = tp.nextC
     }
   }

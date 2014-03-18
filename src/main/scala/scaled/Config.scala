@@ -7,18 +7,35 @@ package scaled
 /** Helper classes for managing editor configuration. */
 object Config {
 
-  /** A key identifies a single configuration setting. */
-  case class Key[T] (
-    /** A human readable description. */
-    descrip :String,
+  /** A key identifies a single configuration setting.
+    * @param A human readable description. */
+  abstract class Key[T] (val descrip :String) {
     /** The value to use if this setting is not customized by the user. */
-    defval :T)
+    def defval (config :Config) :T
+  }
 
-  /** Creates a configuration key. */
-  def key[T] (descrip :String, defval :T) = Key(descrip, defval)
+  /** Creates a config key described by `descrip` with default value `default`. */
+  def key[T] (descrip :String, default :T) :Key[T] = new Key[T](descrip) {
+    override def defval (config :Config) = default
+  }
 
-  /** The key used to configure global and per-mode key bindings. */
-  val keymap = key("Key bindings.", Seq[(String,String)]())
+  /** Creates a config key described by `descrip` that defaults to the value of `default`. */
+  def key[T] (descrip :String, default :Key[T]) = new Key[T](descrip) {
+    override def defval (config :Config) = config(default)
+  }
+
+  //
+  // Basic Face configuration keys
+
+  val boldFace      = key("Basic bold face.", Face(bold=true))
+  val italicFace    = key("Basic italic face.", Face(italic=true))
+  val underlineFace = key("Basic underline face.", Face(underline=true))
+  val strikeFace    = key("Basic strikethrough face.", Face(strike=true))
+
+  val regionFace = key("Basic face for highlighting the region.", Face("#000044"))
+
+  val warnFace  = key("Basic face used to highlight warnings.", Face("DarkOrange").copy(bold=true))
+  val errorFace = key("Basic face used to highlight errors.", Face("Red").copy(bold=true))
 }
 
 /** Manages editor configuration. This trait is used to manage the global configuration for the

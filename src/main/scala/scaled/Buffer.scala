@@ -133,6 +133,10 @@ abstract class BufferV {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
 
+  /** Returns the face of the character at `loc`.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def faceAt (loc :Loc) :Face = line(loc.row).faceAt(loc.col)
+
   /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
     * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
   def region (start :Loc, until :Loc) :Seq[Line]
@@ -203,13 +207,13 @@ abstract class Buffer extends BufferV {
   /** That which handles undoing and redoing for this buffer. */
   def undoer :Undoer
 
-  /** Inserts the single character `c` into this buffer at `loc`. */
-  def insert (loc :Loc, c :Char) :Unit
+  /** Inserts the single character `c` into this buffer at `loc` with face `f`. */
+  def insert (loc :Loc, c :Char, f :Face) :Unit
 
-  /** Inserts the raw string `s` into this buffer at `loc`. */
-  def insert (loc :Loc, s :String) {
-    if (s.length == 1) insert(loc, s.charAt(0))
-    else insert(loc, new Line(s))
+  /** Inserts the raw string `s` into this buffer at `loc` with face `f`. */
+  def insert (loc :Loc, s :String, f :Face) {
+    if (s.length == 1) insert(loc, s.charAt(0), f)
+    else insert(loc, new Line(s, f))
   }
 
   /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
