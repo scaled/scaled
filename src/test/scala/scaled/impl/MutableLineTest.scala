@@ -12,7 +12,7 @@ import org.junit.Assert._
 
 import scaled._
 
-class LineTest {
+class MutableLineTest {
 
   @Test def insertDeleteReplace () {
     val buf = TestData.buffer("test", "")

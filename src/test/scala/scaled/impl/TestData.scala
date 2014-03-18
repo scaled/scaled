@@ -18,6 +18,7 @@ object TestData {
     def showURL (url :String) {}
     def miniRead (prompt :String, defval :String, completer :String => Set[String]) =
       Future.success("test")
+    def miniReadYN (prompt :String) = Future.success(true)
     def emitStatus (msg :String) = println(msg)
     def clearStatus () {}
     def exit (code :Int) {}
