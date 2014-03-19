@@ -37,10 +37,7 @@ class SyntaxTable {
 
   /** Returns the syntax class for `c`. */
   def apply (c :Char) :Syntax = {
-    if (c < _ascii.length) _ascii(c) match {
-      case null => _ascii(c) = resolve(c) ; _ascii(c)
-      case s    => s
-    }
+    if (c < _ascii.length) _ascii(c)
     else _resolved(c) match {
       case null => _resolved.put(c, resolve(c)) ; _resolved(c)
       case    s => s
@@ -86,8 +83,10 @@ class SyntaxTable {
     }
   }
 
-  // we cache syntax for the ascii characters in an array so that we can look them up without boxing
+  // precompute syntax for the ascii characters so we can look them up without boxing
   private val _ascii = Array.ofDim[Syntax](256)
+  for (ii <- 0 until _ascii.length) _ascii(ii) = resolve(ii.toChar)
+
   // any remaining mappings are cached in this map (TODO: use a specialized CharMap, we eventually
   // want a zero boxing solution)
   private val _resolved = new MHashMap[Char,Syntax]() {
