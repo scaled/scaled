@@ -4,8 +4,10 @@
 
 package scaled.impl
 
+import java.util.concurrent.Callable
+
 import javafx.application.Platform
-import javafx.beans.binding.ObjectBinding
+import javafx.beans.binding.{Bindings, ObjectBinding}
 import javafx.beans.property.{DoubleProperty, ObjectProperty, SimpleDoubleProperty}
 import javafx.beans.value.{ChangeListener, ObservableObjectValue, ObservableValue}
 import javafx.beans.{InvalidationListener, Observable}
@@ -17,7 +19,7 @@ import javafx.scene.Group
 import javafx.scene.control.{Control, Label, SkinBase}
 import javafx.scene.input.{MouseEvent, KeyCode, KeyEvent}
 import javafx.scene.layout.{Region, VBox}
-import javafx.scene.paint.Color
+import javafx.scene.paint.{Color, Paint}
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
@@ -84,10 +86,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   private def updateFontMetrics () {
     val fm = Toolkit.getToolkit.getFontLoader.getFontMetrics(font.get)
     charWidth = fm.computeStringWidth("W")
-    // val firstLine = lineNodes.getChildren.get(0).asInstanceOf[Text]
-    // lineHeight = Utils.getLineHeight(font.get, firstLine.getBoundsType)
-    // lineHeight = Utils.getLineHeight(font.get, TextBoundsType.LOGICAL)
-
     // TODO: for some reason JavaFX always ends up one pixel taller when measuring text height; I
     // don't know where this magical pixel comes in, but until I can figure it out, I'm just
     // hacking in a pixel here; yay!
@@ -120,11 +118,19 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
   // create our cursor and bind its position to `bview.point`
   private val cursorBlock = new Rectangle()
-  cursorBlock.getStyleClass.add("cursorBlock")
+  cursorBlock.getStyleClass.add("cursor")
   private val cursorText = new Text()
   cursorText.setTextOrigin(VPos.TOP)
   cursorText.setManaged(false)
-  cursorText.getStyleClass.add("cursorText")
+  // bind the cursor text fill to the fill of the buffer area's background
+  cursorText.fillProperty.bind(Bindings.createObjectBinding(new Callable[Paint]() {
+    def call = {
+      if (getBackground == null) Color.WHITE else {
+        val fills = getBackground.getFills
+        if (fills == null || fills.isEmpty) Color.WHITE else fills.get(0).getFill
+      }
+    }
+  }, backgroundProperty))
   private val cursor = new Group()
   cursor.setManaged(false)
   cursor.getChildren.addAll(cursorBlock, cursorText)
@@ -341,10 +347,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   // add all the current lines to the buffer
   lineNodes.getChildren.addAll(bview.lines.map(_.node) :_*)
 
-  // now that we've added our lines, we can update our font metrics and our preferred sizes
-  updateFontMetrics()
-  // if (textArea.isFocused()) setCaretAnimating(true)
-
   // TODO: insets?
   override protected def computeMinWidth (height :Double) = 20 * charWidth // ?
   override protected def computeMinHeight (height :Double) = lineHeight
@@ -403,7 +405,7 @@ object BufferArea {
 
     val STYLEABLES :java.util.List[CssMetaData[_ <: Styleable, _]] = {
       val styleables = new java.util.ArrayList[CssMetaData[_ <: Styleable, _]](
-        Control.getClassCssMetaData())
+        Region.getClassCssMetaData())
       styleables.add(FONT)
       java.util.Collections.unmodifiableList(styleables)
     }

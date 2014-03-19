@@ -41,6 +41,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     if (_active == buf) _active.content.toFront()
     else {
       if (_active != null) getChildren.remove(_active.content)
+      stage.setTitle(s"Scaled - ${buf.name}")
       _active = buf
       getChildren.add(_active.content)
     }
@@ -122,11 +123,14 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     _active.content.prefHeight(-1) + _minirow.prefHeight(-1)
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
+
   override def layoutChildren () {
-    val pw = _active.content.prefWidth(-1); val ph = _active.content.prefHeight(-1)
-    _active.content.resize(pw, ph)
-    _minirow.resize(pw, _minirow.prefHeight(-1))
-    _minirow.setLayoutY(ph)
+    val bounds = getLayoutBounds
+    val miniHeight = _minirow.prefHeight(-1)
+    val mainHeight = bounds.getHeight-miniHeight
+    _active.content.resize(bounds.getWidth, mainHeight)
+    _minirow.resize(bounds.getWidth, miniHeight)
+    _minirow.setLayoutY(mainHeight)
   }
 
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))

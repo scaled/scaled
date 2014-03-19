@@ -24,7 +24,6 @@ class Main extends Application {
     // TODO: how to support themes, etc.?
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     stage.setScene(scene)
-    stage.setTitle("Scaled")
     stage.show()
   }
 }

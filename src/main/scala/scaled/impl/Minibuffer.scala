@@ -28,7 +28,9 @@ object Minibuffer {
     val disp = new DispatcherImpl(editor, view) {
       override def createMode () = new Mode(editor, view, this, prompt)
     }
-    (prompt, new Area(editor, view, disp))
+    val area = new Area(editor, view, disp)
+    prompt.backgroundProperty.bind(area.backgroundProperty)
+    (prompt, area)
   }
 
   class Area (editor :EditorPane, view :BufferViewImpl, disp :DispatcherImpl)
