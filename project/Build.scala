@@ -9,7 +9,8 @@ object ScaledBuild extends Build {
 
   val localSettings = seq(
     crossPaths    := false,
-    scalacOptions ++= Seq("-unchecked", "-deprecation"),
+    scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-optimize",
+                          "-language:postfixOps" /*, "-Yinline-warnings"*/),
     autoScalaLibrary := false, // we manually add scala-library in our POMs
     fork in Compile := true,
     libraryDependencies ++= Seq(
