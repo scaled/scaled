@@ -76,6 +76,7 @@ class BufferImpl private (
   private val _dirty = Value(false)
   private val _edited = Signal[Buffer.Edit]()
   private val _lineEdited = Signal[Line.Edit]()
+  private val _lineStyled = Signal[Loc]()
 
   val undoStack = new UndoStack(this)
 
@@ -90,6 +91,7 @@ class BufferImpl private (
   override def undoer = undoStack
   override def edited = _edited
   override def lineEdited = _lineEdited
+  override def lineStyled = _lineStyled
   override def lines = _lines
   // refine return type to ease life for internal friends
   override def dirtyV :Value[Boolean] = _dirty
@@ -199,6 +201,20 @@ class BufferImpl private (
     noteEdited(loc.row+1, BufferImpl.NoLines, 1)
   }
 
+  override def applyFace (face :Face, start :Loc, until :Loc) {
+    if (until < start) applyFace(face, until, start)
+    else if (start.row == until.row) line(start).applyFace(face, start, until.col)
+    else {
+      val (fst, last) = (line(start), line(until))
+      fst.applyFace(face, start, fst.length)
+      (start.row+1) until until.row foreach { row =>
+        val line = _lines(row)
+        line.applyFace(face, Loc(row, 0), line.length)
+      }
+      last.applyFace(face, until.atCol(0), until.col)
+    }
+  }
+
   override private[scaled] def undo (edit :Buffer.Edit) {
     assert(edit.buffer == this)
     val undoneInserts = delete(edit.offset, edit.added)
@@ -233,6 +249,10 @@ class BufferImpl private (
   private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) {
     _dirty() = true
     _lineEdited.emit(Line.Edit(loc, deleted, added, this))
+  }
+
+  private[impl] def noteLineStyled (loc :Loc) {
+    _lineStyled.emit(loc)
   }
 
   private val lineSep = "\n" // TODO

@@ -17,6 +17,7 @@ import reactual.{Future, Value}
 
 import scaled._
 import scaled.major.TextMode
+import scaled.minor.WhitespaceMode
 
 /** The editor pane groups together the various UI components that are needed to edit a single
   * buffer. This includes the code area, status line and minibuffer area. It also manages the
@@ -59,6 +60,9 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   _focus onValue onFocusChange
 
   newScratch() // always start with a scratch buffer
+
+  /** The global editor configuration. */
+  def config = new ConfigImpl()
 
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
@@ -128,11 +132,16 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
 
   private def newBuffer (buf :BufferImpl) {
+    val config = new ConfigImpl() // TODO: inherit from global editor config?
     val view = new BufferViewImpl(this, buf, 80, 24)
     // TODO: determine the proper mode based on user customizable mechanism
     val disp = new DispatcherImpl(this, view) {
-      override def createMode () = new TextMode(EditorPane.this, view, this)
+      override def createMode () = new TextMode(EditorPane.this, config, view, this)
     }
+
+    // TEMP: hack in whitespace mode activation for testing for now
+    disp.addMode(new WhitespaceMode(EditorPane.this, config, view,
+                                    disp.major.asInstanceOf[TextMode]))
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has

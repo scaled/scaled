@@ -21,7 +21,7 @@ object Minibuffer {
 
   val bufName = "*minibuffer*"
 
-  def create (editor :Editor) :(Label, Area) = {
+  def create (editor :EditorPane) :(Label, Area) = {
     val prompt = new Label()
     prompt.getStyleClass.add("prompt")
     val view = new BufferViewImpl(editor, BufferImpl.scratch(bufName), 80, 1)
@@ -31,7 +31,7 @@ object Minibuffer {
     (prompt, new Area(editor, view, disp))
   }
 
-  class Area (editor :Editor, view :BufferViewImpl, disp :DispatcherImpl)
+  class Area (editor :EditorPane, view :BufferViewImpl, disp :DispatcherImpl)
       extends BufferArea(editor, view, disp) {
     private[this] val mode = disp.major.asInstanceOf[Mode]
 
@@ -42,8 +42,8 @@ object Minibuffer {
     def clearStatus () = mode.clearStatus()
   }
 
-  private class Mode (editor :Editor, view :BufferViewImpl, disp :DispatcherImpl, prompt :Label)
-      extends EditingMode(editor, view, disp) {
+  private class Mode (editor :EditorPane, view :BufferViewImpl, disp :DispatcherImpl, prompt :Label)
+      extends EditingMode(editor, editor.config, view, disp) {
     override def name = "minibuffer"
     override def dispose () {}  // nothing to dispose
 

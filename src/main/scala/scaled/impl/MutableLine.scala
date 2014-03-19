@@ -4,6 +4,8 @@
 
 package scaled.impl
 
+import scala.annotation.tailrec
+
 import reactual.{Signal, SignalV}
 
 import scaled._
@@ -141,6 +143,23 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
     _end += deltaLength
     buffer.noteLineEdited(loc, replaced, added)
     replaced
+  }
+
+  /** Applies `face` to this line starting at `loc` and continuing to column `last`. If any
+    * characters actually change face, a call to [[BufferImpl.noteLineStyled]] will be made after
+    * the face has been applied to the entire region. */
+  def applyFace (face :Face, loc :Loc, last :Int) {
+    val end = math.min(length, last)
+    @tailrec def loop (pos :Int, first :Int) :Int = {
+      if (pos == end) first
+      else if (_faces(pos) == face) loop(pos+1, first)
+      else {
+        _faces(pos) = face
+        loop(pos+1, if (first == -1) pos else first)
+      }
+    }
+    val first = loop(loc.col, -1)
+    if (first != -1) buffer.noteLineStyled(loc.atCol(first))
   }
 
   override def toString () = s"$asString/${_end}/${_chars.length}"

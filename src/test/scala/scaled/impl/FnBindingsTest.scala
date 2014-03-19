@@ -14,7 +14,7 @@ class FnBindingsTest {
   @Test def testCollectBindings () {
     val view = new BufferViewImpl(TestData.editor, TestData.buffer("test", ""), 80, 24)
     val disp = new DispatcherImpl(TestData.editor, view) {
-      override def createMode () = new TextMode(TestData.editor, view, this)
+      override def createMode () = new TextMode(TestData.editor, TestData.config, view, this)
     }
     val binds = new FnBindings(disp.major, System.err.println)
     // binds.bindings foreach println

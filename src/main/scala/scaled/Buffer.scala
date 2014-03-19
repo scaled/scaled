@@ -263,6 +263,9 @@ abstract class Buffer extends BufferV {
     * which immediately follows the `loc.row`th line. */
   def split (loc :Loc) :Unit
 
+  /** Applies `face` to the characters between `[start, until)`. */
+  def applyFace (face :Face, start :Loc, until :Loc) :Unit
+
   private[scaled] def undo (edit :Buffer.Edit) :Unit
 
   // TODO: methods for editing based on a pair of Locs
@@ -316,6 +319,13 @@ abstract class RBuffer extends Buffer {
 
   /** A signal emitted when any of this buffer's lines are edited. */
   def lineEdited :SignalV[Line.Edit]
+
+  /** A signal emitted when a line in this buffer has a face applied to it. The emitted `Loc` will
+    * contain the row of the line that was edited and the positon of the earliest character to
+    * which a face was applied. Zero or more additional face changes may have been made to
+    * characters after the one identified by the `Loc`, but none will have been made to characters
+    * before that `Loc`. */
+  def lineStyled :SignalV[Loc]
 
   // implement some Buffer methods in terms of our reactive values
   override def name = nameV()

@@ -12,12 +12,20 @@ import scala.annotation.tailrec
 
 import scaled._
 
+/** Configuration for [[EditingMode]]. */
+object EditingConfig extends ConfigDefs {
+
+  // nada for now
+}
+
 /** A base class for all modes that support interactive text editing. This mode defines all of the
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
-abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher) extends MajorMode {
+abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
+    extends MajorMode {
+  import EditingConfig._
 
-  @inline protected def buffer = view.buffer // for great brevity
+  @inline protected final def buffer = view.buffer // for great brevity
 
   /** The syntax table in use for this mode. */
   val syntax :SyntaxTable = createSyntaxTable()
@@ -25,6 +33,8 @@ abstract class EditingMode (editor :Editor, view :RBufferView, disp :Dispatcher)
   /** Creates the syntax table used for this mode. Defaults to the default syntax table. A major mode
     * with special syntax should override this method and return a customized syntax table. */
   protected def createSyntaxTable () = new SyntaxTable()
+
+  override def configDefs = EditingConfig :: super.configDefs
 
   override def defaultFn = Some("self-insert-command")
 

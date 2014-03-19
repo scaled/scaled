@@ -8,7 +8,7 @@ import java.io.{File, StringReader}
 
 import reactual.Future
 
-import scaled.Editor
+import scaled._
 
 /** Helper methods for creating test instances of things. */
 object TestData {
@@ -27,6 +27,8 @@ object TestData {
     def newBuffer (file :File) {}
     def killBuffer (buffer :String) = false
   }
+
+  val config = new ConfigImpl()
 
   /** Creates a test buffer. For testing! */
   def buffer (name :String, text :String) =

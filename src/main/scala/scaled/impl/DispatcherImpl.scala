@@ -30,12 +30,24 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
   override def curFn = _curFn
   override def prevFn = _prevFn
 
-  override def completeFn (fnPre :String) =
-    (Set[String]() /: _metas)((fns, meta) => fns ++ meta.fns.complete(fnPre))
+  override def completeFn (fnPre :String) = (Set[String]() /: _metas) {
+    (fns, meta) => fns ++ meta.fns.complete(fnPre) }
 
   override def invoke (fn :String) = _metas.flatMap(_.fns.binding(fn)).headOption match {
     case Some(fn) => invoke(fn, "") ; true
     case None => false
+  }
+
+  /** Adds the specified minor mode to this dispatcher. */
+  def addMode (minor :MinorMode) {
+    _metas = new ModeMeta(minor) :: _metas
+    _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+  }
+
+  /** Removes the specified minior from this dispatcher. */
+  def removeMode (minor :MinorMode) {
+    _metas = _metas.filter(_.mode != minor)
+    _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
   }
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
@@ -140,14 +152,14 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     editor.emitStatus(trigger.mkString(" "))
   }
 
-  private class ModeMeta (mode :Mode) {
+  private class ModeMeta (val mode :Mode) {
     val fns = new FnBindings(mode, editor.emitStatus)
     val map = DispatcherImpl.parseKeyMap(
       mode.keymap, fns,
       (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
       (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
     // enumerate all prefix sequences (we use these when processing key input)
-    val prefixes = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
+    val prefixes :Set[Seq[KeyPress]] = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
     // TODO: report an error if a key prefix is bound to an fn? WDED?
   }
 

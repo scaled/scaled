@@ -19,12 +19,17 @@ package scaled
   * before every capital letter and making said capital letter lowercase. For example: forwardChar
   * becomes forward-char.
   */
-trait Mode {
+abstract class Mode {
 
   /** The name of this mode. Displayed to the user. This is generally a simple single word. For
     * example: `scala`, `text`, `commit`. This name string will be prefixed to this mode's fns when
     * called interactively by the user or bound in keymaps, so don't be extravagant. */
   def name :String
+
+  /** Returns the configuration definitions objects that are used by this mode. If a mode defines
+    * configurables in a configuration definitions object, it should override this method and
+    * prepend its object to the returned list. */
+  def configDefs :List[ConfigDefs] = EditorConfig :: Nil
 
   /** Returns the key bindings defined by this mode: a list of `(trigger sequence -> fn binding)`
     * mappings.
