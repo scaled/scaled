@@ -4,9 +4,12 @@
 
 package scaled.impl
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 import javafx.geometry.VPos
+import javafx.scene.Node
+import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
 import javafx.scene.text.TextFlow
@@ -17,41 +20,20 @@ class LineViewImpl (_line :LineV) extends LineView {
 
   override def line = _line
 
-  val spans = ArrayBuffer[Span]()
-  class Span (start :Int, end :Int, face :Face) {
-    val text = _line.sliceString(start, end)
-    assert(!text.contains('\r') && !text.contains('\n'))
-
-    // displaying background requires rendering a separate filled rectangle behind our text
-    val rect = if (!face.background.isDefined) null else {
-      val r = new Rectangle(1, 1, face.background.get)
-      r.setManaged(false)
-      node.getChildren.add(r)
-      r
-    }
-
-    val tnode = new Text(text)
-    tnode.getStyleClass.add("text")
-    tnode.setTextOrigin(VPos.TOP)
-    if (face.foreground.isDefined) tnode.setFill(face.foreground.get)
-    // TODO: font variants
-    node.getChildren.add(tnode)
-
-    def layout () {
-      if (rect != null) {
-        // size and position our bg rect based on the size and position of our text
-        val bounds = tnode.getLayoutBounds
-        rect.setWidth(bounds.getWidth)
-        rect.setHeight(bounds.getHeight+1) // see BufferArea.lineHeight for hackery excuse (TODO)
-        rect.relocate(tnode.getLayoutX, tnode.getLayoutY)
-      }
-    }
-  }
-
   val node = new TextFlow() {
     override def layoutChildren () {
       super.layoutChildren()
-      spans foreach(_.layout())
+      val cs = getChildren
+      @tailrec def layout (ii :Int) {
+        if (ii >= 0) {
+          cs.get(ii) match {
+            case ft :FillableText => ft.layoutRect()
+            case _ => // nada
+          }
+          layout(ii-1)
+        }
+      }
+      layout(cs.size-1)
     }
   }
   node.setManaged(false)
@@ -81,22 +63,32 @@ class LineViewImpl (_line :LineV) extends LineView {
   }
 
   def rebuild () {
-    node.getChildren.clear()
-    spans.clear()
-
     // go through the line accumulating runs of characters that are all styled with the same face
     val last = _line.length
     var start = 0
     var end = 0
-    var face :Face = null
+    var style :String = null
+    val kids = ArrayBuffer[Node]()
     while (end <= last) {
-      val cface = _line.faceAt(end)
-      if (cface != face || end == last) {
-        if (end > 0) spans += new Span(start, end, face)
-        face = cface
+      val cstyle = _line.styleAt(end)
+      if (cstyle != style || end == last) {
+        if (end > 0) {
+          val text = _line.sliceString(start, end)
+          assert(end > start)
+          assert(!text.contains('\r') && !text.contains('\n'))
+          val tnode = new FillableText(text)
+          tnode.getStyleClass.add(style)
+          tnode.setTextOrigin(VPos.TOP)
+          kids += tnode.fillRect
+          kids += tnode
+        }
+        style = cstyle
         start = end
       }
       end += 1
     }
+
+    node.getChildren.clear()
+    if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
   }
 }

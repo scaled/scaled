@@ -14,8 +14,8 @@ object WhitespaceConfig extends ConfigDefs {
   val showTrailingWhitespace = key(
     "If true, trailing whitespace will be highlighted", true)
 
-  val trailingWhitespaceFace = key(
-    "The face in which to display trailing whitespace.", Face().withBG("#AB1500"))
+  /** The CSS style applied to trailing whitespace characters. */
+  val trailingWhitespaceStyle = "trailingWhitespaceFace"
 }
 
 /** A minor mode that provides whitespace manipulation fns and can highlight undesirable
@@ -62,11 +62,11 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
     val last = line.length
     val first = seek(last)
     if (first < last) {
-      // TODO: setting the face to default is presumptuous, really we want to remove the trailing
-      // whitespace face if it's applied and leave it alone otherwise; I'm not sure I want to
+      // TODO: setting the style to default is presumptuous, really we want to remove the trailing
+      // whitespace style if it's applied and leave it alone otherwise; I'm not sure I want to
       // support multiple faces per character, but I may have to go down that road...
-      val face = if (show) config(trailingWhitespaceFace) else Face.defaultFace
-      view.buffer.applyFace(face, Loc(ii, first), Loc(ii, last))
+      val face = if (show) trailingWhitespaceStyle else Line.defaultStyle
+      view.buffer.applyStyle(face, Loc(ii, first), Loc(ii, last))
     }
   }
 }

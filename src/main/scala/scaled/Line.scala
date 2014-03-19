@@ -23,9 +23,9 @@ abstract class LineV {
   /** Returns the character at `pos`. If `pos` is >= [[length]] line 0 is returned. */
   def charAt (pos :Int) :Char
 
-  /** Returns the face applied to the character at `pos`. If no custom face has been applied, or
-    * `pos` is >= [[length]], [[Face.defaultFace]] is returned. */
-  def faceAt (pos :Int) :Face
+  /** Returns the CSS style class applied to the character at `pos`. If no custom style has been
+    * applied, or `pos` is >= [[length]], [[Line.defaultStyle]] is returned. */
+  def styleAt (pos :Int) :String
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
@@ -42,8 +42,8 @@ abstract class LineV {
     * @param until one past the index of the last character to include in the slice. */
   def slice (start :Int, until :Int = length) :Line
 
-  /** Copies `[start, until)` from this line into `cs`/`fs` at `offset`. */
-  def sliceInto (start :Int, until :Int, cs :Array[Char], fs :Array[Face], offset :Int) :Unit
+  /** Copies `[start, until)` from this line into `cs`/`ss` at `offset`. */
+  def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[String], offset :Int) :Unit
 
   /** Returns the characters in `[start, until)` as a string. */
   def sliceString (start :Int, until :Int) :String
@@ -54,7 +54,7 @@ abstract class LineV {
   override def equals (other :Any) = other match {
     case ol :LineV =>
       @tailrec def loop (ii :Int) :Boolean = (ii < 0) || (charAt(ii) == ol.charAt(ii) &&
-        faceAt(ii) == ol.faceAt(ii) && loop(ii-1))
+        styleAt(ii) == ol.styleAt(ii) && loop(ii-1))
       length == ol.length && loop(length-1)
     case _ => false
   }
@@ -71,29 +71,29 @@ abstract class LineV {
   * The constructor takes ownership of `cs`. Do not mutate it after using it to create a `Line`.
   * Pass `cs.clone` if the caller needs to retain the ability to mutate the array.
   */
-class Line (_cs :Array[Char], _fs :Array[Face], _offset :Int, val length :Int) extends LineV {
-  def this (cs :Array[Char], fs :Array[Face]) = this(cs, fs, 0, cs.length)
-  def this (cs :Array[Char], f :Face) = this(cs, Array.fill(cs.length)(f))
-  def this (s :String, f :Face) = this(s.toCharArray, f)
-  def this (s :String) = this(s, Face.defaultFace)
+class Line (_cs :Array[Char], _ss :Array[String], _offset :Int, val length :Int) extends LineV {
+  def this (cs :Array[Char], ss :Array[String]) = this(cs, ss, 0, cs.length)
+  def this (cs :Array[Char], style :String) = this(cs, Array.fill(cs.length)(style))
+  def this (s :String, style :String) = this(s.toCharArray, style)
+  def this (s :String) = this(s, Line.defaultStyle)
 
   /** Returns a new line which contains `other` appended to `this`. */
   def merge (other :Line) :Line = {
     val cs = Array.ofDim[Char](length + other.length)
-    val fs = Array.ofDim[Face](cs.length)
-    sliceInto(0, length, cs, fs, 0)
-    other.sliceInto(0, other.length, cs, fs, length)
-    new Line(cs, fs)
+    val ss = Array.ofDim[String](cs.length)
+    sliceInto(0, length, cs, ss, 0)
+    other.sliceInto(0, other.length, cs, ss, length)
+    new Line(cs, ss)
   }
 
   override def charAt (pos :Int) = if (pos < length) _cs(pos+_offset) else 0
-  override def faceAt (pos :Int) = if (pos < length) _fs(pos+_offset) else Face.defaultFace
+  override def styleAt (pos :Int) = if (pos < length) _ss(pos+_offset) else Line.defaultStyle
   override def view (start :Int, until :Int) =
     if (start == 0 && until == length) this else slice(start, until)
-  override def slice (start :Int, until :Int) = new Line(_cs, _fs, _offset+start, until-start)
-  override def sliceInto (start :Int, until :Int, cs :Array[Char], fs :Array[Face], offset :Int) {
+  override def slice (start :Int, until :Int) = new Line(_cs, _ss, _offset+start, until-start)
+  override def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[String], offset :Int) {
     System.arraycopy(_cs, _offset+start, cs, offset, until-start)
-    System.arraycopy(_fs, _offset+start, fs, offset, until-start)
+    System.arraycopy(_ss, _offset+start, ss, offset, until-start)
   }
   override def sliceString (start :Int, until :Int) = new String(_cs, _offset+start, until-start)
   override def asString :String = new String(_cs, _offset, length)
@@ -102,6 +102,8 @@ class Line (_cs :Array[Char], _fs :Array[Face], _offset :Int, val length :Int) e
 
 /** `Line` related types and utilities. */
 object Line {
+
+  final val defaultStyle = "textFace"
 
   /** An event emitted when one or more characters are deleted from a line and replaced by one or
     * more characters. The change will already have been applied when this event is dispatched. */
@@ -130,5 +132,5 @@ object Line {
   }
 
   /** An empty line. */
-  final val Empty = new Line(Array[Char](), Array[Face]())
+  final val Empty = new Line(Array[Char](), Array[String]())
 }

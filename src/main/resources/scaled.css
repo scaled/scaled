@@ -25,10 +25,6 @@
   -fx-fill: #424242;
 }
 
-.buffer .text {
-  -fx-fill: white;
-}
-
 .popup {
   -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
   -fx-background-color: #DBDBDB;
@@ -40,4 +36,43 @@
 .errpop {
   -fx-border-color: #FFE3E3 #FFA5A5 #FFA5A5 #FFE3E3;
   -fx-background-color: #FFDBDB;
+}
+
+/**
+ * Basic text style definitions.
+ */
+
+.textFace {
+  -fx-fill: white;
+}
+
+.boldFace {
+  -fx-font-weight: bold;
+}
+
+.italicFace {
+  -fx-font-style: italic;
+}
+
+.underlineFace {
+  -fx-underline: true;
+}
+
+.strikeFace {
+  -fx-strikethrough: true;
+}
+
+.warnFace {
+  -fx-fill: DarkOrange;
+  -fx-font-weight: bold;
+}
+
+.errorFace {
+  -fx-fill: Red;
+  -fx-font-weight: bold;
+}
+
+/** TODO: move this to whitespace.css */
+.trailingWhitespaceFace {
+  -fx-bg-fill: #AB1500;
 }

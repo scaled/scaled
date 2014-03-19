@@ -156,7 +156,7 @@ class BufferImpl private (
     }
   }
 
-  override def insert (loc :Loc, c :Char, f :Face) = _lines(loc.row).insert(loc, c, f)
+  override def insert (loc :Loc, c :Char, style :String) = _lines(loc.row).insert(loc, c, style)
   override def insert (loc :Loc, line :LineV) = _lines(loc.row).insert(loc, line)
   override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
     case 0 => loc
@@ -201,17 +201,17 @@ class BufferImpl private (
     noteEdited(loc.row+1, BufferImpl.NoLines, 1)
   }
 
-  override def applyFace (face :Face, start :Loc, until :Loc) {
-    if (until < start) applyFace(face, until, start)
-    else if (start.row == until.row) line(start).applyFace(face, start, until.col)
+  override def applyStyle (style :String, start :Loc, until :Loc) {
+    if (until < start) applyStyle(style, until, start)
+    else if (start.row == until.row) line(start).applyStyle(style, start, until.col)
     else {
       val (fst, last) = (line(start), line(until))
-      fst.applyFace(face, start, fst.length)
+      fst.applyStyle(style, start, fst.length)
       (start.row+1) until until.row foreach { row =>
         val line = _lines(row)
-        line.applyFace(face, Loc(row, 0), line.length)
+        line.applyStyle(style, Loc(row, 0), line.length)
       }
-      last.applyFace(face, until.atCol(0), until.col)
+      last.applyStyle(style, until.atCol(0), until.col)
     }
   }
 

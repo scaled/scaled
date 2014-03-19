@@ -133,9 +133,9 @@ abstract class BufferV {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
 
-  /** Returns the face of the character at `loc`.
+  /** Returns the CSS style class of the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def faceAt (loc :Loc) :Face = line(loc.row).faceAt(loc.col)
+  def styleAt (loc :Loc) :String = line(loc.row).styleAt(loc.col)
 
   /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
     * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
@@ -207,13 +207,13 @@ abstract class Buffer extends BufferV {
   /** That which handles undoing and redoing for this buffer. */
   def undoer :Undoer
 
-  /** Inserts the single character `c` into this buffer at `loc` with face `f`. */
-  def insert (loc :Loc, c :Char, f :Face) :Unit
+  /** Inserts the single character `c` into this buffer at `loc` with CSS style class `style`. */
+  def insert (loc :Loc, c :Char, style :String) :Unit
 
-  /** Inserts the raw string `s` into this buffer at `loc` with face `f`. */
-  def insert (loc :Loc, s :String, f :Face) {
-    if (s.length == 1) insert(loc, s.charAt(0), f)
-    else insert(loc, new Line(s, f))
+  /** Inserts the raw string `s` into this buffer at `loc` with CSS style class `style`. */
+  def insert (loc :Loc, s :String, style :String) {
+    if (s.length == 1) insert(loc, s.charAt(0), style)
+    else insert(loc, new Line(s, style))
   }
 
   /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
@@ -263,8 +263,8 @@ abstract class Buffer extends BufferV {
     * which immediately follows the `loc.row`th line. */
   def split (loc :Loc) :Unit
 
-  /** Applies `face` to the characters between `[start, until)`. */
-  def applyFace (face :Face, start :Loc, until :Loc) :Unit
+  /** Applies CSS style class `style` to the characters between `[start, until)`. */
+  def applyStyle (style :String, start :Loc, until :Loc) :Unit
 
   private[scaled] def undo (edit :Buffer.Edit) :Unit
 
@@ -320,9 +320,9 @@ abstract class RBuffer extends Buffer {
   /** A signal emitted when any of this buffer's lines are edited. */
   def lineEdited :SignalV[Line.Edit]
 
-  /** A signal emitted when a line in this buffer has a face applied to it. The emitted `Loc` will
-    * contain the row of the line that was edited and the positon of the earliest character to
-    * which a face was applied. Zero or more additional face changes may have been made to
+  /** A signal emitted when a line in this buffer has a CSS style applied to it. The emitted `Loc`
+    * will contain the row of the line that was edited and the positon of the earliest character to
+    * which a style was applied. Zero or more additional style changes may have been made to
     * characters after the one identified by the `Loc`, but none will have been made to characters
     * before that `Loc`. */
   def lineStyled :SignalV[Loc]

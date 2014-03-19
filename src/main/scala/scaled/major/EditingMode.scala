@@ -218,7 +218,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   def selfInsertCommand (typed :String) {
     // insert the typed character at the point
     val p = view.point
-    view.buffer.insert(p, typed, Face.defaultFace)
+    view.buffer.insert(p, typed, Line.defaultStyle)
     // move the point to the right by the appropriate amount
     view.point = p + (0, typed.length)
   }
@@ -282,7 +282,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     else {
       val swap = tp.prevC
       buffer.replace(swap, 2, new Line(Array(buffer.charAt(tp), buffer.charAt(swap)),
-                                       Array(buffer.faceAt(tp), buffer.faceAt(swap))))
+                                       Array(buffer.styleAt(tp), buffer.styleAt(swap))))
       view.point = tp.nextC
     }
   }

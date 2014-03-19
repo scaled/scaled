@@ -22,9 +22,9 @@ object MutableLine {
   /** Creates a mutable line with a copy of the contents of `line`. */
   def apply (buffer :BufferImpl, line :LineV) = {
     val cs = Array.ofDim[Char](line.length)
-    val fs = Array.ofDim[Face](line.length)
-    line.sliceInto(0, line.length, cs, fs, 0)
-    new MutableLine(buffer, cs, fs)
+    val ss = Array.ofDim[String](line.length)
+    line.sliceInto(0, line.length, cs, ss, 0)
+    new MutableLine(buffer, cs, ss)
   }
 }
 
@@ -43,23 +43,23 @@ object MutableLine {
   * @param initChars The initial characters in this line. Ownership of this array is taken by this
   * line instance and the array may subsequently be mutated thereby.
   */
-class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face]) extends LineV {
+class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String]) extends LineV {
   def this (buffer :BufferImpl, initCs :Array[Char]) =
-    this(buffer, initCs, Array.fill(initCs.length)(Face.defaultFace))
+    this(buffer, initCs, Array.fill(initCs.length)(Line.defaultStyle))
 
   private var _chars = initCs
-  private var _faces = initFs
+  private var _styles = initSs
   private var _end = initCs.size
 
   override def length = _end
   override def charAt (pos :Int) = if (pos < _end) _chars(pos) else 0
-  override def faceAt (pos :Int) = if (pos < _end) _faces(pos) else Face.defaultFace
-  override def view (start :Int, until :Int) = new Line(_chars, _faces, start, until-start)
+  override def styleAt (pos :Int) = if (pos < _end) _styles(pos) else Line.defaultStyle
+  override def view (start :Int, until :Int) = new Line(_chars, _styles, start, until-start)
   override def slice (start :Int, until :Int) =
-    new Line(_chars.slice(start, until), _faces.slice(start, until))
-  override def sliceInto (start :Int, until :Int, cs :Array[Char], fs :Array[Face], offset :Int) {
+    new Line(_chars.slice(start, until), _styles.slice(start, until))
+  override def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[String], offset :Int) {
     System.arraycopy(_chars, start, cs, offset, until-start)
-    System.arraycopy(_faces, start, fs, offset, until-start)
+    System.arraycopy(_styles, start, ss, offset, until-start)
   }
   override def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)
   override def asString :String = new String(_chars, 0, _end)
@@ -76,11 +76,11 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
     MutableLine(buffer, delete(loc, _end-loc.col))
   }
 
-  /** Inserts `c` into this line at `loc` with face `f`. */
-  def insert (loc :Loc, c :Char, f :Face) {
+  /** Inserts `c` into this line at `loc` with style `style`. */
+  def insert (loc :Loc, c :Char, style :String) {
     prepInsert(loc.col, 1)
     _chars(loc.col) = c
-    _faces(loc.col) = f
+    _styles(loc.col) = style
     _end += 1
     buffer.noteLineEdited(loc, Line.Empty, 1)
   }
@@ -89,7 +89,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
     * an edited event</em>. */
   def insertSilent (pos :Int, line :LineV, offset :Int, count :Int) {
     prepInsert(pos, count)
-    line.sliceInto(offset, offset+count, _chars, _faces, pos)
+    line.sliceInto(offset, offset+count, _chars, _styles, pos)
     _end += count
   }
 
@@ -114,7 +114,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
     assert(pos >= 0 && last <= _end)
     val deleted = slice(pos, pos+length)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
-    System.arraycopy(_faces, last, _faces, pos, _end-last)
+    System.arraycopy(_styles, last, _styles, pos, _end-last)
     _end -= length
     buffer.noteLineEdited(loc, deleted, 0)
     deleted
@@ -136,26 +136,26 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
     else if (deltaLength < 0) {
       val toShift = _end-lastDeleted
       System.arraycopy(_chars, lastDeleted, _chars, lastAdded, toShift)
-      System.arraycopy(_faces, lastDeleted, _faces, lastAdded, toShift)
+      System.arraycopy(_styles, lastDeleted, _styles, lastAdded, toShift)
     }
     // otherwise, we've got a perfect match, no shifting needed
 
-    line.sliceInto(0, added, _chars, _faces, pos)
+    line.sliceInto(0, added, _chars, _styles, pos)
     _end += deltaLength
     buffer.noteLineEdited(loc, replaced, added)
     replaced
   }
 
-  /** Applies `face` to this line starting at `loc` and continuing to column `last`. If any
-    * characters actually change face, a call to [[BufferImpl.noteLineStyled]] will be made after
-    * the face has been applied to the entire region. */
-  def applyFace (face :Face, loc :Loc, last :Int) {
+  /** Applies `style` to this line starting at `loc` and continuing to column `last`. If any
+    * characters actually change style, a call to [[BufferImpl.noteLineStyled]] will be made after
+    * the style has been applied to the entire region. */
+  def applyStyle (style :String, loc :Loc, last :Int) {
     val end = math.min(length, last)
     @tailrec def loop (pos :Int, first :Int) :Int = {
       if (pos == end) first
-      else if (_faces(pos) == face) loop(pos+1, first)
+      else if (_styles(pos) == style) loop(pos+1, first)
       else {
-        _faces(pos) = face
+        _styles(pos) = style
         loop(pos+1, if (first == -1) pos else first)
       }
     }
@@ -180,16 +180,16 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
       val nchars = new Array[Char](_chars.length+length + MutableLine.ExpandN)
       System.arraycopy(_chars, 0, nchars, 0, pos)
       System.arraycopy(_chars, pos, nchars, tailpos, taillen)
-      val nfaces = new Array[Face](nchars.length)
-      System.arraycopy(_faces, 0, nfaces, 0, pos)
-      System.arraycopy(_faces, pos, nfaces, tailpos, taillen)
+      val nstyles = new Array[String](nchars.length)
+      System.arraycopy(_styles, 0, nstyles, 0, pos)
+      System.arraycopy(_styles, pos, nstyles, tailpos, taillen)
       _chars = nchars
-      _faces = nfaces
+      _styles = nstyles
     }
     // otherwise shift characters down, if necessary
     else if (pos < curend) {
       System.arraycopy(_chars, pos, _chars, tailpos, taillen)
-      System.arraycopy(_faces, pos, _faces, tailpos, taillen)
+      System.arraycopy(_styles, pos, _styles, tailpos, taillen)
     }
   }
 }

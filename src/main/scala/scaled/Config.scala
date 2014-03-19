@@ -53,16 +53,4 @@ abstract class ConfigDefs {
 /** Defines editor-global configurables. */
 object EditorConfig extends ConfigDefs {
 
-  //
-  // Basic Face configuration keys
-
-  val boldFace      = key("Basic bold face.", Face(bold=true))
-  val italicFace    = key("Basic italic face.", Face(italic=true))
-  val underlineFace = key("Basic underline face.", Face(underline=true))
-  val strikeFace    = key("Basic strikethrough face.", Face(strike=true))
-
-  val regionFace = key("Basic face for highlighting the region.", Face("#000044"))
-
-  val warnFace  = key("Basic face used to highlight warnings.", Face("DarkOrange").copy(bold=true))
-  val errorFace = key("Basic face used to highlight errors.", Face("Red").copy(bold=true))
 }
