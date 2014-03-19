@@ -15,7 +15,7 @@ object WhitespaceConfig extends ConfigDefs {
     "If true, trailing whitespace will be highlighted", true)
 
   val trailingWhitespaceFace = key(
-    "The face in which to display trailing whitespace.", Face().withBG("#FF0000"))
+    "The face in which to display trailing whitespace.", Face().withBG("#AB1500"))
 }
 
 /** A minor mode that provides whitespace manipulation fns and can highlight undesirable

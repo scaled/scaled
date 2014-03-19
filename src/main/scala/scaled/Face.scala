@@ -26,7 +26,7 @@ case class Face (foreground :Option[Color] = None,
 
   /** Returns a copy of this face with the background color as specified.
     * The color is parsed using [[Color.web]]. */
-  def withBG (color :String) = copy(foreground=Some(Color.web(color)))
+  def withBG (color :String) = copy(background=Some(Color.web(color)))
 
   override def toString () = {
     val buf = ArrayBuffer[String]()

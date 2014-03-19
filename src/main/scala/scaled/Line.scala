@@ -45,6 +45,9 @@ abstract class LineV {
   /** Copies `[start, until)` from this line into `cs`/`fs` at `offset`. */
   def sliceInto (start :Int, until :Int, cs :Array[Char], fs :Array[Face], offset :Int) :Unit
 
+  /** Returns the characters in `[start, until)` as a string. */
+  def sliceString (start :Int, until :Int) :String
+
   /** Returns the contents of this line as a string. */
   def asString :String
 
@@ -92,6 +95,7 @@ class Line (_cs :Array[Char], _fs :Array[Face], _offset :Int, val length :Int) e
     System.arraycopy(_cs, _offset+start, cs, offset, until-start)
     System.arraycopy(_fs, _offset+start, fs, offset, until-start)
   }
+  override def sliceString (start :Int, until :Int) = new String(_cs, _offset+start, until-start)
   override def asString :String = new String(_cs, _offset, length)
   override def toString () = s"$asString [${_offset}:$length/${_cs.length}]"
 }

@@ -134,10 +134,9 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   // react to line edits by updating our views
   bview.buffer.lineEdited.onValue { change =>
     // println(s"Chars @${change.loc} +${change.added} -${change.deleted}")
-    // refresh the line that was edited (TODO: something more efficient?)
-    val text = change.buffer.line(change.loc).asString
-    assert(!text.contains('\r') && !text.contains('\n'))
-    bview.lines(change.loc.row).setText(text)
+
+    // update the visualization of the line that was edited
+    bview.lines(change.loc.row).onEdit(change)
 
     // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
     // (TODO: this seems error prone, is there a better way?)
@@ -150,6 +149,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       contentNode.updateCursor(bview.point)
     }
   }
+  bview.buffer.lineStyled.onValue { loc =>
+    bview.lines(loc.row).onStyle(loc)
+  }
+
   // TODO: handle deletion of lines that include the point? that will probably result in the point
   // being moved, so maybe we don't need to worry about it
 
@@ -285,10 +288,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
           val line = cs.get(idx)
           line.setLayoutX(leftPadding)
           line.setLayoutY(y)
-          // TODO: getBoundsInLocal.getHeight is larger than lineHeight; it's not clear why, but if
-          // we don't use lineHeight then all of our other calculations are bogus; maybe we need to
-          // measure a line with some stock text and use that as line height, except we sort of do
-          // that in Utils.getLineHeight, but that returns the same thing as lineHeight, so wtf?
           loop(y + lineHeight, idx+1)
         }
       }

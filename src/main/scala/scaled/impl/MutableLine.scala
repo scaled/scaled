@@ -61,6 +61,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initFs :Array[Face])
     System.arraycopy(_chars, start, cs, offset, until-start)
     System.arraycopy(_faces, start, fs, offset, until-start)
   }
+  override def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)
   override def asString :String = new String(_chars, 0, _end)
 
   /** The array that contains this line's characters. It's size may exceed `length` for reasons of
