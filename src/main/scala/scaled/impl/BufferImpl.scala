@@ -145,8 +145,9 @@ class BufferImpl private (
     offset(loc.row-1, 0) + loc.col
   }
 
-  override def region (start :Loc, until :Loc) = if (until < start) region(until, start) else {
-    if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
+  override def region (start :Loc, until :Loc) =
+    if (until < start) region(until, start)
+    else if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
     else {
       val middle = lines.slice(start.row+1, until.row).map(_.slice(0))
       val s = line(start)
@@ -154,7 +155,6 @@ class BufferImpl private (
       middle += _lines(until.row).slice(0, until.col)
       middle.toSeq
     }
-  }
 
   override def insert (loc :Loc, c :Char, styles :Styles) = _lines(loc.row).insert(loc, c, styles)
   override def insert (loc :Loc, line :LineV) = _lines(loc.row).insert(loc, line)
@@ -196,6 +196,15 @@ class BufferImpl private (
   override def replace (loc :Loc, delete :Int, line :Line) =
     _lines(loc.row).replace(loc, delete, line)
 
+  override def transform (start :Loc, until :Loc, fn :Char => Char) =
+    if (until < start) transform(until, start, fn)
+    else if (start.row == until.row) line(start).transform(fn, start, until.col)
+    else {
+      line(start).transform(fn, start)
+      onRows(start.nextStart, until) { (loc, line) => line.transform(fn, loc) }
+      line(until).transform(fn, until.atCol(0), until.col)
+    }
+
   override def split (loc :Loc) {
     _lines.insert(loc.row+1, line(loc).split(loc))
     noteEdited(loc.row+1, BufferImpl.NoLines, 1)
@@ -216,6 +225,16 @@ class BufferImpl private (
   //
   // impl details
 
+  /** Applies op to all rows from `start` up to (not including) `until`. `op` is passed `Loc(row, 0)`
+    * and the line in question. */
+  private def onRows (start :Loc, until :Loc)(op :(Loc, MutableLine) => Unit) {
+    var loc = start
+    while (loc.row < until.row) {
+      op(loc, _lines(loc.row))
+      loc = loc.nextStart
+    }
+  }
+
   private def delete (row :Int, count :Int) :Seq[Line] =
     if (count == 0) BufferImpl.NoLines
     else {
@@ -230,13 +249,9 @@ class BufferImpl private (
     if (until < start) updateStyle(style, add, until, start)
     else if (start.row == until.row) line(start).updateStyle(style, add, start, until.col)
     else {
-      val (fst, last) = (line(start), line(until))
-      fst.updateStyle(style, add, start, fst.length)
-      (start.row+1) until until.row foreach { row =>
-        val line = _lines(row)
-        line.updateStyle(style, add, Loc(row, 0), line.length)
-      }
-      last.updateStyle(style, add, until.atCol(0), until.col)
+      line(start).updateStyle(style, add, start)
+      onRows(start.nextStart, until) { (loc, line) => line.updateStyle(style, add, loc) }
+      line(until).updateStyle(style, add, until.atCol(0), until.col)
     }
   }
 

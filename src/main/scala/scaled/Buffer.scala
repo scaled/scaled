@@ -217,6 +217,10 @@ abstract class Buffer extends BufferV {
     }
   }
 
+  /** Transforms the characters between `[start, until)` using `fn`.
+    * @return the buffer location just after the transformed region. */
+  def transform (start :Loc, until :Loc, fn :Char => Char) :Loc
+
   /** Splits the line at `loc`. The characters up to `loc.col` will remain on the `loc.row`th line,
     * and the character at `loc.col` and all subsequent characters will be moved to a new line
     * which immediately follows the `loc.row`th line. */

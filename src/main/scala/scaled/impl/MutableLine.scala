@@ -148,21 +148,30 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     replaced
   }
 
+  /** Transforms chars with `fn` starting at `loc` and continuiing to column `last`. This results in
+    * an edited event that reports the transformed characters as deleted and added, regardless of
+    * whether `fn` actually changed them.
+    * @return the location after the last transformed char. */
+  def transform (fn :Char => Char, loc :Loc, last :Int = length) :Loc = {
+    val deleted = slice(loc.col, last)
+    var p = loc.col
+    while (p < last) { _chars(p) = fn(_chars(p)) ; p += 1 }
+    buffer.noteLineEdited(loc, deleted, deleted.length)
+    loc.atCol(last)
+  }
+
   /** Adds or removes `style` (based on `add`) starting at `loc` and continuing to column `last`. If
     * any characters actually change style, a call to [[BufferImpl.noteLineStyled]] will be made
     * after the style has been applied to the entire region. */
-  def updateStyle (style :String, add :Boolean, loc :Loc, last :Int) {
+  def updateStyle (style :String, add :Boolean, loc :Loc, last :Int = length) {
     val end = math.min(length, last)
-    @tailrec def loop (pos :Int, first :Int) :Int = {
-      if (pos == end) first
+    @tailrec def loop (pos :Int, first :Int) :Int = if (pos == end) first else {
+      val ostyles = _styles(pos)
+      val nstyles = if (add) ostyles + style else ostyles - style
+      if (nstyles eq ostyles) loop(pos+1, first)
       else {
-        val ostyles = _styles(pos)
-        val nstyles = if (add) ostyles + style else ostyles - style
-        if (nstyles eq ostyles) loop(pos+1, first)
-        else {
-          _styles(pos) = nstyles
-          loop(pos+1, if (first == -1) pos else first)
-        }
+        _styles(pos) = nstyles
+        loop(pos+1, if (first == -1) pos else first)
       }
     }
     val first = loop(loc.col, -1)
