@@ -48,7 +48,12 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     "TAB"   -> "indent-for-tab-command",
     // TODO: open-line, split-line, ...
 
-    "C-t"    -> "transpose-chars",
+    "C-t"     -> "transpose-chars",
+    "C-x C-u" -> "upcase-region",
+    "C-x C-l" -> "downcase-region",
+    "M-u"     -> "upcase-word",
+    "M-l"     -> "downcase-word",
+    "M-c"     -> "capitalize-word",
 
     // mark manipulation commands
     "C-SPACE" -> "set-mark-command", // TODO: make this push-mark instead?
@@ -140,18 +145,35 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     "M-x" -> "execute-extended-command"
   )
 
+  /** Returns the first location which has syntax `syn`, starting from `p`. `p` itself is considered
+    * and will be returned if it matches. The search proceeds forward if `forward` and backward
+    * otherwise. If the beginning or end of the buffer is reached before finding a match, that end
+    * of the buffer is returned. */
+  def findSyntax (pos :Loc, syn :Syntax, forward :Boolean) :Loc = {
+    val stop = if (forward) buffer.end else buffer.start
+    var p = pos
+    while (p != stop && syntax(buffer charAt p) != syn)
+      p = if (forward) buffer.forward(p, 1) else buffer.backward(p, 1)
+    p
+  }
+
+  /** Returns the first location which does not have syntax `syn`, starting from `p`. `p` itself is
+    * considered and will be returned if it matches. The search proceeds forward if `forward` and
+    * backward otherwise. If the beginning or end of the buffer is reached before finding a match,
+    * that end of the buffer is returned. */
+  def findNotSyntax (pos :Loc, syn :Syntax, forward :Boolean) :Loc = {
+    val stop = if (forward) buffer.end else buffer.start
+    var p = pos
+    while (p != stop && syntax(buffer charAt p) == syn)
+      p = if (forward) buffer.forward(p, 1) else buffer.backward(p, 1)
+    p
+  }
+
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
     * and then keeps going until a non-word char is seen (or the end of the buffer is reached), and
     * that point is returned.
     */
-  def forwardWord (p :Loc) :Loc = {
-    val end = buffer.end
-    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = syntax(buffer.charAt(pos)) match {
-      case Syntax.Word => seek(buffer.forward(pos, 1), true)
-      case _           => if (seenWord || pos == end) pos else seek(buffer.forward(pos, 1), false)
-    }
-    seek(p, false)
-  }
+  def forwardWord (p :Loc) :Loc = findNotSyntax(findSyntax(p, Syntax.Word, true), Syntax.Word, true)
 
   /** Seeks backward to the start of a word. Moves backward from `p` until at least one word char is
     * seen (whether `p` is a word char is not relevant), and then keeps going until a non-word char
@@ -162,7 +184,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     val start = buffer.start
     @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = if (pos == start) start else {
       val ppos = buffer.backward(pos, 1)
-      syntax(buffer.charAt(ppos)) match {
+      syntax(buffer charAt ppos) match {
         case Syntax.Word => seek(ppos, true)
         case _           => if (seenWord) pos else seek(ppos, false)
       }
@@ -170,7 +192,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     seek(p, false)
   }
 
-  /** Delets the region from `from` to `to` from the buffer and adds it to the kill-ring. If `to` is
+  /** Deletes the region `[from, to)` from the buffer and adds it to the kill-ring. If `to` is
     * earlier in the buffer than `from` the arguments will automatically be swapped.
     *
     * Uses `disp.curFn` and `disp.prevFn` to determine whether this kill is due to a repeated
@@ -210,6 +232,26 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     * behavior if they introduce backwards kill commands that do not follow this naming scheme.
     */
   def isBackwardKill (name :String) = name startsWith "backward-"
+
+  /** Invokes `fn` with the start and end of the current region. If the mark is not set, a status
+    * message is emitted that indicates that the current region is not set and `fn` is not
+    * invoked. */
+  def withRegion (fn :(Loc, Loc) => Unit) :Unit = buffer.mark match {
+    case None => editor.emitStatus("The mark is not set now, so there is no region.")
+    case Some(mp) => if (mp < view.point) fn(mp, view.point) else fn(view.point, mp)
+  }
+
+  /** Converts the characters in `[from, to)` to upper case. If `to` is earlier than `from` the
+    * arguments are automatically swapped.
+    * @return the end of the upcased region (the larger of `from` and `to`).
+    */
+  def upcase (from :Loc, to :Loc) :Loc = buffer.transform(from, to, Character.toUpperCase)
+
+  /** Converts the characters in `[from, to)` to lower case. If `to` is earlier than `from` the
+    * arguments are automatically swapped.
+    * @return the end of the upcased region (the larger of `from` and `to`).
+    */
+  def downcase (from :Loc, to :Loc) :Loc = buffer.transform(from, to, Character.toLowerCase)
 
   //
   // CHARACTER EDITING FNS
@@ -281,10 +323,37 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     // otherwise we have a normal transpose: swap the char under the point with the prev char
     else {
       val swap = tp.prevC
-      buffer.replace(swap, 2, new Line(Array(buffer.charAt(tp), buffer.charAt(swap)),
-                                       Array(buffer.stylesAt(tp), buffer.stylesAt(swap))))
+      buffer.replace(swap, 2, new Line(Array(buffer charAt tp, buffer charAt swap),
+                                       Array(buffer stylesAt tp, buffer stylesAt swap)))
       view.point = tp.nextC
     }
+  }
+
+  @Fn("""Converts the region to upper case, moving the point to the end of the region.""")
+  def upcaseRegion () = withRegion(upcase)
+
+  @Fn("""Converts the region to lower case, moving the point to the end of the region.""")
+  def downcaseRegion () = withRegion(downcase)
+
+  @Fn("""Converts the following word to upper case, moving the point to the end of the word.""")
+  def upcaseWord () {
+    view.point = upcase(view.point, forwardWord(view.point))
+  }
+
+  @Fn("""Converts the following word to lower case, moving the point to the end of the word.""")
+  def downcaseWord () {
+    view.point = downcase(view.point, forwardWord(view.point))
+  }
+
+  @Fn("""Capitalizes the word at or following the point, moving the point to the end of the word.
+         This gives the word a first character in upper case and the rest in lower case.""")
+  def capitalizeWord () {
+    val first = findSyntax(view.point, Syntax.Word, true)
+    val start = buffer.forward(first, 1)
+    val until = findNotSyntax(start, Syntax.Word, true)
+    upcase(first, start)
+    downcase(start, until)
+    view.point = until
   }
 
   //
@@ -293,11 +362,9 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("""Kills the text between the point and the mark. This removes the text from the buffer and
          adds it to the kill ring. The point and mark are moved to the start of the killed
          region.""")
-  def killRegion () = buffer.mark match {
-    case None => editor.emitStatus("The mark is not set now, so there is no region.")
-    case Some(mp) =>
-      view.point = kill(view.point, mp)
-      buffer.mark = view.point
+  def killRegion () = withRegion { (start, end) =>
+    view.point = kill(start, end)
+    buffer.mark = view.point
   }
 
   @Fn("""Causes the following command, if it kills, to append to the previous kill rather than
@@ -309,11 +376,9 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
          The point and mark remain unchanged.""")
-  def killRingSave () = buffer.mark match {
-    case None => editor.emitStatus("The mark is not set now, so there is no region.")
-    case Some(mp) =>
-      editor.killRing add buffer.region(view.point, mp)
-      editor.emitStatus("Region added to kill ring.")
+  def killRingSave () = withRegion { (start, end) =>
+    editor.killRing add buffer.region(start, end)
+    editor.emitStatus("Region added to kill ring.")
   }
 
   @Fn("""Kills the rest of the current line, adding it to the kill ring. If the point is at the end
