@@ -5,9 +5,11 @@
 package scaled.minor
 
 import scala.annotation.tailrec
+import scala.collection.mutable.{Set => MSet}
 
 import scaled._
 import scaled.major.{EditingMode, Syntax}
+import scaled.util.Behavior
 
 object WhitespaceConfig extends ConfigDefs {
 
@@ -25,48 +27,62 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
     extends MinorMode {
   import WhitespaceConfig._
 
-  // respond to buffer and line edits
-  view.buffer.edited onValue onBufferEdit
-  view.buffer.lineEdited onValue onLineEdit
+  val trailingWhitespacer = new Behavior() {
+    private val _rethinkLines = MSet[Int]()
+    private var _lastPoint = view.point
 
-  // respond to toggling of the trailing whitespace config
-  config.value(showTrailingWhitespace) onValueNotify updateBufferTrailingWhitespace
+    override protected def activate () {
+      // respond to buffer and line edits
+      note(view.buffer.edited onValue { edit =>
+        queueRethink(edit.offset until (edit.offset+edit.added) :_*)
+      })
+      note(view.buffer.lineEdited onValue { edit =>
+        if (edit.added > 0) queueRethink(edit.loc.row)
+      })
+      // when the point moves, the line it left may now need highlighting and the line it moves to
+      // may no longer need highlighting
+      note(view.pointV onValue { point => queueRethink(_lastPoint.row, point.row) })
+      // note existing trailing whitespace
+      0 until view.buffer.lines.size foreach tagTrailingWhitespace
+      // TODO: defer marking trailing whitespace on non-visible lines until they're scrolled into
+      // view, we can probably do this entirely in client code using RBufferView.scrollTop and
+      // RBufferView.heightV; encapsulate it in a Colorizer helper class?
+    }
+
+    override protected def didDeactivate () {
+      view.buffer.removeStyle(trailingWhitespaceStyle, view.buffer.start, view.buffer.end)
+    }
+
+    private def queueRethink (row :Int*) {
+      val takeAction = _rethinkLines.isEmpty
+      _rethinkLines ++= row
+      if (takeAction) editor defer rethink
+    }
+
+    private def rethink () {
+      _rethinkLines foreach tagTrailingWhitespace
+      _rethinkLines.clear()
+    }
+
+    private val tagTrailingWhitespace = (ii :Int) => {
+      val line = view.buffer.lines(ii)
+      val limit = if (view.point.row == ii) view.point.col else 0
+      @tailrec def seek (col :Int) :Int = {
+        if (col == limit || major.syntax(line.charAt(col-1)) != Syntax.Whitespace) col
+        else seek(col-1)
+      }
+      val last = line.length
+      val first = seek(last)
+      val floc = Loc(ii, first)
+      if (first > 0) view.buffer.removeStyle(trailingWhitespaceStyle, Loc(ii, 0), floc)
+      if (first < last) view.buffer.addStyle(trailingWhitespaceStyle, floc, Loc(ii, last))
+    }
+  }
+  config.value(showTrailingWhitespace) onValueNotify trailingWhitespacer.setActive
 
   override def name = "whitespace"
   override def keymap = Seq() // TODO
   override def dispose () {
-    // TODO: updateBufferTrailingWhitespace(false)?
-  }
-
-  protected def onBufferEdit (edit :Buffer.Edit) {
-    if (config(showTrailingWhitespace)) {
-      edit.offset until (edit.offset+edit.added) foreach updateLineTrailingWhitespace(true)
-    }
-  }
-
-  protected def onLineEdit (edit :Line.Edit) {
-    if (config(showTrailingWhitespace) && edit.added > 0) {
-      updateLineTrailingWhitespace(true)(edit.loc.row)
-    }
-  }
-
-  protected def updateBufferTrailingWhitespace (show :Boolean) {
-    0 until view.buffer.lines.size foreach updateLineTrailingWhitespace(show)
-  }
-  protected def updateLineTrailingWhitespace (show :Boolean)(ii :Int) {
-    val line = view.buffer.lines(ii)
-    @tailrec def seek (col :Int) :Int = {
-      if (col == 0 || major.syntax(line.charAt(col-1)) != Syntax.Whitespace) col
-      else seek(col-1)
-    }
-    val last = line.length
-    val first = seek(last)
-    if (first < last) {
-      // TODO: setting the style to default is presumptuous, really we want to remove the trailing
-      // whitespace style if it's applied and leave it alone otherwise; I'm not sure I want to
-      // support multiple faces per character, but I may have to go down that road...
-      val face = if (show) trailingWhitespaceStyle else Line.defaultStyle
-      view.buffer.applyStyle(face, Loc(ii, first), Loc(ii, last))
-    }
+    trailingWhitespacer.setActive(false)
   }
 }
