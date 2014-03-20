@@ -122,7 +122,7 @@ abstract class BufferV {
 
   /** Returns the loc `count` characters forward of `loc`, or [[end]] if we reach it first. */
   def forward (loc :Loc, count :Int) :Loc = {
-    @tailrec def seek (row :Int, col :Int, remain :Int) :Loc = {
+    @inline @tailrec def seek (row :Int, col :Int, remain :Int) :Loc = {
       val lcol = col + remain
       val llen = lines(row).length
       if (llen >= lcol) Loc(row, lcol)
@@ -134,7 +134,7 @@ abstract class BufferV {
 
   /** Returns the loc `count` characters backward of `loc`, or [[start]] if we reach it first. */
   def backward (loc :Loc, count :Int) :Loc = {
-    @tailrec def seek (row :Int, col :Int, remain :Int) :Loc = {
+    @inline @tailrec def seek (row :Int, col :Int, remain :Int) :Loc = {
       val lcol = col - remain
       if (lcol >= 0) Loc(row, lcol)
       else if (row == 0) start
