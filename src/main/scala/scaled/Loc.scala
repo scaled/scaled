@@ -6,6 +6,12 @@ package scaled
 
 /** A location in a buffer. This is a very ephemeral class. Any change to its associated buffer
   * will result in the locations offsets becoming invalid.
+  *
+  * Note: locations with negative row are not modeled accurately (-1 becomes -2, etc.). They will
+  * compare as earlier than all locations with positive row which is generally sufficient to stave
+  * off insanity, but you should avoid them in general. They sometimes occur when one calls, for
+  * example `prevL`, on row zero, but when that invalid location is bounded into the buffer it
+  * quickly disappears.
   */
 class Loc private (val rowCol :Long) extends AnyVal {
 
@@ -13,7 +19,7 @@ class Loc private (val rowCol :Long) extends AnyVal {
   def row :Int = (rowCol >> 32).toInt
 
   /** The (zero-based) column of the buffer represented by this loc. */
-  def col :Int = (rowCol & 0xFFFFFFFF).toInt
+  def col :Int = rowCol.toInt
 
   /** Returns true if this loc is earlier in the buffer than `other` (i.e. less than it).
     * Naturally both locs must refer to the same buffer. */
@@ -46,6 +52,9 @@ class Loc private (val rowCol :Long) extends AnyVal {
   /** Returns the loc directly below this loc. */
   def nextL = at(row+1, col)
 
+  /** Returns the start of the line after the line referenced by this loc. */
+  def nextStart = at(row+1, 0)
+
   override def toString = s"r$row:c$col"
 }
 
@@ -55,8 +64,5 @@ object Loc {
   val Zero = Loc(0, 0)
 
   /** Creates a location with the specified row and column. */
-  def apply (row :Int, col :Int) = {
-    require(row >= 0 && col >= 0)
-    new Loc((row.toLong << 32) + col)
-  }
+  def apply (row :Int, col :Int) = new Loc((row.toLong << 32) + col)
 }
