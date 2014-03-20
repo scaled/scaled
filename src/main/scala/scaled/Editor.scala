@@ -19,6 +19,9 @@ trait Editor {
   /** Displays the supplied URL in the user's preferred web browser. */
   def showURL (url :String) :Unit
 
+  /** Invokes `op` on the next UI tick. */
+  def defer (op : =>Unit) :Unit
+
   /** The kill ring shared by all buffers in this editor. */
   def killRing :KillRing
 

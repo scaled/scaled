@@ -8,7 +8,7 @@ import java.io.File
 
 import scala.collection.mutable.ArrayBuffer
 
-import javafx.application.Application
+import javafx.application.{Application, Platform}
 import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region}
 import javafx.stage.Stage
@@ -67,6 +67,9 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
+  override def defer (op : => Unit) = Platform.runLater(new Runnable() {
+    override def run () = op
+  })
   override val killRing = new KillRingImpl(40) // TODO: get size from config
 
   override def emitStatus (msg :String) {
