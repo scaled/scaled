@@ -67,22 +67,23 @@ class LineViewImpl (_line :LineV) extends LineView {
     val last = _line.length
     var start = 0
     var end = 0
-    var style :String = null
+    var styles :Styles = null
     val kids = ArrayBuffer[Node]()
     while (end <= last) {
-      val cstyle = _line.styleAt(end)
-      if (cstyle != style || end == last) {
+      val cstyles = _line.stylesAt(end)
+      if ((cstyles ne styles) || end == last) {
         if (end > 0) {
           val text = _line.sliceString(start, end)
           assert(end > start)
-          assert(!text.contains('\r') && !text.contains('\n'))
+          assert(text.indexOf('\r') == -1 && text.indexOf('\n') == -1)
           val tnode = new FillableText(text)
-          tnode.getStyleClass.add(style)
+          tnode.getStyleClass.add("textFace")
+          styles.addTo(tnode.getStyleClass)
           tnode.setTextOrigin(VPos.TOP)
           kids += tnode.fillRect
           kids += tnode
         }
-        style = cstyle
+        styles = cstyles
         start = end
       }
       end += 1

@@ -41,4 +41,8 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
       _lines.insert(change.offset, newlns :_*)
     }
   }
+  // pass line edits onto the line views
+  _buffer.lineEdited.onValue { change => _lines(change.loc.row).onEdit(change) }
+  // pass style changes onto the line views
+  _buffer.lineStyled.onValue { loc => _lines(loc.row).onStyle(loc) }
 }

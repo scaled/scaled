@@ -137,16 +137,9 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   cursor.setVisible(false) // default cursor to invisible
   // move the cursor when the point is updated
   bview.pointV onValue contentNode.updateCursor
-  // react to line edits by updating our views
+  // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
+  // (TODO: this seems error prone, is there a better way?)
   bview.buffer.lineEdited.onValue { change =>
-    // println(s"Chars @${change.loc} +${change.added} -${change.deleted}")
-
-    // update the visualization of the line that was edited
-    bview.lines(change.loc.row).onEdit(change)
-
-    // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
-    // (TODO: this seems error prone, is there a better way?)
-
     // the point may be temporarily invalid while edits are being undone, so NOOP in that case
     // because the correct point will be restored after the undo is completed
     val pointValid = bview.point.row < bview.buffer.lines.size
@@ -154,9 +147,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     if (pointValid && bview.point.row == change.loc.row && change.deleted > 0) {
       contentNode.updateCursor(bview.point)
     }
-  }
-  bview.buffer.lineStyled.onValue { loc =>
-    bview.lines(loc.row).onStyle(loc)
   }
 
   // TODO: handle deletion of lines that include the point? that will probably result in the point
@@ -205,7 +195,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         val pw = prefWidth(-1) ; val ph = prefHeight(-1)
         // we can't just call resize() directly here because JavaFX doesn't take kindly to a Node
         // resizing itself during the layout process, so we defer it
-        if (pw != getWidth || ph != getHeight) defer { resize(pw, ph) }
+        if (pw != getWidth || ph != getHeight) editor.defer { resize(pw, ph) }
         else {
           super.layoutChildren()
           setLayoutX(_pos.vx(_ax, pw, getPadding.getLeft, getPadding.getRight))

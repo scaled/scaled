@@ -156,7 +156,7 @@ class BufferImpl private (
     }
   }
 
-  override def insert (loc :Loc, c :Char, style :String) = _lines(loc.row).insert(loc, c, style)
+  override def insert (loc :Loc, c :Char, styles :Styles) = _lines(loc.row).insert(loc, c, styles)
   override def insert (loc :Loc, line :LineV) = _lines(loc.row).insert(loc, line)
   override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
     case 0 => loc
@@ -201,19 +201,10 @@ class BufferImpl private (
     noteEdited(loc.row+1, BufferImpl.NoLines, 1)
   }
 
-  override def applyStyle (style :String, start :Loc, until :Loc) {
-    if (until < start) applyStyle(style, until, start)
-    else if (start.row == until.row) line(start).applyStyle(style, start, until.col)
-    else {
-      val (fst, last) = (line(start), line(until))
-      fst.applyStyle(style, start, fst.length)
-      (start.row+1) until until.row foreach { row =>
-        val line = _lines(row)
-        line.applyStyle(style, Loc(row, 0), line.length)
-      }
-      last.applyStyle(style, until.atCol(0), until.col)
-    }
-  }
+  override def addStyle (style :String, start :Loc, until :Loc) =
+    updateStyle(style, true, start, until)
+  override def removeStyle (style :String, start :Loc, until :Loc) =
+    updateStyle(style, false, start, until)
 
   override private[scaled] def undo (edit :Buffer.Edit) {
     assert(edit.buffer == this)
@@ -235,6 +226,20 @@ class BufferImpl private (
       deleted.map(_.slice(0))
     }
 
+  private def updateStyle (style :String, add :Boolean, start :Loc, until :Loc) {
+    if (until < start) updateStyle(style, add, until, start)
+    else if (start.row == until.row) line(start).updateStyle(style, add, start, until.col)
+    else {
+      val (fst, last) = (line(start), line(until))
+      fst.updateStyle(style, add, start, fst.length)
+      (start.row+1) until until.row foreach { row =>
+        val line = _lines(row)
+        line.updateStyle(style, add, Loc(row, 0), line.length)
+      }
+      last.updateStyle(style, add, until.atCol(0), until.col)
+    }
+  }
+
   private def deleteEmit (row :Int, count :Int) :Seq[Line] = {
     val deleted = delete(row, count)
     if (!deleted.isEmpty) noteEdited(row, deleted, 0)
@@ -242,16 +247,19 @@ class BufferImpl private (
   }
 
   private def noteEdited (row :Int, deletedLines :Seq[Line], added :Int) {
+    // println(s"Lines @$row +${added} -${deletedLines.length}")
     _dirty() = true
     _edited.emit(Buffer.Edit(row, deletedLines, added, this))
   }
 
   private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) {
+    // println(s"Chars @${loc} +${added} -${deleted.length}")
     _dirty() = true
     _lineEdited.emit(Line.Edit(loc, deleted, added, this))
   }
 
   private[impl] def noteLineStyled (loc :Loc) {
+    // println(s"Styles @$loc")
     _lineStyled.emit(loc)
   }
 

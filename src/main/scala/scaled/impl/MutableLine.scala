@@ -21,8 +21,8 @@ object MutableLine {
 
   /** Creates a mutable line with a copy of the contents of `line`. */
   def apply (buffer :BufferImpl, line :LineV) = {
-    val cs = Array.ofDim[Char](line.length)
-    val ss = Array.ofDim[String](line.length)
+    val cs = new Array[Char](line.length)
+    val ss = new Array[Styles](line.length)
     line.sliceInto(0, line.length, cs, ss, 0)
     new MutableLine(buffer, cs, ss)
   }
@@ -43,9 +43,11 @@ object MutableLine {
   * @param initChars The initial characters in this line. Ownership of this array is taken by this
   * line instance and the array may subsequently be mutated thereby.
   */
-class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String]) extends LineV {
+class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles]) extends LineV {
   def this (buffer :BufferImpl, initCs :Array[Char]) =
-    this(buffer, initCs, Array.fill(initCs.length)(Line.defaultStyle))
+    this(buffer, initCs, Array.fill(initCs.length)(Styles.None))
+
+  require(initCs != null && initSs != null)
 
   private var _chars = initCs
   private var _styles = initSs
@@ -53,11 +55,11 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
 
   override def length = _end
   override def charAt (pos :Int) = if (pos < _end) _chars(pos) else 0
-  override def styleAt (pos :Int) = if (pos < _end) _styles(pos) else Line.defaultStyle
+  override def stylesAt (pos :Int) = if (pos < _end) _styles(pos) else Styles.None
   override def view (start :Int, until :Int) = new Line(_chars, _styles, start, until-start)
   override def slice (start :Int, until :Int) =
     new Line(_chars.slice(start, until), _styles.slice(start, until))
-  override def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[String], offset :Int) {
+  override def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[Styles], offset :Int) {
     System.arraycopy(_chars, start, cs, offset, until-start)
     System.arraycopy(_styles, start, ss, offset, until-start)
   }
@@ -76,11 +78,11 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
     MutableLine(buffer, delete(loc, _end-loc.col))
   }
 
-  /** Inserts `c` into this line at `loc` with style `style`. */
-  def insert (loc :Loc, c :Char, style :String) {
+  /** Inserts `c` into this line at `loc` with styles `styles`. */
+  def insert (loc :Loc, c :Char, styles :Styles) {
     prepInsert(loc.col, 1)
     _chars(loc.col) = c
-    _styles(loc.col) = style
+    _styles(loc.col) = styles
     _end += 1
     buffer.noteLineEdited(loc, Line.Empty, 1)
   }
@@ -111,7 +113,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
   def delete (loc :Loc, length :Int) :Line = {
     val pos = loc.col
     val last = pos + length
-    assert(pos >= 0 && last <= _end)
+    require(pos >= 0 && last <= _end)
     val deleted = slice(pos, pos+length)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
     System.arraycopy(_styles, last, _styles, pos, _end-last)
@@ -124,7 +126,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
   def replace (loc :Loc, delete :Int, line :LineV) :Line = {
     val pos = loc.col
     val lastDeleted = pos + delete
-    assert(lastDeleted <= _end)
+    require(lastDeleted <= _end)
     val added = line.length
     val lastAdded = pos + added
     val replaced = if (delete > 0) slice(pos, pos+delete) else Line.Empty
@@ -146,17 +148,21 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
     replaced
   }
 
-  /** Applies `style` to this line starting at `loc` and continuing to column `last`. If any
-    * characters actually change style, a call to [[BufferImpl.noteLineStyled]] will be made after
-    * the style has been applied to the entire region. */
-  def applyStyle (style :String, loc :Loc, last :Int) {
+  /** Adds or removes `style` (based on `add`) starting at `loc` and continuing to column `last`. If
+    * any characters actually change style, a call to [[BufferImpl.noteLineStyled]] will be made
+    * after the style has been applied to the entire region. */
+  def updateStyle (style :String, add :Boolean, loc :Loc, last :Int) {
     val end = math.min(length, last)
     @tailrec def loop (pos :Int, first :Int) :Int = {
       if (pos == end) first
-      else if (_styles(pos) == style) loop(pos+1, first)
       else {
-        _styles(pos) = style
-        loop(pos+1, if (first == -1) pos else first)
+        val ostyles = _styles(pos)
+        val nstyles = if (add) ostyles + style else ostyles - style
+        if (nstyles eq ostyles) loop(pos+1, first)
+        else {
+          _styles(pos) = nstyles
+          loop(pos+1, if (first == -1) pos else first)
+        }
       }
     }
     val first = loop(loc.col, -1)
@@ -169,7 +175,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
   // impl details
 
   private def prepInsert (pos :Int, length :Int) {
-    assert(pos >= 0 && pos <= _end)
+    require(pos >= 0 && pos <= _end)
     val curlen = _chars.length
     val curend = _end
     val tailpos = pos+length
@@ -180,7 +186,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[String
       val nchars = new Array[Char](_chars.length+length + MutableLine.ExpandN)
       System.arraycopy(_chars, 0, nchars, 0, pos)
       System.arraycopy(_chars, pos, nchars, tailpos, taillen)
-      val nstyles = new Array[String](nchars.length)
+      val nstyles = new Array[Styles](nchars.length)
       System.arraycopy(_styles, 0, nstyles, 0, pos)
       System.arraycopy(_styles, pos, nstyles, tailpos, taillen)
       _chars = nchars

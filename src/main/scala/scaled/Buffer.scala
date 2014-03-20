@@ -44,6 +44,8 @@ case class Loc (
   def prevL = at(row-1, col)
   /** Returns the loc directly below this loc. */
   def nextL = at(row+1, col)
+
+  override def toString = s"r$row:c$col"
 }
 
 /** [[Loc]] related utilities. */
@@ -133,9 +135,9 @@ abstract class BufferV {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
 
-  /** Returns the CSS style class of the character at `loc`.
+  /** Returns the CSS style classes of the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def styleAt (loc :Loc) :String = line(loc.row).styleAt(loc.col)
+  def stylesAt (loc :Loc) :Styles = line(loc.row).stylesAt(loc.col)
 
   /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
     * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
@@ -207,13 +209,13 @@ abstract class Buffer extends BufferV {
   /** That which handles undoing and redoing for this buffer. */
   def undoer :Undoer
 
-  /** Inserts the single character `c` into this buffer at `loc` with CSS style class `style`. */
-  def insert (loc :Loc, c :Char, style :String) :Unit
+  /** Inserts the single character `c` into this buffer at `loc` with CSS style classes `styles`. */
+  def insert (loc :Loc, c :Char, style :Styles) :Unit
 
   /** Inserts the raw string `s` into this buffer at `loc` with CSS style class `style`. */
-  def insert (loc :Loc, s :String, style :String) {
-    if (s.length == 1) insert(loc, s.charAt(0), style)
-    else insert(loc, new Line(s, style))
+  def insert (loc :Loc, s :String, styles :Styles) {
+    if (s.length == 1) insert(loc, s.charAt(0), styles)
+    else insert(loc, new Line(s, styles))
   }
 
   /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
@@ -263,8 +265,11 @@ abstract class Buffer extends BufferV {
     * which immediately follows the `loc.row`th line. */
   def split (loc :Loc) :Unit
 
-  /** Applies CSS style class `style` to the characters between `[start, until)`. */
-  def applyStyle (style :String, start :Loc, until :Loc) :Unit
+  /** Adds CSS style class `style` to the characters between `[start, until)`. */
+  def addStyle (style :String, start :Loc, until :Loc) :Unit
+
+  /** Removes CSS style class `style` from the characters between `[start, until)`. */
+  def removeStyle (style :String, start :Loc, until :Loc) :Unit
 
   private[scaled] def undo (edit :Buffer.Edit) :Unit
 

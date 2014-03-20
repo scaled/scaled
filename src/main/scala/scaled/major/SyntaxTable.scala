@@ -84,7 +84,7 @@ class SyntaxTable {
   }
 
   // precompute syntax for the ascii characters so we can look them up without boxing
-  private val _ascii = Array.ofDim[Syntax](256)
+  private val _ascii = new Array[Syntax](256)
   for (ii <- 0 until _ascii.length) _ascii(ii) = resolve(ii.toChar)
 
   // any remaining mappings are cached in this map (TODO: use a specialized CharMap, we eventually
