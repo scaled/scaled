@@ -142,6 +142,36 @@ abstract class BufferV {
     }
     seek(loc.row, loc.col, count)
   }
+
+  /** Searches forward from `loc` for a character that matches `pred`. If `loc` matches, it will be
+    * returned. If the end of the buffer is reached before finding a match, [[end]] is returned. */
+  def findForward (loc :Loc, pred :Char => Boolean) :Loc = {
+    val rows = lines.size
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = if (row == rows) end else {
+      val line = this.line(row)
+      val last = line.length
+      var p = col
+      while (p < last && !pred(line.charAt(p))) p += 1
+      if (p < last) Loc(row, p)
+      else seek(row+1, 0)
+    }
+    seek(loc.row, loc.col)
+  }
+
+  /** Searches backward from the location immediately previous to `loc` for a character that matches
+    * `pred`. If the start of the buffer is reached before finding a match, [[start]] is
+    * returned. */
+  def findBackward (loc :Loc, pred :Char => Boolean) :Loc = {
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = {
+      val line = this.line(row)
+      var p = col-1
+      while (p >= 0 && !pred(line.charAt(p))) p -= 1
+      if (p >= 0) Loc(row, p)
+      else if (row == 0) start
+      else seek(row-1, this.line(row-1).length)
+    }
+    seek(loc.row, loc.col)
+  }
 }
 
 /** Extends [[BufferV]] with a mutation API. See [[RBuffer]] for a further extension which provides

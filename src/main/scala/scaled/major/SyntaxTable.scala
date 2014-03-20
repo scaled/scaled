@@ -44,6 +44,12 @@ class SyntaxTable {
     }
   }
 
+  /** Returns a predicate that returns true for characters that have syntax `s`. */
+  def is (s :Syntax) = (c :Char) => apply(c) == s
+
+  /** Returns a predicate that returns true for characters that lack syntax `s`. */
+  def isNot (s :Syntax) = (c :Char) => apply(c) != s
+
   /** Resolves the syntax class for `c`. The first time a character's syntax is requested, this
     * (potentially slow) method is called and the resulting class is cached for future lookups. */
   protected def resolve (c :Char) :Syntax = {

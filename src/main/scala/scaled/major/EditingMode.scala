@@ -145,35 +145,17 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     "M-x" -> "execute-extended-command"
   )
 
-  /** Returns the first location which has syntax `syn`, starting from `p`. `p` itself is considered
-    * and will be returned if it matches. The search proceeds forward if `forward` and backward
-    * otherwise. If the beginning or end of the buffer is reached before finding a match, that end
-    * of the buffer is returned. */
-  def findSyntax (pos :Loc, syn :Syntax, forward :Boolean) :Loc = {
-    val stop = if (forward) buffer.end else buffer.start
-    var p = pos
-    while (p != stop && syntax(buffer charAt p) != syn)
-      p = if (forward) buffer.forward(p, 1) else buffer.backward(p, 1)
-    p
-  }
+  /** A predicate that tests a character for word-ness. Used a lot so we expose it here. */
+  val isWord = syntax is Syntax.Word
 
-  /** Returns the first location which does not have syntax `syn`, starting from `p`. `p` itself is
-    * considered and will be returned if it matches. The search proceeds forward if `forward` and
-    * backward otherwise. If the beginning or end of the buffer is reached before finding a match,
-    * that end of the buffer is returned. */
-  def findNotSyntax (pos :Loc, syn :Syntax, forward :Boolean) :Loc = {
-    val stop = if (forward) buffer.end else buffer.start
-    var p = pos
-    while (p != stop && syntax(buffer charAt p) == syn)
-      p = if (forward) buffer.forward(p, 1) else buffer.backward(p, 1)
-    p
-  }
+  /** A predicate that tests a character for non-word-ness. Used a lot so we expose it here. */
+  val isNotWord = syntax isNot Syntax.Word
 
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
     * and then keeps going until a non-word char is seen (or the end of the buffer is reached), and
     * that point is returned.
     */
-  def forwardWord (p :Loc) :Loc = findNotSyntax(findSyntax(p, Syntax.Word, true), Syntax.Word, true)
+  def forwardWord (p :Loc) :Loc = buffer.findForward(buffer.findForward(p, isWord), isNotWord)
 
   /** Seeks backward to the start of a word. Moves backward from `p` until at least one word char is
     * seen (whether `p` is a word char is not relevant), and then keeps going until a non-word char
@@ -181,15 +163,14 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     * char.
     */
   def backwardWord (p :Loc) :Loc = {
-    val start = buffer.start
-    @tailrec def seek (pos :Loc, seenWord :Boolean) :Loc = if (pos == start) start else {
-      val ppos = buffer.backward(pos, 1)
-      syntax(buffer charAt ppos) match {
-        case Syntax.Word => seek(ppos, true)
-        case _           => if (seenWord) pos else seek(ppos, false)
-      }
+    val firstWordC = buffer.findBackward(p, isWord)
+    // we may have hit the beginning of the buffer looking for a word char; if so, cope
+    if (firstWordC == buffer.start) buffer.start
+    else {
+      val nonWordC = buffer.findBackward(firstWordC, isNotWord)
+      // we may have hit the beginning of the buffer looking for a non-word char; if so, cope
+      if (isWord(buffer.charAt(nonWordC))) nonWordC else buffer.forward(nonWordC, 1)
     }
-    seek(p, false)
   }
 
   /** Deletes the region `[from, to)` from the buffer and adds it to the kill-ring. If `to` is
@@ -348,9 +329,9 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("""Capitalizes the word at or following the point, moving the point to the end of the word.
          This gives the word a first character in upper case and the rest in lower case.""")
   def capitalizeWord () {
-    val first = findSyntax(view.point, Syntax.Word, true)
+    val first = buffer.findForward(view.point, isWord)
     val start = buffer.forward(first, 1)
-    val until = findNotSyntax(start, Syntax.Word, true)
+    val until = buffer.findForward(start, isNotWord)
     upcase(first, start)
     downcase(start, until)
     view.point = until
