@@ -76,7 +76,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   override def defer (op : => Unit) = Platform.runLater(new Runnable() {
     override def run () = op
   })
-  override val killRing = new KillRingImpl(40) // TODO: get size from config
+  override val killRing = new KillRingImpl(config(EditorConfig.killRingSize))
 
   override def emitStatus (msg :String) {
     _status.toFront()

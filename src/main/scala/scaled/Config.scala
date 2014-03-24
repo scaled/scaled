@@ -55,4 +55,7 @@ object EditorConfig extends ConfigDefs {
 
   val viewWidth = key("The default width of editor views, in characters.", 100)
   val viewHeight = key("The default height of editor views, in characters.", 40)
+
+  val killRingSize = key("""The number of entries retained in the kill ring. Once this value
+    is reached, the oldest entry will be removed when a new entry is added.""", 40)
 }
