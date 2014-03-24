@@ -16,7 +16,6 @@
 }
 
 .overpop {
-  -fx-font-size: 18px;
   -fx-text-fill: white;
   -fx-padding: 5px;
   -fx-background-color: #DBDBDB77;
@@ -26,9 +25,11 @@
 }
 
 .status {
+  -fx-font-size: 18px;
 }
 
 .mini {
+  -fx-font-size: 15px;
 }
 
 .mini .prompt {
