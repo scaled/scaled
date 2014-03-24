@@ -17,23 +17,24 @@ class MiniReadMode (
   config    :Config,
   view      :RBufferView,
   disp      :Dispatcher,
-  prompt    :MiniPrompt,
+  miniui    :MiniUI,
   promise   :Promise[String],
-  defPrompt :String,
-  defText   :Seq[LineV],
+  prompt    :String,
+  initText  :Seq[LineV],
   completer :String => Set[String]
 ) extends MinibufferMode(editor, config, view, disp, promise) {
 
-  prompt.set(defPrompt)
-  setContents(defText)
+  miniui.setPrompt(prompt)
+  setContents(initText)
 
   override def nameSuffix = "read"
 
   override def keymap = super.keymap ++ Seq(
-    "ENTER" -> "commit-read",
     "TAB"   -> "complete",
-    "S-TAB" -> "complete"
+    "S-TAB" -> "complete",
+    // TODO: special C-d that updates completions if at eol (but does not complete max prefix)
     // TODO: history commands
+    "ENTER" -> "commit-read"
   )
 
   @Fn("Commits the current minibuffer read with its current contents.")
@@ -45,15 +46,13 @@ class MiniReadMode (
   def complete () {
     val current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
     val comps = completer(current)
-    if (comps.isEmpty) {
-      view.popup() = Popup(Seq("No match."), Popup.DnRight(0, 0), true)
-    }
+    if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
     else if (comps.size == 1) {
-      view.popup.clear()
+      miniui.showCompletions(Seq())
       setContents(comps.head)
     }
     else {
-      view.popup() = Popup(comps.toSeq.sorted, Popup.DnRight(0, 0), false)
+      miniui.showCompletions(comps.toSeq.sorted)
       val pre = longestPrefix(comps)
       if (pre != current) setContents(pre)
     }

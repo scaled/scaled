@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import javafx.geometry.Insets
 import javafx.scene.control.Label
 import javafx.scene.layout.BorderPane
 
@@ -12,24 +13,36 @@ import scala.annotation.tailrec
 import reactual.{Future, Promise}
 
 import scaled._
-import scaled.major.MiniPrompt
+import scaled.major.MiniUI
 import scaled.major.MinibufferMode
 
 abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
   getStyleClass.addAll("overpop", "mini")
 
-  val bufName = "*minibuffer*"
-
   val plabel = new Label()
   plabel.maxWidthProperty.bind(widthProperty)
   plabel.setWrapText(true)
   plabel.getStyleClass.add("prompt")
+  BorderPane.setMargin(plabel, new Insets(0, 0, 5, 0))
   setTop(plabel)
 
-  val prompt = new MiniPrompt() {
-    override def set (prompt :String) = plabel.setText(prompt)
-    override def get = plabel.getText
+  val cview = new BufferViewImpl(editor, BufferImpl.scratch("*completions*"), 40, 0)
+  val carea = new BufferArea(editor, cview, null)
+
+  val ui = new MiniUI() {
+    override def setPrompt (prompt :String) = plabel.setText(prompt)
+    override def getPrompt = plabel.getText
+    override def showCompletions (comps :Seq[String]) {
+      if (comps.isEmpty) setBottom(null)
+      else {
+        cview.buffer.replace(cview.buffer.start, cview.buffer.end, comps.map(new Line(_)))
+        cview.widthV() = comps.map(_.length).max
+        cview.heightV() = comps.length
+        setBottom(carea)
+        BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
+      }
+    }
   }
 
   /** Called when we clear an active minibuffer. */
@@ -42,14 +55,14 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
     // TODO: proper config
     val config = new ConfigImpl()
-    val view = new BufferViewImpl(editor, BufferImpl.scratch(bufName), 40, 1)
-    val modeArgs = prompt :: result :: args
+    val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
+    val modeArgs = ui :: result :: args
     val disp = new DispatcherImpl(editor, view) {
       override def createMode () = {
         editor.resolver.resolveMajor(s"mini-$mode", config, view, this, modeArgs) match {
           case Some(mmode :MinibufferMode) => mmode
           case Some(mmode) => throw new Exception(s"$mode is not a MinibufferMode")
-          case None => throw new Exception(s"Unknown minibuffer mode $mode")
+          case None        => throw new Exception(s"Unknown minibuffer mode $mode")
         }
       }
     }
@@ -58,7 +71,8 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
     setVisible(true)
     area.requestFocus()
     result onComplete { _ =>
-      prompt.set("")
+      ui.setPrompt("")
+      ui.showCompletions(Seq())
       view.popup.clear() // clear any active popup
       setCenter(null)
       setVisible(false)

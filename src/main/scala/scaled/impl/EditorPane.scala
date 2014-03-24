@@ -135,10 +135,10 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     _active.content.resize(bounds.getWidth, bounds.getHeight)
 
     val vw = bounds.getWidth ; val vh = bounds.getHeight
-    if (_status.isVisible) layoutInArea(_status, 0, 0, vw, vh/3, 0, null, false, false,
-                                        HPos.CENTER, VPos.CENTER)
-    if (_mini.isVisible) layoutInArea(_mini, 0, vh/6, vw, vh/3, 0, null, false, false,
-                                      HPos.CENTER, VPos.CENTER)
+    if (_status.isVisible) layoutInArea(
+      _status, 0, 0, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
+    if (_mini.isVisible) layoutInArea(
+      _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
   }
 
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))

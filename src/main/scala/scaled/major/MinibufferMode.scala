@@ -8,15 +8,18 @@ import reactual.Promise
 
 import scaled._
 
-/** Enable the reading and setting of the minibuffer prompt string. This is a special dependency
-  * that can be injected by [[MinibufferMode]]s. */
-abstract class MiniPrompt {
+/** Provides some stock UI services to minibuffer modes. This is a special dependency that can be
+  * injected by [[MinibufferMode]]s. */
+abstract class MiniUI {
 
   /** Sets the minibuffer prompt to `prompt`. */
-  def set (prompt :String) :Unit
+  def setPrompt (prompt :String) :Unit
 
   /** Returns the current minibuffer prompt. */
-  def get :String
+  def getPrompt :String
+
+  /** Displays the supplied completion strings. */
+  def showCompletions (comps :Seq[String]) :Unit
 }
 
 /** The base class for modes which operate in the minibuffer. These modes generally manage the

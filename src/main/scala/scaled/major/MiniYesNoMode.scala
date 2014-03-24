@@ -16,18 +16,18 @@ class MiniYesNoMode (
   config    :Config,
   view      :RBufferView,
   disp      :Dispatcher,
-  prompt    :MiniPrompt,
+  miniui    :MiniUI,
   promise   :Promise[Boolean],
-  defPrompt :String
+  prompt    :String
 ) extends MinibufferMode(editor, config, view, disp, promise) {
 
-  prompt.set(defPrompt)
+  miniui.setPrompt(prompt)
 
   override def nameSuffix = "yesno"
 
   override def selfInsertCommand (typed :String) = typed match {
     case "y" => promise.succeed(true)
     case "n" => promise.succeed(false)
-    case _   => prompt.set(s"Please answer y or n. $defPrompt")
+    case _   => miniui.setPrompt(s"Please answer y or n. $prompt")
   }
 }
