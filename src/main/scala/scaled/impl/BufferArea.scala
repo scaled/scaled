@@ -237,16 +237,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     })
     // move our lines when scrollTop/Left change
     bview.scrollTop.onValue { top =>
-      contentNode.setLayoutY(-bview.scrollTop()*lineHeight) // TODO: put this in updateVizLines?
+      contentNode.setLayoutY(-top*lineHeight) // TODO: put this in updateVizLines?
       updateVizLines()
     }
-    bview.scrollLeft.onValue { left =>
-      // val range = maxLenTracker.maxLength - bview.width + 1
-      // println(s"Scrolling left to $left ($range)")
-      // scrollPane.setHvalue(math.min(1, left / range.toDouble))
-
-      // TODO
-    }
+    bview.scrollLeft.onValue { left => contentNode.setLayoutX(-left*charWidth) }
 
     def updateCursor (point :Loc) {
       // use the line to determine the layout coordinates of the cursor
@@ -264,10 +258,14 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
       // if the cursor is out of view, scroll it back to the center of the screen
       val (scrollTop, height) = (bview.scrollTop(), bview.height())
-      val scrollMax = bview.buffer.lines.length - height + 1
+      val scrollTopMax = math.max(0, bview.buffer.lines.length-height+1)
       if (point.row < scrollTop || point.row >= scrollTop + height)
-        bview.scrollTop() = math.min(scrollMax, math.max(0, point.row - height/2))
-      // TODO: same for horizontal scrolling?
+        bview.scrollTop() = math.min(scrollTopMax, math.max(0, point.row-height/2))
+
+      val (scrollLeft, width) = (bview.scrollLeft(), bview.width())
+      val scrollLeftMax = math.max(0, maxLenTracker.maxLength-width+1)
+      if (point.col < scrollLeft || point.col >= scrollLeft + width)
+        bview.scrollLeft() = math.min(scrollLeftMax, math.max(0, point.col-width+1))
 
       // println(s"Cursor at ${point.col} x ${point.row} => " +
       //         s"${cursor.getLayoutX} x ${cursor.getLayoutY}")
@@ -295,24 +293,17 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
       // position the cursor
       updateCursor(bview.point())
-
-      // TODO: update selection-related nodes
     }
 
     def updateVizLines () {
-      val (top, left) = (bview.scrollTop(), bview.scrollLeft())
-      val (bot, right) = (top+bview.height(), left+bview.width())
-      // println(s"Updating viz lines top=$top left=$left bot=$bot right=$right")
-
-      // position the visible lines
+      val top = bview.scrollTop()
+      val bot = top + bview.height()
       val cs = lineNodes.getChildren
-      @tailrec def loop (idx :Int) {
-        if (idx < cs.size) {
-          cs.get(idx).setVisible(idx >= top && idx <= bot)
-          loop(idx+1)
-        }
+      var idx = 0
+      while (idx < cs.size) {
+        cs.get(idx).setVisible(idx >= top && idx <= bot)
+        idx += 1
       }
-      loop(0)
     }
   }
   private val contentNode = new ContentNode()

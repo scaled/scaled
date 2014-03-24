@@ -19,7 +19,7 @@ object Utils {
     def maxLength :Int = _maxLength
     private var _maxLength = buffer.lines.map(_.length).max
     buffer.lineEdited.onValue { edit =>
-      val nlen = edit.addedLine.length
+      val nlen = buffer.line(edit.loc).length
       // if this line is longer than our current max length, increase it
       if (nlen > _maxLength) _maxLength = nlen
       // otherwise if this line's old length was our max length,
