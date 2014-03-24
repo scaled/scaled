@@ -9,11 +9,12 @@ import java.io.File
 import scala.collection.mutable.ArrayBuffer
 
 import javafx.application.{Application, Platform}
+import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region}
 import javafx.stage.Stage
 
-import reactual.{Future, Value}
+import reactual.{Future, Promise, Value}
 
 import scaled._
 import scaled.major.TextMode
@@ -47,20 +48,23 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     }
   }
 
-  private val _minirow = new BorderPane()
-  private val _mini :Minibuffer.Area = {
-    val (miniPrompt :Label, mini :Minibuffer.Area) = Minibuffer.create(this)
-    _minirow.setLeft(miniPrompt)
-    _minirow.setCenter(mini)
-    mini
-  }
-  getChildren.add(_minirow)
+  private val _status = new Label()
+  _status.maxWidthProperty.bind(widthProperty)
+  _status.setWrapText(true)
+  _status.getStyleClass.addAll("overpop", "status")
+  getChildren.add(_status)
+
+  private val _mini = new MiniOverlay(this)
+  getChildren.add(_mini)
 
   // we manage focus specially, via this reactive value
   private val _focus = Value[OpenBuffer](null)
   _focus onValue onFocusChange
 
   newScratch() // always start with a scratch buffer
+
+  /** Used to resolve modes in this editor. */
+  val resolver = new ModeResolver(this)
 
   /** The global editor configuration. */
   def config = new ConfigImpl()
@@ -73,21 +77,21 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   override val killRing = new KillRingImpl(40) // TODO: get size from config
 
   override def emitStatus (msg :String) {
-    // we might be asked to emit status while creating the minibuffer, so don't freak out if that's
-    // the case; just don't display anything, but add the status to our history (when that exists)
-    if (_mini != null) _mini.emitStatus(msg)
+    _status.setText(msg) // TODO: fade in
+    _status.setVisible(true)
+    _status.toFront()
   }
-  override def clearStatus () = _mini.clearStatus()
+  override def clearStatus () = {
+    if (_status.isVisible()) {
+      _status.setText("") // TODO: fade out
+      _status.setVisible(false)
+    }
+  }
 
-  override def miniRead (prompt :String, defval :String, completer :String => Set[String]) =
-    withMiniFocus(_mini.read(prompt, defval, completer))
-
-  override def miniReadYN (prompt :String) = withMiniFocus(_mini.readYN(prompt))
-
-  private def withMiniFocus[T] (action : => Future[T]) :Future[T] = {
-    val ofocus = _focus()                        // note the current focus
-    _focus() = null                              // focus the minibuffer
-    action onComplete { _ => _focus() = ofocus } // restore the focus on completion
+  override def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = {
+    _mini.toFront()
+    _mini.read(mode, result, args.toList) onComplete {
+      _ => _focus().area.requestFocus() } // restore the focus on completion
   }
 
   override def buffers = _buffers.map(_.buffer)
@@ -119,21 +123,21 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   // we manage layout manually so that we can manage the relative z-order of the buffer view versus
   // the minibuffer view (so that popups hover over everything properly)
   override protected def computeMinWidth (height :Double) = _active.content.minWidth(-1)
-  override protected def computeMinHeight (height :Double) =
-    _active.content.minHeight(-1) + _minirow.minHeight(-1)
+  override protected def computeMinHeight (height :Double) = _active.content.minHeight(-1)
   override protected def computePrefWidth (height :Double) = _active.content.prefWidth(-1)
-  override protected def computePrefHeight (width :Double) =
-    _active.content.prefHeight(-1) + _minirow.prefHeight(-1)
+  override protected def computePrefHeight (width :Double) = _active.content.prefHeight(-1)
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 
   override def layoutChildren () {
     val bounds = getLayoutBounds
-    val miniHeight = _minirow.prefHeight(-1)
-    val mainHeight = bounds.getHeight-miniHeight
-    _active.content.resize(bounds.getWidth, mainHeight)
-    _minirow.resize(bounds.getWidth, miniHeight)
-    _minirow.setLayoutY(mainHeight)
+    _active.content.resize(bounds.getWidth, bounds.getHeight)
+
+    val vw = bounds.getWidth ; val vh = bounds.getHeight
+    if (_status.isVisible) layoutInArea(_status, 0, 0, vw, vh/3, 0, null, false, false,
+                                        HPos.CENTER, VPos.CENTER)
+    if (_mini.isVisible) layoutInArea(_mini, 0, vh/6, vw, vh/3, 0, null, false, false,
+                                      HPos.CENTER, VPos.CENTER)
   }
 
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
@@ -175,15 +179,10 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   }
 
   private def onFocusChange (buf :OpenBuffer) {
-    if (buf == null) {
-      _mini.requestFocus()
-      _minirow.toFront()
-    } else {
-      setBuffer(buf)
-      buf.area.requestFocus()
-      // also move the focused buffer to the head of the buffers
-      _buffers -= buf
-      _buffers prepend buf
-    }
+    setBuffer(buf)
+    buf.area.requestFocus()
+    // also move the focused buffer to the head of the buffers
+    _buffers -= buf
+    _buffers prepend buf
   }
 }

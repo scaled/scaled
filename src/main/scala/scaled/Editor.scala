@@ -6,7 +6,7 @@ package scaled
 
 import java.io.File
 
-import reactual.Future
+import reactual.{Future, Promise}
 
 /** Provides access to certain global functionality that doesn't fit nicely elsewhere. */
 trait Editor {
@@ -34,6 +34,23 @@ trait Editor {
     * status message. */
   def clearStatus () :Unit
 
+  /** Invokes the minibuffer with mode `mode`, supplying `result` and `args` as arguments to the
+    * mode. These arguments are used to resolve the mode's constructor dependencies. Note that
+    * `mode` will be prefixed with the string `mini-` as all minibuffer modes are required to
+    * follow that naming convention. Thus `"read"` will resolve a mode named `"mini-read"`.
+    *
+    * The first mode argument (`result`) is returned back to the caller with the expectation that
+    * it will be a `Promise` via which the mode will communicate its results. This allows
+    * minibuffer calls which deliver results to proceed fluently:
+    * {{{
+    * editor.mini("read", Promise[String](), "Find file: ", ...) onSuccess { path => ... }
+    * }}}
+    *
+    * See [[Mode]] and [[MinibufferMode]] for more information on how `result` and `args` are used
+    * in the minibuffer mode's dependency resolution process.
+    */
+  def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R]
+
   /** Prompts the user to input a string via the minibuffer. Returns a future which will yield the
     * entered string, or which will fail if input was canceled.
     *
@@ -44,7 +61,8 @@ trait Editor {
     *                  return the set of all valid completions. The completions should be the
     *                  entire values, not suffixes to be appended to the prefix.
     */
-  def miniRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String]
+  def miniRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
+    mini("read", Promise[String](), prompt, Line.fromText(defval), completer)
 
   /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield true
     * for 'y', false for 'n', and which will fail if input was canceled.
@@ -52,7 +70,7 @@ trait Editor {
     * @param prompt the text to display when requesting input. The string ` (y or n)` will be
     * automatically appended.
     */
-  def miniReadYN (prompt :String) :Future[Boolean]
+  def miniReadYN (prompt :String) :Future[Boolean] = mini("yesno", Promise[Boolean](), prompt)
   // TODO: should I just return Future[Unit] and automatically emit "Canceled." and fail the future
   // if they choose 'n'? that would make chaining confirmations simpler/more succinct...
 

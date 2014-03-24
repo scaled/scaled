@@ -133,4 +133,10 @@ object Line {
 
   /** An empty line. */
   final val Empty = new Line(Array[Char](), Array[Styles]())
+
+  /** Creates one or more lines from the supplied text. If the text contains newlines, it will be
+    * split into multiple `Line` instances based thereon. Carriage returns are ignored. Internally,
+    * Scaled requires multiline strings to be separated only by newlines. Only text read from the
+    * filesystem is allowed to use CR or CRLF. */
+  def fromText (text :String) :Seq[Line] = text.split("\n").map(new Line(_))
 }

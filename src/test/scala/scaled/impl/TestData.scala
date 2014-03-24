@@ -6,7 +6,7 @@ package scaled.impl
 
 import java.io.{File, StringReader}
 
-import reactual.Future
+import reactual.{Future, Promise}
 
 import scaled._
 
@@ -17,9 +17,7 @@ object TestData {
     val killRing = new KillRingImpl(10)
     def showURL (url :String) {}
     def defer (op : =>Unit) = op
-    def miniRead (prompt :String, defval :String, completer :String => Set[String]) =
-      Future.success("test")
-    def miniReadYN (prompt :String) = Future.success(true)
+    def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     def emitStatus (msg :String) = println(msg)
     def clearStatus () {}
     def exit (code :Int) {}

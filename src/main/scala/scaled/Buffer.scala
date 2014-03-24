@@ -236,11 +236,11 @@ abstract class Buffer extends BufferV {
 
   /** Replaces `delete` characters in the line at `loc` with the `line`.
     * @return the replaced characters as a line. */
-  def replace (loc :Loc, delete :Int, line :Line) :Line
+  def replace (loc :Loc, delete :Int, line :LineV) :Line
 
   /** Replaces the region between `[start, until)` with `lines`.
     * @return the buffer location just after the replaced region. */
-  def replace (start :Loc, until :Loc, lines :Seq[Line]) :Loc = {
+  def replace (start :Loc, until :Loc, lines :Seq[LineV]) :Loc = {
     if (until < start) replace(until, start, lines) else {
       delete(start, until)
       insert(start, lines)

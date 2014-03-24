@@ -18,6 +18,12 @@ package scaled
   * directly by the user when calling fns by name. The name is de-camel-cased by inserting a dash
   * before every capital letter and making said capital letter lowercase. For example: forwardChar
   * becomes forward-char.
+  *
+  * Modes are resolved by name and have their "dependencies" (constructor arguments) injected based
+  * on their type. Thus a mode can simply declare `view :RBufferView` in its constructor and the
+  * view for the buffer in which the mode is operating will be supplied at construction time. A
+  * mode may require any or all of: [[Config]], [[RBuffer]], [[RBufferView]], [[Dispatcher]],
+  * [[Editor].
   */
 abstract class Mode {
 

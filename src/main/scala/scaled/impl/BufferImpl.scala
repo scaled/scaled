@@ -193,7 +193,7 @@ class BufferImpl private (
       head +: deleted.dropRight(1) :+ deleted.last.slice(0, until.col)
     }
 
-  override def replace (loc :Loc, delete :Int, line :Line) =
+  override def replace (loc :Loc, delete :Int, line :LineV) =
     _lines(loc.row).replace(loc, delete, line)
 
   override def transform (start :Loc, until :Loc, fn :Char => Char) =

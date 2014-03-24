@@ -15,8 +15,23 @@
   -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
 }
 
-.prompt {
-  -fx-padding: 0 5 0 0;
+.overpop {
+  -fx-font-size: 18px;
+  -fx-text-fill: white;
+  -fx-padding: 5px;
+  -fx-background-color: #DBDBDB77;
+  -fx-background-radius: 5;
+  -fx-border-radius: 5;
+  -fx-effect: dropshadow( one-pass-box , black , 8 , 0.0 , 4 , 4 );
+}
+
+.status {
+}
+
+.mini {
+}
+
+.mini .prompt {
   -fx-text-fill: #00FCFF;
 }
 
