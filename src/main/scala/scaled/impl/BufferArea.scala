@@ -136,16 +136,17 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   cursor.getChildren.addAll(cursorBlock, cursorText)
   cursor.setVisible(false) // default cursor to invisible
   // move the cursor when the point is updated
-  bview.pointV onValue contentNode.updateCursor
+  bview.point onValue contentNode.updateCursor
   // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
   // (TODO: this seems error prone, is there a better way?)
   bview.buffer.lineEdited.onValue { change =>
     // the point may be temporarily invalid while edits are being undone, so NOOP in that case
     // because the correct point will be restored after the undo is completed
-    val pointValid = bview.point.row < bview.buffer.lines.size
+    val point = bview.point()
+    val pointValid = point.row < bview.buffer.lines.size
     // TODO: make this more precise?
-    if (pointValid && bview.point.row == change.loc.row && change.deleted > 0) {
-      contentNode.updateCursor(bview.point)
+    if (pointValid && point.row == change.loc.row && change.deleted > 0) {
+      contentNode.updateCursor(point)
     }
   }
 
@@ -235,11 +236,11 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       }
     })
     // move our lines when scrollTop/Left change
-    bview.scrollTopV.onValue { top =>
-      contentNode.setLayoutY(-bview.scrollTopV()*lineHeight) // TODO: put this in updateVizLines?
+    bview.scrollTop.onValue { top =>
+      contentNode.setLayoutY(-bview.scrollTop()*lineHeight) // TODO: put this in updateVizLines?
       updateVizLines()
     }
-    bview.scrollLeftV.onValue { left =>
+    bview.scrollLeft.onValue { left =>
       // val range = maxLenTracker.maxLength - bview.width + 1
       // println(s"Scrolling left to $left ($range)")
       // scrollPane.setHvalue(math.min(1, left / range.toDouble))
@@ -262,10 +263,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       cursorText.setText(cchar)
 
       // if the cursor is out of view, scroll it back to the center of the screen
-      val (scrollTop, height) = (bview.scrollTopV(), bview.height)
-      val scrollMax = bview.buffer.lines.length - bview.height + 1
+      val (scrollTop, height) = (bview.scrollTop(), bview.height())
+      val scrollMax = bview.buffer.lines.length - height + 1
       if (point.row < scrollTop || point.row >= scrollTop + height)
-        bview.scrollTopV() = math.min(scrollMax, math.max(0, point.row - height/2))
+        bview.scrollTop() = math.min(scrollMax, math.max(0, point.row - height/2))
       // TODO: same for horizontal scrolling?
 
       // println(s"Cursor at ${point.col} x ${point.row} => " +
@@ -293,14 +294,14 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       updateVizLines()
 
       // position the cursor
-      updateCursor(bview.point)
+      updateCursor(bview.point())
 
       // TODO: update selection-related nodes
     }
 
     def updateVizLines () {
-      val (top, left) = (bview.scrollTopV(), bview.scrollLeftV())
-      val (bot, right) = (top+bview.height, left+bview.width)
+      val (top, left) = (bview.scrollTop(), bview.scrollLeft())
+      val (bot, right) = (top+bview.height(), left+bview.width())
       // println(s"Updating viz lines top=$top left=$left bot=$bot right=$right")
 
       // position the visible lines
@@ -340,8 +341,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   // TODO: insets?
   override protected def computeMinWidth (height :Double) = 20 * charWidth // ?
   override protected def computeMinHeight (height :Double) = lineHeight
-  override protected def computePrefWidth (height :Double) = bview.width * charWidth
-  override protected def computePrefHeight (width :Double) = bview.height * lineHeight
+  override protected def computePrefWidth (height :Double) = bview.width() * charWidth
+  override protected def computePrefHeight (width :Double) = bview.height() * lineHeight
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 
@@ -356,10 +357,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     // our size didn't actually change
     val nwc = (nw / charWidth).toInt
     val nhc = (nh / lineHeight).toInt
-    if (nwc != bview.width || nhc != bview.height) {
+    if (nwc != bview.width() || nhc != bview.height()) {
       // update the character width/height in our buffer view
-      bview.widthV() = nwc
-      bview.heightV() = nhc
+      bview.width() = nwc
+      bview.height() = nhc
       // println(s"VP resized $nw x $nh -> ${bview.width} x ${bview.height}")
 
       // TODO: update scrollTop/scrollLeft if needed?

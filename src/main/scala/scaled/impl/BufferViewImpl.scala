@@ -21,10 +21,6 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
-  private val _point = Value(Loc(0, 0))
-  override def pointV = _point
-  override def point_= (loc :Loc) = _point() = _buffer.bound(loc)
-
   // narrow the return types of these guys for our internal friends
   override def buffer :BufferImpl = _buffer
   override def lines :Seq[LineViewImpl] = _lines

@@ -37,8 +37,8 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
       if (comps.isEmpty) setBottom(null)
       else {
         cview.buffer.replace(cview.buffer.start, cview.buffer.end, comps.map(new Line(_)))
-        cview.widthV() = comps.map(_.length).max
-        cview.heightV() = comps.length
+        cview.width() = comps.map(_.length).max
+        cview.height() = comps.length
         setBottom(carea)
         BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
       }

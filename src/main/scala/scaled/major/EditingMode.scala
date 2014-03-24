@@ -219,7 +219,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     * invoked. */
   def withRegion (fn :(Loc, Loc) => Unit) :Unit = buffer.mark match {
     case None => editor.emitStatus("The mark is not set now, so there is no region.")
-    case Some(mp) => if (mp < view.point) fn(mp, view.point) else fn(view.point, mp)
+    case Some(mp) => val p = view.point() ; if (mp < p) fn(mp, p) else fn(p, mp)
   }
 
   /** Converts the characters in `[from, to)` to upper case. If `to` is earlier than `from` the
@@ -240,26 +240,26 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("Inserts the character you typed.")
   def selfInsertCommand (typed :String) {
     // insert the typed character at the point
-    val p = view.point
+    val p = view.point()
     view.buffer.insert(p, typed, Styles.None)
     // move the point to the right by the appropriate amount
-    view.point = p + (0, typed.length)
+    view.point() = p + (0, typed.length)
   }
 
   @Fn("Deletes the character immediately previous to the point.")
   def deleteBackwardChar () {
-    val vp = view.point
+    val vp = view.point()
     val prev = buffer.backward(vp, 1)
     if (prev == vp) editor.emitStatus("Beginning of buffer.")
     else buffer.delete(prev, vp)
     // move the point back one space (TODO: should this be necessary?; I get the idea that buffer
     // deletions prior to the point in Emacs just cause the point to move)
-    view.point = prev
+    view.point() = prev
   }
 
   @Fn("Deletes the character at the point.")
   def deleteForwardChar () {
-    val del = view.point
+    val del = view.point()
     val next = buffer.forward(del, 1)
     if (del == next) editor.emitStatus("End of buffer.")
     else buffer.delete(del, next)
@@ -272,7 +272,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
          line will be transposed with the preceding character.""")
   def transposeChars () {
     // the passages below are a bit twisty, but it (mostly) mimics what emacs does
-    val p = view.point
+    val p = view.point()
     val lineLen = buffer.lineLength(p)
     // if the point is past the last char, act as if it's on the last char
     val tp = if (lineLen > 0 && p.col >= lineLen) p.atCol(lineLen-1) else p
@@ -298,7 +298,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
           val last = Loc(prev, len-1)
           val deleted = buffer.delete(last, 1)
           buffer.insert(buffer.lineStart(p), deleted)
-          view.point = tp.nextC
+          view.point() = tp.nextC
       }
     }
     // otherwise we have a normal transpose: swap the char under the point with the prev char
@@ -306,7 +306,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
       val swap = tp.prevC
       buffer.replace(swap, 2, new Line(Array(buffer charAt tp, buffer charAt swap),
                                        Array(buffer stylesAt tp, buffer stylesAt swap)))
-      view.point = tp.nextC
+      view.point() = tp.nextC
     }
   }
 
@@ -318,23 +318,23 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   @Fn("""Converts the following word to upper case, moving the point to the end of the word.""")
   def upcaseWord () {
-    view.point = upcase(view.point, forwardWord(view.point))
+    view.point() = upcase(view.point(), forwardWord(view.point()))
   }
 
   @Fn("""Converts the following word to lower case, moving the point to the end of the word.""")
   def downcaseWord () {
-    view.point = downcase(view.point, forwardWord(view.point))
+    view.point() = downcase(view.point(), forwardWord(view.point()))
   }
 
   @Fn("""Capitalizes the word at or following the point, moving the point to the end of the word.
          This gives the word a first character in upper case and the rest in lower case.""")
   def capitalizeWord () {
-    val first = buffer.findForward(view.point, isWord)
+    val first = buffer.findForward(view.point(), isWord)
     val start = buffer.forward(first, 1)
     val until = buffer.findForward(start, isNotWord)
     upcase(first, start)
     downcase(start, until)
-    view.point = until
+    view.point() = until
   }
 
   //
@@ -344,8 +344,8 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
          adds it to the kill ring. The point and mark are moved to the start of the killed
          region.""")
   def killRegion () = withRegion { (start, end) =>
-    view.point = kill(start, end)
-    buffer.mark = view.point
+    view.point() = kill(start, end)
+    buffer.mark = view.point()
   }
 
   @Fn("""Causes the following command, if it kills, to append to the previous kill rather than
@@ -365,7 +365,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("""Kills the rest of the current line, adding it to the kill ring. If the point is at the end
          of the line, the newline is killed instead.""")
   def killLine () {
-    val p = view.point
+    val p = view.point()
     val eol = buffer.lineEnd(p)
     // if we're at the end of the line, kill to the first line of the next char (the newline)
     // otherwise kill to the end of the line
@@ -374,17 +374,18 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   @Fn("""Kills the entire current line.""")
   def killWholeLine () {
-    view.point = kill(buffer.lineStart(view.point), buffer.forward(buffer.lineEnd(view.point), 1))
+    val p = view.point()
+    view.point() = kill(buffer.lineStart(p), buffer.forward(buffer.lineEnd(p), 1))
   }
 
   @Fn("""Kills characters forward until encountering the end of a word.""")
   def killWord () {
-    kill(view.point, forwardWord(view.point))
+    kill(view.point(), forwardWord(view.point()))
   }
 
   @Fn("""Kills characters backward until encountering the beginning of a word.""")
   def backwardKillWord () {
-    view.point = kill(backwardWord(view.point), view.point)
+    view.point() = kill(backwardWord(view.point()), view.point())
   }
 
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
@@ -393,8 +394,8 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     editor.killRing.entry(0) match {
       case None => editor.emitStatus("Kill ring is empty.")
       case Some(region) =>
-        buffer.mark = view.point
-        view.point = buffer.insert(view.point, region)
+        buffer.mark = view.point()
+        view.point() = buffer.insert(view.point(), region)
     }
   }
 
@@ -408,8 +409,8 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
         case Some(region) =>
           // since the last command was a yank, the mark must be set
           val mark = buffer.mark.get
-          buffer.mark = view.point lesser mark
-          view.point = buffer.replace(view.point, mark, region)
+          buffer.mark = view.point() lesser mark
+          view.point() = buffer.replace(view.point(), mark, region)
       }
     }
   }
@@ -421,35 +422,35 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   @Fn("Moves the point forward one character.")
   def forwardChar () {
-    val old = view.point
+    val old = view.point()
     // if we're at the end of the current line, move to the next line
-    view.point = buffer.forward(old, 1)
+    view.point() = buffer.forward(old, 1)
     // if the point didn't change, that means we tried to move past the end of the buffer
-    if (old == view.point) editor.emitStatus("End of buffer.")
+    if (old == view.point()) editor.emitStatus("End of buffer.")
   }
 
   @Fn("Moves the point backward one character.")
   def backwardChar () {
-    val old = view.point
-    view.point = buffer.backward(old, 1)
-    if (old == view.point) editor.emitStatus("Beginning of buffer.")
+    val old = view.point()
+    view.point() = buffer.backward(old, 1)
+    if (old == view.point()) editor.emitStatus("Beginning of buffer.")
   }
 
   @Fn("Moves the point forward one word.")
   def forwardWord () {
-    view.point = forwardWord(view.point)
+    view.point() = forwardWord(view.point())
   }
 
   @Fn("Moves the point backward one word.")
   def backwardWord () {
-    view.point = backwardWord(view.point)
+    view.point() = backwardWord(view.point())
   }
 
   @Fn("""Inserts a newline at the point.
          Characters after the point on the current line wil be moved to a new line.""")
   def newline () {
-    buffer.split(view.point)
-    view.point = Loc(view.point.row+1, 0)
+    buffer.split(view.point())
+    view.point() = Loc(view.point().row+1, 0)
   }
 
   @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
@@ -460,7 +461,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("Sets the mark to the current point.")
   def setMarkCommand () {
     // TODO: push old mark onto local (buffer?) and global mark ring?
-    buffer.mark = view.point
+    buffer.mark = view.point()
     editor.emitStatus("Mark set.")
   }
 
@@ -468,8 +469,8 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   def exchangePointAndMark () {
     buffer.mark match {
       case Some(m) =>
-        buffer.mark = view.point
-        view.point = m
+        buffer.mark = view.point()
+        view.point() = m
       case None =>
         editor.emitStatus("No mark set in this buffer.")
     }
@@ -478,33 +479,33 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("Undoes the last change to the buffer.")
   def undo () = buffer.undoer.undo() match {
     case None    => editor.emitStatus("Nothing to undo.")
-    case Some(p) => view.point = p
+    case Some(p) => view.point() = p
   }
 
   @Fn("Redoes the last undone to the buffer.")
   def redo () = buffer.undoer.redo() match {
     case None    => editor.emitStatus("Nothing to redo.")
-    case Some(p) => view.point = p
+    case Some(p) => view.point() = p
   }
 
   @Fn("Moves the point down one line.")
   def nextLine () {
-    val old = view.point
+    val old = view.point()
     // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
     // means not bounding the column, but instead coping with a current column that is beyond
     // the end of the current line (will that be a pandora's box?)
-    view.point = old.nextL
-    if (old == view.point) editor.emitStatus("End of buffer.") // TODO: with beep?
+    view.point() = old.nextL
+    if (old == view.point()) editor.emitStatus("End of buffer.") // TODO: with beep?
   }
 
   @Fn("Moves the point up one line.")
   def previousLine () {
-    val old = view.point
+    val old = view.point()
     // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
     // means not bounding the column, but instead coping with a current column that is beyond
     // the end of the current line (will that be a pandora's box?)
-    view.point = old.prevL
-    if (old == view.point) editor.emitStatus("Beginning of buffer.") // TODO: with beep?
+    view.point() = old.prevL
+    if (old == view.point()) editor.emitStatus("Beginning of buffer.") // TODO: with beep?
   }
 
   // TODO: add config: paragraph-ignore-whitespace and treat non-empty lines which contain only
@@ -520,7 +521,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
         else seek(row+1, seenNonBlank || len > 0)
       }
     }
-    view.point = seek(view.point.row, false)
+    view.point() = seek(view.point().row, false)
   }
 
   @Fn("""Moves to the previous paragraph. Paragraphs are currently delimited by blank lines.
@@ -534,20 +535,20 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
         else seek(row-1, seenNonBlank || len > 0)
       }
     }
-    view.point = seek(view.point.row, false)
+    view.point() = seek(view.point().row, false)
   }
 
   @Fn("Moves the point to the beginning of the line.")
-  def moveBeginningOfLine () = view.point = view.point.atCol(0)
+  def moveBeginningOfLine () = view.point() = view.point().atCol(0)
 
   @Fn("Moves the point to the end of the line.")
-  def moveEndOfLine () = view.point = view.point.atCol(buffer.line(view.point).length)
+  def moveEndOfLine () = view.point() = view.point().atCol(buffer.line(view.point()).length)
 
   @Fn("Moves the point to the beginning of the buffer.")
-  def beginningOfBuffer () = view.point = buffer.start
+  def beginningOfBuffer () = view.point() = buffer.start
 
   @Fn("Moves the point to the end of the buffer.")
-  def endOfBuffer () = view.point = buffer.end
+  def endOfBuffer () = view.point() = buffer.end
 
   @Fn("""Reads line number from minibuffer and goes to that line, counting from line 1 at
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
@@ -557,8 +558,8 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
       val line = try { lineStr.toInt } catch {
         case e :Throwable => 1 // this is what emacs does, seems fine to me
       }
-      if (!buffer.mark.isDefined) buffer.mark = view.point
-      view.point = Loc(line-1, 0)
+      if (!buffer.mark.isDefined) buffer.mark = view.point()
+      view.point() = Loc(line-1, 0)
       recenter()
     }
   }
@@ -573,14 +574,14 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   def scrollDown () = view.scrollVert(1)
 
   @Fn("Scrolls the view up one page.")
-  def scrollUpPage () = view.scrollVert(1-view.height)
+  def scrollUpPage () = view.scrollVert(1-view.height())
 
   @Fn("Scrolls the view down one page.")
-  def scrollDownPage () = view.scrollVert(view.height-1)
+  def scrollDownPage () = view.scrollVert(view.height()-1)
 
   @Fn("""Adjusts the scroll offset of the current window so that the line that contains the point
          is centered therein.""")
-  def recenter () = view.scrollTopV() = math.max(view.point.row - view.height/2, 0)
+  def recenter () = view.scrollTop() = math.max(view.point().row - view.height()/2, 0)
 
   //
   // BUFFER FNS

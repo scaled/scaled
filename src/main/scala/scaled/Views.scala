@@ -4,7 +4,7 @@
 
 package scaled
 
-import reactual.{Future, OptValue, Value, ValueV}
+import reactual.{Future, Property, OptValue, Value, ValueV}
 
 /** Visualizes a single line of text, potentially with style information. */
 abstract class LineView {
@@ -34,51 +34,35 @@ abstract class BufferView {
   def lines :Seq[LineView]
 
   /** The current point (aka the cursor position). */
-  def point :Loc
-
-  /** Updates the current point. The point will be [[Buffer.bound]] into the buffer. */
-  def point_= (loc :Loc) :Unit
+  def point :Property[Loc]
 
   /** The width of the view, in characters. */
-  def width :Int
-
-  /** Sets the width of the view, in characters. This may be overridden with a smaller value if the
-    * requested width cannot be accommodated. */
-  def width_= (w :Int) :Unit
+  def width :Property[Int]
 
   /** The height of the view, in characters. */
-  def height :Int
-
-  /** Sets the height of the view, in characters. This may be overridden with a smaller value if the
-    * requested height cannot be accommodated. */
-  def height_= (w :Int) :Unit
+  def height :Property[Int]
 
   /** The index of the line at the top of the view. */
-  def scrollTop :Int
-
-  /** Sets the index of the lne at the top of the view. */
-  def scrollTop_= (top :Int) :Unit
+  def scrollTop :Property[Int]
 
   /** The column index of the character at the left of the view. */
-  def scrollLeft :Int
-
-  /** Sets the column index of the character at the left of the view. */
-  def scrollLeft_= (left :Int) :Unit
+  def scrollLeft :Property[Int]
 
   /** Adjusts the scroll position of this view by `delta` lines. The scroll position will be bounded
     * based on the size of the buffer. The point will then be bounded into the visible area of the
     * buffer. */
   def scrollVert (delta :Int) {
-    val ctop = scrollTop
+    val ctop = scrollTop()
+    val h = height()
     // bound bottom first, then top; this snaps buffers that are less than one screen tall to top
     // TODO: nix buffer.lines.length, use lines.length when lines is implemented
-    val ntop = math.max(math.min(ctop + delta, buffer.lines.length - height), 0)
+    val ntop = math.max(math.min(ctop + delta, buffer.lines.length - h), 0)
     // println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
-    scrollTop = ntop
+    scrollTop() = ntop
 
-    val p = point
-    if (p.row < ntop) point = p.atRow(ntop)
-    else if (p.row >= ntop + height) point = p.atRow(ntop + height - 1)
+    val p = point()
+    if (p.row < ntop) point() = p.atRow(ntop)
+    else if (p.row >= ntop + h) point() = p.atRow(ntop + h - 1)
   }
 }
 
@@ -89,31 +73,23 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
   override def buffer :RBuffer
 
   /** The current point (aka the cursor position). */
-  def pointV :ValueV[Loc]
+  val point :Value[Loc] = new Value(Loc(0, 0)) {
+    override def update (loc :Loc) :Loc = super.update(buffer.bound(loc))
+    override def updateForce (loc :Loc) :Loc = super.update(buffer.bound(loc))
+  }
 
   /** The width of the buffer view, in characters. */
-  val widthV :Value[Int] = Value(initWidth)
+  val width :Value[Int] = Value(initWidth)
 
   /** The height of the buffer view, in characters. */
-  val heightV :Value[Int] = Value(initHeight)
+  val height :Value[Int] = Value(initHeight)
 
   /** The index of the line at the top of the view. */
-  val scrollTopV :Value[Int] = Value(0)
+  val scrollTop :Value[Int] = Value(0)
 
   /** The column index of the character at the left of the view. */
-  val scrollLeftV :Value[Int] = Value(0)
+  val scrollLeft :Value[Int] = Value(0)
 
   /** The popup being displayed by this buffer, if any. */
   val popup :OptValue[Popup] = OptValue()
-
-  // implement some BufferView methods in terms of our reactive values
-  override def point = pointV()
-  override def width = widthV()
-  override def height = heightV()
-  override def scrollTop = scrollTopV()
-  override def scrollLeft = scrollLeftV()
-  override def width_= (w :Int) = widthV() = w
-  override def height_= (h :Int) = heightV() = h
-  override def scrollTop_= (top :Int) = scrollTopV() = top
-  override def scrollLeft_= (left :Int) = scrollLeftV() = left
 }

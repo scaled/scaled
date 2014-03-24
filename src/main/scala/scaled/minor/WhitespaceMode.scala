@@ -29,7 +29,7 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
 
   val trailingWhitespacer = new Behavior() {
     private val _rethinkLines = MSet[Int]()
-    private var _lastPoint = view.point
+    private var _lastPoint = view.point()
 
     override protected def activate () {
       // respond to buffer and line edits
@@ -41,7 +41,7 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
       })
       // when the point moves, the line it left may now need highlighting and the line it moves to
       // may no longer need highlighting
-      note(view.pointV onValue { point => queueRethink(_lastPoint.row, point.row) })
+      note(view.point onValue { point => queueRethink(_lastPoint.row, point.row) })
       // note existing trailing whitespace
       0 until view.buffer.lines.size foreach tagTrailingWhitespace
       // TODO: defer marking trailing whitespace on non-visible lines until they're scrolled into
@@ -66,7 +66,7 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
 
     private val tagTrailingWhitespace = (ii :Int) => {
       val line = view.buffer.lines(ii)
-      val limit = if (view.point.row == ii) view.point.col else 0
+      val limit = if (view.point().row == ii) view.point().col else 0
       @tailrec def seek (col :Int) :Int = {
         if (col == limit || major.syntax(line.charAt(col-1)) != Syntax.Whitespace) col
         else seek(col-1)

@@ -121,7 +121,7 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     // prepare to invoke our fn
     _curFn = fn.name
     editor.clearStatus()
-    view.buffer.undoStack.actionWillStart(view.point)
+    view.buffer.undoStack.actionWillStart(view.point())
 
     // TODO: pass view to fn for (internal) error reporting?
     fn.invoke(typed)

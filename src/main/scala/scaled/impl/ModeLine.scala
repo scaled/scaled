@@ -14,7 +14,7 @@ class ModeLine (editor :Editor, view :BufferViewImpl) extends Label {
 
   view.buffer.nameV onEmit update
   view.buffer.dirtyV onEmit update
-  view.pointV onEmit update
+  view.point onEmit update
 
   update()
 
@@ -23,7 +23,7 @@ class ModeLine (editor :Editor, view :BufferViewImpl) extends Label {
     val buf = new StringBuilder(" ")
     buf.append(if (view.buffer.dirty) "*" else "-")
     buf.append(" ").append(view.buffer.name)
-    buf.append("  ").append("L").append(view.point.row+1)
+    buf.append("  ").append("L").append(view.point().row+1)
     // TODO: col number mode?
     // TODO: put active mode info into BufferView? pass it separately?
     setText(buf.toString)
