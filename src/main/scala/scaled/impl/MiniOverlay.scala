@@ -15,7 +15,7 @@ import scaled._
 import scaled.major.MiniPrompt
 import scaled.major.MinibufferMode
 
-class MiniOverlay (editor :EditorPane) extends BorderPane {
+abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
   getStyleClass.addAll("overpop", "mini")
 
@@ -31,6 +31,9 @@ class MiniOverlay (editor :EditorPane) extends BorderPane {
     override def set (prompt :String) = plabel.setText(prompt)
     override def get = plabel.getText
   }
+
+  /** Called when we clear an active minibuffer. */
+  def onClear () :Unit
 
   /** Displays a minibuffer with the specified mode. */
   def read[R] (mode :String, result :Promise[R], args :List[Any]) :Future[R] = try {
@@ -59,6 +62,7 @@ class MiniOverlay (editor :EditorPane) extends BorderPane {
       view.popup.clear() // clear any active popup
       setCenter(null)
       setVisible(false)
+      onClear()
     }
 
   } catch {

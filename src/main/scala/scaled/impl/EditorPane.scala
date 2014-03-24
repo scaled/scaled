@@ -54,7 +54,9 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   _status.getStyleClass.addAll("overpop", "status")
   getChildren.add(_status)
 
-  private val _mini = new MiniOverlay(this)
+  private val _mini = new MiniOverlay(this) {
+    override def onClear () = _focus().area.requestFocus() // restore buffer focus on clear
+  }
   getChildren.add(_mini)
 
   // we manage focus specially, via this reactive value
@@ -77,9 +79,9 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   override val killRing = new KillRingImpl(40) // TODO: get size from config
 
   override def emitStatus (msg :String) {
+    _status.toFront()
     _status.setText(msg) // TODO: fade in
     _status.setVisible(true)
-    _status.toFront()
   }
   override def clearStatus () = {
     if (_status.isVisible()) {
@@ -90,8 +92,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   override def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = {
     _mini.toFront()
-    _mini.read(mode, result, args.toList) onComplete {
-      _ => _focus().area.requestFocus() } // restore the focus on completion
+    _mini.read(mode, result, args.toList)
   }
 
   override def buffers = _buffers.map(_.buffer)
