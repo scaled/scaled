@@ -39,11 +39,47 @@ abstract class BufferView {
   /** Updates the current point. The point will be [[Buffer.bound]] into the buffer. */
   def point_= (loc :Loc) :Unit
 
-  /** The width of the buffer, in characters. */
+  /** The width of the view, in characters. */
   def width :Int
 
-  /** The height of the buffer, in characters. */
+  /** Sets the width of the view, in characters. This may be overridden with a smaller value if the
+    * requested width cannot be accommodated. */
+  def width_= (w :Int) :Unit
+
+  /** The height of the view, in characters. */
   def height :Int
+
+  /** Sets the height of the view, in characters. This may be overridden with a smaller value if the
+    * requested height cannot be accommodated. */
+  def height_= (w :Int) :Unit
+
+  /** The index of the line at the top of the view. */
+  def scrollTop :Int
+
+  /** Sets the index of the lne at the top of the view. */
+  def scrollTop_= (top :Int) :Unit
+
+  /** The column index of the character at the left of the view. */
+  def scrollLeft :Int
+
+  /** Sets the column index of the character at the left of the view. */
+  def scrollLeft_= (left :Int) :Unit
+
+  /** Adjusts the scroll position of this view by `delta` lines. The scroll position will be bounded
+    * based on the size of the buffer. The point will then be bounded into the visible area of the
+    * buffer. */
+  def scrollVert (delta :Int) {
+    val ctop = scrollTop
+    // bound bottom first, then top; this snaps buffers that are less than one screen tall to top
+    // TODO: nix buffer.lines.length, use lines.length when lines is implemented
+    val ntop = math.max(math.min(ctop + delta, buffer.lines.length - height), 0)
+    // println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
+    scrollTop = ntop
+
+    val p = point
+    if (p.row < ntop) point = p.atRow(ntop)
+    else if (p.row >= ntop + height) point = p.atRow(ntop + height - 1)
+  }
 }
 
 /** A reactive version of [BufferView], used by modes. */
@@ -67,22 +103,6 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
   /** The column index of the character at the left of the view. */
   val scrollLeftV :Value[Int] = Value(0)
 
-  /** Adjusts the scroll position of this view by `delta` lines. The scroll position will be bounded
-    * based on the size of the buffer. The point will then be bounded into the visible area of the
-    * buffer. */
-  def scrollVert (delta :Int) {
-    val ctop = scrollTopV()
-    // bound bottom first, then top; this snaps buffers that are less than one screen tall to top
-    // TODO: nix buffer.lines.length, use lines.length when lines is implemented
-    val ntop = math.max(math.min(ctop + delta, buffer.lines.length - height), 0)
-    // println(s"Updating scroll top ($delta ${lines.length} $height) $ctop => $ntop")
-    scrollTopV() = ntop
-
-    val p = point
-    if (p.row < ntop) point = p.atRow(ntop)
-    else if (p.row >= ntop + height) point = p.atRow(ntop + height - 1)
-  }
-
   /** The popup being displayed by this buffer, if any. */
   val popup :OptValue[Popup] = OptValue()
 
@@ -90,4 +110,10 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
   override def point = pointV()
   override def width = widthV()
   override def height = heightV()
+  override def scrollTop = scrollTopV()
+  override def scrollLeft = scrollLeftV()
+  override def width_= (w :Int) = widthV() = w
+  override def height_= (h :Int) = heightV() = h
+  override def scrollTop_= (top :Int) = scrollTopV() = top
+  override def scrollLeft_= (left :Int) = scrollLeftV() = left
 }
