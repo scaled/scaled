@@ -145,7 +145,8 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   private def newBuffer (buf :BufferImpl) {
     val config = new ConfigImpl() // TODO: inherit from global editor config?
-    val view = new BufferViewImpl(this, buf, 80, 24)
+    val view = new BufferViewImpl(
+      this, buf, config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
     // TODO: determine the proper mode based on user customizable mechanism
     val disp = new DispatcherImpl(this, view) {
       override def createMode () = new TextMode(EditorPane.this, config, view, this)

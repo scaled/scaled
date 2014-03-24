@@ -53,4 +53,6 @@ abstract class ConfigDefs {
 /** Defines editor-global configurables. */
 object EditorConfig extends ConfigDefs {
 
+  val viewWidth = key("The default width of editor views, in characters.", 100)
+  val viewHeight = key("The default height of editor views, in characters.", 40)
 }
