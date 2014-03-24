@@ -121,12 +121,11 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
       }
   }
 
-  // we manage layout manually so that we can manage the relative z-order of the buffer view versus
-  // the minibuffer view (so that popups hover over everything properly)
-  override protected def computeMinWidth (height :Double) = _active.content.minWidth(-1)
-  override protected def computeMinHeight (height :Double) = _active.content.minHeight(-1)
-  override protected def computePrefWidth (height :Double) = _active.content.prefWidth(-1)
-  override protected def computePrefHeight (width :Double) = _active.content.prefHeight(-1)
+  // we manage layout manually for a variety of nefarious reasons
+  override protected def computeMinWidth (height :Double) = _active.content.minWidth(height)
+  override protected def computeMinHeight (width :Double) = _active.content.minHeight(width)
+  override protected def computePrefWidth (height :Double) = _active.content.prefWidth(height)
+  override protected def computePrefHeight (width :Double) = _active.content.prefHeight(width)
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 
@@ -135,8 +134,10 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
     _active.content.resize(bounds.getWidth, bounds.getHeight)
 
     val vw = bounds.getWidth ; val vh = bounds.getHeight
+    // the status overlay is centered in the top 1/4th of the screen
     if (_status.isVisible) layoutInArea(
       _status, 0, 0, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
+    // the minibuffer overlay is top-aligned at height/4 and extends downward
     if (_mini.isVisible) layoutInArea(
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
   }
