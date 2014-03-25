@@ -19,6 +19,7 @@ import scaled.major.MinibufferMode
 abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
   getStyleClass.addAll("overpop", "mini")
+  setVisible(false)
 
   val plabel = new Label()
   plabel.maxWidthProperty.bind(widthProperty)
