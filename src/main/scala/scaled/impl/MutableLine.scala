@@ -54,21 +54,15 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
   private var _end = initCs.size
 
   override def length = _end
-  override def charAt (pos :Int) = if (pos < _end) _chars(pos) else 0
-  override def stylesAt (pos :Int) = if (pos < _end) _styles(pos) else Styles.None
   override def view (start :Int, until :Int) = new Line(_chars, _styles, start, until-start)
   override def slice (start :Int, until :Int) =
     new Line(_chars.slice(start, until), _styles.slice(start, until))
-  override def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[Styles], offset :Int) {
-    System.arraycopy(_chars, start, cs, offset, until-start)
-    System.arraycopy(_styles, start, ss, offset, until-start)
-  }
-  override def sliceString (start :Int, until :Int) = new String(_chars, start, until-start)
-  override def asString :String = new String(_chars, 0, _end)
 
   /** The array that contains this line's characters. It's size may exceed `length` for reasons of
     * efficiency. Be sure to use [length], not `chars.length`. */
-  def chars :Array[Char] = _chars
+  override def chars = _chars
+  override protected def styles = _styles
+  override protected def offset = 0
 
   /** Splits this line at `loc`. Deletes the data from `loc.col` onward from this line.
     * @return a new line which contains the data from `loc.col` onward. */
