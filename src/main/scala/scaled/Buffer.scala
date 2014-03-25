@@ -172,6 +172,36 @@ abstract class BufferV {
     }
     seek(loc.row, loc.col)
   }
+
+  /** Searches for `lns` in the buffer, starting at `start` and not searching beyond `end`. If only a
+    * single line is sought, it can match anywhere in a line in the buffer. If more than one line
+    * is sought, the first line must match the end of a buffer line, and subsequent lines must
+    * match entirely until the last line which must match the start of the corresponding buffer
+    * line. The text of the lines must not contain line separator characters.
+    * @param maxMatches the search is stopped once this many matches are found. */
+  def search (lns :Seq[LineV], start :Loc, end :Loc, maxMatches :Int = Int.MaxValue) :Seq[Loc] =
+    lns match {
+      case Seq() => Seq()
+      // searching for a single line can match anywhere in a line, so we handle specially
+      case Seq(ln) => searchFrom(start, end, ln, maxMatches, Seq())
+      // multiline searches have to match the end of one line, zero or more intermediate lines, and
+      // the start of the final line
+      case lines =>
+        Seq() // TODO
+    }
+
+  private def searchFrom (start :Loc, end :Loc, needle :LineV, maxMatches :Int,
+                          accum :Seq[Loc]) :Seq[Loc] =
+    if (maxMatches == 0 || start > end) accum
+    else line(start).search(needle, start.col) match {
+      // if no match on this line, move to the next line and keep searching
+      case -1 => searchFrom(start.nextStart, end, needle, maxMatches, accum)
+      // if we did match on this line, make sure it's < end, add it, and keep searching
+      case ii =>
+        val next = start atCol ii+needle.length
+        if (next > end) accum
+        else searchFrom(next, end, needle, maxMatches-1, accum :+ (start atCol ii))
+    }
 }
 
 /** Extends [[BufferV]] with a mutation API. See [[RBuffer]] for a further extension which provides
