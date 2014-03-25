@@ -10,9 +10,10 @@ class ModeResolver (editor :Editor) {
 
   // TODO: extract these mode mappings via metadata found in the classpath
   val majorModes = Map(
-    "text"       -> "scaled.major.TextMode",
-    "mini-read"  -> "scaled.major.MiniReadMode",
-    "mini-yesno" -> "scaled.major.MiniYesNoMode"
+    "text"         -> "scaled.major.TextMode",
+    "mini-read"    -> "scaled.major.MiniReadMode",
+    "mini-yesno"   -> "scaled.major.MiniYesNoMode",
+    "mini-isearch" -> "scaled.major.ISearchMode"
   )
   val minorModes = Map(
     "todo" -> "todo"

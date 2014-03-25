@@ -6,7 +6,7 @@ package scaled.major
 
 import java.io.File
 
-import reactual.Future
+import reactual.{Future, Promise}
 
 import scala.annotation.tailrec
 
@@ -37,6 +37,8 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   override def configDefs = EditingConfig :: super.configDefs
 
   override def defaultFn = Some("self-insert-command")
+
+  override def missedFn = Some("unknown-command")
 
   override def keymap = Seq(
     // character editing commands
@@ -85,6 +87,10 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     "C-_"   -> "undo",
     // TEMP: until we sort out ctrl'd shifted keys
     "C-S--" -> "undo",
+
+    // searching and replacing commands
+    "C-s"   -> "isearch-forward",
+    "C-r"   -> "isearch-backward",
 
     // motion commands
     "C-b"   -> "backward-char",
@@ -418,6 +424,35 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   private val yanks = Set("yank", "yank-pop")
 
   //
+  // SEARCHING AND REPLACING FNS
+
+  @Fn("""Searches incrementally forward. As you type characters, they add to the search string
+         and are immediately sought. The following key bindings control the search:
+
+         Type DEL to cancel last input item from end of search string.
+         Type RET to exit, leaving point at location found.
+         Type C-j to match end of line.
+         Type C-s to search again forward, C-r to search again backward.
+         Type C-w to yank next word or character in buffer onto the end of the search string.
+         Type M-s C-e to yank rest of line onto end of search string and search for it.
+         Type C-y to yank the last string of killed text.
+         Type M-y to replace string just yanked into search prompt with string killed before it.
+         Type C-q to quote control character to search for it.
+
+         C-g while searching or when search has failed cancels input back to what has been found
+           successfully.
+         C-g when search is successful aborts and moves point to starting point.
+         """)
+  def isearchForward () {
+    editor.mini("isearch", Promise[Boolean](), view, "forward")
+  }
+
+  @Fn("Searches incrementally backward. See the command isearch-forward for more info.")
+  def isearchBackward () {
+    editor.mini("isearch", Promise[Boolean](), view, "backward")
+  }
+
+  //
   // MOTION FNS
 
   @Fn("Moves the point forward one character.")
@@ -673,6 +708,11 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   //
   // META FNS
+
+  @Fn("Reports that a key sequence is unknown.")
+  def unknownCommand (trigger :String) {
+    editor.emitStatus(s"$trigger is undefined.")
+  }
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {

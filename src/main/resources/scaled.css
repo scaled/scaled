@@ -87,6 +87,15 @@
   -fx-font-weight: bold;
 }
 
+/** Minibuffer mode faces */
+.isearchMatchFace {
+  -fx-bg-fill: DarkOrange;
+}
+
+.isearchActiveMatchFace {
+  -fx-bg-fill: #AB1500;
+}
+
 /** TODO: move this to whitespace.css */
 .trailingWhitespaceFace {
   -fx-bg-fill: #AB1500;
