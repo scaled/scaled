@@ -8,11 +8,14 @@ import java.io.File
 
 import scala.collection.mutable.ArrayBuffer
 
+import javafx.animation.FadeTransition
 import javafx.application.{Application, Platform}
+import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region}
 import javafx.stage.Stage
+import javafx.util.Duration
 
 import reactual.{Future, Promise, Value}
 
@@ -53,6 +56,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   _status.setWrapText(true)
   _status.getStyleClass.addAll("overpop", "status")
   getChildren.add(_status)
+  private val _statusFade = new FadeTransition(Duration.millis(1), _status)
 
   private val _mini = new MiniOverlay(this) {
     override def onClear () = _focus().area.requestFocus() // restore buffer focus on clear
@@ -80,13 +84,27 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   override def emitStatus (msg :String) {
     _status.toFront()
-    _status.setText(msg) // TODO: fade in
+    _status.setText(msg)
+    _statusFade.stop()
+    _statusFade.setDuration(Duration.millis(150))
+    _statusFade.setFromValue(_status.getOpacity)
+    _statusFade.setToValue(1d)
+    _statusFade.setOnFinished(null)
+    _statusFade.play()
     _status.setVisible(true)
   }
   override def clearStatus () = {
     if (_status.isVisible()) {
-      _status.setText("") // TODO: fade out
-      _status.setVisible(false)
+      _statusFade.stop()
+      _statusFade.setDuration(Duration.millis(300))
+      _statusFade.setFromValue(_status.getOpacity)
+      _statusFade.setToValue(0d)
+      _statusFade.play()
+      _statusFade.setOnFinished(new EventHandler[ActionEvent]() {
+        override def handle (event :ActionEvent) {
+          _status.setVisible(false)
+        }
+      })
     }
   }
 
