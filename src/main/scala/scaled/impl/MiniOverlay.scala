@@ -89,6 +89,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
       ui.setPrompt("")
       ui.showCompletions(Seq())
       view.popup.clear() // clear any active popup
+      disp.dispose()
       setCenter(null)
       setVisible(false)
       onClear()

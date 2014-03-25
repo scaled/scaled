@@ -38,17 +38,29 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     case None => false
   }
 
+  /* Disposes the major mode associated with this dispatcher and any active minor modes. */
+  def dispose () {
+    _metas map(_.mode) foreach(_.dispose())
+    _metas = Nil // render ourselves useless
+    _prefixes = Set()
+  }
+
   /** Adds the specified minor mode to this dispatcher. */
   def addMode (minor :MinorMode) {
     _metas = new ModeMeta(minor) :: _metas
-    _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+    rebuildPrefixes()
   }
 
   /** Removes the specified minior from this dispatcher. */
   def removeMode (minor :MinorMode) {
+    val ometas = _metas
     _metas = _metas.filter(_.mode != minor)
-    _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+    rebuildPrefixes()
+    // if we actually removed this mode, dispose it
+    if (ometas != _metas) minor.dispose()
   }
+
+  private def rebuildPrefixes () :Unit = _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = {
@@ -134,9 +146,10 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
   }
 
   private def invokeMissed () {
-    editor.emitStatus(s"${_trigger.mkString(" ")} is undefined.")
-    _prevFn = null
-    didInvoke()
+    missedFn match {
+      case Some(fn) => invoke(fn, _trigger.mkString(" "))
+      case None     => _prevFn = null ; didInvoke()
+    }
   }
 
   private def didInvoke () {
@@ -168,6 +181,7 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
 
   private val majorMeta = new ModeMeta(major)
   private val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
+  private val missedFn :Option[FnBinding] = major.missedFn.flatMap(majorMeta.fns.binding)
 
   private var _metas = List(majorMeta) // the stack of active modes (major last)
   private var _prefixes = _metas.head.prefixes // union of cmd prefixes from active modes' keymaps

@@ -97,9 +97,15 @@ abstract class MajorMode extends Mode {
 
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
     * for key presses that result in a "typed" character. Key presses that do not generate
-    * characters (i.e. F1, HOME) will not be passed to the default fn. They must be explicitly
-    * bounds. */
+    * characters (i.e. F1, HOME) or which are modified by modifiers other than SHIFT will be passed
+    * to [[missedFn]]. */
   def defaultFn :Option[String] = None
+
+  /** The fn to invoke for a key press for which no mapping exists and which is not expected to yield
+    * text which can be inserted into the buffer (such key presses are sent to [[defaultFn]]).
+    * Instead of supplying `typed` text to the fn, the string representation of the trigger
+    * sequence will be supplied instead (e.g. `C-x C-p`). */
+  def missedFn :Option[String] = None
 }
 
 /** Provides the foundation for a minor editing mode. A minor editing mode customizes the behavior
