@@ -329,6 +329,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   // add all the current lines to the buffer
   lineNodes.getChildren.addAll(bview.lines.map(_.node) :_*)
 
+  // request relayout when our view width/height changes
+  bview.width onValue { _ => requestLayout() }
+  bview.height onValue { _ => requestLayout() }
+
   // TODO: insets?
   override protected def computeMinWidth (height :Double) = 20 * charWidth // ?
   override protected def computeMinHeight (height :Double) = lineHeight
@@ -349,18 +353,20 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     val nwc = (nw / charWidth).toInt
     val nhc = (nh / lineHeight).toInt
     if (nwc != bview.width() || nhc != bview.height()) {
-      // update the character width/height in our buffer view
-      bview.width() = nwc
-      bview.height() = nhc
-      // println(s"VP resized $nw x $nh -> ${bview.width} x ${bview.height}")
-
-      // TODO: update scrollTop/scrollLeft if needed?
-
+      // println(s"VP resized $nw x $nh -> $nwc x $nhc")
+      wasResized(nwc, nhc)
       // update visible lines
       contentNode.updateVizLines()
-
-      // TODO: set clip rect?
+      // TODO: update scrollTop/scrollLeft if needed?
     }
+  }
+
+  protected def wasResized (widthChars :Int, heightChars :Int) {
+    // update our buffer view size with our resized (char) width/height; NOTE: this loops back
+    // around causing this BufferArea to "prefer" this width and height if asked; we may want to
+    // break that loop and separately handle current versus preferred size in BufferView
+    bview.width() = widthChars
+    bview.height() = heightChars
   }
 
   override def getCssMetaData = BufferArea.getClassCssMetaData

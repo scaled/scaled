@@ -77,8 +77,8 @@ abstract class MinibufferMode (
   /** Sets contents of the minibuffer to `lines`. Positions the point at the end of the buffer. */
   protected def setContents (lines :Seq[LineV]) {
     view.buffer.replace(view.buffer.start, view.buffer.end, lines)
-    view.point() = view.buffer.end
     view.width() = math.max(view.width(), lines.map(_.length).max+1)
+    view.point() = view.buffer.end
   }
 
   protected def contents :String = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
