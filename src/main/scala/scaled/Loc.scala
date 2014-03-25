@@ -21,13 +21,14 @@ class Loc private (val rowCol :Long) extends AnyVal {
   /** The (zero-based) column of the buffer represented by this loc. */
   def col :Int = rowCol.toInt
 
-  /** Returns true if this loc is earlier in the buffer than `other` (i.e. less than it).
-    * Naturally both locs must refer to the same buffer. */
+  /** Returns true if this loc is earlier than `other` (i.e. less than it). */
   def < (other :Loc) = {
-    val trow = row
-    val orow = other.row
-      (trow < orow) || (trow == orow && col < other.col)
+    val trow = row ; val orow = other.row
+    (trow < orow) || (trow == orow && col < other.col)
   }
+
+  /** Returns true if this loc is later than `other` (i.e. greather than it). */
+  def > (other :Loc) = other < this
 
   /** Returns the lesser (earlier in the buffer) of `this` and `other`. */
   def lesser (other :Loc) = if (this < other) this else other
