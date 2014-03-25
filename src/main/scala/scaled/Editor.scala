@@ -22,6 +22,9 @@ trait Editor {
   /** Invokes `op` on the next UI tick. */
   def defer (op : =>Unit) :Unit
 
+  /** Invokes `op` on the next UI tick. */
+  def defer (op :Runnable) :Unit
+
   /** The kill ring shared by all buffers in this editor. */
   def killRing :KillRing
 
