@@ -115,7 +115,7 @@ abstract class BufferV {
   /** Bounds `loc` into this buffer. Its row will be bound to [0, `lines.length`) and its column
     * bound into the line to which its row was bound. */
   def bound (loc :Loc) :Loc = {
-    if (loc.row >= lines.size) loc.at(lines.size-1, lines.last.length)
+    if (loc.row >= lines.size) Loc(lines.size-1, lines.last.length)
     else if (loc.row < 0) Loc(0, lines(0).bound(loc.col))
     else lines(loc.row).bound(loc)
   }
@@ -183,7 +183,7 @@ abstract class BufferV {
     lns match {
       case Seq() => Seq()
       // searching for a single line can match anywhere in a line, so we handle specially
-      case Seq(ln) => searchFrom(start, end, ln, maxMatches, Seq())
+      case Seq(ln) => if (ln.length == 0) Seq() else searchFrom(start, end, ln, maxMatches, Seq())
       // multiline searches have to match the end of one line, zero or more intermediate lines, and
       // the start of the final line
       case lines =>
