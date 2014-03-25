@@ -10,9 +10,10 @@ import org.junit.Assert._
 import scaled._
 
 class KillRingTest {
+  import BufferImplTest._
 
   @Test def testRingness () {
-    val buf = BufferTest.testBuffer()
+    val buf = testBuffer(testText)
     val ring = new KillRingImpl(8)
     val rega = buf.region(Loc(0, 0), Loc(1, 0))
     val regb = buf.region(Loc(1, 0), Loc(2, 0))
@@ -36,7 +37,7 @@ class KillRingTest {
   }
 
   @Test def testAppend () {
-    val buf = BufferTest.testBuffer()
+    val buf = testBuffer(testText)
     val ring = new KillRingImpl(8)
     val (l1, l2, l3) = (Loc(0, 0), Loc(1, 0), Loc(2, 0))
     ring.add(buf.region(l1, l2))
