@@ -21,4 +21,9 @@ abstract class Dispatcher {
   /** Resolves the fn named `fn`. If found, it is invoked and `true` is returned. If no fn is found
     * with that name, `false` is returned. */
   def invoke (fn :String) :Boolean
+
+  /** Simulates the press of the key sequence represented by `trigger` (e.g. `C-x C-c`). The
+    * associated `fn` is resolved and invoked, or the major mode's `missedFn` is invoked if no
+    * bound `fn` could be found. */
+  def press (trigger :String) :Unit
 }

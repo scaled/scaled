@@ -38,6 +38,16 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     case None => false
   }
 
+  override def press (trigger :String) {
+    KeyPress.toKeyPresses(err => editor.emitStatus(s"Invalid trigger: $err"), trigger) match {
+      case Some(kps) => resolve(kps, _metas) match {
+        case Some(fn) => invoke(fn, kps.last.text)
+        case None     => invokeMissed(trigger)
+      }
+      case None => editor.emitStatus(s"Unable to simulate press of $trigger")
+    }
+  }
+
   /* Disposes the major mode associated with this dispatcher and any active minor modes. */
   def dispose () {
     _metas map(_.mode) foreach(_.dispose())
@@ -145,11 +155,10 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     didInvoke()
   }
 
-  private def invokeMissed () {
-    missedFn match {
-      case Some(fn) => invoke(fn, _trigger.mkString(" "))
-      case None     => _prevFn = null ; didInvoke()
-    }
+  private def invokeMissed () :Unit = invokeMissed(_trigger.mkString(" "))
+  private def invokeMissed (trigger :String) :Unit = missedFn match {
+    case Some(fn) => invoke(fn, trigger)
+    case None     => _prevFn = null ; didInvoke()
   }
 
   private def didInvoke () {
