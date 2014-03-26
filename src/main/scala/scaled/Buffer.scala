@@ -96,8 +96,8 @@ abstract class BufferV {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def stylesAt (loc :Loc) :Styles = line(loc.row).stylesAt(loc.col)
 
-  /** Returns the data between `[start, until)` as a sequence of lines. Note: the last line does not
-    * conceptually include a trailing newline, and [[insert(Region)]] takes this into account. */
+  /** Returns a copy of the data between `[start, until)`. Note: the last line does not conceptually
+    * include a trailing newline, and [[insert(Region)]] takes this into account. */
   def region (start :Loc, until :Loc) :Seq[Line]
 
   /** Returns the start of the line at `row`. */
