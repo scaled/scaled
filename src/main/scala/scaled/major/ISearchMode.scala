@@ -26,12 +26,13 @@ class ISearchMode (
   editor    :Editor,
   config    :Config,
   miniView  :RBufferView,
-  disp      :Dispatcher,
+  miniDisp  :Dispatcher,
   miniui    :MiniUI,
   promise   :Promise[Unit],
   mainView  :RBufferView,
+  mainDisp  :Dispatcher,
   direction :String
-) extends MinibufferMode(editor, config, miniView, disp, promise) {
+) extends MinibufferMode(editor, config, miniView, miniDisp, promise) {
   import ISearchConfig._
 
   @inline protected final def miniBuffer = miniView.buffer
@@ -173,6 +174,12 @@ class ISearchMode (
   override def dispose () {
     super.dispose()
     _states.head.clear() // clear any highlights
+  }
+
+  // when a non-isearch key binding is pressed...
+  override def unknownCommand (trigger :String) {
+    endSearch()             // terminate the search normally...
+    mainDisp.press(trigger) // and "execute" the pressed key in the main buffer
   }
 
   override def abort () {
