@@ -111,7 +111,8 @@ abstract class LineV {
   def asString :String = new String(chars, offset, length)
 
   override def equals (other :Any) = other match {
-    case ol :LineV => ol.matches(this) && ol.styleMatches(styles, offset, length, 0)
+    case ol :LineV => length == ol.length && ol.matches(this) &&
+      ol.styleMatches(styles, offset, length, 0)
     case _         => false
   }
 
