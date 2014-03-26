@@ -5,8 +5,9 @@
 package scaled.major
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 
-import reactual.Promise
+import reactual.{Value, Promise}
 import scaled._
 
 /** Configuration for [[ISearchMode]]. */
@@ -33,39 +34,101 @@ class ISearchMode (
 ) extends MinibufferMode(editor, config, miniView, disp, promise) {
   import ISearchConfig._
 
-  private var _fwd = direction == "forward"
-  private def dirsuff = if (_fwd) "" else " backward"
-  private def reprompt (pref :String) = miniui.setPrompt(s"${pref}I-search${dirsuff}:")
-  reprompt("")
+  @inline protected final def miniBuffer = miniView.buffer
+  @inline protected final def mainBuffer = mainView.buffer
 
-  // make a note of the initial point, we go back there if aborted
-  private val initPoint = mainView.point()
+  // we track the state of our isearch as a stack of states; every change pushes a new state on the
+  // stack and DEL pops back to previous states
+  case class State (sought :Seq[LineV], matches :Seq[Loc], start :Loc, end :Loc,
+                    fwd :Boolean, fail :Boolean, wrap :Boolean) {
 
-  // machinery for manipulating the highlighted matches
-  private var _sought = Seq[LineV]()
-  private var _matches = Seq[Loc]()
-  private def updateMatches (sought :Seq[LineV], matches :Seq[Loc]) {
-    // remove the matched face from the previous matches
-    if (!_matches.isEmpty) _matches foreach { l =>
-      mainView.buffer.removeStyle(isearchMatchStyle, l, l + _sought)
+    /** The location to place the point when this state is active. */
+    def point :Loc = if (fwd) end else start
+
+    /** Returns the prompt string that should be used for this state. */
+    def prompt :String = {
+      val buf = new StringBuilder
+      if (fail) buf.append("failing ")
+      if (wrap) buf.append("wrapped ")
+      buf.append("I-search")
+      if (!fwd) buf.append(" backward")
+      buf.append(":")
+      buf.setCharAt(0, Character.toUpperCase(buf.charAt(0)))
+      buf.toString
     }
-    _sought = sought
-    _matches = matches
-    // add the match style to the new matches
-    if (!matches.isEmpty) matches foreach { l =>
-      mainView.buffer.addStyle(isearchMatchStyle, l, l + sought)
+
+    /** Applies this state, highlighting matches and the active match (if any), moving the point
+      * appropriately and configuring the contents of the minibuffer.
+      * @param prev the previously active state, which will be unapplied (efficiently such that if
+      * this state and the previous have the same configuration, no change is made).
+      */
+    def apply (prev :State) {
+      // we use `ne` here for efficiency because the only time things are meaningfully equal is
+      // when we've inherited the exact sought text and matches from a previous state
+      if ((prev.sought ne sought) || (prev.matches ne matches)) {
+        prev.clearMatches()
+        matches foreach { l => mainBuffer.addStyle(isearchMatchStyle, l, l + sought) }
+        setContents(sought)
+      }
+      if (prev.start != start || prev.end != end) {
+        mainBuffer.removeStyle(isearchActiveMatchStyle, prev.start, prev.end)
+        mainBuffer.addStyle(isearchActiveMatchStyle, start, end)
+      }
+      mainView.point() = point
+      miniui.setPrompt(prompt)
+    }
+
+    /** Clears the highlights applied by this state. */
+    def clear () {
+      clearMatches()
+      mainBuffer.removeStyle(isearchActiveMatchStyle, start, end)
+    }
+
+    def extend (esought :Seq[LineV]) = {
+      val ematches = mainBuffer.search(esought, mainBuffer.start, mainBuffer.end)
+      find(esought, ematches, if (fwd) start else end, fwd, wrap)
+    }
+
+    def next () = {
+      val newwrap = fwd && fail
+      val from = if (newwrap) mainBuffer.start else point
+      find(sought, matches, from, true, wrap || newwrap)
+    }
+
+    def prev () = {
+      val newwrap = !fwd && fail
+      val from = if (newwrap) mainBuffer.end else point
+      find(sought, matches, from, false, wrap || newwrap)
+    }
+
+    protected def clearMatches () :Unit = matches foreach { l =>
+      mainBuffer.removeStyle(isearchMatchStyle, l, l + sought) }
+
+    protected def find (sought :Seq[LineV], matches :Seq[Loc], from :Loc,
+                        fwd :Boolean, wrap :Boolean) = {
+      val found = if (fwd) matches.dropWhile(_ < from).headOption
+                  else matches.takeWhile(_ < from).lastOption
+      found match {
+        case Some(s) => State(sought, matches, s, s+sought, fwd, false, wrap)
+        case None    => State(sought, matches, start, end,  fwd, true,  wrap)
+      }
     }
   }
 
-  private var _activeMatch :Option[(Loc,Loc)] = None
-  private def updateActiveMatch (loc :Option[Loc]) {
-    _activeMatch foreach { case (s, e) =>
-      mainView.buffer.removeStyle(isearchActiveMatchStyle, s, e) }
-    _activeMatch = loc map(l => (l, l + _sought))
-    _activeMatch foreach { case (s, e) =>
-      mainView.buffer.addStyle(isearchActiveMatchStyle, s, e)
-      mainView.point() = e
-    }
+  private val initState = {
+    val p = mainView.point()
+    new State(Line.fromText(""), Seq(), p, p, direction == "forward", false, false)
+  }
+  miniui.setPrompt(initState.prompt)
+  private var _states = List(initState)
+
+  private def pushState (state :State) {
+    state.apply(_states.head)
+    _states = state :: _states
+  }
+  private def popState () :Unit = _states match {
+    case cur :: prev :: t => prev.apply(cur) ; _states = prev :: t
+    case _ => editor.emitStatus("Can't pop empty isearch state stack!")
   }
 
   // machinery for handling coalesced search term refreshing
@@ -75,25 +138,13 @@ class ISearchMode (
       _refreshPending = true
       editor.defer {
         _refreshPending = false
-        refresh()
+        val sought = miniBuffer.region(miniBuffer.start, miniBuffer.end)
+        if (sought != _states.head.sought) pushState(_states.head.extend(sought))
       }
     }
   }
-  miniView.buffer.edited onEmit queueRefresh
-  miniView.buffer.lineEdited onEmit queueRefresh
-
-  private def preserveActiveMatch = _activeMatch match {
-    case None => false
-    case Some((s, e)) => _matches.contains(s)
-  }
-  private def extendActiveMatch () = updateActiveMatch(Some(_activeMatch.get._1))
-
-  private def refresh () {
-    val term = miniView.buffer.region(miniView.buffer.start, miniView.buffer.end)
-    updateMatches(term, mainView.buffer.search(term, mainView.buffer.start, mainView.buffer.end))
-    if (preserveActiveMatch) extendActiveMatch()
-    else if (_fwd) nextMatch() else prevMatch()
-  }
+  miniBuffer.edited onEmit queueRefresh
+  miniBuffer.lineEdited onEmit queueRefresh
 
   override def nameSuffix = "isearch"
   override def configDefs = ISearchConfig :: super.configDefs
@@ -101,13 +152,14 @@ class ISearchMode (
     // we don't inherit normal editing commands, so we repeat the few essentials here and then
     // route all non-matching commands back to the main buffer
     "C-g"   -> "abort",
-    "BS"    -> "delete-backward-char", // TODO: do we need to do anything special?
     "C-y"   -> "yank",
     "M-y"   -> "yank-pop",
 
     "C-s"   -> "next-match",
     "C-r"   -> "prev-match",
 
+    "BS"    -> "prev-search",
+    "DEL"   -> "prev-search",
     "ENTER" -> "end-search"
     // Type DEL to cancel last input item from end of search string.
     // Type RET to exit, leaving point at location found.
@@ -120,39 +172,43 @@ class ISearchMode (
 
   override def dispose () {
     super.dispose()
-    updateActiveMatch(None)
-    updateMatches(Seq(), Seq())
+    _states.head.clear() // clear any highlights
   }
 
   override def abort () {
-    // TODO: if we have an unmatched search, peel back to the last match (which may be nothing)
-
+    // if we're currently failing, peel back to the last successful state
+    if (_states.head.fail) {
+      val cur = _states.head
+      while (_states.head.fail) _states = _states.tail
+      _states.head.apply(cur)
+    }
     // otherwise revert the main buffer point to its initial value and abort the search
-    mainView.point() = initPoint
-    super.abort()
-  }
-
-  def nextMatch (from :Loc) :Boolean = {
-    _fwd = true
-    _matches.dropWhile(_ < from).headOption match {
-      case Some(loc) => updateActiveMatch(Some(loc)) ; true
-      case None => updateActiveMatch(None) ; false
+    else {
+      mainView.point() = initState.point
+      super.abort()
     }
   }
 
   @Fn("Ends this search, leaving the point at the location found.")
   def endSearch () :Unit = promise.succeed(())
 
+  @Fn("Cancels the last change to the isearch, reverting to the previous search.")
+  def prevSearch () {
+    if (_states.tail != Nil) popState()
+    else editor.emitStatus("No previous search.")
+  }
+
   @Fn("""Moves forward to the next occurrance of the current matched text, if any.
          The point will be placed immediately after the match.""")
   def nextMatch () {
-    if (!nextMatch(mainView.point()))
-      reprompt("Failing ") // TODO: wrap, "Failing wrapped " on wrapped fail
+    // TODO: if _states is default state: toggle fwd/rev or pop last search from search ring
+    pushState(_states.head.next())
   }
 
   @Fn("""Moves backward to the previous occurrance of the current matched text, if any.
          The point will be placed at the start of the match.""")
   def prevMatch () {
-    _fwd = false
+    // TODO: if _states is default state: toggle fwd/rev or pop last search from search ring
+    pushState(_states.head.prev())
   }
 }
