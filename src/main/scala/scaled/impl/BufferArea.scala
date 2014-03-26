@@ -90,9 +90,11 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     // don't know where this magical pixel comes in, but until I can figure it out, I'm just
     // hacking in a pixel here; yay!
     lineHeight = math.ceil(fm.getLineHeight)+1
-    // update the size of our cursor
+    // update the size of our cursors
     cursorBlock.setWidth(charWidth)
     cursorBlock.setHeight(lineHeight)
+    uncursor.setWidth(charWidth)
+    uncursor.setHeight(lineHeight)
   }
 
   // forward key events to the control for dispatching
@@ -105,8 +107,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   focusTraversableProperty().setValue(true)
   focusedProperty.addListener(onChangeB(onFocusChange))
   private def onFocusChange (focused :Boolean) {
-    cursor.setVisible(focused) // TODO: change to an outline around the char; except the
-                               // minibuffer which should make the cursor actually invisible
+    cursor.setVisible(focused)
+    uncursor.setVisible(!focused)
   }
 
   // this tracks the maximum line length in the buffer
@@ -116,7 +118,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   private val lineNodes = new Group()
   lineNodes.setManaged(false)
 
-  // create our cursor and bind its position to `bview.point`
+  // create our focused cursor
   private val cursorBlock = new Rectangle()
   cursorBlock.getStyleClass.add("cursor")
   private val cursorText = new Text()
@@ -135,6 +137,13 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   cursor.setManaged(false)
   cursor.getChildren.addAll(cursorBlock, cursorText)
   cursor.setVisible(false) // default cursor to invisible
+
+  // create our unfocused cursor
+  private val uncursor = new Rectangle(0, 0, Color.TRANSPARENT)
+  uncursor.getStyleClass.add("uncursor")
+  uncursor.setManaged(false)
+  uncursor.setVisible(false)
+
   // move the cursor when the point is updated
   bview.point onValue contentNode.updateCursor
   // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
@@ -245,8 +254,9 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     def updateCursor (point :Loc) {
       // use the line to determine the layout coordinates of the cursor
       val line = bview.lines(point.row)
-      cursor.setLayoutX(line.charX(point.col, charWidth))
-      cursor.setLayoutY(line.node.getLayoutY)
+      val cx = line.charX(point.col, charWidth) ; val cy = line.node.getLayoutY
+      cursor.setLayoutX(cx) ; cursor.setLayoutY(cy)
+      uncursor.setLayoutX(cx) ; uncursor.setLayoutY(cy)
 
       // set the cursor "text" to the character under the point (if any)
       val cchar = if (point.row >= bview.buffer.lines.length) "" else {
@@ -310,7 +320,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   contentNode.setManaged(false)
 
   // put our scene graph together
-  contentNode.getChildren.addAll(lineNodes, cursor, popup)
+  contentNode.getChildren.addAll(lineNodes, cursor, uncursor, popup)
   getChildren.add(contentNode)
 
   // listen for addition and removal of lines
