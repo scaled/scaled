@@ -27,9 +27,6 @@ trait Editor {
   /** Invokes `op` on the next UI tick. */
   def defer (op :Runnable) :Unit
 
-  /** The kill ring shared by all buffers in this editor. */
-  def killRing :KillRing
-
   /** Briefly displays a status message in the minibuffer. The status message will also be appeneded
     * to an editor-wide messages list. */
   def emitStatus (msg :String) :Unit

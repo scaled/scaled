@@ -23,6 +23,7 @@ object EditingConfig extends ConfigDefs {
   */
 abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
     extends MajorMode {
+  import EditorConfig.killRing
   import EditingConfig._
 
   @inline protected final def buffer = view.buffer // for great brevity
@@ -194,11 +195,11 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
       val region = buffer.delete(from, to)
       // if the previous fn was any sort of kill fn, we append instead of add
       if ((disp.prevFn != null) && isKillFn(disp.prevFn)) {
-        if (isBackwardKill(disp.curFn)) editor.killRing prepend region
-        else                            editor.killRing append  region
+        if (isBackwardKill(disp.curFn)) config(killRing) prepend region
+        else                            config(killRing) append  region
       }
       // otherwise create a new kill ring entry
-      else editor.killRing add region
+      else config(killRing) add region
     }
     from lesser to
   }
@@ -364,7 +365,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
          The point and mark remain unchanged.""")
   def killRingSave () = withRegion { (start, end) =>
-    editor.killRing add buffer.region(start, end)
+    config(killRing) add buffer.region(start, end)
     editor.emitStatus("Region added to kill ring.")
   }
 
@@ -397,7 +398,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
          moved to the end if the inserted text.""")
   def yank () {
-    editor.killRing.entry(0) match {
+    config(killRing).entry(0) match {
       case None => editor.emitStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point()
@@ -410,7 +411,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     if (!yanks(disp.prevFn)) editor.emitStatus(s"Previous command was not a yank (${disp.prevFn}).")
     else {
       yankCount = if (disp.prevFn == "yank-pop") yankCount + 1 else 1
-      editor.killRing.entry(yankCount) match {
+      config(killRing).entry(yankCount) match {
         case None => editor.emitStatus("Kill ring is empty.")
         case Some(region) =>
           // since the last command was a yank, the mark must be set

@@ -2,19 +2,19 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.impl
+package scaled
 
 import org.junit._
 import org.junit.Assert._
 
 import scaled._
 
-class KillRingTest {
-  import BufferImplTest._
+class RingTest {
+  import impl.BufferImplTest._
 
   @Test def testRingness () {
     val buf = testBuffer(testText)
-    val ring = new KillRingImpl(8)
+    val ring = new Ring(8)
     val rega = buf.region(Loc(0, 0), Loc(1, 0))
     val regb = buf.region(Loc(1, 0), Loc(2, 0))
     val regc = buf.region(Loc(2, 0), Loc(3, 0))
@@ -38,7 +38,7 @@ class KillRingTest {
 
   @Test def testAppend () {
     val buf = testBuffer(testText)
-    val ring = new KillRingImpl(8)
+    val ring = new Ring(8)
     val (l1, l2, l3) = (Loc(0, 0), Loc(1, 0), Loc(2, 0))
     ring.add(buf.region(l1, l2))
     ring.append(buf.region(l2, l3))

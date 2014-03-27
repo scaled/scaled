@@ -62,8 +62,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
     if (getCenter != null) throw new Exception(
       "Command attempted to use minibuffer while in minibuffer")
 
-    // TODO: proper config
-    val config = new ConfigImpl()
+    val config = editor.configFor("mini-$mode")
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
     val modeArgs = ui :: result :: args
     val disp = new DispatcherImpl(editor, view) {

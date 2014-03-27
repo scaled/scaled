@@ -14,7 +14,6 @@ import scaled._
 object TestData {
 
   val editor = new Editor {
-    val killRing = new KillRingImpl(10)
     def showURL (url :String) {}
     def defer (op :Runnable) = op.run()
     def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
@@ -27,7 +26,7 @@ object TestData {
     def killBuffer (buffer :String) = false
   }
 
-  val config = new ConfigImpl()
+  val config = new ConfigImpl("test", None)
 
   /** Creates a test buffer. For testing! */
   def buffer (name :String, text :String) =

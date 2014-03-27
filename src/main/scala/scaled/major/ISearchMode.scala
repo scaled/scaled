@@ -13,6 +13,8 @@ import scaled._
 /** Configuration for [[ISearchMode]]. */
 object ISearchConfig extends ConfigDefs {
 
+  val isearchRingSize = key("The number of entries retained by the recent searches ring.", 40)
+
   /** The CSS style applied to isearch matches. */
   val isearchMatchStyle = "isearchMatchFace"
 

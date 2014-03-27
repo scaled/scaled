@@ -6,7 +6,7 @@ package scaled.impl
 
 import java.io.File
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 
 import javafx.animation.FadeTransition
 import javafx.application.{Application, Platform}
@@ -67,18 +67,24 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   private val _focus = Value[OpenBuffer](null)
   _focus onValue onFocusChange
 
-  newScratch() // always start with a scratch buffer
+  /** The global editor configuration. */
+  private val _config = new ConfigImpl("editor", None)
+
+  /** Resolved config instances for each mode. */
+  private val _configs = MMap[String,ConfigImpl]()
 
   /** Used to resolve modes in this editor. */
   val resolver = new ModeResolver(this)
 
-  /** The global editor configuration. */
-  def config = new ConfigImpl()
+  newScratch() // always start with a scratch buffer
+
+  /** Obtains the config instance for the mode with the specified name/identifier. */
+  def configFor (mode :String) :ConfigImpl =
+    _configs.getOrElseUpdate(mode, new ConfigImpl(mode, Some(_config)))
 
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override def defer (op :Runnable) = Platform.runLater(op)
-  override val killRing = new KillRingImpl(config(EditorConfig.killRingSize))
 
   override def emitStatus (msg :String) {
     _status.toFront()
@@ -161,16 +167,17 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
 
   private def newBuffer (buf :BufferImpl) {
-    val config = new ConfigImpl() // TODO: inherit from global editor config?
-    val view = new BufferViewImpl(
-      this, buf, config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+    val (width, height) = (_config(EditorConfig.viewWidth), _config(EditorConfig.viewHeight))
+    // TODO: resolve config for the appropriate mode
+    val mconfig = configFor("text")
+    val view = new BufferViewImpl(this, buf, width, height)
     // TODO: determine the proper mode based on user customizable mechanism
     val disp = new DispatcherImpl(this, view) {
-      override def createMode () = new TextMode(EditorPane.this, config, view, this)
+      override def createMode () = new TextMode(EditorPane.this, mconfig, view, this)
     }
 
     // TEMP: hack in whitespace mode activation for testing for now
-    disp.addMode(new WhitespaceMode(EditorPane.this, config, view,
+    disp.addMode(new WhitespaceMode(EditorPane.this, configFor("whitespace"), view,
                                     disp.major.asInstanceOf[TextMode]))
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
