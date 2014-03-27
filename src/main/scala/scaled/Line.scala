@@ -54,12 +54,13 @@ abstract class LineV {
 
   /** Returns the offset into this line at which the characters of `cs` in `[offset, length)` are
     * matched, starting from `start`. -1 is returned if no match could be found. */
-  final def search (cs :Array[Char], offset :Int, length :Int, start :Int) :Int = {
+  final def search (cmp :(Char, Char) => Boolean, cs :Array[Char], offset :Int, length :Int,
+                    start :Int) :Int = {
     if (start + length > this.length) -1
     else {
       val tcs = this.chars ; val last = this.length - length
       @tailrec @inline def check (toffset :Int, ii :Int) :Int =
-        if (ii < length && cs(offset+ii) == tcs(toffset+ii)) check(toffset, ii+1) else ii
+        if (ii < length && cmp(cs(offset+ii), tcs(toffset+ii))) check(toffset, ii+1) else ii
       var ss = start ; while (ss <= last && check(this.offset+ss, 0) != length) ss += 1
       if (ss > last) -1 else ss
     }
@@ -67,11 +68,12 @@ abstract class LineV {
 
   /** Returns true if the characters of `cs` in `[offset, length)` are equal to the characters in
     * this line in `[start, length)`. */
-  final def matches (cs :Array[Char], offset :Int, length :Int, start :Int) :Boolean = {
+  final def matches (cmp :(Char, Char) => Boolean, cs :Array[Char], offset :Int, length :Int,
+                     start :Int) :Boolean = {
     if (start + length > this.length) false
     else {
       val tcs = this.chars ; val toffset = this.offset + start
-      var ii = 0 ; while (ii < length && cs(offset+ii) == tcs(toffset+ii)) ii += 1
+      var ii = 0 ; while (ii < length && cmp(cs(offset+ii), tcs(toffset+ii))) ii += 1
       ii == length
     }
   }
@@ -89,29 +91,30 @@ abstract class LineV {
 
   /** Returns the offset into this line at which the characters of `line` are matched, starting from
     * `start`. -1 is returned if no match could be found. */
-  def search (line :LineV, start :Int = 0) :Int =
-    search(line.chars, line.offset, line.length, start)
+  def search (cmp :(Char, Char) => Boolean, line :LineV, start :Int = 0) :Int =
+    search(cmp, line.chars, line.offset, line.length, start)
 
   /** Returns the offset into this line at which `[offset, length)` characters of `line` are matched,
     * starting from `start`. -1 is returned if no match could be found. */
-  def search (line :LineV, offset :Int, length :Int, start :Int) :Int =
-    search(line.chars, line.offset+offset, length, start)
+  def search (cmp :(Char, Char) => Boolean, line :LineV, offset :Int, length :Int, start :Int) :Int =
+    search(cmp, line.chars, line.offset+offset, length, start)
 
   /** Returns true if the characters of `line` are equal to the characters in this line starting at
     * `start`. */
-  def matches (line :LineV, start :Int = 0) :Boolean =
-    matches(line.chars, line.offset, line.length, start)
+  def matches (cmp :(Char, Char) => Boolean, line :LineV, start :Int = 0) :Boolean =
+    matches(cmp, line.chars, line.offset, line.length, start)
 
   /** Returns true if the `[offset, length)` characters of `line` are equal to the `[start, length)`
     * characters in this line. */
-  def matches (line :LineV, offset :Int, length :Int, start :Int) :Boolean =
-    matches(line.chars, line.offset+offset, length, start)
+  def matches (cmp :(Char, Char) => Boolean, line :LineV, offset :Int, length :Int,
+               start :Int) :Boolean =
+    matches(cmp, line.chars, line.offset+offset, length, start)
 
   /** Returns the contents of this line as a string. */
   def asString :String = new String(chars, offset, length)
 
   override def equals (other :Any) = other match {
-    case ol :LineV => length == ol.length && ol.matches(this) &&
+    case ol :LineV => length == ol.length && ol.matches(Line.exact, this) &&
       ol.styleMatches(styles, offset, length, 0)
     case _         => false
   }
@@ -199,6 +202,27 @@ object Line {
 
   /** An empty line. */
   final val Empty = new Line(Array[Char](), Array[Styles]())
+
+  /** A case-exact character comparison function. */
+  final val exact = (have :Char, want :Char) => have == want
+
+  /** A case-insensitive character comparison function. NOTE: this expects the sought characters to
+    * always be lower case. */
+  final val loose = (have :Char, want :Char) => {
+    have == want || have == Character.toLowerCase(want)
+  }
+
+  /** Returns a comparison function for use in searching for `sought`. If `sought` contains all
+    * lower-case characters, a case insensitive function is returned, otherwise an exact case
+    * function is returned.
+    */
+  def compFor (sought :Seq[LineV]) :(Char,Char) => Boolean = {
+    @inline @tailrec def mixedCase (line :LineV, ii :Int) :Boolean =
+      if (ii == line.length) false
+      else if (Character.isUpperCase(line.charAt(ii))) false
+      else mixedCase(line, ii+1)
+    if (sought.exists(mixedCase(_, 0))) exact else loose
+  }
 
   /** Creates one or more lines from the supplied text. If the text contains newlines, it will be
     * split into multiple `Line` instances based thereon. Carriage returns are ignored. Internally,

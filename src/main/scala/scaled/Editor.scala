@@ -20,7 +20,9 @@ trait Editor {
   def showURL (url :String) :Unit
 
   /** Invokes `op` on the next UI tick. */
-  def defer (op : =>Unit) :Unit
+  def defer (op : => Unit) :Unit = defer(new Runnable() {
+    override def run () = op
+  })
 
   /** Invokes `op` on the next UI tick. */
   def defer (op :Runnable) :Unit

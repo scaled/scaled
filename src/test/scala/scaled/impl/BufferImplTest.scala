@@ -128,7 +128,7 @@ class BufferImplTest {
     val the = Seq(new Line("the"))
     // search for all the thes in the whole buffer
     val allThes = buffer.search(the, buffer.start, buffer.end)
-    assertEquals(4, allThes.size)
+    assertEquals(5, allThes.size)
     // search for thes on the first line (should be none)
     val l2 = Loc(1, 0)
     val firstThes = buffer.search(the, buffer.start, l2)

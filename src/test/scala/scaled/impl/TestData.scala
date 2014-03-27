@@ -16,7 +16,7 @@ object TestData {
   val editor = new Editor {
     val killRing = new KillRingImpl(10)
     def showURL (url :String) {}
-    def defer (op : =>Unit) = op
+    def defer (op :Runnable) = op.run()
     def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     def emitStatus (msg :String) = println(msg)
     def clearStatus () {}

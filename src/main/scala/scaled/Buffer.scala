@@ -179,28 +179,31 @@ abstract class BufferV {
     * match entirely until the last line which must match the start of the corresponding buffer
     * line. The text of the lines must not contain line separator characters.
     * @param maxMatches the search is stopped once this many matches are found. */
-  def search (lns :Seq[LineV], start :Loc, end :Loc, maxMatches :Int = Int.MaxValue) :Seq[Loc] =
+  def search (lns :Seq[LineV], start :Loc, end :Loc, maxMatches :Int = Int.MaxValue) :Seq[Loc] = {
+    val comp = Line.compFor(lns)
     lns match {
       case Seq() => Seq()
       // searching for a single line can match anywhere in a line, so we handle specially
-      case Seq(ln) => if (ln.length == 0) Seq() else searchFrom(start, end, ln, maxMatches, Seq())
+      case Seq(ln) => if (ln.length == 0) Seq()
+                      else searchFrom(comp, start, end, ln, maxMatches, Seq())
       // multiline searches have to match the end of one line, zero or more intermediate lines, and
       // the start of the final line
       case lines =>
         Seq() // TODO
     }
+  }
 
-  private def searchFrom (start :Loc, end :Loc, needle :LineV, maxMatches :Int,
-                          accum :Seq[Loc]) :Seq[Loc] =
+  private def searchFrom (comp :(Char, Char) => Boolean, start :Loc, end :Loc, needle :LineV,
+                          maxMatches :Int, accum :Seq[Loc]) :Seq[Loc] =
     if (maxMatches == 0 || start > end) accum
-    else line(start).search(needle, start.col) match {
+    else line(start).search(comp, needle, start.col) match {
       // if no match on this line, move to the next line and keep searching
-      case -1 => searchFrom(start.nextStart, end, needle, maxMatches, accum)
+      case -1 => searchFrom(comp, start.nextStart, end, needle, maxMatches, accum)
       // if we did match on this line, make sure it's < end, add it, and keep searching
       case ii =>
         val next = start atCol ii+needle.length
         if (next > end) accum
-        else searchFrom(next, end, needle, maxMatches-1, accum :+ (start atCol ii))
+        else searchFrom(comp, next, end, needle, maxMatches-1, accum :+ (start atCol ii))
     }
 }
 

@@ -14,7 +14,7 @@ class LineTest {
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val idx = s.indexOf(needle, start)
       assertEquals(s"offset (from $start) of '$needle' in '$s'", idx,
-                   line.search(new Line(needle), start))
+                   line.search(Line.exact, new Line(needle), start))
       // println(s"$needle IN $s FROM $start => $idx")
     }
     test(l1, "quick", 0)
@@ -37,7 +37,7 @@ class LineTest {
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val matches = s.indexOf(needle, start) == start
       assertEquals(s"'$needle' matches (at $start) '$s'", matches,
-                   line.matches(new Line(needle), start))
+                   line.matches(Line.exact, new Line(needle), start))
       // println(s"$needle MATCH $s AT $start => $matches")
     }
     test(l1, "quick", 4)

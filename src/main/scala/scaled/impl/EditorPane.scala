@@ -77,9 +77,6 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
 
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
-  override def defer (op : => Unit) = defer(new Runnable() {
-    override def run () = op
-  })
   override def defer (op :Runnable) = Platform.runLater(op)
   override val killRing = new KillRingImpl(config(EditorConfig.killRingSize))
 
