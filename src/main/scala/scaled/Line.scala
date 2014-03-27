@@ -52,6 +52,15 @@ abstract class LineV {
   /** Returns the characters in `[start, until)` as a string. */
   def sliceString (start :Int, until :Int) :String = new String(chars, offset+start, until-start)
 
+  /** Returns a new line which contains `other` appended to `this`. */
+  def merge (other :LineV) :Line = {
+    val cs = new Array[Char](length + other.length)
+    val ss = new Array[Styles](cs.length)
+    sliceInto(0, length, cs, ss, 0)
+    other.sliceInto(0, other.length, cs, ss, length)
+    new Line(cs, ss)
+  }
+
   /** Returns the offset into this line at which the characters of `cs` in `[offset, length)` are
     * matched, starting from `start`. -1 is returned if no match could be found. */
   final def search (cmp :(Char, Char) => Boolean, cs :Array[Char], offset :Int, length :Int,
@@ -150,15 +159,6 @@ class Line (_cs :Array[Char], _ss :Array[Styles], _offset :Int, val length :Int)
 
   require(_cs != null && _ss != null && _offset >= 0 && length >= 0,
           s"Invalid Line args ${_cs} ${_ss} ${_offset} $length")
-
-  /** Returns a new line which contains `other` appended to `this`. */
-  def merge (other :Line) :Line = {
-    val cs = new Array[Char](length + other.length)
-    val ss = new Array[Styles](cs.length)
-    sliceInto(0, length, cs, ss, 0)
-    other.sliceInto(0, other.length, cs, ss, length)
-    new Line(cs, ss)
-  }
 
   override def view (start :Int, until :Int) =
     if (start == 0 && until == length) this else slice(start, until)

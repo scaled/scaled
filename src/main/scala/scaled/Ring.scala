@@ -15,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class Ring (val size :Int) {
 
-  private val _entries = ArrayBuffer[Seq[Line]]()
+  private val _entries = ArrayBuffer[Seq[LineV]]()
   private var _pos = -1 // the position of the most recently added entry
 
   /** Returns `Some` ring entry at `age` or `None` if the ring is empty.
@@ -26,13 +26,13 @@ class Ring (val size :Int) {
     * eventually wrap around to the start of the ring.
     *
     * @throws IndexOutOfBoundsException if a negative age is supplied. */
-  def entry (age :Int) :Option[Seq[Line]] = if (_pos < 0) None else {
+  def entry (age :Int) :Option[Seq[LineV]] = if (_pos < 0) None else {
     val size = _entries.size
     Some(_entries((_pos + size - (age % size)) % size))
   }
 
   /** Adds `region` to the ring as a new entry. If full, the oldest entry will be removed. */
-  def add (region :Seq[Line]) {
+  def add (region :Seq[LineV]) {
     assert(!region.isEmpty)
     _pos = (_pos + 1) % size
     if (_entries.size < size) _entries += region
@@ -40,17 +40,17 @@ class Ring (val size :Int) {
   }
 
   /** Appends `region` to the youngest ring entry. */
-  def append (region :Seq[Line]) {
+  def append (region :Seq[LineV]) {
     if (_pos < 0) add(region)
     else _entries(_pos) = merge(_entries(_pos), region)
   }
 
   /** Prepends `region` to the youngest ring entry. */
-  def prepend (region :Seq[Line]) {
+  def prepend (region :Seq[LineV]) {
     if (_pos < 0) add(region)
     else _entries(_pos) = merge(region, _entries(_pos))
   }
 
-  protected def merge (as :Seq[Line], bs :Seq[Line]) =
+  protected def merge (as :Seq[LineV], bs :Seq[LineV]) =
     (as.dropRight(1) :+ as.last.merge(bs.head)) ++ bs.drop(1)
 }
