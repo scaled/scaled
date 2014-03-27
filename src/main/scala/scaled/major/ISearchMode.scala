@@ -14,6 +14,9 @@ import scaled._
 object ISearchConfig extends ConfigDefs {
 
   val isearchRingSize = key("The number of entries retained by the recent searches ring.", 40)
+  val isearchRing = key("The ring in which recent searches are stored.") {
+    cfg => new Ring(cfg(isearchRingSize))
+  }
 
   /** The CSS style applied to isearch matches. */
   val isearchMatchStyle = "isearchMatchFace"
@@ -124,9 +127,10 @@ class ISearchMode (
   }
   miniui.setPrompt(initState.prompt)
   private var _states = List(initState)
+  private def curstate = _states.head
 
   private def pushState (state :State) {
-    state.apply(_states.head)
+    state.apply(curstate)
     _states = state :: _states
   }
   private def popState () :Unit = _states match {
@@ -142,7 +146,7 @@ class ISearchMode (
       editor.defer {
         _refreshPending = false
         val sought = miniBuffer.region(miniBuffer.start, miniBuffer.end)
-        if (sought != _states.head.sought) pushState(_states.head.extend(sought))
+        if (sought != curstate.sought) pushState(curstate.extend(sought))
       }
     }
   }
@@ -164,10 +168,7 @@ class ISearchMode (
     "BS"    -> "prev-search",
     "DEL"   -> "prev-search",
     "ENTER" -> "end-search"
-    // Type DEL to cancel last input item from end of search string.
-    // Type RET to exit, leaving point at location found.
     // Type C-j to match end of line.
-    // Type C-s to search again forward, C-r to search again backward.
     // Type C-w to yank next word or character in buffer onto the end of the search string.
     // Type M-s C-e to yank rest of line onto end of search string and search for it.
     // Type C-q to quote control character to search for it.
@@ -175,7 +176,7 @@ class ISearchMode (
 
   override def dispose () {
     super.dispose()
-    _states.head.clear() // clear any highlights
+    curstate.clear() // clear any highlights
   }
 
   // when a non-isearch key binding is pressed...
@@ -186,10 +187,10 @@ class ISearchMode (
 
   override def abort () {
     // if we're currently failing, peel back to the last successful state
-    if (_states.head.fail) {
-      val cur = _states.head
-      while (_states.head.fail) _states = _states.tail
-      _states.head.apply(cur)
+    if (curstate.fail) {
+      val oldcur = curstate
+      while (curstate.fail) _states = _states.tail
+      curstate.apply(oldcur)
     }
     // otherwise revert the main buffer point to its initial value and abort the search
     else {
@@ -199,7 +200,10 @@ class ISearchMode (
   }
 
   @Fn("Ends this search, leaving the point at the location found.")
-  def endSearch () :Unit = promise.succeed(())
+  def endSearch () :Unit = {
+    if (curstate ne initState) config(isearchRing).add(curstate.sought)
+    promise.succeed(())
+  }
 
   @Fn("Cancels the last change to the isearch, reverting to the previous search.")
   def prevSearch () {
@@ -210,14 +214,23 @@ class ISearchMode (
   @Fn("""Moves forward to the next occurrance of the current matched text, if any.
          The point will be placed immediately after the match.""")
   def nextMatch () {
-    // TODO: if _states is default state: toggle fwd/rev or pop last search from search ring
-    pushState(_states.head.next())
+    // if we're not at the default state, or we're changing direction, next() the current state
+    if (curstate != initState || !curstate.fwd) pushState(curstate.next())
+    // otherwise populate the search with the first entry from the search history ring
+    else setFromHistory(0)
   }
 
   @Fn("""Moves backward to the previous occurrance of the current matched text, if any.
          The point will be placed at the start of the match.""")
   def prevMatch () {
-    // TODO: if _states is default state: toggle fwd/rev or pop last search from search ring
-    pushState(_states.head.prev())
+    // if we're not at the default state, or we're changing direction, prev() the current state
+    if (curstate != initState || curstate.fwd) pushState(curstate.prev())
+    // otherwise populate the search with the first entry from the search history ring
+    else setFromHistory(0)
+  }
+
+  protected def setFromHistory (idx :Int) :Unit = config(isearchRing).entry(0) match {
+    case Some(sought) => setContents(sought)
+    case None => editor.emitStatus("No previous search string.")
   }
 }
