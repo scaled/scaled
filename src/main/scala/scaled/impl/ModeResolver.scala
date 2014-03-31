@@ -13,6 +13,7 @@ class ModeResolver (editor :Editor) {
     "text"         -> "scaled.major.TextMode",
     "mini-read"    -> "scaled.major.MiniReadMode",
     "mini-yesno"   -> "scaled.major.MiniYesNoMode",
+    "mini-readopt" -> "scaled.major.MiniReadOptMode",
     "mini-isearch" -> "scaled.major.ISearchMode"
   )
   val minorModes = Map(
