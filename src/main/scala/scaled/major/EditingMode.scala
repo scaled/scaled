@@ -37,9 +37,9 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   override def configDefs = EditingConfig :: super.configDefs
 
-  override def defaultFn = Some("self-insert-command")
+  override def defaultFn :Option[String] = Some("self-insert-command")
 
-  override def missedFn = Some("unknown-command")
+  override def missedFn :Option[String] = Some("unknown-command")
 
   override def keymap = Seq(
     // character editing commands
@@ -703,8 +703,29 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   @Fn("""Offers to save any unsaved buffers, then kills this editor.""")
   def saveBuffersKillEditor () {
-    // TODO: save buffers!
-    editor.exit(0)
+    val opts = Seq(
+      "y"   -> "save the current buffer",
+      "n"   -> "skip the current buffer (abandon changes)",
+      "q"   -> "skip all remaining buffers",
+      "!"   -> "save all remaining buffers",
+      "."   -> "save *only* the current buffer, then exit",
+      "C-g" -> "cancel this kill-editor command"
+      // TODO: C-r to view this buffer?
+      // TODO: d to diff this buffer against the file system version
+    )
+    def saveLoop (dirty :List[Buffer]) :Unit = dirty match {
+      case Nil => editor.exit(0)
+      case buf :: tail =>
+        val prompt = s"${buf.file.getAbsolutePath} is modified. Save?"
+        editor.mini("readopt", Promise[String](), prompt, opts) onSuccess(_ match {
+          case "y" => buf.save() ; saveLoop(tail)
+          case "n" => saveLoop(tail)
+          case "q" => saveLoop(Nil)
+          case "!" => dirty map(_.save()) ; saveLoop(Nil)
+          case "." => buf.save() ; saveLoop(Nil)
+        })
+    }
+    saveLoop(editor.buffers.filter(_.dirty).toList)
   }
 
   //
