@@ -76,9 +76,8 @@ trait Editor {
   // TODO: should I just return Future[Unit] and automatically emit "Canceled." and fail the future
   // if they choose 'n'? that would make chaining confirmations simpler/more succinct...
 
-  /** Returns a view on all open buffers. The buffers will be returned in order of most recent
-    * activation. */
-  def buffers :Seq[BufferV]
+  /** Returns all open buffers. The buffers will be returned in order of most recent activation. */
+  def buffers :Seq[Buffer]
 
   /** Opens `file` into a new buffer. If another buffer is already visiting `file` that buffer is
     * made active instead. */
