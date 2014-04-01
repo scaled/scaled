@@ -25,21 +25,16 @@ package scaled
   * mode may require any or all of: [[Config]], [[RBuffer]], [[RBufferView]], [[Dispatcher]],
   * [[Editor]].
   *
-  * A mode must also have a [[Mode]] annotation, which defines the name of the mode, provides a
-  * basic description, and which expresses the packages on which the mode depends. The package
-  * dependencies are resolved before a mode is loaded, and any classes provided by the dependencies
-  * may be used by the mode (assuming they're intended for public consumption). If a mode depends
-  * on a package which provides a service, it can then simply declare that service in its
-  * constructor parameters to cause the service to be resolved and started (if it's not already)
-  * when the mode is activated.
+  * A mode must also have a [[Major]] or [[Minor]] annotation, which defines the name of the mode
+  * and provides a basic description.
   */
-abstract class AbstractMode {
+abstract class Mode {
 
   /** Returns the name of this mode. */
-  lazy val name :String = getClass.getAnnotation(classOf[Mode]) match {
-    case null => "unknown"
-    case mode => mode.name
-  }
+  def name :String
+
+  /** Returns a brief description of this mode. */
+  def desc :String
 
   /** Returns the configuration definitions objects that are used by this mode. If a mode defines
     * configurables in a configuration definitions object, it should override this method and
@@ -58,10 +53,10 @@ abstract class AbstractMode {
     *  - `C-c C-i`: control-c followed by control-i
     *
     * The fn bindings are defined by the mode, by using the [[Fn]] annotation on methods. The name
-    * in the keymap corresponds to the de-camel-cased method name (see [[AbstractMode]] docs). When
-    * a mode refers to its own fns, it may provide just the name, but if a mode (or a mode hook)
-    * refers to another mode's fns, it must prefix the name by the name of the mode and a colon
-    * (e.g. "scala:goto-term").
+    * in the keymap corresponds to the de-camel-cased method name (see [[Mode]] docs). When a mode
+    * refers to its own fns, it may provide just the name, but if a mode (or a mode hook) refers to
+    * another mode's fns, it must prefix the name by the name of the mode and a colon (e.g.
+    * "scala:goto-term").
     *
     * Key bindings are applied in a stack-like fashion:
     *  - start with global key bindings
@@ -102,7 +97,11 @@ abstract class AbstractMode {
   * changes in the buffer or editor in addition to making simpler behavior changes like modifying
   * the keymap.
   */
-abstract class MajorMode extends AbstractMode {
+abstract class MajorMode extends Mode {
+
+  override def name = if (info == null) "unknown" else info.name
+  override def desc = if (info == null) "unknown" else info.desc
+  private lazy val info = getClass.getAnnotation(classOf[Major])
 
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
     * for key presses that result in a "typed" character. Key presses that do not generate
@@ -122,6 +121,9 @@ abstract class MajorMode extends AbstractMode {
   * example, by checking the spelling of all words in the buffer and binding a face to those that
   * are misspelled).
   */
-abstract class MinorMode extends AbstractMode {
+abstract class MinorMode extends Mode {
 
+  override def name = if (info == null) "unknown" else info.name
+  override def desc = if (info == null) "unknown" else info.desc
+  private lazy val info = getClass.getAnnotation(classOf[Minor])
 }

@@ -30,8 +30,7 @@ object TestData {
   val config = new ConfigImpl("editor", None)
 
   val resolver = new ModeResolver(editor, config) {
-    override def completeMode (modePre :String) = Set()
-    override protected def locateMode (mode :String) = Future.success(classOf[TextMode])
+    override protected def locate (major :Boolean, mode :String) = Future.success(classOf[TextMode])
   }
 
   /** Creates a test buffer. For testing! */

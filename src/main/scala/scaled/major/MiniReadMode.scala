@@ -9,9 +9,9 @@ import scala.annotation.tailrec
 import reactual.Promise
 import scaled._
 
-@Mode(name="mini-read", desc="""
-      A minibuffer mode that queries the user for a string, using a supplied completion function
-      to allow the user to tab-complete their way to satisfaction.""")
+@Major(name="mini-read", desc="""
+       A minibuffer mode that queries the user for a string, using a supplied completion function
+       to allow the user to tab-complete their way to satisfaction.""")
 class MiniReadMode (
   editor    :Editor,
   config    :Config,

@@ -117,7 +117,8 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
 
   override def completeFn (fnPre :String) = (Set[String]() /: _metas) {
     (fns, meta) => fns ++ meta.fns.complete(fnPre) }
-  override def completeMode (modePre :String) = resolver.completeMode(modePre)
+  override def completeMajor (modePre :String) = resolver.complete(true, modePre)
+  override def completeMinor (modePre :String) = resolver.complete(false, modePre)
 
   override def toggleMode (mode :String) {
     _metas map(_.mode) find(_.name == mode) match {
@@ -146,7 +147,7 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
     }
   }
 
-  private def addMode (minor :AbstractMode) {
+  private def addMode (minor :Mode) {
     _metas = new ModeMeta(minor) :: _metas
     rebuildPrefixes()
   }
@@ -203,7 +204,7 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
     editor.emitStatus(trigger.mkString(" "))
   }
 
-  private class ModeMeta (val mode :AbstractMode) {
+  private class ModeMeta (val mode :Mode) {
     val fns = new FnBindings(mode, editor.emitStatus)
     val map = DispatcherImpl.parseKeyMap(
       mode.keymap, fns,

@@ -11,17 +11,17 @@ import scaled._
 
 abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
 
-  def completeMode (namePre :String) :Set[String]
+  def complete (major :Boolean, namePre :String) :Set[String] = Set()
 
   def resolveMajor (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
                     args :List[Any]) :Future[MajorMode] =
-    locateMode(mode) flatMap(requireMajor(mode)) flatMap(resolve(mode, view, disp, args))
+    locate(true, mode) flatMap(requireMajor(mode)) flatMap(resolve(mode, view, disp, args))
 
   def resolveMinor (mode :String, view :BufferViewImpl, disp :DispatcherImpl, major :MajorMode,
                     args :List[Any]) :Future[MinorMode] =
-    locateMode(mode) flatMap(requireMinor(mode)) flatMap(resolve(mode, view, disp, major :: args))
+    locate(false, mode) flatMap(requireMinor(mode)) flatMap(resolve(mode, view, disp, major :: args))
 
-  protected def locateMode (mode :String) :Future[Class[_]]
+  protected def locate (major :Boolean, mode :String) :Future[Class[_]]
 
   private def requireMajor (mode :String) =
     reqType(classOf[MajorMode], s"$mode is not a major mode.") _
@@ -70,6 +70,7 @@ abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
 class PackageModeResolver (pmgr :pkg.PackageManager, editor :Editor, edconfig :ConfigImpl)
     extends ModeResolver(editor, edconfig) {
 
-  override def completeMode (namePre :String) = Set() ++ pmgr.modes.filter(_ startsWith namePre)
-  override protected def locateMode (mode :String) = pmgr.mode(mode)
+  override def complete (major :Boolean, namePre :String) =
+    Set() ++ pmgr.modes(major).filter(_ startsWith namePre)
+  override protected def locate (major :Boolean, mode :String) = pmgr.mode(major, mode)
 }

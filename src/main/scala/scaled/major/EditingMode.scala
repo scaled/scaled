@@ -745,6 +745,6 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
 
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
-    editor.miniRead("Mode:", "", disp.completeMode) onSuccess disp.toggleMode
+    editor.miniRead("Mode:", "", disp.completeMinor) onSuccess disp.toggleMode
   }
 }

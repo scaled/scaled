@@ -16,26 +16,30 @@ import scaled.impl._
 class PackageManager (app :Main) {
 
   /** Resolves the class for the mode named `name`. */
-  def mode (name :String) :Future[Class[_]] = modeMap.get(name).map(_.mode(name)) match {
-    case Some(mode) => Future.success(mode)
-    case None => Future.failure(new Exception(s"Unknown mode: $name"))
-  }
+  def mode (major :Boolean, name :String) :Future[Class[_]] =
+    lookup(modeMap(major), name, "major mode")
 
   /** Resolves the class for the service with classname `name`. */
-  def service (name :String) :Future[Class[_]] = serviceMap.get(name).map(_.service(name)) match {
-    case Some(svc) => Future.success(svc)
-    case None => Future.failure(new Exception(s"Unknown service: $name"))
-  }
+  def service (name :String) :Future[Class[_]] = lookup(serviceMap, name, "service")
 
   /** Returns the name of all modes provided by all packages. */
-  def modes :Iterable[String] = modeMap.keySet
+  def modes (major :Boolean) :Iterable[String] = modeMap(major).keySet
 
   /** A mapping from repo URL to package. Repo URL is the unique global identifier for a package, and
     * is what is used to express inter-package dependencies. */
-  val pkgs = MMap[String,Package]()
+  private[pkg] val pkgs = MMap[String,Package]()
 
-  private val modeMap = MMap[String,Package]()
-  private val serviceMap = MMap[String,Package]()
+  private type Finder = String => Class[_]
+  private val serviceMap = MMap[String,Finder]()
+  private val majorMap = MMap[String,Finder]()
+  private val minorMap = MMap[String,Finder]()
+  private def modeMap (major :Boolean) = if (major) majorMap else minorMap
+
+  private def lookup (map :MMap[String,Finder], name :String, thing :String) :Future[Class[_]] =
+    map.get(name).map(_.apply(name)) match {
+      case Some(mode) => Future.success(mode)
+      case None => Future.failure(new Exception(s"Unknown $thing: $name"))
+    }
 
   // resolve our "built-in" package, which we locate via the classloader
   getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
@@ -61,8 +65,9 @@ class PackageManager (app :Main) {
 
   private def addPackage (pkg :Package) {
     pkgs += (pkg.info.repo -> pkg)
-    pkg.modes.keys foreach { m => modeMap += (m -> pkg) }
-    pkg.services foreach { s => serviceMap += (s -> pkg) }
+    pkg.majors.keys foreach { m => majorMap += (m -> pkg.major _) }
+    pkg.minors.keys foreach { m => minorMap += (m -> pkg.minor _) }
+    pkg.services foreach { s => serviceMap += (s -> pkg.service _) }
     // println(s"Added package $pkg")
   }
 

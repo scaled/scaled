@@ -17,12 +17,15 @@ import scaled.impl.Filer
 // NOTE: package instances are constructed on a background thread
 class Package (mgr :PackageManager, val info :PackageInfo) {
 
-  /** Loads and returns the class for the mode named `name`. */
-  def mode (name :String) :Class[_] = loader.loadClass(modes(name))
+  /** Loads and returns the class for the major mode named `name`. */
+  def major (name :String) :Class[_] = loader.loadClass(majors(name))
+  /** Loads and returns the class for the minor mode named `name`. */
+  def minor (name :String) :Class[_] = loader.loadClass(minors(name))
   /** Loads and returns the class for the service with class name `name`. */
   def service (name :String) :Class[_] = loader.loadClass(name)
 
-  val modes = MMap[String,String]() // mode -> classname for all this package's modes
+  val majors = MMap[String,String]() // mode -> classname for all this package's major modes
+  val minors = MMap[String,String]() // mode -> classname for all this package's minor modes
   val services = ArrayBuffer[String]() // service classname for all this package's services
 
   /** The class loader for classes in this package. */
@@ -41,7 +44,8 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   // TODO: make sure dependent packages are resolved sooner?
   private lazy val dependPkgs = info.depends.map(mgr.pkgs).toList
 
-  override def toString = s"${info.name} [modes=${modes.keys}, svcs=$services, deps=${info.depends}]"
+  override def toString = String.format("%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
+                                        info.name, majors.keys, minors.keys, services, info.depends)
 
   // scan the package directory locating FooMode.class and FooService.class
   Filer.descendFiles(info.root) { f =>
@@ -53,46 +57,39 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     }
   }
 
-  private abstract class Visitor (aclass :String) extends ClassVisitor(Opcodes.ASM5) {
-    private var _cname :String = _
+  private abstract class Visitor extends ClassVisitor(Opcodes.ASM5) {
+    protected var _cname :String = _
     override def visit (version :Int, access :Int, name :String, signature :String,
                         superName :String, ifcs :Array[String]) {
       _cname = name.replace('/', '.') // TODO: handle inner classes?
     }
-
-    override def visitAnnotation (desc :String, viz :Boolean) = {
-      if (desc != aclass) null
-      else {
-        onMatch(_cname)
-        new AnnotationVisitor(Opcodes.ASM5) {
-          override def visit (name :String, value :AnyRef) {
-            onAnnotation(_cname, name, value.toString)
-          }
-        }
-      }
-    }
-
-    def onMatch (cname :String) {}
-    def onAnnotation (cname :String, aname :String, value :String) :Unit
   }
+
   private def parse (file :File, viz :Visitor) {
     val r = new ClassReader(Files.readAllBytes(file.toPath))
     r.accept(viz, ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
   }
 
-  private def parseMode (file :File) = parse(file, new Visitor("Lscaled/Mode;") {
-    override def onAnnotation (cname :String, aname :String, value :String) {
-      if (aname == "name") modes += (value.toString -> cname)
-      // TODO: put the description somewhere?
+  private def parseMode (file :File) = parse(file, new Visitor() {
+    override def visitAnnotation (desc :String, viz :Boolean) = {
+      if (desc == "Lscaled/Major;") new AnnotationVisitor(Opcodes.ASM5) {
+        override def visit (name :String, value :AnyRef) {
+          if (name == "name") majors += (value.toString -> _cname)
+        }
+      }
+      else if (desc == "Lscaled/Minor;") new AnnotationVisitor(Opcodes.ASM5) {
+        override def visit (name :String, value :AnyRef) {
+          if (name == "name") minors += (value.toString -> _cname)
+        }
+      }
+      else  null
     }
   })
 
-  private def parseService (file :File) = parse(file, new Visitor("Lscaled/Service;") {
-    override def onMatch (cname :String) {
-      services += cname
-    }
-    override def onAnnotation (cname :String, aname :String, value :String) {
-      // TODO: put the description somewhere?
+  private def parseService (file :File) = parse(file, new Visitor() {
+    override def visitAnnotation (desc :String, viz :Boolean) = {
+      if (desc == "Lscaled/Service;") services += _cname
+      null
     }
   })
 }

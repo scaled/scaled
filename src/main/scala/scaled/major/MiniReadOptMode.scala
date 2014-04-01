@@ -8,10 +8,10 @@ import reactual.Promise
 
 import scaled._
 
-@Mode(name="mini-readopt", desc="""
-      A minibuffer mode that queries the user for a single key press from a large(ish) selection. In
-      addition to the supplied options, C-h will be bound to a fn that displays the help text in the
-      minibuffer completion area.""")
+@Major(name="mini-readopt", desc="""
+       A minibuffer mode that queries the user for a single key press from a large(ish) selection. In
+       addition to the supplied options, C-h will be bound to a fn that displays the help text in the
+       minibuffer completion area.""")
 class MiniReadOptMode (
   editor    :Editor,
   config    :Config,
