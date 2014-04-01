@@ -48,8 +48,8 @@ trait Editor {
     * editor.mini("read", Promise[String](), "Find file: ", ...) onSuccess { path => ... }
     * }}}
     *
-    * See [[Mode]] and [[MinibufferMode]] for more information on how `result` and `args` are used
-    * in the minibuffer mode's dependency resolution process.
+    * See [[AbstractMode]] and [[MinibufferMode]] for more information on how `result` and `args`
+    * are used in the minibuffer mode's dependency resolution process.
     */
   def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R]
 

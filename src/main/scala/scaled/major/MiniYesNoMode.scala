@@ -8,8 +8,8 @@ import reactual.Promise
 
 import scaled._
 
-/** A minibuffer mode that asks the user to respond 'y' or 'n' to a question.
-  */
+@Mode(name="mini-yesno",
+      desc="A minibuffer mode that asks the user to respond 'y' or 'n' to a question.")
 class MiniYesNoMode (
   editor    :Editor,
   config    :Config,
@@ -22,8 +22,6 @@ class MiniYesNoMode (
 
   def ynprompt = s"$prompt (y or n)"
   miniui.setPrompt(ynprompt)
-
-  override def nameSuffix = "yesno"
 
   override def selfInsertCommand (typed :String) = typed match {
     case "y" => promise.succeed(true)

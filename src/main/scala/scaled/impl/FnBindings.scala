@@ -16,7 +16,7 @@ import scaled._
   * @param meth the method to which the name is bound.
   * @param wantsTyped whether the fn binding wants to be passed the typed character.
   */
-case class FnBinding (mode :Mode, name :String, meth :Method, wantsTyped :Boolean) {
+case class FnBinding (mode :AbstractMode, name :String, meth :Method, wantsTyped :Boolean) {
 
   /** Invokes this fn binding in response to a key press.
     *
@@ -55,7 +55,7 @@ object FnBindings {
 
   /** Creates an `FnBinding` for `mode`'s method `meth`. Reports an error and returns `None` if the
     * method does not conform to a valid fn method signature (i.e. `()` or `(String)`). */
-  def toFnBinding (mode :Mode, errFn :(String => Unit))(meth :Method) :Option[FnBinding] = {
+  def toFnBinding (mode :AbstractMode, errFn :(String => Unit))(meth :Method) :Option[FnBinding] = {
     val pcount = meth.getParameterCount
     val wantsTyped = pcount == 1 && meth.getParameterTypes.apply(0) == classOf[String]
     if (!wantsTyped && pcount != 0) {
@@ -66,7 +66,7 @@ object FnBindings {
 }
 
 /** Resolves all fns defined in `mode` and exposes them via a civilized API. */
-class FnBindings (mode :Mode, errFn :(String => Unit)) {
+class FnBindings (mode :AbstractMode, errFn :(String => Unit)) {
 
   /** Bindings to the fns exported by this mode. */
   val bindings :Seq[FnBinding] = extractBindings(mode.getClass)

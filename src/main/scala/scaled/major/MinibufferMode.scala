@@ -42,6 +42,9 @@ abstract class MiniUI {
   * The invoker of the mode supplies a `Promise` instance via which to receive the results of the
   * minibuffer's query. The completion (with success or failure) of this promise causes the
   * minibuffer view to be dismissed.
+  *
+  * Note: minibuffer mode names must start with the string `mini-`. For example: `mini-isearch`,
+  * `mini-read`, etc.
   */
 abstract class MinibufferMode (
   editor      :Editor,
@@ -50,11 +53,6 @@ abstract class MinibufferMode (
   disp        :Dispatcher,
   promise     :Promise[_]
 ) extends EditingMode(editor, config, view, disp) {
-
-  /** All minibuffer modes are named `mini-something`. This method defines `something`. */
-  def nameSuffix :String
-
-  final override def name = s"mini-$nameSuffix"
 
   override def keymap = super.keymap ++ Seq(
     "C-g" -> "abort"

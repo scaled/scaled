@@ -9,9 +9,9 @@ import scala.annotation.tailrec
 import reactual.Promise
 import scaled._
 
-/** A minibuffer mode that queries the user for a string, using a supplied completion function to
-  * allow the user to tab-complete their way to satisfaction.
-  */
+@Mode(name="mini-read", desc="""
+      A minibuffer mode that queries the user for a string, using a supplied completion function
+      to allow the user to tab-complete their way to satisfaction.""")
 class MiniReadMode (
   editor    :Editor,
   config    :Config,
@@ -26,8 +26,6 @@ class MiniReadMode (
 
   miniui.setPrompt(prompt)
   setContents(initText)
-
-  override def nameSuffix = "read"
 
   override def keymap = super.keymap ++ Seq(
     "TAB"   -> "complete",

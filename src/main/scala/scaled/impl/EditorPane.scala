@@ -31,7 +31,7 @@ import scaled.minor.WhitespaceMode
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (app :Application, stage :Stage) extends Region with Editor {
+class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   private case class OpenBuffer (content :BorderPane, area :BufferArea, view :BufferViewImpl) {
     def buffer = view.buffer
@@ -74,7 +74,7 @@ class EditorPane (app :Application, stage :Stage) extends Region with Editor {
   private val _configs = MMap[String,ConfigImpl]()
 
   /** Used to resolve modes in this editor. */
-  val resolver = new ModeResolver(this)
+  val resolver = new ModeResolver(app.pkgMgr, this)
 
   newScratch() // always start with a scratch buffer
 

@@ -10,6 +10,14 @@ import scala.collection.JavaConversions._
 
 class Main extends Application {
 
+  // locate and create our metadata dir
+  val homeDir = new File(System.getProperty("user.home"))
+  val metaDir = Filer.requireDir(locateMetaDir)
+
+  val pkgMgr = new PackageManager(metaDir)
+
+  // TODO: a thread pool for background jobs?
+
   override def start (stage :Stage) {
     val epane = new EditorPane(this, stage)
     // open a pane/tab for each file passed on the command line
@@ -26,6 +34,10 @@ class Main extends Application {
     stage.setScene(scene)
     stage.show()
   }
+
+  // TODO: platform specific app dirs
+  private def locateMetaDir :File =
+    (homeDir /: Seq("Library", "Application Support", "Scaled"))(new File(_, _))
 }
 
 object Main {

@@ -20,9 +20,9 @@ object WhitespaceConfig extends ConfigDefs {
   val trailingWhitespaceStyle = "trailingWhitespaceFace"
 }
 
-/** A minor mode that provides whitespace manipulation fns and can highlight undesirable
-  * whitespace.
-  */
+@Mode(name="whitespace", desc="""
+      A minor mode that provides whitespace manipulation fns and can highlight undesirable
+      whitespace.""")
 class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :EditingMode)
     extends MinorMode {
   import WhitespaceConfig._
@@ -80,7 +80,6 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
   }
   config.value(showTrailingWhitespace) onValueNotify trailingWhitespacer.setActive
 
-  override def name = "whitespace"
   override def keymap = Seq() // TODO
   override def dispose () {
     trailingWhitespacer.setActive(false)

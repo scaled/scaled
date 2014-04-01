@@ -8,13 +8,10 @@ import reactual.Promise
 
 import scaled._
 
-/** A minibuffer mode that queries the user for a single key press from a large(ish) selection. In
-  * addition to the supplied options, C-h will be bound to a fn that displays the help text in the
-  * minibuffer completion area.
-  *
-  * @param opts a map from key trigger sequence (e.g. `y`, `C-r`, `!`, etc.) to a help string
-  * describing that option.
-  */
+@Mode(name="mini-readopt", desc="""
+      A minibuffer mode that queries the user for a single key press from a large(ish) selection. In
+      addition to the supplied options, C-h will be bound to a fn that displays the help text in the
+      minibuffer completion area.""")
 class MiniReadOptMode (
   editor    :Editor,
   config    :Config,
@@ -23,14 +20,13 @@ class MiniReadOptMode (
   miniui    :MiniUI,
   promise   :Promise[String],
   prompt    :String,
+  /** A map from key trigger (e.g. `y`, `C-r`, `!`, etc.) to a help string for the option. */
   opts      :Seq[(String,String)]
 ) extends MinibufferMode(editor, config, view, disp, promise) {
 
   val optMap = opts.toMap
   def optprompt = prompt + opts.map(_._1).mkString(" (", ", ", ", C-h)")
   miniui.setPrompt(optprompt)
-
-  override def nameSuffix = "readopt"
 
   override def keymap = Seq(
     "C-g" -> "abort",

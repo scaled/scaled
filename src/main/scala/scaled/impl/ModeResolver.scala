@@ -4,24 +4,14 @@
 
 package scaled.impl
 
+import java.lang.reflect.Field
+
 import scaled._
 
-class ModeResolver (editor :Editor) {
-
-  // TODO: extract these mode mappings via metadata found in the classpath
-  val majorModes = Map(
-    "text"         -> "scaled.major.TextMode",
-    "mini-read"    -> "scaled.major.MiniReadMode",
-    "mini-yesno"   -> "scaled.major.MiniYesNoMode",
-    "mini-readopt" -> "scaled.major.MiniReadOptMode",
-    "mini-isearch" -> "scaled.major.ISearchMode"
-  )
-  val minorModes = Map(
-    "todo" -> "todo"
-  )
+class ModeResolver (pmgr :PackageManager, editor :Editor) {
 
   def resolveMajor (mode :String, config :Config, view :BufferViewImpl, disp :DispatcherImpl,
-                    args :List[Any]) :Option[MajorMode] = majorModes.get(mode).map(
+                    args :List[Any]) :Option[MajorMode] = pmgr.mode(mode).map(
     resolveMode(mode, List(editor, config, view.buffer, view, disp) ++ args)).map(_ match {
       case mm :MajorMode => mm
       case mm => throw new IllegalArgumentException(
@@ -29,16 +19,15 @@ class ModeResolver (editor :Editor) {
     })
 
   def resolveMinor (mode :String, config :Config, view :BufferViewImpl, disp :DispatcherImpl,
-                    major :MajorMode, args :List[Any]) :Option[MinorMode] = minorModes.get(mode).map(
+                    major :MajorMode, args :List[Any]) :Option[MinorMode] = pmgr.mode(mode).map(
     resolveMode(mode, List(editor, config, view.buffer, view, disp, major) ++ args)).map(_ match {
       case mm :MinorMode => mm
       case mm => throw new IllegalArgumentException(
         s"$mode did not resolve to an instanceof MinorMode. Got $mm")
     })
 
-  private def resolveMode (mode :String, args :List[Any])(modeClass :String) :Any = try {
-    val clazz = Class.forName(modeClass)
-    val ctor = clazz.getConstructors match {
+  private def resolveMode (mode :String, args :List[Any])(modeClass :Class[_]) :Any = try {
+    val ctor = modeClass.getConstructors match {
       case Array(ctor) => ctor
       case ctors       => throw new IllegalArgumentException(
         s"Modes must have only one constructor: $modeClass [${ctors.mkString(", ")}]")
@@ -60,6 +49,7 @@ class ModeResolver (editor :Editor) {
       }
     }
     ctor.newInstance(params.asInstanceOf[Array[Object]] :_*)
+
   } catch {
     case cnfe :ClassNotFoundException =>
       throw new IllegalArgumentException(s"$mode bound to unknown class: $modeClass")

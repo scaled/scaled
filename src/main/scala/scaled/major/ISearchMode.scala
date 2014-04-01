@@ -25,8 +25,8 @@ object ISearchConfig extends ConfigDefs {
   val isearchActiveMatchStyle = "isearchActiveMatchFace"
 }
 
-/** A minibuffer mode that handle interactive searching, both forward and back.
-  */
+@Mode(name="mini-isearch",
+      desc="A minibuffer mode that handles interactive searching, forward and back.")
 class ISearchMode (
   editor    :Editor,
   config    :Config,
@@ -153,7 +153,6 @@ class ISearchMode (
   miniBuffer.edited onEmit queueRefresh
   miniBuffer.lineEdited onEmit queueRefresh
 
-  override def nameSuffix = "isearch"
   override def configDefs = ISearchConfig :: super.configDefs
   override def keymap = Seq(
     // we don't inherit normal editing commands, so we repeat the few essentials here and then

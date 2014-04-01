@@ -174,7 +174,7 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     editor.emitStatus(trigger.mkString(" "))
   }
 
-  private class ModeMeta (val mode :Mode) {
+  private class ModeMeta (val mode :AbstractMode) {
     val fns = new FnBindings(mode, editor.emitStatus)
     val map = DispatcherImpl.parseKeyMap(
       mode.keymap, fns,
