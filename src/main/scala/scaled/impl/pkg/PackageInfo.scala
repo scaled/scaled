@@ -42,12 +42,12 @@ object PackageInfo {
   /** Creates a package info from the supplied `package.scaled` file. The file is assumed to be in
     * the top-level directory of the package in question. */
   def apply (file :File) :PackageInfo =
-    fromFile(file.getParentFile, "classes", Source.fromFile(file))
+    fromFile(file.getParentFile, Source.fromFile(file))
 
   /** Creates a package info for the "built-in" package. This exports the modes and services defined
     * in the main Scaled source tree. */
   def builtin (classesDir :File) :PackageInfo =
-    fromFile(classesDir.getParentFile, classesDir.getName, Source.fromString("""
+    fromFile(classesDir.getParentFile, Source.fromString(s"""
 name: scaled
 version: 1.0
 description: Built-in services.
@@ -55,9 +55,10 @@ homepage: https://github.com/samskivert/scaled/
 repository: git:https://github.com/samskivert/scaled.git
 license: New BSD
 source: .
+classes: ${classesDir.getName}
 """))
 
-  private def fromFile (root :File, classes :String, source :Source) = {
+  private def fromFile (root :File, source :Source) = {
     val props = MMap[String,String]()
     val depends = ArrayBuffer[String]()
     val errors = ArrayBuffer[String]()
@@ -74,7 +75,7 @@ source: .
     })
     PackageInfo(root, require("name"), require("version"), require("description"),
                 require("homepage"), require("repository"), require("license"),
-                depends, require("source"), classes, errors)
+                depends, require("source"), props.getOrElse("classes", "classes"), errors)
   }
 
   private def trim (line :String) = line.indexOf('#') match {
