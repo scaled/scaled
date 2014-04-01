@@ -23,7 +23,7 @@ package scaled
   * on their type. Thus a mode can simply declare `view :RBufferView` in its constructor and the
   * view for the buffer in which the mode is operating will be supplied at construction time. A
   * mode may require any or all of: [[Config]], [[RBuffer]], [[RBufferView]], [[Dispatcher]],
-  * [[Editor].
+  * [[Editor]].
   *
   * A mode must also have a [[Mode]] annotation, which defines the name of the mode, provides a
   * basic description, and which expresses the packages on which the mode depends. The package

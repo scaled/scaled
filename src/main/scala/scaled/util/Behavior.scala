@@ -35,8 +35,8 @@ abstract class Behavior {
   /** Called after this behavior has been deactivated. */
   protected def didDeactivate () {}
 
-  /** Notes a reactive connection. The connection will be closed on the next call to [[deactivate]].
-    * This should only be called from [[activate]]. */
+  /** Notes a reactive connection. The connection will be closed on the next call to
+    * [[setActive]]`(false)`. This should only be called from [[activate]]. */
   protected def note (conn :Connection) {
     _conns += conn
   }

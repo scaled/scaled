@@ -97,7 +97,7 @@ abstract class BufferV {
   def stylesAt (loc :Loc) :Styles = line(loc.row).stylesAt(loc.col)
 
   /** Returns a copy of the data between `[start, until)`. Note: the last line does not conceptually
-    * include a trailing newline, and [[insert(Region)]] takes this into account. */
+    * include a trailing newline, and [[insert(Loc,Seq[LineV])]] takes this into account. */
   def region (start :Loc, until :Loc) :Seq[Line]
 
   /** Returns the start of the line at `row`. */
@@ -263,8 +263,8 @@ abstract class Buffer extends BufferV {
   def delete (loc :Loc, count :Int) :Line
 
   /** Deletes the data between `[start, until)` from the buffer. Returns a copy of the deleted data.
-    * Note: the last line does not conceptually include a trailing newline, and [[insert(Region)]]
-    * takes this into account. */
+    * Note: the last line does not conceptually include a trailing newline, and
+    * [[insert(Loc,Seq[LineV])]] takes this into account. */
   def delete (start :Loc, until :Loc) :Seq[Line]
 
   /** Replaces `delete` characters in the line at `loc` with the `line`.

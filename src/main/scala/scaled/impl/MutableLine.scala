@@ -155,7 +155,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
   }
 
   /** Adds or removes `style` (based on `add`) starting at `loc` and continuing to column `last`. If
-    * any characters actually change style, a call to [[BufferImpl.noteLineStyled]] will be made
+    * any characters actually change style, a call to `BufferImpl.noteLineStyled` will be made
     * after the style has been applied to the entire region. */
   def updateStyle (style :String, add :Boolean, loc :Loc, last :Int = length) {
     val end = math.min(length, last)
