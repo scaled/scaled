@@ -21,7 +21,6 @@ import reactual.{Future, Promise, Value}
 
 import scaled._
 import scaled.major.TextMode
-import scaled.minor.WhitespaceMode
 
 /** The editor pane groups together the various UI components that are needed to edit a single
   * buffer. This includes the code area, status line and minibuffer area. It also manages the
@@ -175,10 +174,6 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
     val disp = new DispatcherImpl(this, view) {
       override def createMode () = new TextMode(EditorPane.this, mconfig, view, this)
     }
-
-    // TEMP: hack in whitespace mode activation for testing for now
-    disp.addMode(new WhitespaceMode(EditorPane.this, configFor("whitespace"), view,
-                                    disp.major.asInstanceOf[TextMode]))
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has
