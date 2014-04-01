@@ -69,17 +69,10 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   /** The global editor configuration. */
   private val _config = new ConfigImpl("editor", None)
 
-  /** Resolved config instances for each mode. */
-  private val _configs = MMap[String,ConfigImpl]()
-
   /** Used to resolve modes in this editor. */
-  val resolver = new ModeResolver(app.pkgMgr, this)
+  val resolver = new PackageModeResolver(app.pkgMgr, this, _config)
 
   newScratch() // always start with a scratch buffer
-
-  /** Obtains the config instance for the mode with the specified name/identifier. */
-  def configFor (mode :String) :ConfigImpl =
-    _configs.getOrElseUpdate(mode, new ConfigImpl(mode, Some(_config)))
 
   override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
   override def showURL (url :String) = app.getHostServices.showDocument(url)
@@ -167,13 +160,9 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   private def newBuffer (buf :BufferImpl) {
     val (width, height) = (_config(EditorConfig.viewWidth), _config(EditorConfig.viewHeight))
-    // TODO: resolve config for the appropriate mode
-    val mconfig = configFor("text")
     val view = new BufferViewImpl(this, buf, width, height)
     // TODO: determine the proper mode based on user customizable mechanism
-    val disp = new DispatcherImpl(this, view) {
-      override def createMode () = new TextMode(EditorPane.this, mconfig, view, this)
-    }
+    val disp = new DispatcherImpl(this, resolver, view, "text", Nil)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has

@@ -55,7 +55,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
 
   private abstract class Visitor (aclass :String) extends ClassVisitor(Opcodes.ASM5) {
     private var _cname :String = _
-    override def visit (version :Int, access :Int, name :String, signatur :String,
+    override def visit (version :Int, access :Int, name :String, signature :String,
                         superName :String, ifcs :Array[String]) {
       _cname = name.replace('/', '.') // TODO: handle inner classes?
     }

@@ -5,28 +5,37 @@
 package scaled.impl
 
 import java.lang.reflect.Field
-
+import reactual.Future
+import scala.collection.mutable.{Map => MMap}
 import scaled._
 
-class ModeResolver (pmgr :pkg.PackageManager, editor :Editor) {
+abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
 
-  def resolveMajor (mode :String, config :Config, view :BufferViewImpl, disp :DispatcherImpl,
-                    args :List[Any]) :Option[MajorMode] = pmgr.mode(mode).map(
-    resolveMode(mode, List(editor, config, view.buffer, view, disp) ++ args)).map(_ match {
-      case mm :MajorMode => mm
-      case mm => throw new IllegalArgumentException(
-        s"$mode did not resolve to an instanceof MajorMode. Got $mm")
-    })
+  def completeMode (namePre :String) :Set[String]
 
-  def resolveMinor (mode :String, config :Config, view :BufferViewImpl, disp :DispatcherImpl,
-                    major :MajorMode, args :List[Any]) :Option[MinorMode] = pmgr.mode(mode).map(
-    resolveMode(mode, List(editor, config, view.buffer, view, disp, major) ++ args)).map(_ match {
-      case mm :MinorMode => mm
-      case mm => throw new IllegalArgumentException(
-        s"$mode did not resolve to an instanceof MinorMode. Got $mm")
-    })
+  def resolveMajor (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
+                    args :List[Any]) :Future[MajorMode] =
+    locateMode(mode) flatMap(requireMajor(mode)) flatMap(resolve(mode, view, disp, args))
 
-  private def resolveMode (mode :String, args :List[Any])(modeClass :Class[_]) :Any = try {
+  def resolveMinor (mode :String, view :BufferViewImpl, disp :DispatcherImpl, major :MajorMode,
+                    args :List[Any]) :Future[MinorMode] =
+    locateMode(mode) flatMap(requireMinor(mode)) flatMap(resolve(mode, view, disp, major :: args))
+
+  protected def locateMode (mode :String) :Future[Class[_]]
+
+  private def requireMajor (mode :String) =
+    reqType(classOf[MajorMode], s"$mode is not a major mode.") _
+  private def requireMinor (mode :String) =
+    reqType(classOf[MinorMode], s"$mode is not a minor mode.") _
+  private def reqType[T] (mclass :Class[T], errmsg :String)(clazz :Class[_]) =
+    if (mclass.isAssignableFrom(clazz)) Future.success(clazz.asInstanceOf[Class[T]])
+    else Future.failure(new IllegalArgumentException(errmsg))
+
+  /** Resolved config instances for each mode. */
+  private val _configs = MMap[String,ConfigImpl]()
+
+  private def resolve[T] (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
+                          args :List[Any])(modeClass :Class[T]) :Future[T] = try {
     val ctor = modeClass.getConstructors match {
       case Array(ctor) => ctor
       case ctors       => throw new IllegalArgumentException(
@@ -40,7 +49,8 @@ class ModeResolver (pmgr :pkg.PackageManager, editor :Editor) {
       case Nil => Nil
       case h :: t => if (elem == h) t else h :: minus(t, elem)
     }
-    var remargs = args
+    val config = _configs.getOrElseUpdate(mode, new ConfigImpl(mode, Some(edconfig)))
+    var remargs = editor :: config :: view.buffer :: view :: disp :: args
     val params = ctor.getParameterTypes.map { p =>
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg
@@ -48,10 +58,18 @@ class ModeResolver (pmgr :pkg.PackageManager, editor :Editor) {
           s"Unable to satisfy mode dependency [type=$p, remargs=$remargs]")
       }
     }
-    ctor.newInstance(params.asInstanceOf[Array[Object]] :_*)
+    Future.success(ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T])
 
   } catch {
-    case cnfe :ClassNotFoundException =>
-      throw new IllegalArgumentException(s"$mode bound to unknown class: $modeClass")
+    case cnfe :ClassNotFoundException => Future.failure(
+      new IllegalArgumentException(s"$mode bound to unknown class: $modeClass"))
+    case e :Exception => Future.failure(e)
   }
+}
+
+class PackageModeResolver (pmgr :pkg.PackageManager, editor :Editor, edconfig :ConfigImpl)
+    extends ModeResolver(editor, edconfig) {
+
+  override def completeMode (namePre :String) = Set() ++ pmgr.modes.filter(_ startsWith namePre)
+  override protected def locateMode (mode :String) = pmgr.mode(mode)
 }

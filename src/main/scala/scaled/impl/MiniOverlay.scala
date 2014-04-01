@@ -62,18 +62,9 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
     if (getCenter != null) throw new Exception(
       "Command attempted to use minibuffer while in minibuffer")
 
-    val config = editor.configFor("mini-$mode")
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
     val modeArgs = ui :: result :: args
-    val disp = new DispatcherImpl(editor, view) {
-      override def createMode () = {
-        editor.resolver.resolveMajor(s"mini-$mode", config, view, this, modeArgs) match {
-          case Some(mmode :MinibufferMode) => mmode
-          case Some(mmode) => throw new Exception(s"$mode is not a MinibufferMode")
-          case None        => throw new Exception(s"Unknown minibuffer mode $mode")
-        }
-      }
-    }
+    val disp = new DispatcherImpl(editor, editor.resolver, view, s"mini-$mode", modeArgs)
     val area = new BufferArea(editor, view, disp) {
       override protected def wasResized (widthChars :Int, heightChars :Int) {
         // only persist width; height is unfortunately delivered bogus values due to JavaFX

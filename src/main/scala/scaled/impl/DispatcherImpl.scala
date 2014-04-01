@@ -13,64 +13,38 @@ import scaled._
   * bound fns based on a mode's key bindings, and handling incoming key events and resolving them
   * into trigger sequences.
   *
-  * @param mode the major mode which defines our primary key mappings. Minor modes are added (and
-  * removed) dynamically, but a dispatcher's major mode never changes.
+  * @param majorMode the major mode, which defines our primary key mappings.
+  * Minor modes are added (and removed) dynamically, but a dispatcher's major mode never changes.
   */
-abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dispatcher {
+class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewImpl,
+                      majorMode :String, modeArgs :List[Any]) extends Dispatcher {
 
-  /** The major mode with which we interact. */
-  val major :MajorMode = createMode()
+  private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
+                               KeyCode.COMMAND, KeyCode.WINDOWS)
 
-  // because the major mode needs a dispatcher reference and the dispatcher needs a major mode
-  // reference, this lives in an abstract field so that we can tie the Gordian knot
-  protected def createMode () :MajorMode
+  private lazy val majorMeta = new ModeMeta(major)
+  private lazy val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
+  private lazy val missedFn :Option[FnBinding] = major.missedFn.flatMap(majorMeta.fns.binding)
 
+  private var _major :MajorMode = _
   private var _curFn :String = _
   private var _prevFn :String = _
-  override def curFn = _curFn
-  override def prevFn = _prevFn
 
-  override def completeFn (fnPre :String) = (Set[String]() /: _metas) {
-    (fns, meta) => fns ++ meta.fns.complete(fnPre) }
+  private var _metas = List[ModeMeta]() // the stack of active modes (major last)
+  private var _prefixes = Set[Seq[KeyPress]]() // union of cmd prefixes from active modes' keymaps
 
-  override def invoke (fn :String) = _metas.flatMap(_.fns.binding(fn)).headOption match {
-    case Some(fn) => invoke(fn, "") ; true
-    case None => false
-  }
+  private var _trigger = Seq[KeyPress]()
+  private var _dispatchTyped = false
+  private var _escapeNext = false
 
-  override def press (trigger :String) {
-    KeyPress.toKeyPresses(err => editor.emitStatus(s"Invalid trigger: $err"), trigger) match {
-      case Some(kps) => resolve(kps, _metas) match {
-        case Some(fn) => invoke(fn, kps.last.text)
-        case None     => invokeMissed(trigger)
-      }
-      case None => editor.emitStatus(s"Unable to simulate press of $trigger")
-    }
-  }
+  // resolve our major mode first thing
+  resolver.resolveMajor(majorMode, view, this, modeArgs).
+    onSuccess { major => _major = major ; addMode(major) }.
+    // TODO: we're hosed in this case, what to do?
+    onFailure { err => editor.emitStatus(err.getMessage) }
 
-  /* Disposes the major mode associated with this dispatcher and any active minor modes. */
-  def dispose () {
-    _metas map(_.mode) foreach(_.dispose())
-    _metas = Nil // render ourselves useless
-    _prefixes = Set()
-  }
-
-  /** Adds the specified minor mode to this dispatcher. */
-  def addMode (minor :MinorMode) {
-    _metas = new ModeMeta(minor) :: _metas
-    rebuildPrefixes()
-  }
-
-  /** Removes the specified minior from this dispatcher. */
-  def removeMode (minor :MinorMode) {
-    val ometas = _metas
-    _metas = _metas.filter(_.mode != minor)
-    rebuildPrefixes()
-    // if we actually removed this mode, dispose it
-    if (ometas != _metas) minor.dispose()
-  }
-
-  private def rebuildPrefixes () :Unit = _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+  /** The major mode with which we interact. */
+  def major :MajorMode = _major
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = {
@@ -131,8 +105,63 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     kev.consume()
   }
 
-  /** Resolves the fn binding for a trigger sequence. */
-  def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] =
+  /* Disposes the major mode associated with this dispatcher and any active minor modes. */
+  def dispose () {
+    _metas map(_.mode) foreach(_.dispose())
+    _metas = Nil // render ourselves useless
+    _prefixes = Set()
+  }
+
+  override def curFn = _curFn
+  override def prevFn = _prevFn
+
+  override def completeFn (fnPre :String) = (Set[String]() /: _metas) {
+    (fns, meta) => fns ++ meta.fns.complete(fnPre) }
+  override def completeMode (modePre :String) = resolver.completeMode(modePre)
+
+  override def toggleMode (mode :String) {
+    _metas map(_.mode) find(_.name == mode) match {
+      case Some(minor :MinorMode) =>
+        removeMode(minor)
+        editor.emitStatus(s"$mode mode deactivated.")
+      case _ => resolver.resolveMinor(mode, view, this, major, Nil) onSuccess { minor =>
+        addMode(minor)
+        editor.emitStatus(s"$mode mode activated.")
+      } onFailure { err => editor.emitStatus(err.getMessage) }
+    }
+  }
+
+  override def invoke (fn :String) = _metas.flatMap(_.fns.binding(fn)).headOption match {
+    case Some(fn) => invoke(fn, "") ; true
+    case None => false
+  }
+
+  override def press (trigger :String) {
+    KeyPress.toKeyPresses(err => editor.emitStatus(s"Invalid trigger: $err"), trigger) match {
+      case Some(kps) => resolve(kps, _metas) match {
+        case Some(fn) => invoke(fn, kps.last.text)
+        case None     => invokeMissed(trigger)
+      }
+      case None => editor.emitStatus(s"Unable to simulate press of $trigger")
+    }
+  }
+
+  private def addMode (minor :AbstractMode) {
+    _metas = new ModeMeta(minor) :: _metas
+    rebuildPrefixes()
+  }
+
+  private def removeMode (minor :MinorMode) {
+    val ometas = _metas
+    _metas = _metas.filter(_.mode != minor)
+    rebuildPrefixes()
+    // if we actually removed this mode, dispose it
+    if (ometas != _metas) minor.dispose()
+  }
+
+  private def rebuildPrefixes () :Unit = _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+
+  private def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] =
     // we could do modes.flatMap(_.map.get(trigger)).headOption but we want zero garbage
     if (modes.isEmpty) None else {
       val fnopt = modes.head.map.get(trigger)
@@ -184,20 +213,6 @@ abstract class DispatcherImpl (editor :Editor, view :BufferViewImpl) extends Dis
     val prefixes :Set[Seq[KeyPress]] = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
     // TODO: report an error if a key prefix is bound to an fn? WDED?
   }
-
-  private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
-                               KeyCode.COMMAND, KeyCode.WINDOWS)
-
-  private val majorMeta = new ModeMeta(major)
-  private val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
-  private val missedFn :Option[FnBinding] = major.missedFn.flatMap(majorMeta.fns.binding)
-
-  private var _metas = List(majorMeta) // the stack of active modes (major last)
-  private var _prefixes = _metas.head.prefixes // union of cmd prefixes from active modes' keymaps
-
-  private var _trigger = Seq[KeyPress]()
-  private var _dispatchTyped = false
-  private var _escapeNext = false
 }
 
 /** [[DispatcherImpl]] utilities. */

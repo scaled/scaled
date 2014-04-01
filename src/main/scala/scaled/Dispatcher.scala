@@ -18,6 +18,12 @@ abstract class Dispatcher {
   /** Returns the set of all fns whose name starts with `fnPre`. */
   def completeFn (fnPre :String) :Set[String]
 
+  /** Returns the set of all modes whose name starts with `modePre`. */
+  def completeMode (modePre :String) :Set[String]
+
+  /** Toggles the activation of the minor mode named `mode`. */
+  def toggleMode (mode :String) :Unit
+
   /** Resolves the fn named `fn`. If found, it is invoked and `true` is returned. If no fn is found
     * with that name, `false` is returned. */
   def invoke (fn :String) :Boolean

@@ -742,4 +742,9 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
       if (!disp.invoke(fn)) editor.emitStatus(s"Unknown fn: $fn")
     }
   }
+
+  @Fn("Toggles the activation of a minor mode.")
+  def toggleMode () {
+    editor.miniRead("Mode:", "", disp.completeMode) onSuccess disp.toggleMode
+  }
 }

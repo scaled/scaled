@@ -9,6 +9,7 @@ import java.io.{File, StringReader}
 import reactual.{Future, Promise}
 
 import scaled._
+import scaled.major.TextMode
 
 /** Helper methods for creating test instances of things. */
 object TestData {
@@ -26,7 +27,12 @@ object TestData {
     def killBuffer (buffer :String) = false
   }
 
-  val config = new ConfigImpl("test", None)
+  val config = new ConfigImpl("editor", None)
+
+  val resolver = new ModeResolver(editor, config) {
+    override def completeMode (modePre :String) = Set()
+    override protected def locateMode (mode :String) = Future.success(classOf[TextMode])
+  }
 
   /** Creates a test buffer. For testing! */
   def buffer (name :String, text :String) =

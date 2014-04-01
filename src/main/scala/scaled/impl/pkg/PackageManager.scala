@@ -9,22 +9,33 @@ import java.net.URLClassLoader
 
 import scala.collection.mutable.{Map => MMap}
 
+import reactual.Future
+
 import scaled.impl._
 
 class PackageManager (app :Main) {
 
   /** Resolves the class for the mode named `name`. */
-  def mode (name :String) :Option[Class[_]] = modes.get(name).map(_.mode(name))
+  def mode (name :String) :Future[Class[_]] = modeMap.get(name).map(_.mode(name)) match {
+    case Some(mode) => Future.success(mode)
+    case None => Future.failure(new Exception(s"Unknown mode: $name"))
+  }
 
   /** Resolves the class for the service with classname `name`. */
-  def service (name :String) :Option[Class[_]] = services.get(name).map(_.service(name))
+  def service (name :String) :Future[Class[_]] = serviceMap.get(name).map(_.service(name)) match {
+    case Some(svc) => Future.success(svc)
+    case None => Future.failure(new Exception(s"Unknown service: $name"))
+  }
+
+  /** Returns the name of all modes provided by all packages. */
+  def modes :Iterable[String] = modeMap.keySet
 
   /** A mapping from repo URL to package. Repo URL is the unique global identifier for a package, and
     * is what is used to express inter-package dependencies. */
   val pkgs = MMap[String,Package]()
 
-  private val modes = MMap[String,Package]()
-  private val services = MMap[String,Package]()
+  private val modeMap = MMap[String,Package]()
+  private val serviceMap = MMap[String,Package]()
 
   // resolve our "built-in" package, which we locate via the classloader
   getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
@@ -50,15 +61,15 @@ class PackageManager (app :Main) {
 
   private def addPackage (pkg :Package) {
     pkgs += (pkg.info.repo -> pkg)
-    pkg.modes.keys foreach { m => modes += (m -> pkg) }
-    pkg.services foreach { s => services += (s -> pkg) }
+    pkg.modes.keys foreach { m => modeMap += (m -> pkg) }
+    pkg.services foreach { s => serviceMap += (s -> pkg) }
     // println(s"Added package $pkg")
   }
 
   // NOTE: this is called on a background thread
   private def resolvePackage (info :PackageInfo) {
-    // make sure this package is up to date
-    println(s"Resolving package $info")
+    // println(s"Resolving package $info")
+    // TODO: make sure this package is compiled
     // create the package and scan its classes
     val pkg = new Package(this, info)
     // lastly map this package's information back on our main thread
