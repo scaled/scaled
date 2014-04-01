@@ -34,9 +34,6 @@ import scaled._
 //
 // - support passing in start and end anchors and only displaying the part of the buffer between
 // those anchors (actually make this an attribute of the BufferView)
-//
-// - how will we support styles? attribute the buffer? probably so because that will cause all
-// views of the buffer to remain in sync as attributes are provided by external intelligence
 
 /** Brings everything together into one all singing, all dancing text editing extravaganza.
   */
