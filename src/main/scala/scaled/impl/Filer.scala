@@ -22,11 +22,12 @@ object Filer {
     else fail(s"Unable to create ${dir.getAbsolutePath}.")
   }
 
-  /** Applies `op` to all subdirectories, subsubdirectories, etc of `root`. */
-  def descendDirs (root :File)(op :File => Unit) {
+  /** Applies `op` to all subdirectories, subsubdirectories, etc of `root`. If `op` returns false, we
+    * descend into the directory, if it returns true we do not. */
+  def descendDirs (root :File)(op :File => Boolean) {
     val seen = MSet[File]()
     def apply (dir :File) :Unit = if (seen.add(dir)) dir.listFiles foreach { f =>
-      if (f.isDirectory) { op(f) ; apply(f) }
+      if (f.isDirectory) { if (!op(f)) apply(f) }
     }
     apply(root)
   }

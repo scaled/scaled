@@ -8,7 +8,7 @@ import java.lang.reflect.Field
 
 import scaled._
 
-class ModeResolver (pmgr :PackageManager, editor :Editor) {
+class ModeResolver (pmgr :pkg.PackageManager, editor :Editor) {
 
   def resolveMajor (mode :String, config :Config, view :BufferViewImpl, disp :DispatcherImpl,
                     args :List[Any]) :Option[MajorMode] = pmgr.mode(mode).map(

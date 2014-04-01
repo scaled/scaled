@@ -1,6 +1,7 @@
 package scaled.impl
 
 import java.io.File
+import java.util.concurrent.Executors
 
 import javafx.application.Application
 import javafx.scene.Scene
@@ -10,13 +11,14 @@ import scala.collection.JavaConversions._
 
 class Main extends Application {
 
+  /** An executor service for great concurrency. */
+  val exec = Executors.newFixedThreadPool(4) // TODO: config
+
   // locate and create our metadata dir
   val homeDir = new File(System.getProperty("user.home"))
   val metaDir = Filer.requireDir(locateMetaDir)
 
-  val pkgMgr = new PackageManager(metaDir)
-
-  // TODO: a thread pool for background jobs?
+  val pkgMgr = new pkg.PackageManager(this)
 
   override def start (stage :Stage) {
     val epane = new EditorPane(this, stage)

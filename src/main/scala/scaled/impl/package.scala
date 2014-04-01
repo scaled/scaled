@@ -4,6 +4,7 @@
 
 import java.io.File
 
+import javafx.application.Platform
 import javafx.beans.value.ObservableValue
 import javafx.beans.value.ChangeListener
 
@@ -25,5 +26,10 @@ package scaled {
 
     /** Returns the current working directory of the editor process. */
     def cwd () = new File(System.getProperty("user.dir"))
+
+    /** Runs `op` on the main JavaFX thread. */
+    def onMainThread (op : =>Unit) = Platform.runLater(new Runnable() {
+      def run () = op
+    })
   }
 }

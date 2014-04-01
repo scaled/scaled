@@ -13,22 +13,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Mode {
 
-    /** The name of this mode. Displayed to the user. This is generally a simple single word, but
-     * it's also a global namespace, so pick something unique. Examples: {@code whitespace}, {@code
-     * scala}, {@code foo-bar}. */
+    /** The name of this mode. Displayed to the user. This is generally a simple single lowercase
+     * word. Note that modes exist in a global namespace, so pick something unique. Examples:
+     * {@code whitespace}, {@code scala}, {@code foo-bar}. */
     String name ();
 
     /** A description of this mode's functionality. */
     String desc ();
-
-    /** A list of package dependencies for this mode. These must be version control URLs which are
-     * raw version control URLs prefixed by the version control system. Examples:
-     * <pre>
-     * git:git@github.com:samskivert/scaled.git
-     * git:https://github.com/samskivert/scaled.git
-     * hg:http://hg.openjdk.java.net/jdk8/jdk8/jdk/
-     * svn:http://svn.apache.org/repos/asf/subversion/trunk
-     * </pre>
-     */
-    String[] deps () default {};
 }
