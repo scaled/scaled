@@ -150,9 +150,8 @@ abstract class BufferV {
     @inline @tailrec def seek (row :Int, col :Int) :Loc = if (row == rows) end else {
       val line = this.line(row)
       val last = line.length
-      var p = col
-      while (p < last && !pred(line.charAt(p))) p += 1
-      if (p < last) Loc(row, p)
+      var p = col ; while (p <= last && !pred(line.charAt(p))) p += 1
+      if (p <= last) Loc(row, p)
       else seek(row+1, 0)
     }
     seek(loc.row, loc.col)
@@ -164,13 +163,12 @@ abstract class BufferV {
   def findBackward (loc :Loc, pred :Char => Boolean) :Loc = {
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
-      var p = col-1
-      while (p >= 0 && !pred(line.charAt(p))) p -= 1
+      var p = col ; while (p >= 0 && !pred(line.charAt(p))) p -= 1
       if (p >= 0) Loc(row, p)
       else if (row == 0) start
       else seek(row-1, this.line(row-1).length)
     }
-    seek(loc.row, loc.col)
+    seek(loc.row, loc.col-1)
   }
 
   /** Searches for `lns` in the buffer, starting at `start` and not searching beyond `end`. If only a
