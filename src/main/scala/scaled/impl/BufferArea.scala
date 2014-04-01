@@ -144,21 +144,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   uncursor.setManaged(false)
   uncursor.setVisible(false)
 
-  // move the cursor when the point is updated
-  bview.point onValue contentNode.updateCursor
-  // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
-  // (TODO: this seems error prone, is there a better way?)
-  bview.buffer.lineEdited.onValue { change =>
-    // the point may be temporarily invalid while edits are being undone, so NOOP in that case
-    // because the correct point will be restored after the undo is completed
-    val point = bview.point()
-    val pointValid = point.row < bview.buffer.lines.size
-    // TODO: make this more precise?
-    if (pointValid && point.row == change.loc.row && change.deleted > 0) {
-      contentNode.updateCursor(point)
-    }
-  }
-
   // TODO: handle deletion of lines that include the point? that will probably result in the point
   // being moved, so maybe we don't need to worry about it
 
@@ -245,10 +230,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       }
     })
     // move our lines when scrollTop/Left change
-    bview.scrollTop.onValue { top =>
-      contentNode.setLayoutY(-top*lineHeight) // TODO: put this in updateVizLines?
-      updateVizLines()
-    }
+    bview.scrollTop onEmit updateVizLines
     bview.scrollLeft.onValue { left => contentNode.setLayoutX(-left*charWidth) }
 
     def updateCursor (point :Loc) {
@@ -300,6 +282,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
       // update which lines are visible
       updateVizLines()
+      contentNode.setLayoutX(-bview.scrollLeft()*charWidth)
 
       // position the cursor
       updateCursor(bview.point())
@@ -314,6 +297,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         cs.get(idx).setVisible(idx >= top && idx <= bot)
         idx += 1
       }
+      contentNode.setLayoutY(-top*lineHeight)
     }
   }
   private val contentNode = new ContentNode()
@@ -322,6 +306,21 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   // put our scene graph together
   contentNode.getChildren.addAll(lineNodes, cursor, uncursor, popup)
   getChildren.add(contentNode)
+
+  // move the cursor when the point is updated
+  bview.point onValueNotify contentNode.updateCursor
+  // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
+  // (TODO: this seems error prone, is there a better way?)
+  bview.buffer.lineEdited.onValue { change =>
+    // the point may be temporarily invalid while edits are being undone, so NOOP in that case
+    // because the correct point will be restored after the undo is completed
+    val point = bview.point()
+    val pointValid = point.row < bview.buffer.lines.size
+    // TODO: make this more precise?
+    if (pointValid && point.row == change.loc.row && change.deleted > 0) {
+      contentNode.updateCursor(point)
+    }
+  }
 
   // listen for addition and removal of lines
   bview.buffer.edited.onValue { change =>
