@@ -27,7 +27,7 @@ class Main extends Application {
       // TODO: should Editor just take a path and do this massaging internally? or should we export
       // a public Files utility class and recommend callers use that? meh...
       val f = new File(p)
-      epane.newBuffer(if (f.exists || f.isAbsolute) f else new File(cwd(), p))
+      epane.visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), p))
     }
 
     val scene = new Scene(epane)

@@ -80,11 +80,11 @@ trait Editor {
   def buffers :Seq[Buffer]
 
   /** Opens `file` into a new buffer. If another buffer is already visiting `file` that buffer is
-    * made active instead. */
-  def newBuffer (file :File) :Unit
+    * made active instead. The view for the visiting buffer is returned. */
+  def visitFile (file :File) :BufferView
 
   /** Makes the buffer with the specified name the active buffer. If no buffer exists with that
-    * name, a new empty buffer will be created with that name.. */
+    * name, a new empty buffer will be created with that name. */
   def openBuffer (buffer :String) :Unit
 
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due

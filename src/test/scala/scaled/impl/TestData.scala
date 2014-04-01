@@ -23,7 +23,7 @@ object TestData {
     def exit (code :Int) {}
     def buffers = Seq()
     def openBuffer (buffer :String) {}
-    def newBuffer (file :File) {}
+    def visitFile (file :File) = null
     def killBuffer (buffer :String) = false
   }
 

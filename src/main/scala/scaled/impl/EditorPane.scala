@@ -125,14 +125,18 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   }
 
   // if another buffer exists that is visiting this file, just open it
-  override def newBuffer (file :File) = _buffers.find(_.buffer.file == file) match {
-    case Some(ob) => _focus() = ob
-    case None =>
-      if (file.exists) newBuffer(BufferImpl.fromFile(file))
-      else {
-        newBuffer(BufferImpl.empty(file.getName, file))
-        emitStatus("(New file)")
-      }
+  override def visitFile (file :File) = {
+    _buffers.find(_.buffer.file == file) match {
+      case Some(ob) =>
+        _focus() = ob
+      case None =>
+        if (file.exists) newBuffer(BufferImpl.fromFile(file))
+        else {
+          newBuffer(BufferImpl.empty(file.getName, file))
+          emitStatus("(New file)")
+        }
+    }
+    _focus().view
   }
 
   // we manage layout manually for a variety of nefarious reasons

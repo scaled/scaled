@@ -658,7 +658,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
       val file = new File(path)
       if (file.isDirectory) editor.emitStatus(
         "Scaled does not support editing directories. Use Emacs.")
-      else editor.newBuffer(file)
+      else editor.visitFile(file)
     }
   }
 
