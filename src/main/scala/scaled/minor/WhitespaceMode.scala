@@ -20,9 +20,10 @@ object WhitespaceConfig extends ConfigDefs {
   val trailingWhitespaceStyle = "trailingWhitespaceFace"
 }
 
-@Minor(name="whitespace", desc="""
-       A minor mode that provides whitespace manipulation fns and can highlight undesirable
-       whitespace.""")
+@Minor(name="whitespace",
+       tags=Array("text", "code"),
+       desc="""A minor mode that provides whitespace manipulation fns and can highlight
+               undesirable whitespace.""")
 class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :EditingMode)
     extends MinorMode {
   import WhitespaceConfig._

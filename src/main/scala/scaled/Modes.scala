@@ -36,6 +36,9 @@ abstract class Mode {
   /** Returns a brief description of this mode. */
   def desc :String
 
+  /** Returns the tags that describe this mode. See [[Major.tags]] and [[Minor.tags]]. */
+  def tags :Array[String]
+
   /** Returns the configuration definitions objects that are used by this mode. If a mode defines
     * configurables in a configuration definitions object, it should override this method and
     * prepend its object to the returned list. */
@@ -101,6 +104,7 @@ abstract class MajorMode extends Mode {
 
   override def name = if (info == null) "unknown" else info.name
   override def desc = if (info == null) "unknown" else info.desc
+  override def tags = if (info == null) Array()   else info.tags
   private lazy val info = getClass.getAnnotation(classOf[Major])
 
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
@@ -125,5 +129,6 @@ abstract class MinorMode extends Mode {
 
   override def name = if (info == null) "unknown" else info.name
   override def desc = if (info == null) "unknown" else info.desc
+  override def tags = if (info == null) Array()   else info.tags
   private lazy val info = getClass.getAnnotation(classOf[Minor])
 }

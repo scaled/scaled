@@ -89,6 +89,11 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
     _statusFade.play()
     _status.setVisible(true)
   }
+  override def emitError (err :Throwable) {
+    // TODO
+    emitStatus(err.getMessage)
+    err.printStackTrace(System.err)
+  }
   override def clearStatus () = {
     if (_status.isVisible()) {
       _statusFade.stop()
@@ -164,9 +169,9 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   private def newBuffer (buf :BufferImpl) {
     val (width, height) = (_config(EditorConfig.viewWidth), _config(EditorConfig.viewHeight))
+    val mode = app.pkgMgr.detectMode(buf)
     val view = new BufferViewImpl(this, buf, width, height)
-    // TODO: determine the proper mode based on user customizable mechanism
-    val disp = new DispatcherImpl(this, resolver, view, "text", Nil)
+    val disp = new DispatcherImpl(this, resolver, view, mode, Nil)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has

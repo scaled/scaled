@@ -5,7 +5,7 @@
 package scaled.impl
 
 import javafx.scene.input.{KeyCode, KeyEvent}
-
+import reactual.Value
 import scaled._
 
 /** Handles the conversion of key presses into execution of the appropriate fns. This includes
@@ -22,14 +22,10 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
                                KeyCode.COMMAND, KeyCode.WINDOWS)
 
-  private lazy val majorMeta = new ModeMeta(major)
-  private lazy val defaultFn :Option[FnBinding] = major.defaultFn.flatMap(majorMeta.fns.binding)
-  private lazy val missedFn :Option[FnBinding] = major.missedFn.flatMap(majorMeta.fns.binding)
-
-  private var _major :MajorMode = _
   private var _curFn :String = _
   private var _prevFn :String = _
 
+  private var _majorMeta :MajorModeMeta = _
   private var _metas = List[ModeMeta]() // the stack of active modes (major last)
   private var _prefixes = Set[Seq[KeyPress]]() // union of cmd prefixes from active modes' keymaps
 
@@ -37,14 +33,29 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
   private var _dispatchTyped = false
   private var _escapeNext = false
 
+  /** The major mode with which we interact. */
+  val major = Value[MajorMode](null)
+  major onValue { major =>
+    val hadMajor = (_majorMeta != null)
+    // all old modes need to be cleaned out, and applicable minor modes re-resolved
+    _metas foreach { _.mode.dispose() }
+    // set up our new major mode
+    _majorMeta = new MajorModeMeta(major)
+    _metas = List(_majorMeta)
+    rebuildPrefixes()
+    // automatically activate any minor modes that match our major mode's tags
+    resolver.minorModes(major.tags) foreach { mode =>
+      resolver.resolveMinor(mode, view, this, major, Nil).onComplete(
+        addMode(false), editor.emitError)
+    }
+    // if we were replacing an existing major mode, give feedback to the user
+    if (hadMajor) editor.emitStatus("${major.name} activated.")
+  }
+
   // resolve our major mode first thing
   resolver.resolveMajor(majorMode, view, this, modeArgs).
-    onSuccess { major => _major = major ; addMode(major) }.
-    // TODO: we're hosed in this case, what to do?
-    onFailure { err => editor.emitStatus(err.getMessage) }
-
-  /** The major mode with which we interact. */
-  def major :MajorMode = _major
+    onSuccess(major.update).
+    onFailure(editor.emitError) // TODO: we're hosed in this case, what to do?
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = {
@@ -89,7 +100,8 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
                                    meta=kev.isMetaDown).metafy(_escapeNext)
             _trigger = _trigger.dropRight(1) :+ key
           }
-          val defFn = if (_trigger.size > 1 || _trigger.last.isModified) None else defaultFn
+          val defFn = if (_trigger.size > 1 || _trigger.last.isModified) None
+                      else _majorMeta.defaultFn
           resolve(_trigger, _metas) orElse defFn match {
             case Some(fn) => invoke(fn, _trigger.last.text)
             case None     => invokeMissed()
@@ -125,10 +137,9 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
       case Some(minor :MinorMode) =>
         removeMode(minor)
         editor.emitStatus(s"$mode mode deactivated.")
-      case _ => resolver.resolveMinor(mode, view, this, major, Nil) onSuccess { minor =>
-        addMode(minor)
-        editor.emitStatus(s"$mode mode activated.")
-      } onFailure { err => editor.emitStatus(err.getMessage) }
+      case _ =>
+        resolver.resolveMinor(mode, view, this, major(), Nil).onComplete(
+          addMode(true), editor.emitError)
     }
   }
 
@@ -147,9 +158,10 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
     }
   }
 
-  private def addMode (minor :Mode) {
-    _metas = new ModeMeta(minor) :: _metas
+  private def addMode (feedback :Boolean)(mode :MinorMode) {
+    _metas = new ModeMeta(mode) :: _metas
     rebuildPrefixes()
+    if (feedback) editor.emitStatus(s"${mode.name} mode activated.")
   }
 
   private def removeMode (minor :MinorMode) {
@@ -186,7 +198,7 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
   }
 
   private def invokeMissed () :Unit = invokeMissed(_trigger.mkString(" "))
-  private def invokeMissed (trigger :String) :Unit = missedFn match {
+  private def invokeMissed (trigger :String) :Unit = _majorMeta.missedFn match {
     case Some(fn) => invoke(fn, trigger)
     case None     => _prevFn = null ; didInvoke()
   }
@@ -213,6 +225,11 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
     // enumerate all prefix sequences (we use these when processing key input)
     val prefixes :Set[Seq[KeyPress]] = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
     // TODO: report an error if a key prefix is bound to an fn? WDED?
+  }
+
+  private class MajorModeMeta (mode :MajorMode) extends ModeMeta(mode) {
+    val defaultFn :Option[FnBinding] = mode.defaultFn.flatMap(fns.binding)
+    val missedFn :Option[FnBinding] = mode.missedFn.flatMap(fns.binding)
   }
 }
 

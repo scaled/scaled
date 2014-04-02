@@ -19,6 +19,7 @@ object TestData {
     def defer (op :Runnable) = op.run()
     def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     def emitStatus (msg :String) = println(msg)
+    def emitError (err :Throwable) = err.printStackTrace(System.err)
     def clearStatus () {}
     def exit (code :Int) {}
     def buffers = Seq()

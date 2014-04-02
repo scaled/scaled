@@ -25,8 +25,9 @@ object ISearchConfig extends ConfigDefs {
   val isearchActiveMatchStyle = "isearchActiveMatchFace"
 }
 
-@Major(name="mini-isearch",
-       desc="A minibuffer mode that handles interactive searching, forward and back.")
+@Major(name="mini-isearch", tags=Array("mini"), desc="""
+  A minibuffer mode that handles interactive searching, forward and back.
+""")
 class ISearchMode (
   editor    :Editor,
   config    :Config,

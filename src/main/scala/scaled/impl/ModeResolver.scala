@@ -13,6 +13,8 @@ abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
 
   def complete (major :Boolean, namePre :String) :Set[String] = Set()
 
+  def minorModes (tags :Array[String]) :Set[String] = Set()
+
   def resolveMajor (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
                     args :List[Any]) :Future[MajorMode] =
     locate(true, mode) flatMap(requireMajor(mode)) flatMap(resolve(mode, view, disp, args))
@@ -72,5 +74,6 @@ class PackageModeResolver (pmgr :pkg.PackageManager, editor :Editor, edconfig :C
 
   override def complete (major :Boolean, namePre :String) =
     Set() ++ pmgr.modes(major).filter(_ startsWith namePre)
+  override def minorModes (tags :Array[String]) = pmgr.minorModes(tags)
   override protected def locate (major :Boolean, mode :String) = pmgr.mode(major, mode)
 }

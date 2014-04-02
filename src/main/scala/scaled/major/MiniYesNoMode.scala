@@ -8,8 +8,9 @@ import reactual.Promise
 
 import scaled._
 
-@Major(name="mini-yesno",
-       desc="A minibuffer mode that asks the user to respond 'y' or 'n' to a question.")
+@Major(name="mini-yesno", tags=Array("mini"), desc="""
+  A minibuffer mode that asks the user to respond 'y' or 'n' to a question.
+""")
 class MiniYesNoMode (
   editor    :Editor,
   config    :Config,

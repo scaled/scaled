@@ -27,9 +27,13 @@ trait Editor {
   /** Invokes `op` on the next UI tick. */
   def defer (op :Runnable) :Unit
 
-  /** Briefly displays a status message in the minibuffer. The status message will also be appeneded
-    * to an editor-wide messages list. */
+  /** Briefly displays a status message to the user. The status message will also be appeneded to an
+    * editor-wide messages list. */
   def emitStatus (msg :String) :Unit
+
+  /** Reports an unexpected error to the user. The message will also be appended to an editor-wide
+    * messages list. */
+  def emitError (err :Throwable) :Unit
 
   /** Clears any lingering status message. A status message usually remains visible until the user
     * types the next key, so this allows any buffer which receives key input to clear the last
