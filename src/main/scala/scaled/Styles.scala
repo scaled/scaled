@@ -42,6 +42,9 @@ final class Styles private (styles :Array[String]) {
   /** Returns a new styles instance which removes `style` from this set of styles. */
   def - (style :String) = if (contains(style)) Styles.remove(styles, style) else this
 
+  /** Returns a new style instance with all styles which match `pred` removed. */
+  def - (pred :String => Boolean) = Styles.remove(styles, pred)
+
   override def toString = styles.mkString(" ")
 
   private def extend (style :String) = new Styles(styles :+ style)
@@ -80,6 +83,18 @@ object Styles {
       else {
         val s = styles(ii)
         if (s == style) loop(ii+1, node)
+        else loop(ii+1, node.child(s))
+      }
+    }
+    loop(0, _root).styles
+  }
+
+  private def remove (styles :Array[String], pred :String => Boolean) :Styles = {
+    @tailrec def loop (ii :Int, node :Node) :Node = {
+      if (ii == styles.length) node
+      else {
+        val s = styles(ii)
+        if (pred(s)) loop(ii+1, node)
         else loop(ii+1, node.child(s))
       }
     }

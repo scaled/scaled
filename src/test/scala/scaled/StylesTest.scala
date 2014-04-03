@@ -33,5 +33,9 @@ class StylesTest {
 
     assertTrue(s12 - "one" eq s2)
     assertTrue(s12 - "two" eq s1)
+
+    val s3 = Styles("one") + "two" + "three" + "four" + "five"
+    val s3minusTs = Styles("one") + "four" + "five"
+    assertEquals(s3minusTs, s3 - (_ startsWith "t"))
   }
 }
