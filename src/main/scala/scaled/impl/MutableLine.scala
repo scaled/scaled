@@ -4,10 +4,9 @@
 
 package scaled.impl
 
-import scala.annotation.tailrec
-
+import java.io.Writer
 import reactual.{Signal, SignalV}
-
+import scala.annotation.tailrec
 import scaled._
 
 /** [MutableLine] related types and utilities. */
@@ -49,20 +48,18 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
 
   require(initCs != null && initSs != null)
 
-  private var _chars = initCs
-  private var _styles = initSs
-  private var _end = initCs.size
+  protected var _chars = initCs
+  protected var _styles = initSs
+  private[this] var _end = initCs.size
 
   override def length = _end
   override def view (start :Int, until :Int) = new Line(_chars, _styles, start, until-start)
   override def slice (start :Int, until :Int) =
     new Line(_chars.slice(start, until), _styles.slice(start, until))
+  override protected def _offset = 0
 
-  /** The array that contains this line's characters. It's size may exceed `length` for reasons of
-    * efficiency. Be sure to use [length], not `chars.length`. */
-  override def chars = _chars
-  override protected def styles = _styles
-  override protected def offset = 0
+  /** Writes this mutable line to the supplied writer. */
+  def write (out :Writer) = out.write(_chars, 0, _end)
 
   /** Splits this line at `loc`. Deletes the data from `loc.col` onward from this line.
     * @return a new line which contains the data from `loc.col` onward. */

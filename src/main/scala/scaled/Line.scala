@@ -17,16 +17,16 @@ import reactual.SignalV
   * case they are a view on mutable data and have type [[LineV]]. Do not retain a reference to a
   * [[LineV]] as it may change after you relinquish control of the editor thread.
   */
-abstract class LineV {
+abstract class LineV extends CharSequence {
 
   /** The length (in characters) of this line. */
   def length :Int
 
   /** Returns the character at `pos`. If `pos` is >= [[length]] line 0 is returned. */
-  def charAt (pos :Int) :Char = if (pos < length) chars(offset+pos) else 0
+  def charAt (pos :Int) :Char = if (pos < length) _chars(_offset+pos) else 0
 
   /** Returns the CSS style classes applied to the character at `pos`, if any. */
-  def stylesAt (pos :Int) :Styles = if (pos < length) styles(offset+pos) else Styles.None
+  def stylesAt (pos :Int) :Styles = if (pos < length) _styles(_offset+pos) else Styles.None
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
@@ -45,12 +45,12 @@ abstract class LineV {
 
   /** Copies `[start, until)` from this line into `cs`/`ss` at `offset`. */
   def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[Styles], offset :Int) {
-    System.arraycopy(chars, this.offset+start, cs, offset, until-start)
-    System.arraycopy(styles, this.offset+start, ss, offset, until-start)
+    System.arraycopy(_chars, _offset+start, cs, offset, until-start)
+    System.arraycopy(_styles, _offset+start, ss, offset, until-start)
   }
 
   /** Returns the characters in `[start, until)` as a string. */
-  def sliceString (start :Int, until :Int) :String = new String(chars, offset+start, until-start)
+  def sliceString (start :Int, until :Int) :String = new String(_chars, _offset+start, until-start)
 
   /** Returns a new line which contains `other` appended to `this`. */
   def merge (other :LineV) :Line = {
@@ -67,10 +67,10 @@ abstract class LineV {
                     start :Int) :Int = {
     if (start + length > this.length) -1
     else {
-      val tcs = this.chars ; val last = this.length - length
+      val tcs = _chars ; val last = this.length - length
       @tailrec @inline def check (toffset :Int, ii :Int) :Int =
         if (ii < length && cmp(cs(offset+ii), tcs(toffset+ii))) check(toffset, ii+1) else ii
-      var ss = start ; while (ss <= last && check(this.offset+ss, 0) != length) ss += 1
+      var ss = start ; while (ss <= last && check(_offset+ss, 0) != length) ss += 1
       if (ss > last) -1 else ss
     }
   }
@@ -81,7 +81,7 @@ abstract class LineV {
                      start :Int) :Boolean = {
     if (start + length > this.length) false
     else {
-      val tcs = this.chars ; val toffset = this.offset + start
+      val tcs = _chars ; val toffset = _offset + start
       var ii = 0 ; while (ii < length && cmp(cs(offset+ii), tcs(toffset+ii))) ii += 1
       ii == length
     }
@@ -92,7 +92,7 @@ abstract class LineV {
   final def styleMatches (ss :Array[Styles], offset :Int, length :Int, start :Int) :Boolean = {
     if (start + length > this.length) false
     else {
-      val tss = styles ; val toffset = this.offset + start
+      val tss = _styles ; val toffset = _offset + start
       var ii = 0 ; while (ii < length && (ss(offset+ii) eq tss(toffset+ii))) ii += 1
       ii == length
     }
@@ -101,49 +101,51 @@ abstract class LineV {
   /** Returns the offset into this line at which the characters of `line` are matched, starting from
     * `start`. -1 is returned if no match could be found. */
   def search (cmp :(Char, Char) => Boolean, line :LineV, start :Int = 0) :Int =
-    search(cmp, line.chars, line.offset, line.length, start)
+    search(cmp, line._chars, line._offset, line.length, start)
 
   /** Returns the offset into this line at which `[offset, length)` characters of `line` are matched,
     * starting from `start`. -1 is returned if no match could be found. */
   def search (cmp :(Char, Char) => Boolean, line :LineV, offset :Int, length :Int, start :Int) :Int =
-    search(cmp, line.chars, line.offset+offset, length, start)
+    search(cmp, line._chars, line._offset+offset, length, start)
 
   /** Returns true if the characters of `line` are equal to the characters in this line starting at
     * `start`. */
   def matches (cmp :(Char, Char) => Boolean, line :LineV, start :Int = 0) :Boolean =
-    matches(cmp, line.chars, line.offset, line.length, start)
+    matches(cmp, line._chars, line._offset, line.length, start)
 
   /** Returns true if the `[offset, length)` characters of `line` are equal to the `[start, length)`
     * characters in this line. */
   def matches (cmp :(Char, Char) => Boolean, line :LineV, offset :Int, length :Int,
                start :Int) :Boolean =
-    matches(cmp, line.chars, line.offset+offset, length, start)
+    matches(cmp, line._chars, line._offset+offset, length, start)
 
   /** Returns the contents of this line as a string. */
-  def asString :String = new String(chars, offset, length)
+  def asString :String = new String(_chars, _offset, length)
+
+  override def subSequence (start :Int, end :Int) = new String(_chars, _offset+start, end-start)
 
   override def equals (other :Any) = other match {
     case ol :LineV => length == ol.length && ol.matches(Line.exact, this) &&
-      ol.styleMatches(styles, offset, length, 0)
+      ol.styleMatches(_styles, _offset, length, 0)
     case _         => false
   }
 
   override def hashCode = {
     @tailrec def loop (code :Int, chars :Array[Char], ii :Int, last :Int) :Int =
       if (ii == last) code else loop(31*code + chars(ii), chars, ii+1, last)
-    loop(1, chars, offset, offset+length)
+    loop(1, _chars, _offset, _offset+length)
   }
 
   /** Returns the `char` array that backs this line. The returned array will only be used to
     * implement read-only methods and will never be mutated. */
-  protected def chars :Array[Char]
+  protected def _chars :Array[Char]
 
   /** Returns the `Styles` array that backs this line. The returned array will only be used to
     * implement read-only methods and will never be mutated. */
-  protected def styles :Array[Styles]
+  protected def _styles :Array[Styles]
 
   /** Returns the offset into [[chars]] and [[styles]] at which our data starts. */
-  protected def offset :Int
+  protected def _offset :Int
 }
 
 /** Models a single immutable line of text that is not associated with a buffer.
@@ -151,7 +153,8 @@ abstract class LineV {
   * The constructor takes ownership of the supplied arrays. Do not mutate them after using them to
   * create a `Line`. Clone them first if you need to retain the ability to mutate the arrays.
   */
-class Line (_cs :Array[Char], _ss :Array[Styles], _offset :Int, val length :Int) extends LineV {
+class Line (_cs :Array[Char], _ss :Array[Styles], protected val _offset :Int,
+            val length :Int) extends LineV {
   def this (cs :Array[Char], ss :Array[Styles]) = this(cs, ss, 0, cs.length)
   def this (cs :Array[Char], styles :Styles) = this(cs, Array.fill(cs.length)(styles))
   def this (s :String, styles :Styles) = this(s.toCharArray, styles)
@@ -164,9 +167,8 @@ class Line (_cs :Array[Char], _ss :Array[Styles], _offset :Int, val length :Int)
     if (start == 0 && until == length) this else slice(start, until)
   override def slice (start :Int, until :Int) = new Line(_cs, _ss, _offset+start, until-start)
 
-  override protected def chars = _cs
-  override protected def styles = _ss
-  override protected def offset = _offset
+  override protected def _chars = _cs
+  override protected def _styles = _ss
 
   override def toString () = s"$asString [${_offset}:$length/${_cs.length}]"
 }

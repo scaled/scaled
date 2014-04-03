@@ -107,7 +107,7 @@ class BufferImpl private (
         if (idx < lines.length) {
           val l = lines(idx)
           if (idx > 0) out.newLine() // TODO: use newlines we detected when reading the file
-          out.write(l.chars, 0, l.length)
+          l.write(out)
           write(idx+1)
         }
       }
