@@ -34,6 +34,9 @@ trait Anchor {
   *
   * For better and worse, the JVM allows you to downcast to the more powerful type. That's a bad
   * idea. Don't do it. Consider yourself warned.
+  *
+  * @define RNLNOTE Note: the last line does not conceptually include a trailing newline, and
+  * [[insert(Loc,Seq[LineV])]] takes this into account.
   */
 abstract class BufferV {
 
@@ -96,9 +99,11 @@ abstract class BufferV {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def stylesAt (loc :Loc) :Styles = line(loc.row).stylesAt(loc.col)
 
-  /** Returns a copy of the data between `[start, until)`. Note: the last line does not conceptually
-    * include a trailing newline, and [[insert(Loc,Seq[LineV])]] takes this into account. */
+  /** Returns a copy of the data between `[start, until)`. $RNLNOTE */
   def region (start :Loc, until :Loc) :Seq[Line]
+
+  /** Returns a copy of the data in region `r`. $RNLNOTE */
+  def region (r :Region) :Seq[Line] = region(r.start, r.end)
 
   /** Returns the start of the line at `row`. */
   def lineStart (row :Int) :Loc = Loc(row, 0)
@@ -261,9 +266,11 @@ abstract class Buffer extends BufferV {
   def delete (loc :Loc, count :Int) :Line
 
   /** Deletes the data between `[start, until)` from the buffer. Returns a copy of the deleted data.
-    * Note: the last line does not conceptually include a trailing newline, and
-    * [[insert(Loc,Seq[LineV])]] takes this into account. */
+    * $RNLNOTE */
   def delete (start :Loc, until :Loc) :Seq[Line]
+
+  /** Deletes the data in region `r` from the buffer. Returns a copy of the deleted data. $RNLNOTE */
+  def delete (r :Region) :Seq[Line] = delete(r.start, r.end)
 
   /** Replaces `delete` characters in the line at `loc` with the `line`.
     * @return the replaced characters as a line. */
@@ -278,9 +285,17 @@ abstract class Buffer extends BufferV {
     }
   }
 
+  /** Replaces the region `r` with `lines`.
+    * @return the buffer location just after the replaced region. */
+  def replace (r :Region, lines :Seq[LineV]) :Loc = replace(r.start, r.end, lines)
+
   /** Transforms the characters between `[start, until)` using `fn`.
     * @return the buffer location just after the transformed region. */
   def transform (start :Loc, until :Loc, fn :Char => Char) :Loc
+
+  /** Transforms the characters in region `r` using `fn`.
+    * @return the buffer location just after the transformed region. */
+  def transform (r :Region, fn :Char => Char) :Loc = transform(r.start, r.end, fn)
 
   /** Splits the line at `loc`. The characters up to `loc.col` will remain on the `loc.row`th line,
     * and the character at `loc.col` and all subsequent characters will be moved to a new line
@@ -290,12 +305,16 @@ abstract class Buffer extends BufferV {
   /** Adds CSS style class `style` to the characters between `[start, until)`. */
   def addStyle (style :String, start :Loc, until :Loc) :Unit
 
+  /** Adds CSS style class `style` to the characters in region `r`. */
+  def addStyle (style :String, r :Region) :Unit = addStyle(style :String, r.start, r.end)
+
   /** Removes CSS style class `style` from the characters between `[start, until)`. */
   def removeStyle (style :String, start :Loc, until :Loc) :Unit
 
-  private[scaled] def undo (edit :Buffer.Edit) :Unit
+  /** Removes CSS style class `style` from the characters in region `r`. */
+  def removeStyle (style :String, r :Region) :Unit = removeStyle(style, r.start, r.end)
 
-  // TODO: methods for editing based on a pair of Locs
+  private[scaled] def undo (edit :Buffer.Edit) :Unit
 }
 
 /** `Buffer` related types and utilities. */
