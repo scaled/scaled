@@ -83,6 +83,10 @@
   -fx-fill: white;
 }
 
+.regionFace {
+  -fx-fill: #000044;
+}
+
 .warnFace {
   -fx-fill: DarkOrange;
   -fx-font-weight: bold;
@@ -93,7 +97,12 @@
   -fx-font-weight: bold;
 }
 
-/** Minibuffer mode faces */
+/** TODO: from emacs
+ '(link ((t (:underline t :foreground "#7CF"))))
+ '(link-visited ((t (:underline t :foreground "#36A"))))
+*/
+
+/** ISearch mode faces. */
 .isearchMatchFace {
   -fx-bg-fill: DarkOrange;
 }
