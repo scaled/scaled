@@ -249,7 +249,7 @@ abstract class Buffer extends BufferV {
   def insert (loc :Loc, line :LineV) :Loc
 
   /** Inserts `region` into this buffer at `loc`. `region` will often have come from a call to
-    * [[region]] or [[delete(Loc,Loc)]].
+    * [[region(Loc,Loc)]] or [[delete(Loc,Loc)]].
     *
     * The lines will be spliced into the line at `loc` which is almost certainly what you want.
     * This means the line at `loc` will be [[split]] in two, the first line in `region` will be

@@ -144,7 +144,7 @@ abstract class LineV extends CharSequence {
     * implement read-only methods and will never be mutated. */
   protected def _styles :Array[Styles]
 
-  /** Returns the offset into [[chars]] and [[styles]] at which our data starts. */
+  /** Returns the offset into [[_chars]] and [[_styles]] at which our data starts. */
   protected def _offset :Int
 }
 
