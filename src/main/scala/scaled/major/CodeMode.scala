@@ -2,10 +2,9 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.code
+package scaled.major
 
 import scaled._
-import scaled.major.EditingMode
 
 /** A base class for major modes which edit program code.
   */
