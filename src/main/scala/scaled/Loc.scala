@@ -28,6 +28,13 @@ class Loc private (val rowCol :Long) extends AnyVal {
   /** Returns true if this loc is later than `other` (i.e. greather than it). */
   def > (other :Loc) :Boolean = other < this
 
+  /** Returns `< 0` if `this` is `<` `other`, `0` if `this` == `other` and `> 0` otherwise. */
+  def compareTo (other :Loc) :Int = {
+    // overflow is not a risk, if a buffer has ~2 billion rows/cols, you have bigger problems
+    val drow = row - other.row
+    if (drow != 0) drow else col - other.col
+  }
+
   /** Returns the lesser (earlier in the buffer) of `this` and `other`. */
   def lesser (other :Loc) :Loc = if (this < other) this else other
   /** Returns the greater (later in the buffer) of `this` and `other`. */
