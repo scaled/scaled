@@ -82,6 +82,7 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
   config.value(showTrailingWhitespace) onValueNotify trailingWhitespacer.setActive
 
   override def keymap = Seq() // TODO
+  override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
   override def dispose () {
     trailingWhitespacer.setActive(false)
   }

@@ -16,7 +16,7 @@ import scaled._
   * @param majorMode the major mode, which defines our primary key mappings.
   * Minor modes are added (and removed) dynamically, but a dispatcher's major mode never changes.
   */
-class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewImpl,
+class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferViewImpl,
                       majorMode :String, modeArgs :List[Any]) extends Dispatcher {
 
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
@@ -38,7 +38,7 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
   major onValue { major =>
     val hadMajor = (_majorMeta != null)
     // all old modes need to be cleaned out, and applicable minor modes re-resolved
-    _metas foreach { _.mode.dispose() }
+    _metas foreach { _.dispose() }
     // set up our new major mode
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
@@ -166,7 +166,10 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
 
   private def removeMode (minor :MinorMode) {
     val ometas = _metas
-    _metas = _metas.filter(_.mode != minor)
+    _metas = _metas.filterNot { mm =>
+      if (mm.mode == minor) { mm.dispose(); true }
+      else false
+    }
     rebuildPrefixes()
     // if we actually removed this mode, dispose it
     if (ometas != _metas) minor.dispose()
@@ -225,6 +228,22 @@ class DispatcherImpl (editor :Editor, resolver :ModeResolver, view :BufferViewIm
     // enumerate all prefix sequences (we use these when processing key input)
     val prefixes :Set[Seq[KeyPress]] = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
     // TODO: report an error if a key prefix is bound to an fn? WDED?
+
+    // add this mode's stylesheet (if any) to the editor
+    private def addSheets (sheets :List[String]) :Unit = if (!sheets.isEmpty) {
+      addSheets(sheets.tail)
+      editor.getStylesheets.add(sheets.head)
+    }
+    // TODO: we want to remove the global user stylesheets, add these mode sheets, and then readd
+    // the global user sheets (so that the global user sheets are always last)
+    addSheets(mode.stylesheets)
+
+    def dispose () {
+      // remove this mode's stylesheet (if any) from the editor
+      mode.stylesheets.foreach { ss => editor.getStylesheets.remove(ss) }
+      // and dispose the mode
+      mode.dispose()
+    }
   }
 
   private class MajorModeMeta (mode :MajorMode) extends ModeMeta(mode) {

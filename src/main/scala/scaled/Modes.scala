@@ -44,6 +44,18 @@ abstract class Mode {
     * prepend its object to the returned list. */
   def configDefs :List[ConfigDefs] = EditorConfig :: Nil
 
+  /** Returns the URL for any custom stylesheets associated with this mode. These should be bundled
+    * with the mode and should be referenced via the classloader. A helper method [[stylesheetURL]]
+    * is provided to take care of this for you. For example:
+    *
+    * `override def stylesheets = stylesheetURL("/mymode.css") :: super.stylesheets`
+    *
+    * The stylesheets will be added in reverse order, so if a mode inherits from a mode that
+    * defines a stylesheet, the parent mode's stylesheet will be addede before the subclass's
+    * stylesheet, ensuring the subclass's styles override the parent's styles.
+    */
+  def stylesheets :List[String] = Nil
+
   /** Returns the key bindings defined by this mode: a list of `(trigger sequence -> fn binding)`
     * mappings.
     *
@@ -79,6 +91,11 @@ abstract class Mode {
   /** Cleans up any external resources managed by this mode. This is called when the mode is disabled
     * or the buffer containing the mode is going away. */
   def dispose () :Unit
+
+  /** A helper function for obtaining a stylesheet URL from a classpath. A mode will generally call
+    * this like so: `stylesheetURL("/mymode.css")` and place `mymode.css` in the top-level of the
+    * mode's resources directory. */
+  protected def stylesheetURL (path :String) = getClass.getResource(path).toExternalForm
 }
 
 // /** [[Mode]] related types and helpers. */

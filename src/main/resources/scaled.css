@@ -61,10 +61,7 @@
  * Basic text style definitions.
  */
 
-.textFace {
-  -fx-fill: white;
-}
-
+/** Non-semantic faces. */
 .boldFace {
   -fx-font-weight: bold;
 }
@@ -79,6 +76,11 @@
 
 .strikeFace {
   -fx-strikethrough: true;
+}
+
+/** Global semantic faces. */
+.textFace {
+  -fx-fill: white;
 }
 
 .warnFace {
@@ -97,10 +99,5 @@
 }
 
 .isearchActiveMatchFace {
-  -fx-bg-fill: #AB1500;
-}
-
-/** TODO: move this to whitespace.css */
-.trailingWhitespaceFace {
   -fx-bg-fill: #AB1500;
 }

@@ -31,7 +31,6 @@ class Main extends Application {
     }
 
     val scene = new Scene(epane)
-    // TODO: how to support themes, etc.?
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     stage.setScene(scene)
     stage.show()
