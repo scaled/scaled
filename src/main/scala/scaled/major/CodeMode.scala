@@ -11,4 +11,6 @@ import scaled._
 abstract class CodeMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
     extends EditingMode(editor, config, view, disp) {
 
+  override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
+
 }
