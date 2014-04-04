@@ -17,7 +17,7 @@ object WhitespaceConfig extends ConfigDefs {
     "If true, trailing whitespace will be highlighted", true)
 
   /** The CSS style applied to trailing whitespace characters. */
-  val trailingWhitespaceStyle = "trailingWhitespaceFace"
+  val trailingStyle = "whitespaceTrailingFace"
 }
 
 @Minor(name="whitespace",
@@ -51,7 +51,7 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
     }
 
     override protected def didDeactivate () {
-      view.buffer.removeStyle(trailingWhitespaceStyle, view.buffer.start, view.buffer.end)
+      view.buffer.removeStyle(trailingStyle, view.buffer.start, view.buffer.end)
     }
 
     private def queueRethink (row :Int*) {
@@ -75,8 +75,8 @@ class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :
       val last = line.length
       val first = seek(last)
       val floc = Loc(ii, first)
-      if (first > 0) view.buffer.removeStyle(trailingWhitespaceStyle, Loc(ii, 0), floc)
-      if (first < last) view.buffer.addStyle(trailingWhitespaceStyle, floc, Loc(ii, last))
+      if (first > 0) view.buffer.removeStyle(trailingStyle, Loc(ii, 0), floc)
+      if (first < last) view.buffer.addStyle(trailingStyle, floc, Loc(ii, last))
     }
   }
   config.value(showTrailingWhitespace) onValueNotify trailingWhitespacer.setActive
