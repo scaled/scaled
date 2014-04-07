@@ -75,4 +75,13 @@ object EditorConfig extends ConfigDefs(true) {
   val killRing = key("The ring in which killed blocks of text are stored.") {
     cfg => new Ring(cfg(killRingSize))
   }
+
+  /** The default CSS class name for text. */
+  val textStyle = "textFace"
+  /** The CSS class name for the active region face. */
+  val regionStyle = "regionFace"
+  /** The CSS class name for `warn` face. */
+  val warnStyle = "warnFace"
+  /** The CSS class name for `error` face. */
+  val errorStyle = "errorFace"
 }
