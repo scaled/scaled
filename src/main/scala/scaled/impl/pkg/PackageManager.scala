@@ -9,7 +9,7 @@ import java.io.File
 import java.net.URLClassLoader
 import java.util.regex.Pattern
 import reactual.Future
-import scala.collection.mutable.{ArrayBuffer, Map => MMap}
+import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scaled.impl._
 
 class PackageManager (app :Main) {
@@ -47,16 +47,48 @@ class PackageManager (app :Main) {
       if (ms.size > 1) warn(s"Multiple modes match buffer name '$name': $ms")
       ms.headOption
     }
-    fileLocal orElse interp orElse pattern(buf.file.getName) getOrElse "text"
+    println(s"Detecting mode for ${buf.name}")
+    fileLocal orElse interp orElse pattern(buf.name) getOrElse "text"
   }
   private val skipToks = Set("", "usr", "local", "bin", "env", "opt")
 
   /** Returns the set of minor modes that should be auto-activated for `tags`. */
   def minorModes (tags :Array[String]) :Set[String] = Set() ++ tags flatMap (minorTags.get _)
 
-  /** A mapping from repo URL to package. Repo URL is the unique global identifier for a package, and
+  /** Resolves the specified package dependency, returning a classloader that can be used to load
+    * classes from that dependency. Dependencies URLs are of the form:
+    *  # git:https://github.com/scaled/foo-service.git
+    *  # git:https://code.google.com/p/scaled-bar-service/
+    *  # hg:https://code.google.com/p/scaled-baz-service/
+    *  # svn:https://scaled-pants-service.googlecode.com/svn/trunk
+    *  # mvn:com.google.guava:guava:16.0.1:jar
+    *  # ivy:com.google.guava:guava:16.0.1:jar
+    *
+    * Dependencies in the form of a DVCS URL will have been checked out into `pkgsDir` and built.
+    * This happens during package installation, _not_ during this dependency resolution process.
+    * Dependencies prefixed by `mvn:` will be resolved from the local Maven repository, and those
+    * prefixed by `ivy:` will be resolved from the local Ivy repository. These dependencies will
+    * also be assumed to already exist, having been downloaded during package installation.
+    */
+  def resolveDepend (info :PackageInfo)(depURL :String) :Option[ClassLoader] = {
+    def fail (msg :String) = { warn(s"$msg [pkg=${info.name}, dep=$depURL]"); None }
+    depURL.split(":", 2) match {
+      case Array("mvn", mvnURL) => fail(s"TODO: mvn depend")
+      case Array("ivy", ivyURL) => Ivy.dependFromURL(ivyURL) match {
+        case Some(depend) => ivy.resolveDepend(depend)
+        case None         => fail(s"Invalid Ivy dependency URL")
+      }
+      case Array(vcs, url) => pkgs.get(depURL).map(_.loader) orElse
+        fail(s"Missing project dependency")
+      case other           => fail(s"Invalid project dependency")
+    }
+  }
+
+  /** A mapping from `srcurl` to package. `srcurl` is the unique global identifier for a package, and
     * is what is used to express inter-package dependencies. */
-  private[pkg] val pkgs = MMap[String,Package]()
+  private val pkgs = MMap[String,Package]()
+
+  private val ivy = new IvyResolver()
 
   private type Finder = String => Class[_]
   private val serviceMap = MMap[String,Finder]()
@@ -77,28 +109,23 @@ class PackageManager (app :Main) {
   // resolve our "built-in" package, which we locate via the classloader
   getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
     if ((url.getProtocol == "file") && !(url.getPath endsWith ".jar")) {
-      // resolve this package immediately, on the main thread because we need our basic modes to be
-      // available immediately; TODO: really? maybe we could defer those as well?
       addPackage(new Package(this, PackageInfo.builtin(new File(url.getPath))))
     }
   }
 
-  // resolve all packages in our packages directory
+  // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
+  // cache the results of our scans and load that instead)
   private val pkgsDir = Filer.requireDir(new File(app.metaDir, "Packages"))
   Filer.descendDirs(pkgsDir) { dir =>
     val pkgFile = new File(dir, "package.scaled")
     if (!pkgFile.exists) true // descend into subdirs
-    else {
-      app.exec.execute(new Runnable() {
-        override def run () = resolvePackage(PackageInfo(pkgFile))
-      })
-      false // stop descending
-    }
+    else { addPackage(new Package(this, PackageInfo(pkgFile))) ; false } // stop descending
   }
 
   private def addPackage (pkg :Package) {
     // TODO: report errors in pkg.info
-    pkgs.put(pkg.info.repo, pkg)
+    pkgs.put(pkg.info.srcurl, pkg)
+
     // map this package's major and minor modes, and services
     pkg.majors.keySet foreach { majorMap.put(_, pkg.major _) }
     pkg.minors.keySet foreach { minorMap.put(_, pkg.minor _) }
@@ -115,18 +142,12 @@ class PackageManager (app :Main) {
     }
     // map the tags defined by this pattern's minor modes
     minorTags.putAll(pkg.minorTags)
+
     // println(s"Added package $pkg")
   }
 
-  private def warn (msg :String) = println(msg) // TODO
+  // TODO: install package phase where we download and install a package, install its dependencies
+  // and ensure that everything is compiled and ready to run
 
-  // NOTE: this is called on a background thread
-  private def resolvePackage (info :PackageInfo) {
-    // println(s"Resolving package $info")
-    // TODO: make sure this package is compiled
-    // create the package and scan its classes
-    val pkg = new Package(this, info)
-    // lastly map this package's information back on our main thread
-    onMainThread { addPackage(pkg) }
-  }
+  private def warn (msg :String) = println(msg) // TODO
 }

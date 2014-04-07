@@ -6,7 +6,7 @@ package scaled.impl.pkg
 
 import com.google.common.collect.HashMultimap
 import java.io.File
-import java.net.URLClassLoader
+import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
@@ -32,20 +32,32 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   val minorTags = HashMultimap.create[String,String]() // tag -> minor mode
 
   /** The class loader for classes in this package. */
-  val loader :ClassLoader = new URLClassLoader(Array(info.classesDir.toURI.toURL)) {
-    override protected def findClass (name :String) :Class[_] = {
-      var pkgs = dependPkgs // first try finding the class in our dependencies
-      while (!pkgs.isEmpty) {
-        try return pkgs.head.loader.loadClass(name)
-        catch {
-          case cnfe :ClassNotFoundException => pkgs = pkgs.tail
+  val loader :ClassLoader =
+    // if this is the special built-in package, use our normal class loader, otherwise we end up
+    // doubly defining all of our built-in classes which confuses tools like JRebel
+    if (info.isBuiltIn) getClass.getClassLoader
+    else new URLClassLoader(Array(info.classesDir.toURI.toURL)) {
+      override def getResource (path :String) :URL = {
+        var loaders = dependLoaders // first try finding the resource in our dependencies
+        while (!loaders.isEmpty) {
+          val r = loaders.head.getResource(path)
+          if (r != null) return r
+          loaders = loaders.tail
         }
+        super.getResource(path)
       }
-      super.findClass(name) // then fall back to looking locally
+      override protected def findClass (name :String) :Class[_] = {
+        var loaders = dependLoaders // first try finding the class in our dependencies
+        while (!loaders.isEmpty) {
+          try return loaders.head.loadClass(name)
+          catch {
+            case cnfe :ClassNotFoundException => loaders = loaders.tail
+          }
+        }
+        super.findClass(name) // then fall back to looking locally
+      }
     }
-  }
-  // TODO: make sure dependent packages are resolved sooner?
-  private lazy val dependPkgs = info.depends.map(mgr.pkgs).toList
+  private lazy val dependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",

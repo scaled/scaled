@@ -14,30 +14,34 @@ case class PackageInfo (
   name    :String,
   version :String,
   descrip :String,
-  homepage :String,
-  repo    :String,
+  weburl  :String,
+  srcurl  :String,
   license :String,
-  depends :Seq[String],
-  source  :String,
-  classes :String,
+  depends :List[String],
+  srcdir  :String,
+  bindir  :String,
   errors  :Seq[String]) {
 
-  def classesDir = new File(root, classes)
+  def isBuiltIn = srcurl == PackageInfo.builtInSrcURL
+  def classesDir = new File(root, bindir)
 
   override def toString =
-    s"""|name: $name
+    s"""|   name: $name
         |version: $version
         |descrip: $descrip
-        |homepage: $homepage
-        |repo: $repo
+        | weburl: $weburl
+        | srcurl: $srcurl
         |license: $license
         |depends: $depends
-        |source: $source
-        |classes: $classes
-        |errors: $errors""".stripMargin
+        | srcdir: $srcdir
+        | bindir: $bindir
+        | errors: $errors""".stripMargin
 }
 
 object PackageInfo {
+
+  /** The `srcurl` for our built-in package. */
+  final val builtInSrcURL = "git:https://github.com/samskivert/scaled.git"
 
   /** Creates a package info from the supplied `package.scaled` file. The file is assumed to be in
     * the top-level directory of the package in question. */
@@ -48,24 +52,24 @@ object PackageInfo {
     * in the main Scaled source tree. */
   def builtin (classesDir :File) :PackageInfo =
     fromFile(classesDir.getParentFile, Source.fromString(s"""
-name: scaled
+   name: scaled
 version: 1.0
-description: Built-in services.
-homepage: https://github.com/samskivert/scaled/
-repository: git:https://github.com/samskivert/scaled.git
+descrip: Built-in services.
+ weburl: https://github.com/samskivert/scaled/
+ srcurl: $builtInSrcURL
 license: New BSD
-source: .
-classes: ${classesDir.getName}
+ srcdir: .
+ bindir: ${classesDir.getName}
 """))
 
   private def fromFile (root :File, source :Source) = {
     val props = MMap[String,String]()
-    val depends = ArrayBuffer[String]()
+    var depends = List[String]()
     val errors = ArrayBuffer[String]()
     source.getLines.map(trim).filter(_.length > 0) foreach { line => line.split(":", 2) match {
       case Array(key, value) =>
         val (tkey, tvalue) = (key.trim, value.trim)
-        if (tkey == "depends") depends += tvalue
+        if (tkey == "depend") depends = tvalue :: depends
         else props += (tkey -> tvalue) // TODO: validate that prop has meaning?
       case _ => errors += s"Invalid: $line"
     }}
@@ -73,9 +77,9 @@ classes: ${classesDir.getName}
       errors += s"Missing property '$prop'"
       "unknown"
     })
-    PackageInfo(root, require("name"), require("version"), require("description"),
-                require("homepage"), require("repository"), require("license"),
-                depends, require("source"), props.getOrElse("classes", "classes"), errors)
+    PackageInfo(root, require("name"), require("version"), require("descrip"), require("weburl"),
+                require("srcurl"), require("license"), builtInSrcURL :: depends,
+                require("srcdir"), props.getOrElse("bindir", "classes"), errors)
   }
 
   private def trim (line :String) = line.indexOf('#') match {
