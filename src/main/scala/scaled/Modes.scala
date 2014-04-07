@@ -4,6 +4,8 @@
 
 package scaled
 
+import java.io.FileNotFoundException
+
 /** Defines the attributes of an editor mode (major or minor). An editing mode has two main
   * components:
   *  - a collection of fns; an fn is a function that can be called interactively (by virtue of
@@ -95,7 +97,10 @@ abstract class Mode {
   /** A helper function for obtaining a stylesheet URL from a classpath. A mode will generally call
     * this like so: `stylesheetURL("/mymode.css")` and place `mymode.css` in the top-level of the
     * mode's resources directory. */
-  protected def stylesheetURL (path :String) = getClass.getResource(path).toExternalForm
+  protected def stylesheetURL (path :String) = getClass.getResource(path) match {
+    case null => throw new FileNotFoundException(s"Unable to find stylesheet resource '$path'")
+    case rsrc => rsrc.toExternalForm
+  }
 }
 
 // /** [[Mode]] related types and helpers. */
