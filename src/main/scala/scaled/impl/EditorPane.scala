@@ -180,7 +180,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
     val content = new BorderPane()
     val area = new BufferArea(this, view, disp)
     content.setCenter(area)
-    content.setBottom(new ModeLine(this, view))
+    content.setBottom(new ModeLine(this, view, disp))
 
     val obuf = OpenBuffer(content, area, view)
     _buffers prepend obuf
