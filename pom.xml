@@ -55,6 +55,13 @@
       <version>${scala.version}</version>
     </dependency>
 
+    <!-- TEMP: nix when I fix mvn and ivy package depends -->
+    <dependency>
+      <groupId>com.googlecode.plist</groupId>
+      <artifactId>dd-plist</artifactId>
+      <version>1.8</version>
+    </dependency>
+
     <!-- test dependencies -->
     <dependency>
       <groupId>junit</groupId>
