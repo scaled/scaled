@@ -107,6 +107,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
         }
       })
     }
+    _active.view.clearEphemeralPopup()
   }
 
   override def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = {

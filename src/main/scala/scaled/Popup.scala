@@ -5,8 +5,18 @@
 package scaled
 
 /** Defines a popup, displayed over a buffer. */
-case class Popup (text :Seq[String], pos :Popup.Pos, isError :Boolean)
-// TODO: allow style runs in the text
+case class Popup (
+  /** The text that will be displayed in the popup. */
+  text :Seq[String], // TODO: take Seq[LineV] and support styled text
+  /** Controls the position of the popup and its extent. */
+  pos :Popup.Pos,
+  /** Indicates that this popup is ephemeral, which means it is automatically cleared the next time
+    * the user types a key, just like status messages. Persistent (non-ephemeral) popups must be
+    * cleared manually. */
+  isEphemeral :Boolean = true,
+  /** Indicates that this popup is displaying an error. Error popups are styled in a more attention
+    * getting manner than non-error (informatinonal) popups. */
+  isError :Boolean = false)
 
 object Popup {
   /** Defines the position and orientation of a popup. */
@@ -32,7 +42,19 @@ object Popup {
   }
 
   case class UpRight (x :Int, y :Int) extends Pos with Up with Right
+  object UpRight {
+    def apply (pos :Loc) :UpRight = apply(pos.col, pos.row)
+  }
   case class DnRight (x :Int, y :Int) extends Pos with Dn with Right
+  object DnRight {
+    def apply (pos :Loc) :DnRight = apply(pos.col, pos.row)
+  }
   case class UpLeft  (x :Int, y :Int) extends Pos with Up with Left
+  object UpLeft {
+    def apply (pos :Loc) :UpLeft = apply(pos.col, pos.row)
+  }
   case class DnLeft  (x :Int, y :Int) extends Pos with Dn with Left
+  object DnLeft {
+    def apply (pos :Loc) :DnLeft = apply(pos.col, pos.row)
+  }
 }

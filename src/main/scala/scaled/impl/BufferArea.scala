@@ -166,6 +166,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         getChildren.add(text)
       }
 
+      // TODO: bound the popup into the view
       val line = bview.lines(math.min(pop.pos.y, bview.lines.size-1))
       _ax = line.charX(pop.pos.x, charWidth)
       _ay = line.node.getLayoutY
@@ -173,6 +174,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     }
 
     def clear () {
+      // TODO: fade the popup out?
       popup.getChildren.clear()
       popup.setVisible(false)
       _pos = null

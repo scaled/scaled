@@ -21,6 +21,10 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
 
+  def clearEphemeralPopup () {
+    if (popup.isDefined && popup().isEphemeral) popup.clear()
+  }
+
   // narrow the return types of these guys for our internal friends
   override def buffer :BufferImpl = _buffer
   override def lines :Seq[LineViewImpl] = _lines
