@@ -37,6 +37,6 @@ object CodeConfig extends ConfigDefs {
 abstract class CodeMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
     extends EditingMode(editor, config, view, disp) {
 
+  override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
-
 }
