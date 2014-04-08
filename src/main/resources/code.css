@@ -14,9 +14,6 @@
   -fx-fill: #9933CC;
   -fx-font-style: italic;
 }
-/** TODO: from emacs
- '(font-lock-comment-delimiter-face ((t (:foreground "#9933cc"))))
-*/
 
 .codeConstantFace {
   -fx-fill: #339999;
@@ -43,7 +40,7 @@
 }
 
 .codeVariableFace {
-  -fx-fill: #309797;
+  -fx-fill: #F2E294;
 }
 
 .codeFunctionFace {
