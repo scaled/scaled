@@ -59,10 +59,20 @@ class ISearchMode (
       if (wrap) buf.append("wrapped ")
       buf.append("I-search")
       if (!fwd) buf.append(" backward")
+      matches.size match {
+        case 0 => // nada
+        case 1 => buf.append(" (1 match)")
+        case n => buf.append(" (").append(n).append(" matches)")
+      }
       buf.append(":")
       buf.setCharAt(0, Character.toUpperCase(buf.charAt(0)))
       buf.toString
     }
+
+    /** Returns true if we should highlight non-active matches. We avoid highlighting single char
+      * searches because it's not particularly useful, and it needlessly slows down the initial
+      * search process. */
+    def shouldShowMatches :Boolean = sought.size > 1 || sought.head.length > 1
 
     /** Applies this state, highlighting matches and the active match (if any), moving the point
       * appropriately and configuring the contents of the minibuffer.
@@ -74,7 +84,8 @@ class ISearchMode (
       // when we've inherited the exact sought text and matches from a previous state
       if ((prev.sought ne sought) || (prev.matches ne matches)) {
         prev.clearMatches()
-        matches foreach { l => mainBuffer.addStyle(isearchMatchStyle, l, l + sought) }
+        if (shouldShowMatches) matches foreach {
+          l => mainBuffer.addStyle(isearchMatchStyle, l, l + sought) }
         setContents(sought)
       }
       if (prev.start != start || prev.end != end) {
@@ -108,7 +119,7 @@ class ISearchMode (
       find(sought, matches, from, false, wrap || newwrap)
     }
 
-    protected def clearMatches () :Unit = matches foreach { l =>
+    protected def clearMatches () :Unit = if (shouldShowMatches) matches foreach { l =>
       mainBuffer.removeStyle(isearchMatchStyle, l, l + sought) }
 
     protected def find (sought :Seq[LineV], matches :Seq[Loc], from :Loc,
