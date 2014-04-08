@@ -166,7 +166,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         getChildren.add(text)
       }
 
-      val line = bview.lines(pop.pos.y)
+      val line = bview.lines(math.min(pop.pos.y, bview.lines.size-1))
       _ax = line.charX(pop.pos.x, charWidth)
       _ay = line.node.getLayoutY
       _pos = pop.pos
