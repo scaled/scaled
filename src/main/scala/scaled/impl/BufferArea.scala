@@ -269,7 +269,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       // position our lines at the proper y offset
       val leftPadding = snappedLeftInset
       val cs = lineNodes.getChildren
-      @tailrec def loop (y :Double, idx :Int) {
+      @inline @tailrec def loop (y :Double, idx :Int) {
         if (idx < cs.size) {
           val line = cs.get(idx)
           line.setLayoutX(leftPadding)
@@ -290,11 +290,10 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     def updateVizLines () {
       val top = bview.scrollTop()
       val bot = top + bview.height()
-      val cs = lineNodes.getChildren
-      var idx = 0
-      while (idx < cs.size) {
-        cs.get(idx).setVisible(idx >= top && idx <= bot)
-        idx += 1
+      val lines = bview.lines
+      var idx = lines.size-1 ; while (idx >= 0) {
+        lines(idx).setVisible(idx >= top && idx <= bot)
+        idx -= 1
       }
       contentNode.setLayoutY(-top*lineHeight)
     }

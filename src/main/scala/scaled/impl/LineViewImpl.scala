@@ -19,6 +19,7 @@ import scaled._
 class LineViewImpl (_line :LineV) extends LineView {
 
   override def line = _line
+  private var _valid = false
 
   val node = new TextFlow() {
     override def layoutChildren () {
@@ -40,7 +41,6 @@ class LineViewImpl (_line :LineV) extends LineView {
   // node.fontProperty.bind(ctrl.fontProperty)
   // node.fillProperty.bind(textFill)
   // node.impl_selectionFillProperty().bind(highlightTextFill)
-  rebuild()
 
   /** Returns the x position of character at the specified column.
     * @param charWidth the current width of the (fixed) view font.
@@ -53,16 +53,26 @@ class LineViewImpl (_line :LineV) extends LineView {
   /** Updates this line to reflect the supplied edit. */
   def onEdit (change :Line.Edit) {
     // TODO: only change the spans that are affected by the edit
-    rebuild()
+    invalidate()
   }
 
   /** Updates this line to reflect the supplied style change. */
   def onStyle (loc :Loc) {
     // TODO: only change the spans that are affected by the restyle
-    rebuild()
+    invalidate()
   }
 
-  def rebuild () {
+  /** Updates this line's visibility. Lines outside the visible area of the buffer are marked
+    * non-visible and defer applying line changes until they are once again visible. */
+  def setVisible (viz :Boolean) {
+    if (viz && !_valid) validate()
+    node.setVisible(viz)
+  }
+
+  /** Validates this line, rebuilding its visualization. This is called when the line becomes
+    * visible. Non-visible lines defer visualization rebuilds until they become visible. */
+  def validate () :Unit = if (!_valid) {
+    _valid = true
     // go through the line accumulating runs of characters that are all styled with the same face
     val last = _line.length
     var start = 0
@@ -91,5 +101,10 @@ class LineViewImpl (_line :LineV) extends LineView {
 
     node.getChildren.clear()
     if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
+  }
+
+  private def invalidate () :Unit = if (_valid) {
+    _valid = false
+    if (node.isVisible) validate()
   }
 }
