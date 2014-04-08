@@ -210,10 +210,15 @@ class BufferImpl private (
     noteEdited(loc.row+1, BufferImpl.NoLines, 1)
   }
 
-  override def addStyle (style :String, start :Loc, until :Loc) =
-    updateStyle(style, true, start, until)
-  override def removeStyle (style :String, start :Loc, until :Loc) =
-    updateStyle(style, false, start, until)
+  override def updateStyles (fn :Styles => Styles, start :Loc, until :Loc) {
+    if (until < start) updateStyles(fn, until, start)
+    else if (start.row == until.row) line(start).updateStyles(fn, start, until.col)
+    else {
+      line(start).updateStyles(fn, start)
+      onRows(start.nextStart, until) { (loc, line) => line.updateStyles(fn, loc) }
+      line(until).updateStyles(fn, until.atCol(0), until.col)
+    }
+  }
 
   override private[scaled] def undo (edit :Buffer.Edit) {
     assert(edit.buffer == this)
@@ -244,16 +249,6 @@ class BufferImpl private (
       // giving up these lines their data can be bequeathed to immutable lines
       deleted.map(_.slice(0))
     }
-
-  private def updateStyle (style :String, add :Boolean, start :Loc, until :Loc) {
-    if (until < start) updateStyle(style, add, until, start)
-    else if (start.row == until.row) line(start).updateStyle(style, add, start, until.col)
-    else {
-      line(start).updateStyle(style, add, start)
-      onRows(start.nextStart, until) { (loc, line) => line.updateStyle(style, add, loc) }
-      line(until).updateStyle(style, add, until.atCol(0), until.col)
-    }
-  }
 
   private def deleteEmit (row :Int, count :Int) :Seq[Line] = {
     val deleted = delete(row, count)

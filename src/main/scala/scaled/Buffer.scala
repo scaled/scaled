@@ -268,7 +268,6 @@ abstract class Buffer extends BufferV {
   /** Deletes the data between `[start, until)` from the buffer. Returns a copy of the deleted data.
     * $RNLNOTE */
   def delete (start :Loc, until :Loc) :Seq[Line]
-
   /** Deletes the data in region `r` from the buffer. Returns a copy of the deleted data. $RNLNOTE */
   def delete (r :Region) :Seq[Line] = delete(r.start, r.end)
 
@@ -284,7 +283,6 @@ abstract class Buffer extends BufferV {
       insert(start, lines)
     }
   }
-
   /** Replaces the region `r` with `lines`.
     * @return the buffer location just after the replaced region. */
   def replace (r :Region, lines :Seq[LineV]) :Loc = replace(r.start, r.end, lines)
@@ -292,7 +290,6 @@ abstract class Buffer extends BufferV {
   /** Transforms the characters between `[start, until)` using `fn`.
     * @return the buffer location just after the transformed region. */
   def transform (start :Loc, until :Loc, fn :Char => Char) :Loc
-
   /** Transforms the characters in region `r` using `fn`.
     * @return the buffer location just after the transformed region. */
   def transform (r :Region, fn :Char => Char) :Loc = transform(r.start, r.end, fn)
@@ -302,15 +299,20 @@ abstract class Buffer extends BufferV {
     * which immediately follows the `loc.row`th line. */
   def split (loc :Loc) :Unit
 
-  /** Adds CSS style class `style` to the characters between `[start, until)`. */
-  def addStyle (style :String, start :Loc, until :Loc) :Unit
+  /** Updates the CSS style classes of the characters between `[start, until)` by applying `fn` to
+    * the existing styles. To add a single style do: `updateStyles(_ + style, ...)` to remove a
+    * single style do: `updateStyles(_ - style, ...)`. */
+  def updateStyles (fn :Styles => Styles, start :Loc, until :Loc) :Unit
+  /** Updates the CSS style classes of the characters in region `r` by applying `fn` to the existing
+    * styles. */
+  def updateStyles (fn :Styles => Styles, r :Region) :Unit = updateStyles(fn, r.start, r.end)
 
+  /** Adds CSS style class `style` to the characters between `[start, until)`. */
+  def addStyle (style :String, start :Loc, until :Loc) = updateStyles(_ + style, start, until)
   /** Adds CSS style class `style` to the characters in region `r`. */
   def addStyle (style :String, r :Region) :Unit = addStyle(style :String, r.start, r.end)
-
   /** Removes CSS style class `style` from the characters between `[start, until)`. */
-  def removeStyle (style :String, start :Loc, until :Loc) :Unit
-
+  def removeStyle (style :String, start :Loc, until :Loc) = updateStyles(_ - style, start, until)
   /** Removes CSS style class `style` from the characters in region `r`. */
   def removeStyle (style :String, r :Region) :Unit = removeStyle(style, r.start, r.end)
 

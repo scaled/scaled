@@ -151,14 +151,13 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     loc.atCol(last)
   }
 
-  /** Adds or removes `style` (based on `add`) starting at `loc` and continuing to column `last`. If
-    * any characters actually change style, a call to `BufferImpl.noteLineStyled` will be made
-    * after the style has been applied to the entire region. */
-  def updateStyle (style :String, add :Boolean, loc :Loc, last :Int = length) {
+  /** Transforms styles (using `fn`) starting at `loc` and continuing to column `last`. If any
+    * characters actually change style, a call to `BufferImpl.noteLineStyled` will be made after
+    * the style has been applied to the entire region. */
+  def updateStyles (fn :Styles => Styles, loc :Loc, last :Int = length) {
     val end = math.min(length, last)
     @tailrec def loop (pos :Int, first :Int) :Int = if (pos == end) first else {
-      val ostyles = _styles(pos)
-      val nstyles = if (add) ostyles + style else ostyles - style
+      val ostyles = _styles(pos) ; val nstyles = fn(ostyles)
       if (nstyles eq ostyles) loop(pos+1, first)
       else {
         _styles(pos) = nstyles
