@@ -47,7 +47,7 @@ class ISearchMode (
   // we track the state of our isearch as a stack of states; every change pushes a new state on the
   // stack and DEL pops back to previous states
   case class State (sought :Seq[LineV], matches :Seq[Loc], start :Loc, end :Loc,
-                    fwd :Boolean, fail :Boolean, wrap :Boolean) {
+                    fwd :Boolean, fail :Boolean, wrap :Boolean) extends Region {
 
     /** The location to place the point when this state is active. */
     def point :Loc = if (fwd) end else start
@@ -89,8 +89,8 @@ class ISearchMode (
         setContents(sought)
       }
       if (prev.start != start || prev.end != end) {
-        mainBuffer.removeStyle(isearchActiveMatchStyle, prev.start, prev.end)
-        mainBuffer.addStyle(isearchActiveMatchStyle, start, end)
+        mainBuffer.removeStyle(isearchActiveMatchStyle, prev)
+        mainBuffer.addStyle(isearchActiveMatchStyle, this)
       }
       mainView.point() = point
       miniui.setPrompt(prompt)
@@ -99,7 +99,7 @@ class ISearchMode (
     /** Clears the highlights applied by this state. */
     def clear () {
       clearMatches()
-      mainBuffer.removeStyle(isearchActiveMatchStyle, start, end)
+      mainBuffer.removeStyle(isearchActiveMatchStyle, this)
     }
 
     def extend (esought :Seq[LineV]) = {
