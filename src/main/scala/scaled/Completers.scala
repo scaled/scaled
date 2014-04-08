@@ -27,11 +27,18 @@ object Completers {
   }
 
   private def expand (dir :File, prefix :String) :Set[String] = {
-    val matches = Set() ++ dir.listFiles filter(_.getName startsWith prefix) map(format)
-    val file = new File(dir, prefix)
+    val edir = massage(dir)
+    val files = if (edir.exists) edir.listFiles else Array[File]()
+    val matches = Set() ++ files filter(_.getName startsWith prefix) map(format)
+    val file = new File(edir, prefix)
     if (!file.exists) matches
     else if (file.isDirectory && matches.size == 1) Set() ++ file.listFiles map(format)
     else matches
+  }
+
+  private def massage (dir :File) = {
+    if (dir.getName == "~") new File(System.getProperty("user.home"))
+    else dir // TODO: map // to root of file system?
   }
 
   private def format (file :File) = {
