@@ -35,12 +35,10 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     * with special syntax should override this method and return a customized syntax table. */
   protected def createSyntaxTable () = new SyntaxTable()
 
-  override def configDefs = EditingConfig :: super.configDefs
-
   override def defaultFn :Option[String] = Some("self-insert-command")
+  override def missedFn  :Option[String] = Some("unknown-command")
 
-  override def missedFn :Option[String] = Some("unknown-command")
-
+  override def configDefs = EditingConfig :: super.configDefs
   override def keymap = Seq(
     // character editing commands
     "BS"    -> "delete-backward-char", // TODO: make this delete back to mark (if set)
