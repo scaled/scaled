@@ -12,12 +12,12 @@ import scaled._
 
 class ConfigImpl (name :String, parent :Option[ConfigImpl]) extends Config {
 
-  override def value[T] (key :ConfigKey[T]) = resolve(key)
-  override def update[T] (key :ConfigKey[T], value :T) = resolve(key).update(value)
+  override def value[T] (key :Config.Key[T]) = resolve(key)
+  override def update[T] (key :Config.Key[T], value :T) = resolve(key).update(value)
 
   override def toString = s"$name / $parent"
 
-  private def resolve[T] (key :ConfigKey[T]) :Value[T] = _vals.get(key) match {
+  private def resolve[T] (key :Config.Key[T]) :Value[T] = _vals.get(key) match {
     case null =>
       if (parent.isEmpty == key.global) {
         val nv = new Value[T](key.defval(this))
@@ -29,5 +29,5 @@ class ConfigImpl (name :String, parent :Option[ConfigImpl]) extends Config {
     case v => v.asInstanceOf[Value[T]]
   }
 
-  private[this] val _vals = new HashMap[ConfigKey[_],Value[_]]()
+  private[this] val _vals = new HashMap[Config.Key[_],Value[_]]()
 }

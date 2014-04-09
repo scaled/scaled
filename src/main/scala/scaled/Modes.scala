@@ -30,7 +30,7 @@ import java.io.FileNotFoundException
   * A mode must also have a [[Major]] or [[Minor]] annotation, which defines the name of the mode
   * and provides a basic description.
   */
-abstract class Mode {
+abstract class Mode (val config :Config) {
 
   /** Returns the name of this mode. */
   def name :String
@@ -44,7 +44,7 @@ abstract class Mode {
   /** Returns the configuration definitions objects that are used by this mode. If a mode defines
     * configurables in a configuration definitions object, it should override this method and
     * prepend its object to the returned list. */
-  def configDefs :List[ConfigDefs] = EditorConfig :: Nil
+  def configDefs :List[Config.Defs] = Nil
 
   /** Returns the URL for any custom stylesheets associated with this mode. These should be bundled
     * with the mode and should be referenced via the classloader. A helper method [[stylesheetURL]]
@@ -122,12 +122,14 @@ abstract class Mode {
   * changes in the buffer or editor in addition to making simpler behavior changes like modifying
   * the keymap.
   */
-abstract class MajorMode extends Mode {
+abstract class MajorMode (config :Config) extends Mode(config) {
 
   override def name = if (info == null) "unknown" else info.name
   override def desc = if (info == null) "unknown" else info.desc
   override def tags = if (info == null) Array()   else info.tags
   private lazy val info = getClass.getAnnotation(classOf[Major])
+
+  override def configDefs :List[Config.Defs] = EditorConfig :: super.configDefs
 
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
     * for key presses that result in a "typed" character. Key presses that do not generate
@@ -147,7 +149,7 @@ abstract class MajorMode extends Mode {
   * example, by checking the spelling of all words in the buffer and binding a face to those that
   * are misspelled).
   */
-abstract class MinorMode extends Mode {
+abstract class MinorMode (config :Config) extends Mode(config) {
 
   override def name = if (info == null) "unknown" else info.name
   override def desc = if (info == null) "unknown" else info.desc

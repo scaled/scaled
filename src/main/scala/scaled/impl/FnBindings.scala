@@ -16,7 +16,13 @@ import scaled._
   * @param meth the method to which the name is bound.
   * @param wantsTyped whether the fn binding wants to be passed the typed character.
   */
-case class FnBinding (mode :Mode, name :String, meth :Method, wantsTyped :Boolean) {
+case class FnBinding (mode :Mode, meth :Method, wantsTyped :Boolean) {
+
+  /** Returns the de-camel-cased name of the fn. */
+  val name :String = Config.deCamelCase(meth.getName)
+
+  /** Returns a description of the fn. */
+  val descrip :String = meth.getAnnotation(classOf[Fn]).value.replaceAll("\\n\\s+", " ")
 
   /** Invokes this fn binding in response to a key press.
     *
@@ -36,23 +42,6 @@ case class FnBinding (mode :Mode, name :String, meth :Method, wantsTyped :Boolea
 /** [[FnBindings]] helper methods. */
 object FnBindings {
 
-  /** Converts `name` from camelCase to words-separated-by-dashes. */
-  def deCamelCase (name :String) = {
-    val buf = new StringBuilder(name)
-    var ii = 0
-    while (ii < buf.length) {
-      val c = buf.charAt(ii)
-      if (Character.isUpperCase(c)) {
-        buf.deleteCharAt(ii)
-        buf.insert(ii, '-')
-        ii += 1
-        buf.insert(ii, Character.toLowerCase(c))
-      }
-      ii += 1
-    }
-    buf.toString
-  }
-
   /** Creates an `FnBinding` for `mode`'s method `meth`. Reports an error and returns `None` if the
     * method does not conform to a valid fn method signature (i.e. `()` or `(String)`). */
   def toFnBinding (mode :Mode, errFn :(String => Unit))(meth :Method) :Option[FnBinding] = {
@@ -61,7 +50,7 @@ object FnBindings {
     if (!wantsTyped && pcount != 0) {
       errFn(s"Invalid fn method definition $meth. Must take () or (String).")
       None
-    } else Some(FnBinding(mode, deCamelCase(meth.getName), meth, wantsTyped))
+    } else Some(FnBinding(mode, meth, wantsTyped))
   }
 }
 

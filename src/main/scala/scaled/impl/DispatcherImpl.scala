@@ -129,8 +129,11 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
 
   override def completeFn (fnPre :String) = (Set[String]() /: _metas) {
     (fns, meta) => fns ++ meta.fns.complete(fnPre) }
+  override def describeFn (fn :String) = findFn(fn) map(_.descrip)
   override def completeMajor (modePre :String) = resolver.complete(true, modePre)
   override def completeMinor (modePre :String) = resolver.complete(false, modePre)
+
+  override def modes = _metas.map(_.mode)
 
   override def toggleMode (mode :String) {
     _metas map(_.mode) find(_.name == mode) match {
@@ -143,7 +146,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     }
   }
 
-  override def invoke (fn :String) = _metas.flatMap(_.fns.binding(fn)).headOption match {
+  override def invoke (fn :String) = findFn(fn) match {
     case Some(fn) => invoke(fn, "") ; true
     case None => false
   }
@@ -177,6 +180,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
 
   private def rebuildPrefixes () :Unit = _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
 
+  private def findFn (fn :String) :Option[FnBinding] = _metas.flatMap(_.fns.binding(fn)).headOption
   private def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] =
     // we could do modes.flatMap(_.map.get(trigger)).headOption but we want zero garbage
     if (modes.isEmpty) None else {

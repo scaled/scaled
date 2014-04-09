@@ -11,10 +11,10 @@ import scaled._
 import scaled.major.{EditingMode, Syntax}
 import scaled.util.Behavior
 
-object WhitespaceConfig extends ConfigDefs {
+object WhitespaceConfig extends Config.Defs {
 
-  val showTrailingWhitespace = key(
-    "If true, trailing whitespace will be highlighted", true)
+  @Var("If true, trailing whitespace will be highlighted.")
+  val showTrailingWhitespace = key(true)
 
   /** The CSS style applied to trailing whitespace characters. */
   val trailingStyle = "whitespaceTrailingFace"
@@ -25,7 +25,7 @@ object WhitespaceConfig extends ConfigDefs {
        desc="""A minor mode that provides whitespace manipulation fns and can highlight
                undesirable whitespace.""")
 class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :EditingMode)
-    extends MinorMode {
+    extends MinorMode(config) {
   import WhitespaceConfig._
 
   val trailingWhitespacer = new Behavior() {

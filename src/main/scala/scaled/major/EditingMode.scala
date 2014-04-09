@@ -13,7 +13,7 @@ import scala.annotation.tailrec
 import scaled._
 
 /** Configuration for [[EditingMode]]. */
-object EditingConfig extends ConfigDefs {
+object EditingConfig extends Config.Defs {
 
   // nada for now
 }
@@ -22,7 +22,7 @@ object EditingConfig extends ConfigDefs {
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
 abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
-    extends MajorMode {
+    extends MajorMode(config) {
   import EditorConfig.killRing
   import EditingConfig._
 
@@ -146,6 +146,10 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     // editor commands
     "C-x C-c" -> "save-buffers-kill-editor",
 
+    // help commands
+    "C-h f" -> "describe-fn",
+    "C-h v" -> "describe-variable",
+
     // meta commands
     "M-x" -> "execute-extended-command"
   )
@@ -238,6 +242,25 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
     * @return the end of the upcased region (the larger of `from` and `to`).
     */
   def downcase (from :Loc, to :Loc) :Loc = buffer.transform(from, to, Character.toLowerCase)
+
+  /** Used by [withConfigVar]. */
+  case class VarBind (m :Mode, v :Config.Var[_]) {
+    /** Returns the current value of this variable binding, converted to a string. */
+    def current :String = v.key.converter.toString(m.config(v.key))
+    /** Converts `value` to the appropriate type for this variable binding and updates it. */
+    def update (value :String) = m.config(v.key) = v.key.converter.fromString(value)
+  }
+
+  /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
+  def withConfigVar (fn :VarBind => Unit) {
+    val vars = disp.modes.flatMap(m => m.configDefs.flatMap(_.vars).map(v => VarBind(m, v)))
+    editor.miniRead("Variable:", "", Completers.from(vars)(_.v.name)) onSuccess { vname =>
+      vars.find(_.v.name == vname) match {
+        case Some(v) => fn(v)
+        case None    => editor.emitStatus(s"No such variable: $vname")
+      }
+    }
+  }
 
   //
   // CHARACTER EDITING FNS
@@ -588,7 +611,7 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
          it will be set to the point prior to moving to the new line. """")
   def gotoLine () {
-    editor.miniRead("Goto line:", "", a => Set(a)) onSuccess { lineStr =>
+    editor.miniRead("Goto line:", "", Completers.none) onSuccess { lineStr =>
       val line = try { lineStr.toInt } catch {
         case e :Throwable => 1 // this is what emacs does, seems fine to me
       }
@@ -724,6 +747,38 @@ abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, d
         })
     }
     saveLoop(editor.buffers.filter(_.dirty).toList)
+  }
+
+  //
+  // HELP FNS
+
+  @Fn("Displays the documentation for a fn.")
+  def describeFn () {
+    editor.miniRead("Fn:", "", disp.completeFn) onSuccess { fn =>
+      disp.describeFn(fn) match {
+        case Some(descrip) => editor.emitStatus(s"Fn: $fn\n$descrip")
+        case None => editor.emitStatus(s"No such fn: $fn")
+      }
+    }
+  }
+
+  @Fn("Displays the documentation for a config variable as well as its current value.")
+  def describeVariable () {
+    withConfigVar(b => editor.emitStatus(
+      s"Mode: ${b.m.name}\nVar: ${b.v.name}\nCurrent value: ${b.current}\n${b.v.descrip}"))
+  }
+
+  @Fn("""Updates the value of a config variable for the current editor.
+         The value is not persisted across sessions. Use edit-config to make permanent changes.""")
+  def setVariable () {
+    withConfigVar { b =>
+      val prompt = s"Set ${b.v.name} to (current ${b.current}):"
+      editor.miniRead(prompt, b.current, Completers.none) onSuccess { newval =>
+        try b.update(newval) catch {
+          case e :Exception => editor.emitStatus(s"Unable to parse $newval: $e")
+        }
+      }
+    }
   }
 
   //

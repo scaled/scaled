@@ -11,12 +11,12 @@ import reactual.{Value, Promise}
 import scaled._
 
 /** Configuration for [[ISearchMode]]. */
-object ISearchConfig extends ConfigDefs {
+object ISearchConfig extends Config.Defs {
 
-  val isearchRingSize = key("The number of entries retained by the recent searches ring.", 40)
-  val isearchRing = key("The ring in which recent searches are stored.") {
-    cfg => new Ring(cfg(isearchRingSize))
-  }
+  @Var("The number of entries retained by the recent searches ring.")
+  val isearchRingSize = key(40)
+  /** The ring in which recent searches are stored. */
+  val isearchRing = fnKey(cfg => new Ring(cfg(isearchRingSize)))
 
   /** The CSS style applied to isearch matches. */
   val isearchMatchStyle = "isearchMatchFace"

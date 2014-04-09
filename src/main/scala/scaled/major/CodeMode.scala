@@ -6,13 +6,13 @@ package scaled.major
 
 import scaled._
 
-object CodeConfig extends ConfigDefs {
+object CodeConfig extends Config.Defs {
 
-  val indentWidth = key(
-    "The number of characters to indent when in a nested scope.", 4)
+  @Var("The number of characters to indent when in a nested scope.")
+  val indentWidth = key(4)
 
-  val autoDetectIndent = key(
-    "Whether to attempt to auto-detect indentWidth for buffers with existing code.", true)
+  @Var("Whether to attempt to auto-detect indentWidth for buffers with existing code.")
+  val autoDetectIndent = key(true)
 
   /** The CSS style applied to `builtin` syntax. */
   val builtinStyle = "codeBuiltinFace"
