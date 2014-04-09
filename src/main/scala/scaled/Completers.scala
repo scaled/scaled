@@ -8,20 +8,31 @@ import java.io.File
 
 /** Some useful completion functions. */
 object Completers {
+  type Completer = String => Set[String]
+
+  /** A noop completer. */
+  val none :Completer = (prefix :String) => Set(prefix)
+
+  /** Returns a completer over `names`. */
+  def from (names :Set[String]) :Completer =
+    (prefix :String) => names filter (_ startsWith prefix)
+
+  /** Returns a completer over `things` using `nameFn` to obtain  thing's name. */
+  def from[T] (things :Seq[T])(nameFn :T => String) :Completer = from(Set() ++ things map nameFn)
+
+  /** Returns a completer on buffer name. */
+  def buffer (editor :Editor) :Completer = from(editor.buffers)(_.name)
 
   /** Returns a completer on buffer name.
     * @param except a set of buffer names to exclude from completion.
     */
-  def buffer (editor :Editor, except :Set[String]) :String => Set[String] =
+  def buffer (editor :Editor, except :Set[String]) :Completer =
     (prefix :String) => Set() ++ editor.buffers.collect {
       case (buf) if (!except(buf.name) && (buf.name startsWith prefix)) => buf.name
     }
 
-  /** Returns a completer on buffer name. */
-  def buffer (editor :Editor) :String => Set[String] = buffer(editor, Set())
-
   /** A completer on file system files. */
-  val file :String => Set[String] = path => path lastIndexOf File.separatorChar match {
+  val file :Completer = path => path lastIndexOf File.separatorChar match {
     case -1  => expand(File.listRoots.head /*TODO*/, path)
     case idx => expand(new File(path.substring(0, idx+1)), path.substring(idx+1))
   }
