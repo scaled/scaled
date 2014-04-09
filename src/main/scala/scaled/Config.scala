@@ -81,7 +81,7 @@ object Config {
     override def toString = "String"
   }
 
-  /** Contains metadata for a particular configuration variable. */
+  /** Contains metadata for a particular configuration var. */
   case class Var[T] (name :String, descrip :String, key :Key[T])
 
   /** The base class for a collection of configuration definitions. The (global) editor config object
@@ -89,7 +89,7 @@ object Config {
     */
   abstract class Defs (global :Boolean = false) {
 
-    /** All config variables defined by this defs instance. */
+    /** All config vars defined by this defs instance. */
     lazy val vars :Array[Var[_]] = getClass.getDeclaredFields flatMap { f =>
       val vara = f.getAnnotation(classOf[scaled.Var])
       if (vara == null) None

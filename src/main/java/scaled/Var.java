@@ -10,14 +10,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Defines a configuration variable. Modes define configuration variables which can subsequently be
+ * Defines a configuration var. Modes define configuration vars which can subsequently be
  * customized by the user in a mode configuration file, or interactively.
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Var {
 
-    /** A documentary description of this configuration variable. This will be shown to the user
-     * when they ask to describe the variable, so don't hold back on the details. */
+    /** A documentary description of this configuration var. This will be shown to the user when
+     * they ask to describe the var, so don't hold back on the details. */
     String value ();
 }

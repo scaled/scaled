@@ -145,7 +145,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
     // help commands
     "C-h f" -> "describe-fn",
-    "C-h v" -> "describe-variable",
+    "C-h v" -> "describe-var",
 
     // meta commands
     "M-x" -> "execute-extended-command"
@@ -242,19 +242,19 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   /** Used by [withConfigVar]. */
   case class VarBind (m :Mode, v :Config.Var[_]) {
-    /** Returns the current value of this variable binding, converted to a string. */
+    /** Returns the current value of this var binding, converted to a string. */
     def current :String = v.key.converter.toString(m.config(v.key))
-    /** Converts `value` to the appropriate type for this variable binding and updates it. */
+    /** Converts `value` to the appropriate type for this var binding and updates it. */
     def update (value :String) = m.config(v.key) = v.key.converter.fromString(value)
   }
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :VarBind => Unit) {
     val vars = disp.modes.flatMap(m => m.configDefs.flatMap(_.vars).map(v => VarBind(m, v)))
-    editor.miniRead("Variable:", "", Completers.from(vars)(_.v.name)) onSuccess { vname =>
+    editor.miniRead("Var:", "", Completers.from(vars)(_.v.name)) onSuccess { vname =>
       vars.find(_.v.name == vname) match {
         case Some(v) => fn(v)
-        case None    => editor.emitStatus(s"No such variable: $vname")
+        case None    => editor.emitStatus(s"No such var: $vname")
       }
     }
   }
@@ -759,15 +759,15 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     }
   }
 
-  @Fn("Displays the documentation for a config variable as well as its current value.")
-  def describeVariable () {
+  @Fn("Displays the documentation for a config var as well as its current value.")
+  def describeVar () {
     withConfigVar(b => editor.emitStatus(
       s"Mode: ${b.m.name}\nVar: ${b.v.name}\nCurrent value: ${b.current}\n${b.v.descrip}"))
   }
 
-  @Fn("""Updates the value of a config variable for the current editor.
+  @Fn("""Updates the value of a config var for the current editor.
          The value is not persisted across sessions. Use edit-config to make permanent changes.""")
-  def setVariable () {
+  def setVar () {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
       editor.miniRead(prompt, b.current, Completers.none) onSuccess { newval =>
