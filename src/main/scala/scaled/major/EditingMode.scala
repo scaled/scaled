@@ -21,12 +21,9 @@ object EditingConfig extends Config.Defs {
 /** A base class for all modes that support interactive text editing. This mode defines all of the
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
-abstract class EditingMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
-    extends MajorMode(config) {
+abstract class EditingMode (env :Env) extends MajorMode(env) {
   import EditorConfig.killRing
   import EditingConfig._
-
-  @inline protected final def buffer = view.buffer // for great brevity
 
   /** The syntax table in use for this mode. */
   val syntax :SyntaxTable = createSyntaxTable()

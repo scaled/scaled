@@ -14,16 +14,13 @@ import scaled._
   allow the user to tab-complete their way to satisfaction.
 """)
 class MiniReadMode (
-  editor    :Editor,
-  config    :Config,
-  view      :RBufferView,
-  disp      :Dispatcher,
+  env       :Env,
   miniui    :MiniUI,
   promise   :Promise[String],
   prompt    :String,
   initText  :Seq[LineV],
   completer :String => Set[String]
-) extends MinibufferMode(editor, config, view, disp, promise) {
+) extends MinibufferMode(env, promise) {
 
   miniui.setPrompt(prompt)
   setContents(initText)

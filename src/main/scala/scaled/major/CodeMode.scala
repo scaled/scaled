@@ -40,8 +40,7 @@ object CodeConfig extends Config.Defs {
 
 /** A base class for major modes which edit program code.
   */
-abstract class CodeMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
-    extends EditingMode(editor, config, view, disp) {
+abstract class CodeMode (env :Env) extends EditingMode(env) {
   import CodeConfig._
 
   override def configDefs = CodeConfig :: super.configDefs

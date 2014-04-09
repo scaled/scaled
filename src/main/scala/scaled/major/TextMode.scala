@@ -9,8 +9,7 @@ import scaled._
 @Major(name="text", tags=Array("text"), desc="""
   A major mode for editing plain text. This is used when no more specific mode can be found.
 """)
-class TextMode (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher)
-    extends EditingMode(editor, config, view, disp) {
+class TextMode (env :Env) extends EditingMode(env) {
 
   override def dispose () {}  // nothing to dispose
 }

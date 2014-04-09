@@ -46,13 +46,7 @@ abstract class MiniUI {
   * Note: minibuffer mode names must start with the string `mini-`. For example: `mini-isearch`,
   * `mini-read`, etc.
   */
-abstract class MinibufferMode (
-  editor      :Editor,
-  config      :Config,
-  view        :RBufferView,
-  disp        :Dispatcher,
-  promise     :Promise[_]
-) extends EditingMode(editor, config, view, disp) {
+abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMode(env) {
 
   override def keymap = super.keymap ++ Seq(
     "C-g" -> "abort"

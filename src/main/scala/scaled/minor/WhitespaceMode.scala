@@ -24,8 +24,7 @@ object WhitespaceConfig extends Config.Defs {
        tags=Array("text", "code"),
        desc="""A minor mode that provides whitespace manipulation fns and can highlight
                undesirable whitespace.""")
-class WhitespaceMode (editor :Editor, config :Config, view :RBufferView, major :EditingMode)
-    extends MinorMode(config) {
+class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
   import WhitespaceConfig._
 
   val trailingWhitespacer = new Behavior() {

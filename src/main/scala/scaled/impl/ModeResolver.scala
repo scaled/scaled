@@ -9,6 +9,8 @@ import reactual.Future
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 
+case class EnvImpl (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher) extends Env
+
 abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
 
   def complete (major :Boolean, namePre :String) :Set[String] = Set()
@@ -52,7 +54,7 @@ abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
       case h :: t => if (elem == h) t else h :: minus(t, elem)
     }
     val config = _configs.getOrElseUpdate(mode, new ConfigImpl(mode, Some(edconfig)))
-    var remargs = editor :: config :: view.buffer :: view :: disp :: args
+    var remargs = EnvImpl(editor, config, view, disp) :: args
     val params = ctor.getParameterTypes.map { p =>
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg

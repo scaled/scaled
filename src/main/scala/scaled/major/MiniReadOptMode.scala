@@ -14,16 +14,13 @@ import scaled._
   minibuffer completion area.
 """)
 class MiniReadOptMode (
-  editor    :Editor,
-  config    :Config,
-  view      :RBufferView,
-  disp      :Dispatcher,
+  env       :Env,
   miniui    :MiniUI,
   promise   :Promise[String],
   prompt    :String,
   /** A map from key trigger (e.g. `y`, `C-r`, `!`, etc.) to a help string for the option. */
   opts      :Seq[(String,String)]
-) extends MinibufferMode(editor, config, view, disp, promise) {
+) extends MinibufferMode(env, promise) {
 
   val optMap = opts.toMap
   def optprompt = prompt + opts.map(_._1).mkString(" (", ", ", ", C-h)")

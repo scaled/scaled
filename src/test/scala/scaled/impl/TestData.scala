@@ -34,6 +34,13 @@ object TestData {
     override protected def locate (major :Boolean, mode :String) = Future.success(classOf[TextMode])
   }
 
+  def env (view_ :RBufferView) = new Env {
+    val editor = TestData.editor
+    val config = TestData.config
+    val view = view_
+    val disp = null
+  }
+
   /** Creates a test buffer. For testing! */
   def buffer (name :String, text :String) =
     BufferImpl(name, new File(name), new StringReader(text))

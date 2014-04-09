@@ -12,14 +12,11 @@ import scaled._
   A minibuffer mode that asks the user to respond 'y' or 'n' to a question.
 """)
 class MiniYesNoMode (
-  editor    :Editor,
-  config    :Config,
-  view      :RBufferView,
-  disp      :Dispatcher,
-  miniui    :MiniUI,
-  promise   :Promise[Boolean],
-  prompt    :String
-) extends MinibufferMode(editor, config, view, disp, promise) {
+  env     :Env,
+  miniui  :MiniUI,
+  promise :Promise[Boolean],
+  prompt  :String
+) extends MinibufferMode(env, promise) {
 
   def ynprompt = s"$prompt (y or n)"
   miniui.setPrompt(ynprompt)

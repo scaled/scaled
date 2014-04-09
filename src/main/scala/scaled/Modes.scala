@@ -6,6 +6,26 @@ package scaled
 
 import java.io.FileNotFoundException
 
+/** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
+  *  - one it makes passing a bundle of standard depends on to a superclass constructor less
+  * onerous,
+  *  - and two it allows us to provide new standard dependencies without breaking the constructor
+  * signatures of every mode in the known universe. */
+abstract class Env {
+
+  /** The editor in which this mode is operating. */
+  val editor :Editor
+
+  /** This mode's configuration. */
+  val config :Config
+
+  /** The view in which this mode is operating. */
+  val view :RBufferView
+
+  /** The dispatcher that is handling interactions. */
+  val disp :Dispatcher
+}
+
 /** Defines the attributes of an editor mode (major or minor). An editing mode has two main
   * components:
   *  - a collection of fns; an fn is a function that can be called interactively (by virtue of
@@ -15,22 +35,21 @@ import java.io.FileNotFoundException
   *    interface" of the mode, in that the user will generally interact with a mode by pressing
   *    keys
   *
-  * Fns: a fn is a zero-argument method in the `Mode` class which is annotated by [[Fn]]. The name
-  * of the method defines the name of the method as referenced in key maps and as specified
+  * Fns: a fn is a zero-argument method in the `Mode` class which is annotated with [[Fn]]. The
+  * name of the method defines the name of the method as referenced in key maps and as specified
   * directly by the user when calling fns by name. The name is de-camel-cased by inserting a dash
   * before every capital letter and making said capital letter lowercase. For example: forwardChar
   * becomes forward-char.
   *
   * Modes are resolved by name and have their "dependencies" (constructor arguments) injected based
-  * on their type. Thus a mode can simply declare `view :RBufferView` in its constructor and the
-  * view for the buffer in which the mode is operating will be supplied at construction time. A
-  * mode may require any or all of: [[Config]], [[RBuffer]], [[RBufferView]], [[Dispatcher]],
-  * [[Editor]].
+  * on their type. Most of these dependencies are wrapped into an [[Env]] instance, but special
+  * modes (like `MinibufferMode`s) can route additional dependencies through this injection
+  * process. Also minor modes can have the current `MajorMode` injected.
   *
   * A mode must also have a [[Major]] or [[Minor]] annotation, which defines the name of the mode
   * and provides a basic description.
   */
-abstract class Mode (val config :Config) {
+abstract class Mode (env :Env) {
 
   /** Returns the name of this mode. */
   def name :String
@@ -40,6 +59,9 @@ abstract class Mode (val config :Config) {
 
   /** Returns the tags that describe this mode. See [[Major.tags]] and [[Minor.tags]]. */
   def tags :Array[String]
+
+  /** This mode's configuration. */
+  final def config :Config = env.config
 
   /** Returns the configuration definitions objects that are used by this mode. If a mode defines
     * configurables in a configuration definitions object, it should override this method and
@@ -94,6 +116,12 @@ abstract class Mode (val config :Config) {
     * or the buffer containing the mode is going away. */
   def dispose () :Unit
 
+  // a view methods to make life easier for modes
+  @inline protected final def editor = env.editor
+  @inline protected final def view = env.view
+  @inline protected final def buffer = env.view.buffer
+  @inline protected final def disp = env.disp
+
   /** A helper function for obtaining a stylesheet URL from a classpath. A mode will generally call
     * this like so: `stylesheetURL("/mymode.css")` and place `mymode.css` in the top-level of the
     * mode's resources directory. */
@@ -122,7 +150,7 @@ abstract class Mode (val config :Config) {
   * changes in the buffer or editor in addition to making simpler behavior changes like modifying
   * the keymap.
   */
-abstract class MajorMode (config :Config) extends Mode(config) {
+abstract class MajorMode (env :Env) extends Mode(env) {
 
   override def name = if (info == null) "unknown" else info.name
   override def desc = if (info == null) "unknown" else info.desc
@@ -149,7 +177,7 @@ abstract class MajorMode (config :Config) extends Mode(config) {
   * example, by checking the spelling of all words in the buffer and binding a face to those that
   * are misspelled).
   */
-abstract class MinorMode (config :Config) extends Mode(config) {
+abstract class MinorMode (env :Env) extends Mode(env) {
 
   override def name = if (info == null) "unknown" else info.name
   override def desc = if (info == null) "unknown" else info.desc

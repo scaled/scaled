@@ -29,19 +29,15 @@ object ISearchConfig extends Config.Defs {
   A minibuffer mode that handles interactive searching, forward and back.
 """)
 class ISearchMode (
-  editor    :Editor,
-  config    :Config,
-  miniView  :RBufferView,
-  miniDisp  :Dispatcher,
+  env       :Env,
   miniui    :MiniUI,
   promise   :Promise[Unit],
   mainView  :RBufferView,
   mainDisp  :Dispatcher,
   direction :String
-) extends MinibufferMode(editor, config, miniView, miniDisp, promise) {
+) extends MinibufferMode(env, promise) {
   import ISearchConfig._
 
-  @inline protected final def miniBuffer = miniView.buffer
   @inline protected final def mainBuffer = mainView.buffer
 
   // we track the state of our isearch as a stack of states; every change pushes a new state on the
@@ -157,13 +153,13 @@ class ISearchMode (
       _refreshPending = true
       editor.defer {
         _refreshPending = false
-        val sought = miniBuffer.region(miniBuffer.start, miniBuffer.end)
+        val sought = buffer.region(buffer.start, buffer.end)
         if (sought != curstate.sought) pushState(curstate.extend(sought))
       }
     }
   }
-  miniBuffer.edited onEmit queueRefresh
-  miniBuffer.lineEdited onEmit queueRefresh
+  buffer.edited onEmit queueRefresh
+  buffer.lineEdited onEmit queueRefresh
 
   override def configDefs = ISearchConfig :: super.configDefs
   override def keymap = Seq(
