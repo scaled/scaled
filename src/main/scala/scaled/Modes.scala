@@ -16,14 +16,15 @@ abstract class Env {
   /** The editor in which this mode is operating. */
   val editor :Editor
 
-  /** This mode's configuration. */
-  val config :Config
-
   /** The view in which this mode is operating. */
   val view :RBufferView
 
   /** The dispatcher that is handling interactions. */
   val disp :Dispatcher
+
+  /** Resolves the config for `mode` using the supplied `defs`. This is an implementation detail that
+    * unfortunately has to live out in the open. Please to ignore. */
+  def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
 }
 
 /** Defines the attributes of an editor mode (major or minor). An editing mode has two main
@@ -61,7 +62,7 @@ abstract class Mode (env :Env) {
   def tags :Array[String]
 
   /** This mode's configuration. */
-  final def config :Config = env.config
+  final val config :Config = env.resolveConfig(name, configDefs)
 
   /** Returns the configuration definitions objects that are used by this mode. If a mode defines
     * configurables in a configuration definitions object, it should override this method and

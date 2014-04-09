@@ -28,17 +28,21 @@ object TestData {
     def killBuffer (buffer :String) = false
   }
 
-  val config = new ConfigImpl("editor", None)
+  val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
 
-  val resolver = new ModeResolver(editor, config) {
+  val resolver = new ModeResolver(editor) {
     override protected def locate (major :Boolean, mode :String) = Future.success(classOf[TextMode])
+    override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
+      modeConfig(mode, defs)
   }
+
+  def modeConfig (mode :String, defs :List[Config.Defs]) = new ConfigImpl(mode, defs, Some(config))
 
   def env (view_ :RBufferView) = new Env {
     val editor = TestData.editor
-    val config = TestData.config
     val view = view_
     val disp = null
+    def resolveConfig (mode :String, defs :List[Config.Defs]) = modeConfig(mode, defs)
   }
 
   /** Creates a test buffer. For testing! */

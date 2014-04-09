@@ -18,7 +18,9 @@ class Main extends Application {
   val homeDir = new File(System.getProperty("user.home"))
   val metaDir = Filer.requireDir(locateMetaDir)
 
+  val watchMgr = new WatchManager()
   val pkgMgr = new pkg.PackageManager(this)
+  val cfgMgr = new ConfigManager(this)
 
   override def start (stage :Stage) {
     val epane = new EditorPane(this, stage)

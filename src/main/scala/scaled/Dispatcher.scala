@@ -21,11 +21,11 @@ abstract class Dispatcher {
   /** Returns the documentation for `fn` if such fn exists. */
   def describeFn (fn :String) :Option[String]
 
-  /** Returns the set of all major modes whose name starts with `modePre`. */
-  def completeMajor (modePre :String) :Set[String]
+  /** Returns the names of all known major modes. */
+  def majorModes :Set[String]
 
-  /** Returns the set of all minor modes whose name starts with `modePre`. */
-  def completeMinor (modePre :String) :Set[String]
+  /** Returns the names of all known minor modes. */
+  def minorModes :Set[String]
 
   /** Returns a list of all active modes. */
   def modes :List[Mode]

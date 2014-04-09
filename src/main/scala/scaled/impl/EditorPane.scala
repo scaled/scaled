@@ -67,11 +67,8 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   private val _focus = Value[OpenBuffer](null)
   _focus onValue onFocusChange
 
-  /** The global editor configuration. */
-  private val _config = new ConfigImpl("editor", None)
-
   /** Used to resolve modes in this editor. */
-  val resolver = new PackageModeResolver(app.pkgMgr, this, _config)
+  val resolver = new AppModeResolver(app, this)
 
   newScratch() // always start with a scratch buffer
 
@@ -170,7 +167,8 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
 
   private def newBuffer (buf :BufferImpl) {
-    val (width, height) = (_config(EditorConfig.viewWidth), _config(EditorConfig.viewHeight))
+    val config = app.cfgMgr.globalConfig
+    val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
     val mode = app.pkgMgr.detectMode(buf)
     val view = new BufferViewImpl(this, buf, width, height)
     val disp = new DispatcherImpl(this, resolver, view, mode, Nil)

@@ -757,8 +757,8 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       s"Mode: ${b.m.name}\nVar: ${b.v.name}\nCurrent value: ${b.current}\n${b.v.descrip}"))
   }
 
-  @Fn("""Updates the value of a config var for the current editor.
-         The value is not persisted across sessions. Use edit-config to make permanent changes.""")
+  @Fn("""Updates the in-memory value of a config var. The value is not persisted across sessions.
+         Use edit-config to make permanent changes.""")
   def setVar () {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
@@ -787,6 +787,6 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
-    editor.miniRead("Mode:", "", disp.completeMinor) onSuccess disp.toggleMode
+    editor.miniRead("Mode:", "", Completers.from(disp.minorModes)) onSuccess disp.toggleMode
   }
 }

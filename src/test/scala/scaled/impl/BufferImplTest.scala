@@ -5,10 +5,8 @@
 package scaled.impl
 
 import java.io.{File, StringReader}
-
-import org.junit._
 import org.junit.Assert._
-
+import org.junit._
 import scaled._
 
 object BufferImplTest {

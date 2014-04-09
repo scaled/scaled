@@ -56,6 +56,11 @@ object Config {
     /** The value to use if this setting is not customized by the user. */
     def defval (config :Config) :T
 
+    /** Converts `value` to a string using this key's converter. */
+    def toString (value :T) = converter.toString(value)
+    /** Converts `value` from a string using this key's converter. */
+    def fromString (value :String) = converter.fromString(value)
+
     override def toString () = (if (global) "global" else "local") + "/" + converter
   }
 
@@ -82,14 +87,19 @@ object Config {
   }
 
   /** Contains metadata for a particular configuration var. */
-  case class Var[T] (name :String, descrip :String, key :Key[T])
+  case class Var[T] (name :String, descrip :String, key :Key[T]) {
+    /** Returns the current value of this var in `config`, converted to a string. */
+    def current (config :Config) :String = key.toString(config(key))
+    /** Converts `value` to the appropriate type for this var and updates it in `config`. */
+    def update (config :Config, value :String) = config(key) = key.fromString(value)
+  }
 
   /** Eases the process of working with a mode's var bindings. */
   case class VarBind[T] (m :Mode, v :Var[T]) {
     /** Returns the current value of this var binding, converted to a string. */
-    def current :String = v.key.converter.toString(m.config(v.key))
+    def current :String = v.current(m.config)
     /** Converts `value` to the appropriate type for this var binding and updates it. */
-    def update (value :String) = m.config(v.key) = v.key.converter.fromString(value)
+    def update (value :String) = v.update(m.config, value)
   }
 
   /** The base class for a collection of configuration definitions. The (global) editor config object

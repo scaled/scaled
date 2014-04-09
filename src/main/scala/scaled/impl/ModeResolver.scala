@@ -9,23 +9,28 @@ import reactual.Future
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 
-case class EnvImpl (editor :Editor, config :Config, view :RBufferView, disp :Dispatcher) extends Env
+abstract class EnvImpl (val editor :Editor, val view :RBufferView, val disp :Dispatcher) extends Env
 
-abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
+abstract class ModeResolver (editor :Editor) {
 
-  def complete (major :Boolean, namePre :String) :Set[String] = Set()
+  /** Returns the names of all known modes, major if `major`, minor if not. */
+  def modes (major :Boolean) :Set[String] = Set()
 
+  /** Returns the names of all minor modes with tags that overlap `tags`. */
   def minorModes (tags :Array[String]) :Set[String] = Set()
 
+  /** Resolves and instantiates the major mode `mode` with the supplied environment. */
   def resolveMajor (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
                     args :List[Any]) :Future[MajorMode] =
     locate(true, mode) flatMap(requireMajor(mode)) flatMap(resolve(mode, view, disp, args))
 
+  /** Resolves and instantiates the minor mode `mode` with the supplied environment. */
   def resolveMinor (mode :String, view :BufferViewImpl, disp :DispatcherImpl, major :MajorMode,
                     args :List[Any]) :Future[MinorMode] =
     locate(false, mode) flatMap(requireMinor(mode)) flatMap(resolve(mode, view, disp, major :: args))
 
   protected def locate (major :Boolean, mode :String) :Future[Class[_]]
+  protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
 
   private def requireMajor (mode :String) =
     reqType(classOf[MajorMode], s"$mode is not a major mode.") _
@@ -34,9 +39,6 @@ abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
   private def reqType[T] (mclass :Class[T], errmsg :String)(clazz :Class[_]) =
     if (mclass.isAssignableFrom(clazz)) Future.success(clazz.asInstanceOf[Class[T]])
     else Future.failure(new IllegalArgumentException(errmsg))
-
-  /** Resolved config instances for each mode. */
-  private val _configs = MMap[String,ConfigImpl]()
 
   private def resolve[T] (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
                           args :List[Any])(modeClass :Class[T]) :Future[T] = try {
@@ -53,8 +55,10 @@ abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
       case Nil => Nil
       case h :: t => if (elem == h) t else h :: minus(t, elem)
     }
-    val config = _configs.getOrElseUpdate(mode, new ConfigImpl(mode, Some(edconfig)))
-    var remargs = EnvImpl(editor, config, view, disp) :: args
+    var remargs = new EnvImpl(editor, view, disp) {
+      def resolveConfig (mode :String, defs :List[Config.Defs]) =
+        ModeResolver.this.resolveConfig(mode, defs)
+    } :: args
     val params = ctor.getParameterTypes.map { p =>
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg
@@ -71,11 +75,12 @@ abstract class ModeResolver (editor :Editor, edconfig :ConfigImpl) {
   }
 }
 
-class PackageModeResolver (pmgr :pkg.PackageManager, editor :Editor, edconfig :ConfigImpl)
-    extends ModeResolver(editor, edconfig) {
+class AppModeResolver (app :Main, editor :Editor) extends ModeResolver(editor) {
 
-  override def complete (major :Boolean, namePre :String) =
-    Set() ++ pmgr.modes(major).filter(_ startsWith namePre)
-  override def minorModes (tags :Array[String]) = pmgr.minorModes(tags)
-  override protected def locate (major :Boolean, mode :String) = pmgr.mode(major, mode)
+  override def modes (major :Boolean) = Set() ++ app.pkgMgr.modes(major)
+  override def minorModes (tags :Array[String]) = app.pkgMgr.minorModes(tags)
+
+  override protected def locate (major :Boolean, mode :String) = app.pkgMgr.mode(major, mode)
+  override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
+    app.cfgMgr.resolveConfig(mode, defs)
 }
