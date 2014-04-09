@@ -84,6 +84,14 @@ object Config {
   /** Contains metadata for a particular configuration var. */
   case class Var[T] (name :String, descrip :String, key :Key[T])
 
+  /** Eases the process of working with a mode's var bindings. */
+  case class VarBind[T] (m :Mode, v :Var[T]) {
+    /** Returns the current value of this var binding, converted to a string. */
+    def current :String = v.key.converter.toString(m.config(v.key))
+    /** Converts `value` to the appropriate type for this var binding and updates it. */
+    def update (value :String) = m.config(v.key) = v.key.converter.fromString(value)
+  }
+
   /** The base class for a collection of configuration definitions. The (global) editor config object
     * ([[EditorConfig]]) extends this as well as each individual mode's config definition object.
     */

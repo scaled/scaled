@@ -240,17 +240,9 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     */
   def downcase (from :Loc, to :Loc) :Loc = buffer.transform(from, to, Character.toLowerCase)
 
-  /** Used by [withConfigVar]. */
-  case class VarBind (m :Mode, v :Config.Var[_]) {
-    /** Returns the current value of this var binding, converted to a string. */
-    def current :String = v.key.converter.toString(m.config(v.key))
-    /** Converts `value` to the appropriate type for this var binding and updates it. */
-    def update (value :String) = m.config(v.key) = v.key.converter.fromString(value)
-  }
-
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
-  def withConfigVar (fn :VarBind => Unit) {
-    val vars = disp.modes.flatMap(m => m.configDefs.flatMap(_.vars).map(v => VarBind(m, v)))
+  def withConfigVar (fn :Config.VarBind[_] => Unit) {
+    val vars = disp.modes.flatMap(m => m.varBindings)
     editor.miniRead("Var:", "", Completers.from(vars)(_.v.name)) onSuccess { vname =>
       vars.find(_.v.name == vname) match {
         case Some(v) => fn(v)

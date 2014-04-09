@@ -68,6 +68,10 @@ abstract class Mode (env :Env) {
     * prepend its object to the returned list. */
   def configDefs :List[Config.Defs] = Nil
 
+  /** Returns bindings for all of this mode's vars. */
+  def varBindings :Seq[Config.VarBind[_]] = configDefs.flatMap(_.vars).map(
+    v => Config.VarBind(this, v))
+
   /** Returns the URL for any custom stylesheets associated with this mode. These should be bundled
     * with the mode and should be referenced via the classloader. A helper method [[stylesheetURL]]
     * is provided to take care of this for you. For example:
