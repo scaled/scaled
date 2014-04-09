@@ -10,6 +10,7 @@ import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 
 import javafx.animation.FadeTransition
 import javafx.application.{Application, Platform}
+import javafx.beans.binding.Bindings
 import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
@@ -51,7 +52,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   }
 
   private val _status = new Label()
-  _status.maxWidthProperty.bind(widthProperty)
+  _status.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
   _status.setWrapText(true)
   _status.getStyleClass.addAll("overpop", "status")
   getChildren.add(_status)
