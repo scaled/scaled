@@ -162,8 +162,6 @@ abstract class MajorMode (env :Env) extends Mode(env) {
   override def tags = if (info == null) Array()   else info.tags
   private lazy val info = getClass.getAnnotation(classOf[Major])
 
-  override def configDefs :List[Config.Defs] = EditorConfig :: super.configDefs
-
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
     * for key presses that result in a "typed" character. Key presses that do not generate
     * characters (i.e. F1, HOME) or which are modified by modifiers other than SHIFT will be passed

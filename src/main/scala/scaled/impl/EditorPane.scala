@@ -153,9 +153,8 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
     val view = visitFile(file)
     app.cfgMgr.configText(mode) match {
       case Some(lines) =>
-        val stock = lines.map(new Line(_))
-        if (stock != view.buffer.region(view.buffer.start, view.buffer.end)) {
-          view.buffer.replace(view.buffer.start, view.buffer.end, stock)
+        if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
+          view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(new Line(_)))
         }
       case None => // TODO
     }
@@ -186,7 +185,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
 
   private def newBuffer (buf :BufferImpl) {
-    val config = app.cfgMgr.globalConfig
+    val config = app.cfgMgr.editorConfig
     val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
     val mode = app.pkgMgr.detectMode(buf)
     val view = new BufferViewImpl(this, buf, width, height)

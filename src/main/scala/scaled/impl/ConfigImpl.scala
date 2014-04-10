@@ -33,12 +33,13 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     _vars.values.toSeq.sortBy(_.name) foreach { v =>
       buf += "" // preceed each var by a blank link and its description
       buf += s"# ${v.descrip}"
-      lookup(v.key) match {
-        case null => buf += s"# ${v.name}: ${v.key.toString(v.key.defval(this))}"
-        case   rv => // TODO: ugh
-          val curval = v.key.asInstanceOf[Config.Key[Object]].toString(rv.get.asInstanceOf[Object])
-          buf += s"${v.name}: $curval"
-      }
+      val defval = v.key.toString(v.key.defval(this))
+      val rv = lookup(v.key)
+      // TODO: oh type system, you fail me so
+      val curval = if (rv == null) defval
+                   else v.key.asInstanceOf[Config.Key[Object]].toString(rv.get.asInstanceOf[Object])
+      val pre = if (curval == defval) "# " else ""
+      buf += s"$pre${v.name}: $curval"
     }
     buf += "" // add a trailing newline
     buf

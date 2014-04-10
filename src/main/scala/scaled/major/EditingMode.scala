@@ -758,7 +758,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   }
 
   @Fn("""Updates the in-memory value of a config var. The value is not persisted across sessions.
-         Use edit-config to make permanent changes.""")
+         Use edit-mode-config to make permanent changes.""")
   def setVar () {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
@@ -791,11 +791,16 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   }
 
   @Fn("Opens the configuration file for the specified mode in a buffer.")
-  def editConfig () {
+  def editModeConfig () {
     val comp = Completers.from(disp.majorModes ++ disp.minorModes)
     editor.miniRead("Mode:", name, comp) onSuccess { mode =>
       if (comp(mode) != Set(mode)) editor.emitStatus(s"Unknown mode: $mode")
       else editor.visitConfig(mode)
     }
+  }
+
+  @Fn("Opens the configuration file for the Scaled editor in a buffer.")
+  def editEditorConfig () {
+    editor.visitConfig("editor")
   }
 }

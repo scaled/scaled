@@ -149,6 +149,13 @@ object Config {
 /** Defines editor-global configurables. */
 object EditorConfig extends Config.Defs(true) {
 
+  @Var("""The default x position of editor views, in pixels.
+          -1 indicates that the view should be centered in the screen.""")
+  val viewLeft = key(-1)
+  @Var("""The default y position of editor views, in pixels.
+          -1 indicates that the view should be centered in the screen.""")
+  val viewTop = key(-1)
+
   @Var("The default width of editor views, in characters.")
   val viewWidth = key(100)
   @Var("The default height of editor views, in characters.")

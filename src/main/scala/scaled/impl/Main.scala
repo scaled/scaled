@@ -2,12 +2,11 @@ package scaled.impl
 
 import java.io.File
 import java.util.concurrent.Executors
-
 import javafx.application.Application
 import javafx.scene.Scene
 import javafx.stage.Stage
-
 import scala.collection.JavaConversions._
+import scaled.EditorConfig
 
 class Main extends Application {
 
@@ -34,6 +33,12 @@ class Main extends Application {
 
     val scene = new Scene(epane)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
+    cfgMgr.editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
+      if (x >= 0) stage.setX(x)
+    }
+    cfgMgr.editorConfig.value(EditorConfig.viewTop) onValueNotify { y =>
+      if (y >= 0) stage.setY(y)
+    }
     stage.setScene(scene)
     stage.show()
   }
