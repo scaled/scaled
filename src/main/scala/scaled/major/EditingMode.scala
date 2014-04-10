@@ -745,7 +745,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   def describeFn () {
     editor.miniRead("Fn:", "", disp.completeFn) onSuccess { fn =>
       disp.describeFn(fn) match {
-        case Some(descrip) => editor.emitStatus(s"Fn: $fn\n$descrip")
+        case Some(descrip) => editor.emitStatus(s"Fn: $fn", descrip)
         case None => editor.emitStatus(s"No such fn: $fn")
       }
     }
@@ -754,7 +754,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   @Fn("Displays the documentation for a config var as well as its current value.")
   def describeVar () {
     withConfigVar(b => editor.emitStatus(
-      s"Mode: ${b.m.name}\nVar: ${b.v.name}\nCurrent value: ${b.current}\n${b.v.descrip}"))
+      s"Mode: ${b.m.name}\nVar: ${b.v.name} (currently: ${b.current})", b.v.descrip))
   }
 
   @Fn("""Updates the in-memory value of a config var. The value is not persisted across sessions.
@@ -764,7 +764,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
       editor.miniRead(prompt, b.current, Completers.none) onSuccess { newval =>
         try b.update(newval) catch {
-          case e :Exception => editor.emitStatus(s"Unable to parse $newval: $e")
+          case e :Exception => editor.emitStatus(s"Unable to parse '$newval':", e.toString)
         }
       }
     }
