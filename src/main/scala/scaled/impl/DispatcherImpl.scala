@@ -224,7 +224,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   }
 
   private class ModeMeta (val mode :Mode) {
-    val fns = new FnBindings(mode, editor.emitStatus)
+    val fns = new FnBindings(mode, m => editor.emitStatus(m))
     val map = DispatcherImpl.parseKeyMap(
       mode.keymap, fns,
       (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),

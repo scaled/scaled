@@ -29,7 +29,7 @@ trait Editor {
 
   /** Briefly displays a status message to the user. The status message will also be appeneded to an
     * editor-wide messages list. */
-  def emitStatus (msg :String) :Unit
+  def emitStatus (msg :String, subtext :String = null) :Unit
 
   /** Reports an unexpected error to the user. The message will also be appended to an editor-wide
     * messages list. */

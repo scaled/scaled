@@ -11,7 +11,7 @@ import javafx.beans.binding.Bindings
 import javafx.event.{ActionEvent, EventHandler}
 import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
-import javafx.scene.layout.{BorderPane, Region}
+import javafx.scene.layout.{BorderPane, Region, VBox}
 import javafx.stage.Stage
 import javafx.util.Duration
 import reactual.{Future, Promise, Value}
@@ -48,11 +48,17 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   }
 
   private val _status = new Label()
-  _status.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
   _status.setWrapText(true)
-  _status.getStyleClass.addAll("overpop", "status")
-  getChildren.add(_status)
-  private val _statusFade = new FadeTransition(Duration.millis(1), _status)
+  _status.getStyleClass.add("status")
+  private val _subStatus = new Label()
+  _subStatus.setWrapText(true)
+  _subStatus.getStyleClass.add("substatus")
+  private val _statusBox = new VBox()
+  _statusBox.getStyleClass.add("overpop")
+  _statusBox.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
+  _statusBox.getChildren.addAll(_status, _subStatus)
+  getChildren.add(_statusBox)
+  private val _statusFade = new FadeTransition(Duration.millis(1), _statusBox)
 
   private val _mini = new MiniOverlay(this) {
     override def onClear () = _focus().area.requestFocus() // restore buffer focus on clear
@@ -72,16 +78,19 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override def defer (op :Runnable) = Platform.runLater(op)
 
-  override def emitStatus (msg :String) {
-    _status.toFront()
+  override def emitStatus (msg :String, subtext :String) {
+    _statusBox.toFront()
     _status.setText(msg)
+    if (subtext != null) _subStatus.setText(subtext)
+    _subStatus.setVisible(subtext != null)
+    _subStatus.setManaged(subtext != null)
     _statusFade.stop()
     _statusFade.setDuration(Duration.millis(150))
     _statusFade.setFromValue(_status.getOpacity)
     _statusFade.setToValue(1d)
     _statusFade.setOnFinished(null)
     _statusFade.play()
-    _status.setVisible(true)
+    _statusBox.setVisible(true)
   }
   override def emitError (err :Throwable) {
     // TODO
@@ -89,15 +98,15 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
     err.printStackTrace(System.err)
   }
   override def clearStatus () = {
-    if (_status.isVisible()) {
+    if (_statusBox.isVisible()) {
       _statusFade.stop()
       _statusFade.setDuration(Duration.millis(300))
-      _statusFade.setFromValue(_status.getOpacity)
+      _statusFade.setFromValue(_statusBox.getOpacity)
       _statusFade.setToValue(0d)
       _statusFade.play()
       _statusFade.setOnFinished(new EventHandler[ActionEvent]() {
         override def handle (event :ActionEvent) {
-          _status.setVisible(false)
+          _statusBox.setVisible(false)
         }
       })
     }
@@ -167,8 +176,8 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
     val vw = bounds.getWidth ; val vh = bounds.getHeight
     // the status overlay is centered in the top 1/4th of the screen
-    if (_status.isVisible) layoutInArea(
-      _status, 0, 0, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
+    if (_statusBox.isVisible) layoutInArea(
+      _statusBox, 0, 0, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
     // the minibuffer overlay is top-aligned at height/4 and extends downward
     if (_mini.isVisible) layoutInArea(
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)

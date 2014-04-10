@@ -25,7 +25,13 @@
 }
 
 .status {
+  -fx-text-fill: white;
   -fx-font-size: 18px;
+}
+
+.substatus {
+  -fx-text-fill: white;
+  -fx-font-size: 12px;
 }
 
 .mini {

@@ -679,7 +679,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
       // what else does emacs do?
       buffer.save()
-      editor.emitStatus(s"Wrote: ${buffer.file.getAbsolutePath}")
+      editor.emitStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
     }
   }
 
@@ -702,7 +702,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
             case false => editor.emitStatus("Canceled.")
             case true =>
               buffer.saveTo(file)
-              editor.emitStatus(s"Wrote: ${buffer.file.getAbsolutePath}")
+              editor.emitStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
           }
       }
     }
