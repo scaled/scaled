@@ -789,4 +789,13 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   def toggleMode () {
     editor.miniRead("Mode:", "", Completers.from(disp.minorModes)) onSuccess disp.toggleMode
   }
+
+  @Fn("Opens the configuration file for the specified mode in a buffer.")
+  def editConfig () {
+    val comp = Completers.from(disp.majorModes ++ disp.minorModes)
+    editor.miniRead("Mode:", name, comp) onSuccess { mode =>
+      if (comp(mode) != Set(mode)) editor.emitStatus(s"Unknown mode: $mode")
+      else editor.visitConfig(mode)
+    }
+  }
 }

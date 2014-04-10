@@ -4,10 +4,7 @@
 
 package scaled.impl
 
-import java.io.File
-
-import scala.collection.mutable.{ArrayBuffer, Map => MMap}
-
+import java.io.{File, StringReader}
 import javafx.animation.FadeTransition
 import javafx.application.{Application, Platform}
 import javafx.beans.binding.Bindings
@@ -17,9 +14,8 @@ import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region}
 import javafx.stage.Stage
 import javafx.util.Duration
-
 import reactual.{Future, Promise, Value}
-
+import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scaled._
 import scaled.major.TextMode
 
@@ -141,6 +137,20 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
         }
     }
     _focus().view
+  }
+
+  override def visitConfig (mode :String) = {
+    val file = app.cfgMgr.configFile(mode)
+    val view = visitFile(file)
+    app.cfgMgr.configText(mode) match {
+      case Some(lines) =>
+        val stock = lines.map(new Line(_))
+        if (stock != view.buffer.region(view.buffer.start, view.buffer.end)) {
+          view.buffer.replace(view.buffer.start, view.buffer.end, stock)
+        }
+      case None => // TODO
+    }
+    view
   }
 
   // we manage layout manually for a variety of nefarious reasons

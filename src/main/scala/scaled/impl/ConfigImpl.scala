@@ -4,11 +4,12 @@
 
 package scaled.impl
 
-import com.google.common.io.Files
-import java.nio.charset.StandardCharsets
 import java.io.File
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.util.HashMap
 import reactual.Value
+import scala.collection.mutable.ArrayBuffer
 import scaled._
 import spray.json._
 
@@ -19,18 +20,28 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
 
   override def toString = s"$name / $parent"
 
-  /** Generates JSON from `cfg`, with "field.default" entries for config vars that have not been
-    * changed from their default values. */
-  def toJson :String = {
-    import DefaultJsonProtocol._
-    (_vars.values.toSeq.sortBy(_.name) map { v =>
+  /** Converts this config to a `properties` file. Config vars that have not been changed from their
+    * default values will have commented out entries indicating the default values, and configured
+    * entries will appear as normal.
+    */
+  def toProperties :Seq[String] = {
+    val buf = new ArrayBuffer[String]()
+    buf += s"# Scaled '$name' config vars"
+    buf += s"#"
+    buf += s"# This file is managed by Scaled. Uncomment and customize the value of any"
+    buf += s"# desired config vars. Other changes will be ignored."
+    _vars.values.toSeq.sortBy(_.name) foreach { v =>
+      buf += "" // preceed each var by a blank link and its description
+      buf += s"# ${v.descrip}"
       lookup(v.key) match {
-        case null => (s"${v.name}.default", v.key.toString(v.key.defval(this)))
+        case null => buf += s"# ${v.name}: ${v.key.toString(v.key.defval(this))}"
         case   rv => // TODO: ugh
-          (s"${v.name}", v.key.asInstanceOf[Config.Key[Object]].toString(
-            rv.get.asInstanceOf[Object]))
+          val curval = v.key.asInstanceOf[Config.Key[Object]].toString(rv.get.asInstanceOf[Object])
+          buf += s"${v.name}: $curval"
       }
-    }).toMap.toJson.prettyPrint
+    }
+    buf += "" // add a trailing newline
+    buf
   }
 
   // TODO: route this into *Messages* buffer or something
@@ -50,22 +61,13 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
 
   private def lookup[T] (key :Config.Key[T]) = _vals.get(key).asInstanceOf[Value[T]]
 
-  private def apply (cfg :Map[String,JsValue]) = cfg foreach {
-    case (nm, jsval) =>
-      _vars.get(nm) match {
-        case None => if (!(nm endsWith ".default")) warn(
-          s"$name config contains unknown/stale setting '$nm'.")
-        case Some(cvar) =>
-          jsval match {
-            case jsstr :JsString => try {
-              resolve(cvar.key)() = cvar.key.converter.fromString(jsstr.value)
-            } catch {
-              case e :Exception => warn(
-                s"$name config contains invalid setting [key=$nm, value=${jsstr.value}]: $e")
-            }
-            case _ => println(s"TODO: ConfigImpl.put($jsval)")
-          }
-      }
+  private def put (key :String, value :String) :Unit = _vars.get(key) match {
+    case None => warn(s"$name config contains unknown/stale setting '$key: $value'.")
+    case Some(cvar) => try {
+      resolve(cvar.key)() = cvar.key.converter.fromString(value)
+    } catch {
+      case e :Exception => warn(s"$name config contains invalid setting: '$key: $value': $e")
+    }
   }
 
   private[this] val _vars = Map[String,Config.Var[_]]() ++ defs.flatMap(_.vars).map(v => v.name -> v)
@@ -73,19 +75,20 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
 }
 
 object ConfigImpl {
-  import DefaultJsonProtocol._
+  import scala.collection.convert.WrapAsScala._
 
   /** Reads the config information from `file` and updates `into` with the configuration read from
     * the file. */
   def readInto (file :File, into :ConfigImpl) :Unit =
-    readInto(file.getName, Files.toString(file, StandardCharsets.UTF_8), into)
+    readInto(file.getName, Files.readAllLines(file.toPath), into)
 
   /** Parses the config information in `text` and updates `into` with the parsed values. */
-  def readInto (name :String, text :String, into :ConfigImpl) {
-    JsonParser(text) match {
-      case json :JsObject => into.apply(json.fields)
+  def readInto (name :String, lines :Seq[String], into :ConfigImpl) {
+    def isComment (l :String) = (l startsWith "#") || (l.length == 0)
+    lines map(_.trim) filterNot(isComment) foreach { _ split(":", 2) match {
+      case Array(key, value) => into.put(key.trim, value.trim)
       // TODO: require errFn so that we can report this bogosity somewhere sensible
-      case what => println(s"$name contains invalid JSON:\n$text")
-    }
+      case other => println(s"$name contains invalid config line:\n${other.toSeq}")
+    }}
   }
 }

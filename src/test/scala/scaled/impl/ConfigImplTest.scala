@@ -11,30 +11,31 @@ import scaled._
 class ConfigImplTest {
 
   @Test def testReadInto () {
-    val impl = new ConfigImpl("scaled", EditorConfig :: Nil, None)
-    val json = """{ "view-width": "15",
-                    "view-height": "25" }"""
-    ConfigImpl.readInto("test", json, impl)
+    val impl = new ConfigImpl("editor", EditorConfig :: Nil, None)
+    val props = Seq("# Scaled editor config",
+                    "", "# View width", "view-width: 15",
+                    "", "# View height", "view-height: 25")
+    ConfigImpl.readInto("test", props, impl)
     assertEquals(15, impl(EditorConfig.viewWidth))
     assertEquals(25, impl(EditorConfig.viewHeight))
   }
 
   @Test def testWrite () {
-    val impl = new ConfigImpl("scaled", EditorConfig :: Nil, None)
+    val impl = new ConfigImpl("editor", EditorConfig :: Nil, None)
 
-    val allDefaults = """{
-  "kill-ring-size.default": "40",
-  "view-height.default": "40",
-  "view-width.default": "100"
-}"""
-    assertEquals(allDefaults, impl.toJson)
+    val allDefaults = Seq(
+      "# Scaled editor config vars",
+      "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",
+      "", "# The default height of editor views, in characters.", "# view-height: 40",
+      "", "# The default width of editor views, in characters.", "# view-width: 100")
+    assertEquals(allDefaults, impl.toProperties)
 
     impl(EditorConfig.viewWidth) = 15
-    val viewWidthChanged = """{
-  "kill-ring-size.default": "40",
-  "view-height.default": "40",
-  "view-width": "15"
-}"""
-    assertEquals(viewWidthChanged, impl.toJson)
+    val viewWidthChanged = Seq(
+      "# Scaled editor config vars",
+      "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",
+      "", "# The default height of editor views, in characters.", "# view-height: 40",
+      "", "# The default width of editor views, in characters.", "view-width: 15")
+    assertEquals(viewWidthChanged, impl.toProperties)
   }
 }
