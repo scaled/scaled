@@ -67,7 +67,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val prev = findNonBlank(pos.row-1)
     val prevIndent = readIndent(prev)
     // if the previous line introduced a new scope, indent from that
-    if (opensScope(prev)) prevIndent + config(indentWidth)
+    if (opensScope(prev)) {
+      prevIndent + config(indentWidth)
+      // TODO: if 'line' closes the scope (starts with }), don't nest indent
+    }
     // if the previous line opened an arg list, indent from that
     else opensArgList(prev) match {
       case -1 => prevIndent // otherwise indent the same as the previous line
