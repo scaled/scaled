@@ -177,7 +177,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
     val vw = bounds.getWidth ; val vh = bounds.getHeight
     // the status overlay is centered in the top 1/4th of the screen
     if (_statusBox.isVisible) layoutInArea(
-      _statusBox, 0, 0, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
+      _statusBox, 0, 3*vh/4, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
     // the minibuffer overlay is top-aligned at height/4 and extends downward
     if (_mini.isVisible) layoutInArea(
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
