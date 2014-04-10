@@ -15,8 +15,8 @@ abstract class Dispatcher {
     * nefarious reasons. */
   def prevFn :String
 
-  /** Returns the set of all fns whose name starts with `fnPre`. */
-  def completeFn (fnPre :String) :Set[String]
+  /** Returns the names of all available fns. */
+  def fns :Set[String]
 
   /** Returns the documentation for `fn` if such fn exists. */
   def describeFn (fn :String) :Option[String]

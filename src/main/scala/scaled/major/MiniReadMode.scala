@@ -19,7 +19,7 @@ class MiniReadMode (
   promise   :Promise[String],
   prompt    :String,
   initText  :Seq[LineV],
-  completer :String => Set[String]
+  completer :Completer
 ) extends MinibufferMode(env, promise) {
 
   miniui.setPrompt(prompt)
@@ -33,30 +33,38 @@ class MiniReadMode (
     "ENTER" -> "commit-read"
   )
 
+  def current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
+
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
-    promise.succeed(contents)
+    val cur = current
+    if (completer.requireCompletion && completer(cur) != Set(cur)) complete()
+    else promise.succeed(contents)
   }
 
   @Fn("Completes the minibuffer contents as much as possible.")
   def complete () {
-    val current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
-    val comps = completer(current)
+    val cur = current
+    val comps = completer(cur)
     if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
     else if (comps.size == 1) {
       miniui.showCompletions(Seq())
       setContents(comps.head)
     }
     else {
-      miniui.showCompletions(comps.toSeq.sorted)
+      // if we have a path separator, strip off the path prefix shared by the current completion;
+      // this results in substantially smaller and more readable completions when we're completing
+      // things like long file system paths
+      val preLen = completer.pathSeparator map(sep => cur.lastIndexOf(sep)+1) getOrElse 0
+      miniui.showCompletions(comps.toSeq.map(_.substring(preLen)).sorted)
       val pre = longestPrefix(comps)
-      if (pre != current) setContents(pre)
+      if (pre != cur) setContents(pre)
     }
   }
 
   private def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
     val buf = new StringBuilder
-    @tailrec def loop (ii :Int) {
+    @inline @tailrec def loop (ii :Int) {
       if (ii < a.length && ii < b.length && a.charAt(ii) == b.charAt(ii)) {
         buf.append(a.charAt(ii))
         loop(ii+1)

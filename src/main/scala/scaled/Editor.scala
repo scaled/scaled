@@ -62,12 +62,9 @@ trait Editor {
     *
     * @param prompt the text to display to the left of the minibuffer when requesting input.
     * @param defval the default value with which to populate the minibuffer.
-    * @param completer a completion function used to generate completions when the user presses TAB.
-    *                  It will be passed the current minibuffer contents (the prefix) and should
-    *                  return the set of all valid completions. The completions should be the
-    *                  entire values, not suffixes to be appended to the prefix.
+    * @param completer used to generate completions when the user presses TAB.
     */
-  def miniRead (prompt :String, defval :String, completer :String => Set[String]) :Future[String] =
+  def miniRead (prompt :String, defval :String, completer :Completer) :Future[String] =
     mini("read", Promise[String](), prompt, Line.fromText(defval), completer)
 
   /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield true

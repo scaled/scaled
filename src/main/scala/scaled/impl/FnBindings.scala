@@ -63,11 +63,6 @@ class FnBindings (mode :Mode, errFn :(String => Unit)) {
   /** Returns the binding with the specified name, or `None`. */
   def binding (name :String) :Option[FnBinding] = _bindmap.get(name)
 
-  /** Returns all bindings with names that start with `prefix`. */
-  def complete (prefix :String) :Set[String] = Set() ++ bindings.collect {
-    case fn if (fn.name startsWith prefix) => fn.name
-  }
-
   private[this] val _bindmap = bindings map(b => (b.name -> b)) toMap
 
   private def extractBindings (clazz :Class[_]) :Seq[FnBinding] = {

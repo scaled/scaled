@@ -127,8 +127,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   override def curFn = _curFn
   override def prevFn = _prevFn
 
-  override def completeFn (fnPre :String) = (Set[String]() /: _metas) {
-    (fns, meta) => fns ++ meta.fns.complete(fnPre) }
+  override def fns = (Set[String]() /: _metas) { _ ++ _.fns.bindings.map(_.name) }
   override def describeFn (fn :String) = findFn(fn) map(_.descrip)
   override def majorModes = resolver.modes(true)
   override def minorModes = resolver.modes(false)
