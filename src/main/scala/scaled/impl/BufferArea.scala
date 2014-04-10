@@ -77,6 +77,11 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     override def invalidated (valueModel :Observable) = updateFontMetrics()
   })
 
+  /** Returns the number of characters that we can fit in the specified pixel width. */
+  def widthInChars (width :Double) :Int = (width / charWidth).toInt
+  /** Returns the number of characters that we can fit in the specified pixel height. */
+  def heightInChars (height :Double) :Int = (height / lineHeight).toInt
+
   private var charWidth  = 0d
   private var lineHeight = 0d
 
@@ -357,8 +362,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
     // resize seems to be called any time anything happens, so avoid doing a lot of extra work if
     // our size didn't actually change
-    val nwc = (nw / charWidth).toInt
-    val nhc = (nh / lineHeight).toInt
+    val nwc = widthInChars(nw) ; val nhc = heightInChars(nh)
     if (nwc != bview.width() || nhc != bview.height()) {
       // println(s"VP resized $nw x $nh -> $nwc x $nhc")
       wasResized(nwc, nhc)
