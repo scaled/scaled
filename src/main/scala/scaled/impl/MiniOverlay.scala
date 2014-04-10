@@ -4,17 +4,15 @@
 
 package scaled.impl
 
+import com.sun.javafx.tk.Toolkit
 import javafx.geometry.Insets
 import javafx.scene.control.Label
 import javafx.scene.layout.BorderPane
-
 import scala.annotation.tailrec
-
-import reactual.{Future, Promise}
-
 import scaled._
 import scaled.major.MiniUI
 import scaled.major.MinibufferMode
+import reactual.{Future, Promise}
 
 abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
@@ -45,9 +43,10 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
     override def showCompletions (comps :Seq[String]) {
       if (comps.isEmpty) setBottom(null)
       else {
-        cview.buffer.replace(cview.buffer.start, cview.buffer.end, comps.map(new Line(_)))
-        cview.width() = comps.map(_.length).max
-        cview.height() = comps.length
+        val fcomps = formatCompletions(comps)
+        cview.buffer.replace(cview.buffer.start, cview.buffer.end, fcomps.map(new Line(_)))
+        cview.width() = fcomps.map(_.length).max
+        cview.height() = fcomps.length
         setBottom(carea)
         BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
       }
@@ -90,5 +89,19 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
       result.fail(e)
       editor.emitStatus(e.getMessage)
       result
+  }
+
+  private def formatCompletions (comps :Seq[String]) :Seq[String] = {
+    // our completion area might not have been shown yet, so we have to get the font width
+    // from the prompt label and then do the pixel to char max width math ourselves; sigh...
+    val fm = Toolkit.getToolkit.getFontLoader.getFontMetrics(plabel.getFont)
+    val charWidth = fm.computeStringWidth("W")
+    // add a gap of two chars between columns
+    val colWid = comps.map(_.length).max+2
+    // leave two columns on either side to accommodate padding
+    val availWid = (getMaxWidth / charWidth).toInt - 4
+    val cols = availWid / colWid
+    if (cols <= 1) comps
+    else comps.grouped(cols).map(_.map(s"%-${colWid}s".format(_)).mkString).toSeq
   }
 }
