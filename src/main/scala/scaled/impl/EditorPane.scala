@@ -63,6 +63,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   private val _mini = new MiniOverlay(this) {
     override def onClear () = _focus().area.requestFocus() // restore buffer focus on clear
   }
+  _mini.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
   getChildren.add(_mini)
 
   // we manage focus specially, via this reactive value
