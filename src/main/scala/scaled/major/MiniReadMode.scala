@@ -38,7 +38,7 @@ class MiniReadMode (
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
     val cur = current
-    if (completer.requireCompletion && completer(cur) != Set(cur)) complete()
+    if (completer.requireCompletion && !completer(cur)(cur)) complete()
     else promise.succeed(contents)
   }
 
