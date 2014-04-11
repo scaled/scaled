@@ -10,32 +10,39 @@ import scaled._
 
 class ConfigImplTest {
 
+  object TestConfig extends Config.Defs(true) {
+    @Var("The default width of editor views, in characters.")
+    val viewWidth = key(100)
+    @Var("The default height of editor views, in characters.")
+    val viewHeight = key(40)
+    @Var("The number of entries retained by the kill ring.")
+    val killRingSize = key(40)
+  }
+
   @Test def testReadInto () {
-    val impl = new ConfigImpl("editor", EditorConfig :: Nil, None)
+    val impl = new ConfigImpl("editor", TestConfig :: Nil, None)
     val props = Seq("# Scaled editor config",
                     "", "# View width", "view-width: 15",
                     "", "# View height", "view-height: 25")
     ConfigImpl.readInto("test", props, impl)
-    assertEquals(15, impl(EditorConfig.viewWidth))
-    assertEquals(25, impl(EditorConfig.viewHeight))
+    assertEquals(15, impl(TestConfig.viewWidth))
+    assertEquals(25, impl(TestConfig.viewHeight))
   }
 
   @Test def testWrite () {
-    val impl = new ConfigImpl("editor", EditorConfig :: Nil, None)
+    val impl = new ConfigImpl("editor", TestConfig :: Nil, None)
 
     val allDefaults = Seq(
-      "# Scaled editor config vars",
       "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",
       "", "# The default height of editor views, in characters.", "# view-height: 40",
       "", "# The default width of editor views, in characters.", "# view-width: 100")
-    assertEquals(allDefaults, impl.toProperties)
+    assertTrue(impl.toProperties containsSlice allDefaults)
 
-    impl(EditorConfig.viewWidth) = 15
+    impl(TestConfig.viewWidth) = 15
     val viewWidthChanged = Seq(
-      "# Scaled editor config vars",
       "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",
       "", "# The default height of editor views, in characters.", "# view-height: 40",
       "", "# The default width of editor views, in characters.", "view-width: 15")
-    assertEquals(viewWidthChanged, impl.toProperties)
+    assertTrue(impl.toProperties containsSlice viewWidthChanged)
   }
 }
