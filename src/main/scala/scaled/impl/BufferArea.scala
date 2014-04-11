@@ -255,12 +255,12 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       // if the cursor is out of view, scroll it back to the center of the screen
       val (scrollTop, height) = (bview.scrollTop(), bview.height())
       val scrollTopMax = math.max(0, bview.buffer.lines.length-height+1)
-      if (point.row < scrollTop || point.row >= scrollTop + height)
+      if (point.row < scrollTop || point.row >= scrollTop + height || scrollTop > scrollTopMax)
         bview.scrollTop() = math.min(scrollTopMax, math.max(0, point.row-height/2))
 
       val (scrollLeft, width) = (bview.scrollLeft(), bview.width())
       val scrollLeftMax = math.max(0, maxLenTracker.maxLength-width+1)
-      if (point.col < scrollLeft || point.col >= scrollLeft + width)
+      if (point.col < scrollLeft || point.col >= scrollLeft + width || scrollLeft > scrollLeftMax)
         bview.scrollLeft() = math.min(scrollLeftMax, math.max(0, point.col-width+1))
 
       // println(s"Cursor at ${point.col} x ${point.row} => " +
