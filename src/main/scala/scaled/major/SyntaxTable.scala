@@ -13,15 +13,15 @@ trait Syntax
 
 /** Defines standard syntax classes. */
 object Syntax {
-  // TODO: which of these do we really need?
   case object Whitespace  extends Syntax
   case object Word        extends Syntax
-  case object Symbol      extends Syntax
   case object Punctuation extends Syntax
-  case object Quote       extends Syntax
-  case object Escape      extends Syntax
-  case class  OpenDelim (close :Char) extends Syntax
-  case class  CloseDelim (open :Char) extends Syntax
+
+  // case object Symbol      extends Syntax
+  // case object Quote       extends Syntax
+  // case object Escape      extends Syntax
+  // case class  OpenDelim (close :Char) extends Syntax
+  // case class  CloseDelim (open :Char) extends Syntax
 }
 
 /** Maps characters to a syntax class. Editing modes make use of syntax tables for a variety of
