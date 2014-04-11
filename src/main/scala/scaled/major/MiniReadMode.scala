@@ -5,6 +5,7 @@
 package scaled.major
 
 import scala.annotation.tailrec
+import scala.collection.immutable.TreeMap
 
 import reactual.Promise
 import scaled._
@@ -13,13 +14,13 @@ import scaled._
   A minibuffer mode that queries the user for a string, using a supplied completion function to
   allow the user to tab-complete their way to satisfaction.
 """)
-class MiniReadMode (
+class MiniReadMode[T] (
   env       :Env,
   miniui    :MiniUI,
-  promise   :Promise[String],
+  promise   :Promise[T],
   prompt    :String,
   initText  :Seq[LineV],
-  completer :Completer
+  completer :Completer[T]
 ) extends MinibufferMode(env, promise) {
 
   miniui.setPrompt(prompt)
@@ -37,15 +38,19 @@ class MiniReadMode (
 
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
-    val cur = current
-    if (completer.requireCompletion && !completer(cur)(cur)) complete()
-    else promise.succeed(contents)
+    val cur = current ; val comps = completer(cur)
+    // if the current selection is valid, use it; next, see if the completer will turn
+    // the current string into a selection; lastly, use the lexically first selection
+    comps.get(cur) orElse completer.fromString(cur) orElse comps.headOption.map(_._2) match {
+      case Some(result) => promise.succeed(result)
+      case None         => complete()
+    }
   }
 
   @Fn("Completes the minibuffer contents as much as possible.")
   def complete () {
     val cur = current
-    val comps = completer(cur)
+    val comps = completer(cur).keySet
     if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
     else if (comps.size == 1) {
       miniui.showCompletions(Seq())
@@ -56,7 +61,7 @@ class MiniReadMode (
       // this results in substantially smaller and more readable completions when we're completing
       // things like long file system paths
       val preLen = completer.pathSeparator map(sep => cur.lastIndexOf(sep)+1) getOrElse 0
-      miniui.showCompletions(comps.toSeq.map(_.substring(preLen)).sorted)
+      miniui.showCompletions(comps.map(_.substring(preLen)).toSeq)
       val pre = longestPrefix(comps)
       if (pre != cur) setContents(pre)
     }
@@ -73,5 +78,5 @@ class MiniReadMode (
     loop(0)
     buf.toString
   }
-  private def longestPrefix (comps :Set[String]) = comps reduce sharedPrefix
+  private def longestPrefix (comps :Iterable[String]) = comps reduce sharedPrefix
 }

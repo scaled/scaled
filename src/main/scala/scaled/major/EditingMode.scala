@@ -665,8 +665,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   @Fn("""Reads a filename from the minibuffer and switches to a filename visiting it.""")
   def findFile () {
     val bufwd = buffer.dir.getAbsolutePath + File.separator
-    editor.miniRead("Find file:", bufwd, Completer.file) onSuccess { path =>
-      val file = new File(path)
+    editor.miniRead("Find file:", bufwd, Completer.file) onSuccess { file =>
       if (file.isDirectory) editor.emitStatus(
         "Scaled does not support editing directories. Use Emacs.")
       else editor.visitFile(file)
@@ -689,17 +688,17 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
          in the specified directory.""")
   def writeFile () {
     val bufwd = buffer.dir.getAbsolutePath + File.separator
-    editor.miniRead("Write file:", bufwd, Completer.file) onSuccess { path =>
-      val file = new File(path).getCanonicalFile
+    editor.miniRead("Write file:", bufwd, Completer.file) onSuccess { lfile =>
+      val file = lfile.getCanonicalFile
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
       (if (!editor.buffers.exists(_.file == file)) Future.success(true)
-      else editor.miniReadYN(s"A buffer is visiting '$path'; proceed?")) onSuccess {
+      else editor.miniReadYN(s"A buffer is visiting '$lfile'; proceed?")) onSuccess {
         case false => editor.emitStatus("Canceled.")
         case true =>
           // require confirmation if the target file already exists
           (if (!file.exists) Future.success(true)
-          else editor.miniReadYN(s"File '$path' exists; overwrite?")) onSuccess {
+          else editor.miniReadYN(s"File '$lfile' exists; overwrite?")) onSuccess {
             case false => editor.emitStatus("Canceled.")
             case true =>
               buffer.saveTo(file)

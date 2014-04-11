@@ -64,8 +64,8 @@ trait Editor {
     * @param defval the default value with which to populate the minibuffer.
     * @param completer used to generate completions when the user presses TAB.
     */
-  def miniRead (prompt :String, defval :String, completer :Completer) :Future[String] =
-    mini("read", Promise[String](), prompt, Line.fromText(defval), completer)
+  def miniRead[R] (prompt :String, defval :String, completer :Completer[R]) :Future[R] =
+    mini("read", Promise[R](), prompt, Line.fromText(defval), completer)
 
   /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield true
     * for 'y', false for 'n', and which will fail if input was canceled.
