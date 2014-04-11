@@ -15,14 +15,28 @@ abstract class Completer[T] {
     * The completions should be complete values, not suffixes to be applied to `prefix. */
   def apply (prefix :String) :SortedMap[String,T]
 
-  /** Generates a `T` from the supplied string. Return `None` to restrict the user to selecting
-    * from one of the returned prefixes, return `Some(t)` to allow the user to enter any string
-    * and have it turned into a valid result. */
-  def fromString (value :String) :Option[T]
+  /** Requests to commit this completion with the specified current value. If `Some(r)` is
+    * returned, the completion will finish with that result. If `None` is returned, the
+    * user will be required to keep going until they provide a valid completion.
+    *
+    * The default implementation checks whether current is currently a valid completion, and
+    * uses it, if so. Otherwise it calls `fromString` and uses that result if possible. Finally
+    * it attempts to return the lexically first current completion (which is what will be
+    * displayed at the top of the completions list).
+    */
+  def commit (current :String) :Option[T] = {
+    val comps = apply(current)
+    comps.get(current) orElse fromString(current) orElse comps.headOption.map(_._2)
+  }
 
   /** If the value being completed is a path, this separator will be used to omit the path elements
     * shared by the currently displayed prefix and the current completions. */
   def pathSeparator :Option[String] = None
+
+  /** Generates a `T` from the supplied string. Return `None` to restrict the user to selecting
+    * from one of the returned prefixes, return `Some(t)` to allow the user to enter any string
+    * and have it turned into a valid result. */
+  protected def fromString (value :String) :Option[T] = None
 
   /** Converts `rs` into a map, obtaining the key via `fn`. If multiple entries map to the same name
     * via `fn`, an arbitrary selection is made. */
@@ -36,14 +50,14 @@ object Completer {
   /** A noop completer for strings. */
   val none :Completer[String] = new Completer[String] {
     def apply (prefix :String) = TreeMap(prefix -> prefix)
-    def fromString (value :String) = Some(value)
+    override protected def fromString (value :String) = Some(value)
   }
 
   /** Returns a completer over `names`.
     * @param requireComp whether to require a completion from the supplied set. */
   def from (names :Set[String], requireComp :Boolean) :Completer[String] = new Completer[String] {
     def apply (prefix :String) = selfMap(names.filter(_ startsWith prefix).toSeq)
-    def fromString (value :String) = if (requireComp) None else Some(value)
+    override protected def fromString (value :String) = if (requireComp) None else Some(value)
   }
 
   /** Returns a completer over `things` using `nameFn` to obtain  thing's name.
@@ -61,7 +75,7 @@ object Completer {
     def apply (prefix :String) = selfMap(editor.buffers.collect {
       case (buf) if (!except(buf.name) && (buf.name startsWith prefix)) => buf.name
     })
-    def fromString (value :String) = Some(value)
+    override protected def fromString (value :String) = Some(value)
   }
 
   private def selfMap (names :Seq[String]) = TreeMap(names.map(n => (n, n)) :_*)
@@ -72,8 +86,8 @@ object Completer {
       case -1  => expand(File.listRoots.head /*TODO*/, path)
       case idx => expand(new File(path.substring(0, idx+1)), path.substring(idx+1))
     }
-    def fromString (value :String) = Some(new File(value))
     override def pathSeparator = Some(File.separator)
+    override protected def fromString (value :String) = Some(new File(value))
 
     private def expand (dir :File, prefix :String) = {
       val edir = massage(dir)

@@ -38,10 +38,7 @@ class MiniReadMode[T] (
 
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
-    val cur = current ; val comps = completer(cur)
-    // if the current selection is valid, use it; next, see if the completer will turn
-    // the current string into a selection; lastly, use the lexically first selection
-    comps.get(cur) orElse completer.fromString(cur) orElse comps.headOption.map(_._2) match {
+    completer.commit(current) match {
       case Some(result) => promise.succeed(result)
       case None         => complete()
     }
@@ -71,9 +68,15 @@ class MiniReadMode[T] (
   private def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
     val buf = new StringBuilder
     @inline @tailrec def loop (ii :Int) {
-      if (ii < a.length && ii < b.length && a.charAt(ii) == b.charAt(ii)) {
-        buf.append(a.charAt(ii))
-        loop(ii+1)
+      if (ii < a.length && ii < b.length) {
+        val ra = a.charAt(ii) ; val la = Character.toLowerCase(ra)
+        val rb = b.charAt(ii) ; val lb = Character.toLowerCase(rb)
+        if (la == lb) {
+          // if everyone uses uppercase here, keep the prefix uppercase, otherwise lower
+          val c = if (Character.isUpperCase(ra) && Character.isUpperCase(rb)) ra else la
+          buf.append(c)
+          loop(ii+1)
+        }
       }
     }
     loop(0)
