@@ -11,7 +11,6 @@ import java.util.HashMap
 import reactual.Value
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import spray.json._
 
 class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl]) extends Config {
 
