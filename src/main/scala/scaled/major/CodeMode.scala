@@ -46,8 +46,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap ++ Seq(
-    "ENTER" -> "newline-and-indent",
-    "TAB"   -> "reindent"
+    "ENTER"   -> "newline-and-indent",
+    "S-ENTER" -> "newline-and-indent",
+    "TAB"     -> "reindent"
   )
 
   /** Returns the number of whitespace chars at the start of `line`. */
