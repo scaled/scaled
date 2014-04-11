@@ -57,13 +57,14 @@ class MiniReadMode[T] (
       setContents(comps.head)
     }
     else {
+      // replace the current contents with the longest shared prefix of the completions
+      val pre = longestPrefix(comps)
+      if (pre != cur) setContents(pre)
       // if we have a path separator, strip off the path prefix shared by the current completion;
       // this results in substantially smaller and more readable completions when we're completing
       // things like long file system paths
-      val preLen = completer.pathSeparator map(sep => cur.lastIndexOf(sep)+1) getOrElse 0
+      val preLen = completer.pathSeparator map(sep => pre.lastIndexOf(sep)+1) getOrElse 0
       miniui.showCompletions(comps.map(_.substring(preLen)).toSeq)
-      val pre = longestPrefix(comps)
-      if (pre != cur) setContents(pre)
     }
   }
 
