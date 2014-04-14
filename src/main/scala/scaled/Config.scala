@@ -57,41 +57,41 @@ object Config {
     def defval (config :Config) :T
 
     /** Converts `value` to a string using this key's converter. */
-    def toString (value :T) = converter.toString(value)
+    def show (value :T) = converter.show(value)
     /** Converts `value` from a string using this key's converter. */
-    def fromString (value :String) = converter.fromString(value)
+    def read (value :String) = converter.read(value)
 
     override def toString () = (if (global) "global" else "local") + "/" + converter
   }
 
   /** Converts values to and from strings. */
   abstract class Converter[T] {
-    def toString (value :T) :String
-    def fromString (value :String) :T
+    def show (value :T) :String
+    def read (value :String) :T
   }
   object IntC extends Converter[Int] {
-    override def toString (value :Int) = value.toString
-    override def fromString (value :String) = value.toInt
+    override def show (value :Int) = value.toString
+    override def read (value :String) = value.toInt
     override def toString = "Int"
   }
   object BoolC extends Converter[Boolean] {
-    override def toString (value :Boolean) = value.toString
-    override def fromString (value :String) =
+    override def show (value :Boolean) = value.toString
+    override def read (value :String) =
       (value equalsIgnoreCase "true") || (value equalsIgnoreCase "t")
     override def toString = "Boolean"
   }
   object StringC extends Converter[String] {
-    override def toString (value :String) = value
-    override def fromString (value :String) = value
+    override def show (value :String) = value
+    override def read (value :String) = value
     override def toString = "String"
   }
 
   /** Contains metadata for a particular configuration var. */
   case class Var[T] (name :String, descrip :String, key :Key[T]) {
     /** Returns the current value of this var in `config`, converted to a string. */
-    def current (config :Config) :String = key.toString(config(key))
+    def current (config :Config) :String = key.show(config(key))
     /** Converts `value` to the appropriate type for this var and updates it in `config`. */
-    def update (config :Config, value :String) = config(key) = key.fromString(value)
+    def update (config :Config, value :String) = config(key) = key.read(value)
   }
 
   /** Eases the process of working with a mode's var bindings. */

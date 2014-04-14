@@ -32,11 +32,11 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     _vars.values.toSeq.sortBy(_.name) foreach { v =>
       buf += "" // preceed each var by a blank link and its description
       buf += s"# ${v.descrip}"
-      val defval = v.key.toString(v.key.defval(this))
+      val defval = v.key.show(v.key.defval(this))
       val rv = lookup(v.key)
       // TODO: oh type system, you fail me so
       val curval = if (rv == null) defval
-                   else v.key.asInstanceOf[Config.Key[Object]].toString(rv.get.asInstanceOf[Object])
+                   else v.key.asInstanceOf[Config.Key[Object]].show(rv.get.asInstanceOf[Object])
       val pre = if (curval == defval) "# " else ""
       buf += s"$pre${v.name}: $curval"
     }
@@ -64,7 +64,7 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
   private def put (key :String, value :String) :Unit = _vars.get(key) match {
     case None => warn(s"$name config contains unknown/stale setting '$key: $value'.")
     case Some(cvar) => try {
-      resolve(cvar.key)() = cvar.key.converter.fromString(value)
+      resolve(cvar.key)() = cvar.key.converter.read(value)
     } catch {
       case e :Exception => warn(s"$name config contains invalid setting: '$key: $value': $e")
     }
