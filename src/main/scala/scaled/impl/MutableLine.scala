@@ -144,7 +144,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     * the style has been applied to the entire region. */
   def updateStyles (fn :Styles => Styles, loc :Loc, last :Int = length) {
     val end = math.min(length, last)
-    @tailrec def loop (pos :Int, first :Int) :Int = if (pos == end) first else {
+    @tailrec def loop (pos :Int, first :Int) :Int = if (pos >= end) first else {
       val ostyles = _styles(pos) ; val nstyles = fn(ostyles)
       if (nstyles eq ostyles) loop(pos+1, first)
       else {
