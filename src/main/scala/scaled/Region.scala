@@ -12,6 +12,9 @@ trait Region {
 
   /** The location immediately following the last location in the region. */
   def end :Loc
+
+  /** Returns true if this region (`[start,end)`) contains `loc`. */
+  def contains (loc :Loc) :Boolean = start == loc || (start < loc && loc < end)
 }
 
 object Region {

@@ -314,27 +314,23 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   bview.point onValueNotify contentNode.updateCursor
   // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
   // (TODO: this seems error prone, is there a better way?)
-  bview.buffer.lineEdited.onValue { change =>
+  bview.buffer.edited.onValue { edit =>
     // the point may be temporarily invalid while edits are being undone, so NOOP in that case
     // because the correct point will be restored after the undo is completed
     val point = bview.point()
     val pointValid = point.row < bview.buffer.lines.size
-    // TODO: make this more precise?
-    if (pointValid && point.row == change.loc.row && change.deleted > 0) {
-      contentNode.updateCursor(point)
-    }
+    if (pointValid && edit.contains(point)) contentNode.updateCursor(point)
   }
 
   // listen for addition and removal of lines
-  bview.buffer.edited.onValue { change =>
-    // println(s"Lines @${change.offset} +${change.added} -${change.deleted}")
-    if (change.deleted > 0) {
-      lineNodes.getChildren.remove(change.offset, change.offset+change.deleted)
+  bview.changed.onValue { change =>
+    // println(s"Lines @${change.row} ${change.delta}")
+    if (change.delta < 0) {
+      lineNodes.getChildren.remove(change.row, change.row-change.delta)
       // TODO: let these nodes know they've been removed so they can cleanup?
-    }
-    if (change.added > 0) {
-      val nodes = bview.lines.slice(change.offset, change.offset+change.added).map(_.node)
-      lineNodes.getChildren.addAll(change.offset, nodes)
+    } else if (change.delta > 0) {
+      val nodes = bview.lines.slice(change.row, change.row+change.delta).map(_.node)
+      lineNodes.getChildren.addAll(change.row, nodes)
     }
     requestLayout()
   }

@@ -14,7 +14,6 @@ import scaled._
 class UndoStack (buffer :BufferImpl) extends Undoer {
 
   buffer.edited.onValue { edit => accum += edit }
-  buffer.lineEdited.onValue { edit => accum += edit }
 
   def actionWillStart (point :Loc) {
     _point = point
@@ -82,9 +81,9 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
       // determine whether the edits we're accumulating are a simple single character insert (which
       // we call 'typing') and whether the inserted character is a word break character
       val (isTyping, isWordBreak) = edits match {
-        case Seq(le :Line.Edit) =>
-          val isSingleChar = le.deleted == 0 && le.added == 1
-          (isSingleChar, isSingleChar && isBreakChar(le.addedChar(0)))
+        case Seq(le :Buffer.Edit) =>
+          val isSingleChar = le.end == le.start.nextC
+          (isSingleChar, isSingleChar && isBreakChar(le.buffer.charAt(le.start)))
         case _ => (false, false)
       }
 

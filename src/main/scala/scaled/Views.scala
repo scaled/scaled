@@ -4,7 +4,7 @@
 
 package scaled
 
-import reactual.{Future, Property, OptValue, Value, ValueV}
+import reactual.{Future, Property, OptValue, SignalV, Value, ValueV}
 
 /** Visualizes a single line of text, potentially with style information. */
 abstract class LineView {
@@ -66,11 +66,28 @@ abstract class BufferView {
   }
 }
 
+/** `BufferView` related types and utilities. */
+object BufferView {
+
+  /** An event emitted when lines are added to or removed from the buffer view. The removed lines
+    * will have already been removed and the added lines added when this edit is dispatched. */
+  case class Change (
+    /** The row at which the additions or removals start. */
+    row :Int,
+    /** If positive, the number of rows added, if negative the number of rows deleted. */
+    delta :Int,
+    /** The buffer view that was edited. */
+    view :BufferView)
+}
+
 /** A reactive version of [BufferView], used by modes. */
 abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView {
 
   /** The (reactive) buffer being displayed by this view. */
   override def buffer :RBuffer
+
+  /** A signal emitted when lines are added to or removed from this view. */
+  def changed :SignalV[BufferView.Change]
 
   /** The current point (aka the cursor position). */
   val point :Value[Loc] = new Value(Loc(0, 0)) {

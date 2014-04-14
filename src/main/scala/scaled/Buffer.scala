@@ -38,7 +38,7 @@ trait Anchor {
   * @define RNLNOTE Note: the last line does not conceptually include a trailing newline, and
   * [[insert(Loc,Seq[LineV])]] takes this into account.
   */
-abstract class BufferV {
+abstract class BufferV extends Region {
 
   /** The name of this buffer. Tends to be the name of the file from which it was read, but may
     * differ if two buffers exist with the same file name. */
@@ -264,25 +264,18 @@ abstract class Buffer extends BufferV {
   /** Deletes `count` characters from the line at `loc`.
     * @return the deleted chars as a line. */
   def delete (loc :Loc, count :Int) :Line
-
   /** Deletes the data between `[start, until)` from the buffer. Returns a copy of the deleted data.
     * $RNLNOTE */
   def delete (start :Loc, until :Loc) :Seq[Line]
   /** Deletes the data in region `r` from the buffer. Returns a copy of the deleted data. $RNLNOTE */
   def delete (r :Region) :Seq[Line] = delete(r.start, r.end)
 
-  /** Replaces `delete` characters in the line at `loc` with the `line`.
+  /** Replaces `count` characters in the line at `loc` with the `line`.
     * @return the replaced characters as a line. */
-  def replace (loc :Loc, delete :Int, line :LineV) :Line
-
+  def replace (loc :Loc, count :Int, line :LineV) :Line
   /** Replaces the region between `[start, until)` with `lines`.
     * @return the buffer location just after the replaced region. */
-  def replace (start :Loc, until :Loc, lines :Seq[LineV]) :Loc = {
-    if (until < start) replace(until, start, lines) else {
-      delete(start, until)
-      insert(start, lines)
-    }
-  }
+  def replace (start :Loc, until :Loc, lines :Seq[LineV]) :Loc
   /** Replaces the region `r` with `lines`.
     * @return the buffer location just after the replaced region. */
   def replace (r :Region, lines :Seq[LineV]) :Loc = replace(r.start, r.end, lines)
@@ -315,35 +308,34 @@ abstract class Buffer extends BufferV {
   def removeStyle (style :String, start :Loc, until :Loc) = updateStyles(_ - style, start, until)
   /** Removes CSS style class `style` from the characters in region `r`. */
   def removeStyle (style :String, r :Region) :Unit = removeStyle(style, r.start, r.end)
-
-  private[scaled] def undo (edit :Buffer.Edit) :Unit
 }
 
 /** `Buffer` related types and utilities. */
 object Buffer {
 
-  /** An event emitted when one or more lines are deleted from a buffer and replaced by one or more
-    * new lines. The removed lines will have already been removed and the added lines added when
-    * this edit is dispatched. */
-  case class Edit (
-    /** The offset (zero-based line number) in the buffer at which lines were replaced. */
-    offset :Int,
-    /** The lines that were deleted. */
-    deletedLines :Seq[Line],
-    /** The number of lines that were added. */
-    added :Int,
-    /** The buffer that was edited. */
-    buffer :Buffer) extends Undoable {
+  /** Conveys information about a buffer edit. See [[Insert]], [[Delete]], [[Transform]]. */
+  sealed trait Edit extends Region with Undoable {
+    def buffer :Buffer
+  }
 
-    /** Extracts and returns the lines that were added. */
-    def addedLines :Seq[LineV] = buffer.lines.slice(offset, offset+added)
-    /** The number of lines that were deleted. */
-    def deleted :Int = deletedLines.size
+  /** An event emitted when text is inserted into a buffer. */
+  case class Insert (start :Loc, end :Loc, buffer :Buffer) extends Edit {
+    def undo () = buffer.delete(start, end)
+    override def toString = s"Edit[+${Region.toString(this)}]"
+  }
 
-    /** Undoes this edit. */
-    override def undo () :Unit = buffer.undo(this)
+  /** An event emitted when text is deleted from a buffer. */
+  case class Delete (start :Loc, deletedRegion :Seq[Line], buffer :Buffer) extends Edit {
+    val end :Loc = start + deletedRegion
+    def undo () = buffer.insert(start, deletedRegion)
+    override def toString = s"Edit[-${Region.toString(this)}]"
+  }
 
-    override def toString = s"BEdit[@$offset, -${deletedLines.size} +$added"
+  /** An event emitted when text in a buffer is transformed. */
+  case class Transform (start :Loc, original :Seq[Line], buffer :Buffer) extends Edit {
+    val end :Loc = start + original
+    def undo () = buffer.replace(start, end, original)
+    override def toString = s"Edit[!${Region.toString(this)}]"
   }
 }
 
@@ -364,9 +356,6 @@ abstract class RBuffer extends Buffer {
 
   /** A signal emitted when this buffer is edited. */
   def edited :SignalV[Buffer.Edit]
-
-  /** A signal emitted when any of this buffer's lines are edited. */
-  def lineEdited :SignalV[Line.Edit]
 
   /** A signal emitted when a line in this buffer has a CSS style applied to it. The emitted `Loc`
     * will contain the row of the line that was edited and the positon of the earliest character to

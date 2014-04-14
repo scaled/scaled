@@ -159,7 +159,6 @@ class ISearchMode (
     }
   }
   buffer.edited onEmit queueRefresh
-  buffer.lineEdited onEmit queueRefresh
 
   override def configDefs = ISearchConfig :: super.configDefs
   override def keymap = Seq(

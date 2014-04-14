@@ -6,29 +6,41 @@ package scaled.impl
 
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.Toolkit
-
 import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
-
+import scala.annotation.tailrec
 import scaled._
 
 /** Various utilities used by our controls. */
 object Utils {
 
   class MaxLengthTracker (buffer :RBuffer) {
-    def maxLength :Int = _maxLength
-    private var _maxLength = buffer.lines.map(_.length).max
-    buffer.lineEdited.onValue { edit =>
-      val nlen = buffer.line(edit.loc).length
-      // if this line is longer than our current max length, increase it
-      if (nlen > _maxLength) _maxLength = nlen
-      // otherwise if this line's old length was our max length,
-      // we need to rescan the buffer to find the new longest line
-      else {
-        val olen = nlen - edit.added + edit.deleted
-        if (olen >= _maxLength) _maxLength = buffer.lines.map(_.length).max
-      }
+    def maxLength :Int = buffer.lines(_maxRow).length
+
+    private var _maxRow = longest(buffer.lines, 0, buffer.lines.length)
+    private def longest (lines :Seq[LineV], start :Int, end :Int) :Int = {
+      @inline @tailrec def loop (cur :Int, max :Int, maxLen :Int) :Int =
+        if (cur >= end) max
+        else {
+          val curLen = lines(cur).length
+          if (curLen > maxLen) loop(cur+1, cur, curLen)
+          else loop(cur+1, max, maxLen)
+        }
+      loop(start, 0, 0)
     }
+
+    buffer.edited.onValue { edit => edit match {
+      case Buffer.Insert(start, end, _) =>
+        // check inserted lines for new longest line
+        _maxRow = math.max(_maxRow, longest(buffer.lines, start.row, end.row+1))
+
+      case Buffer.Delete(start, _, _) =>
+        // if our old longest line was in the deleted region, rescan buffer for new longest
+        if (_maxRow >= start.row && _maxRow <= edit.end.row)
+          _maxRow = longest(buffer.lines, 0, buffer.lines.length)
+
+      case _ => // no changes on transform
+    }}
   }
 
   def computeTextWidth (font :Font, text :String) :Double = {

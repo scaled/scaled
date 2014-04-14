@@ -32,12 +32,9 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
     private var _lastPoint = view.point()
 
     override protected def activate () {
-      // respond to buffer and line edits
+      // respond to buffer edits
       note(view.buffer.edited onValue { edit =>
-        queueRethink(edit.offset until (edit.offset+edit.added) :_*)
-      })
-      note(view.buffer.lineEdited onValue { edit =>
-        if (edit.added > 0) queueRethink(edit.loc.row)
+        queueRethink(edit.start.row until edit.end.row :_*)
       })
       // when the point moves, the line it left may now need highlighting and the line it moves to
       // may no longer need highlighting

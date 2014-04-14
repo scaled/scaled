@@ -75,7 +75,6 @@ class BufferImpl private (
   private val _mark = Value(None :Option[Loc])
   private val _dirty = Value(false)
   private val _edited = Signal[Buffer.Edit]()
-  private val _lineEdited = Signal[Line.Edit]()
   private val _lineStyled = Signal[Loc]()
 
   val undoStack = new UndoStack(this)
@@ -90,7 +89,6 @@ class BufferImpl private (
   override def clearMark () = _mark() = None
   override def undoer = undoStack
   override def edited = _edited
-  override def lineEdited = _lineEdited
   override def lineStyled = _lineStyled
   override def lines = _lines
   // refine return type to ease life for internal friends
@@ -156,88 +154,111 @@ class BufferImpl private (
       middle.toSeq
     }
 
-  override def insert (loc :Loc, c :Char, styles :Styles) = _lines(loc.row).insert(loc, c, styles)
-  override def insert (loc :Loc, line :LineV) = _lines(loc.row).insert(loc, line)
+  override def insert (loc :Loc, c :Char, styles :Styles) {
+    _lines(loc.row).insert(loc, c, styles)
+    noteInsert(loc, loc.nextC)
+  }
+  override def insert (loc :Loc, line :LineV) = {
+    val end = _lines(loc.row).insert(loc, line)
+    noteInsert(loc, end)
+  }
   override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
     case 0 => loc
-    case 1 =>
-      line(loc).insert(loc, region.head)
-      // no new lines inserted, so no need to emit a buffer edit
+    case 1 => insert(loc, region.head)
     case _ =>
       // split the first line in twain
       val tail = line(loc).split(loc)
       // merge the first half of the split line with the first line of the region
       line(loc).append(loc, region.head)
       // merge the last line of the region with the second half of the split line
-      tail.insertSilent(0, region.last, 0, region.last.length)
+      tail.insert(Loc.Zero, region.last, 0, region.last.length)
       // finally add the middle lines (unmodified) and the merged last line into the buffer
       val rest = region.slice(1, region.length-1).map(MutableLine(this, _)) :+ tail
       _lines.insertAll(loc.row+1, rest)
-      noteEdited(loc.row+1, BufferImpl.NoLines, rest.length)
-      // return the location at the end of the inserted region
-      Loc(loc.row+region.length-1, region.last.length)
+      // note the edit, and return the location at the end of the inserted region
+      noteInsert(loc, loc + region)
   }
 
-  override def delete (loc :Loc, count :Int) = line(loc).delete(loc, count)
+  override def delete (loc :Loc, count :Int) = {
+    val dline = line(loc).delete(loc, count)
+    noteDelete(loc, Seq(dline))
+    dline
+  }
   override def delete (start :Loc, until :Loc) =
     if (until < start) delete(until, start)
-    else if (start.row == until.row) Seq(line(start).delete(start, until.col-start.col))
+    else if (start.row == until.row) Seq(delete(start, until.col-start.col))
     else {
       val (fst, last) = (line(start), line(until))
       // replace the deleted part of the first line with the retained part of the last line
       val head = fst.replace(start, fst.length-start.col, last.slice(until.col))
       // then delete all the intervening lines
-      val deleted = deleteEmit(start.row+1, until.row-start.row)
+      val middle = delete(start.row+1, until.row-start.row)
       // truncate the last deleted line at the until column, otherwise we'd erroneously report the
       // retained part of that line as part of the deleted region
-      head +: deleted.dropRight(1) :+ deleted.last.slice(0, until.col)
+      val deleted = head +: middle.dropRight(1) :+ middle.last.slice(0, until.col)
+      noteDelete(start, deleted)
+      deleted
     }
 
-  override def replace (loc :Loc, delete :Int, line :LineV) =
-    _lines(loc.row).replace(loc, delete, line)
+  override def replace (loc :Loc, count :Int, line :LineV) = {
+    val dline = _lines(loc.row).replace(loc, count, line)
+    noteDelete(loc, Seq(dline))
+    noteInsert(loc, loc + (0, line.length))
+    dline
+  }
+
+  override def replace (start :Loc, until :Loc, lines :Seq[LineV]) :Loc = {
+    if (until < start) replace(until, start, lines) else {
+      // if this is an exact replacement, handle it specially; this is mainly for efficient undoing
+      // of transforms; overkill perhaps, but whatever, it's four lines of code
+      if (until == start + lines) {
+        val original = new ArrayBuffer[Line]()
+        onRows(start, until) { (l, s, c) => original += l.replace(s, c, lines(s.row-start.row)) }
+        noteTransform(start, original)
+      } else {
+        delete(start, until)
+        insert(start, lines)
+      }
+    }
+  }
 
   override def transform (start :Loc, until :Loc, fn :Char => Char) =
     if (until < start) transform(until, start, fn)
-    else if (start.row == until.row) line(start).transform(fn, start, until.col)
     else {
-      line(start).transform(fn, start)
-      onRows(start.nextStart, until) { (loc, line) => line.transform(fn, loc) }
-      line(until).transform(fn, until.atCol(0), until.col)
+      val original = new ArrayBuffer[Line]()
+      def xf (ln :MutableLine, start :Loc, end :Int) = {
+        original += ln.slice(start.col, end)
+        ln.transform(fn, start, end)
+      }
+      if (start.row == until.row) xf(line(start), start, until.col)
+      else onRows(start, until)(xf)
+      noteTransform(start, original)
     }
 
   override def split (loc :Loc) {
     _lines.insert(loc.row+1, line(loc).split(loc))
-    noteEdited(loc.row+1, BufferImpl.NoLines, 1)
+    noteInsert(loc, loc.nextStart)
   }
 
   override def updateStyles (fn :Styles => Styles, start :Loc, until :Loc) {
     if (until < start) updateStyles(fn, until, start)
     else if (start.row == until.row) line(start).updateStyles(fn, start, until.col)
-    else {
-      line(start).updateStyles(fn, start)
-      onRows(start.nextStart, until) { (loc, line) => line.updateStyles(fn, loc) }
-      line(until).updateStyles(fn, until.atCol(0), until.col)
-    }
-  }
-
-  override private[scaled] def undo (edit :Buffer.Edit) {
-    assert(edit.buffer == this)
-    val undoneInserts = delete(edit.offset, edit.added)
-    _lines.insertAll(edit.offset, edit.deletedLines.map(MutableLine(this, _)))
-    noteEdited(edit.offset, undoneInserts, edit.deleted)
+    else onRows(start, until)(_.updateStyles(fn, _, _))
   }
 
   //
   // impl details
 
-  /** Applies op to all rows from `start` up to (not including) `until`. `op` is passed `Loc(row, 0)`
-    * and the line in question. */
-  private def onRows (start :Loc, until :Loc)(op :(Loc, MutableLine) => Unit) {
+  /** Applies op to all rows from `start` up to (not including) `until`. `op` is passed `(line,
+    * start, endCol)` which is adjusted properly for the first and last line. */
+  private def onRows (start :Loc, until :Loc)(op :(MutableLine, Loc, Int) => Unit) {
     var loc = start
     while (loc.row < until.row) {
-      op(loc, _lines(loc.row))
+      val l = _lines(loc.row)
+      op(l, loc, l.length)
       loc = loc.nextStart
     }
+    op(_lines(loc.row), loc, until.col)
   }
 
   private def delete (row :Int, count :Int) :Seq[Line] =
@@ -250,23 +271,15 @@ class BufferImpl private (
       deleted.map(_.slice(0))
     }
 
-  private def deleteEmit (row :Int, count :Int) :Seq[Line] = {
-    val deleted = delete(row, count)
-    if (!deleted.isEmpty) noteEdited(row, deleted, 0)
-    deleted
-  }
-
-  private def noteEdited (row :Int, deletedLines :Seq[Line], added :Int) {
-    // println(s"Lines @$row +${added} -${deletedLines.length}")
+  private def note (edit :Buffer.Edit) :Loc = {
+    // println(edit)
     _dirty() = true
-    _edited.emit(Buffer.Edit(row, deletedLines, added, this))
+    _edited.emit(edit)
+    edit.end
   }
-
-  private[impl] def noteLineEdited (loc :Loc, deleted :Line, added :Int) {
-    // println(s"Chars @${loc} +${added} -${deleted.length}")
-    _dirty() = true
-    _lineEdited.emit(Line.Edit(loc, deleted, added, this))
-  }
+  private def noteInsert (start :Loc, end :Loc) = note(Buffer.Insert(start, end, this))
+  private def noteDelete (start :Loc, deleted :Seq[Line]) = note(Buffer.Delete(start, deleted, this))
+  private def noteTransform (start :Loc, orig :Seq[Line]) = note(Buffer.Transform(start, orig, this))
 
   private[impl] def noteLineStyled (loc :Loc) {
     // println(s"Styles @$loc")

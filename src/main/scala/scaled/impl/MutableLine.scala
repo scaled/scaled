@@ -75,21 +75,13 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     _chars(loc.col) = c
     _styles(loc.col) = styles
     _end += 1
-    buffer.noteLineEdited(loc, Line.Empty, 1)
-  }
-
-  /** Inserts `[offset, offset+count)` slice of `line` into this line at `pos` <em>without emitting
-    * an edited event</em>. */
-  def insertSilent (pos :Int, line :LineV, offset :Int, count :Int) {
-    prepInsert(pos, count)
-    line.sliceInto(offset, offset+count, _chars, _styles, pos)
-    _end += count
   }
 
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
   def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = {
-    insertSilent(loc.col, line, offset, count)
-    buffer.noteLineEdited(loc, Line.Empty, count)
+    prepInsert(loc.col, count)
+    line.sliceInto(offset, offset+count, _chars, _styles, loc.col)
+    _end += count
     loc + (0, count)
   }
 
@@ -104,12 +96,11 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
   def delete (loc :Loc, length :Int) :Line = {
     val pos = loc.col
     val last = pos + length
-    require(pos >= 0 && last <= _end)
+    require(pos >= 0 && last <= _end, s"$pos >= 0 && $last <= ${_end}")
     val deleted = slice(pos, pos+length)
     System.arraycopy(_chars, last, _chars, pos, _end-last)
     System.arraycopy(_styles, last, _styles, pos, _end-last)
     _end -= length
-    buffer.noteLineEdited(loc, deleted, 0)
     deleted
   }
 
@@ -135,7 +126,6 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
 
     line.sliceInto(0, added, _chars, _styles, pos)
     _end += deltaLength
-    buffer.noteLineEdited(loc, replaced, added)
     replaced
   }
 
@@ -144,10 +134,8 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     * whether `fn` actually changed them.
     * @return the location after the last transformed char. */
   def transform (fn :Char => Char, loc :Loc, last :Int = length) :Loc = {
-    val deleted = slice(loc.col, last)
     var p = loc.col
     while (p < last) { _chars(p) = fn(_chars(p)) ; p += 1 }
-    buffer.noteLineEdited(loc, deleted, deleted.length)
     loc.atCol(last)
   }
 

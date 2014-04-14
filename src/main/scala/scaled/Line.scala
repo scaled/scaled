@@ -192,32 +192,6 @@ class Line (_cs :Array[Char], _ss :Array[Styles], protected val _offset :Int,
 /** `Line` related types and utilities. */
 object Line {
 
-  /** An event emitted when one or more characters are deleted from a line and replaced by one or
-    * more characters. The change will already have been applied when this event is dispatched. */
-  case class Edit (
-    /** The location in the buffer at which the edited line resides (`row`) and the offset into that
-      * line at which characters were replaced (`col`). */
-    loc :Loc,
-    /** The characters that were deleted, as a line. */
-    deletedLine :Line,
-    /** The number of characters that were added. */
-    added :Int,
-    /** The buffer that contains the line that was edited. */
-    buffer :Buffer) extends Undoable {
-
-    /** Returns the `idx`th added character. */
-    def addedChar (idx :Int) = buffer.line(loc).charAt(loc.col+idx)
-    /** The characters that were added as a line view. */
-    def addedLine :LineV = buffer.line(loc).view(loc.col, loc.col+added)
-    /** The number of characters that were deleted. */
-    def deleted = deletedLine.length
-
-    // remove the added characters and add the removed characters
-    override def undo () = buffer.replace(loc, added, deletedLine)
-
-    override def toString = s"LEdit[$loc -'$deletedLine +'$addedLine]"
-  }
-
   /** An empty line. */
   final val Empty = new Line(Array[Char](), Array[Styles]())
 

@@ -50,12 +50,6 @@ class LineViewImpl (_line :LineV) extends LineView {
     node.getLayoutX + col*charWidth
   }
 
-  /** Updates this line to reflect the supplied edit. */
-  def onEdit (change :Line.Edit) {
-    // TODO: only change the spans that are affected by the edit
-    invalidate()
-  }
-
   /** Updates this line to reflect the supplied style change. */
   def onStyle (loc :Loc) {
     // TODO: only change the spans that are affected by the restyle
@@ -67,6 +61,11 @@ class LineViewImpl (_line :LineV) extends LineView {
   def setVisible (viz :Boolean) {
     if (viz && !_valid) validate()
     node.setVisible(viz)
+  }
+
+  def invalidate () :Unit = if (_valid) {
+    _valid = false
+    if (node.isVisible) validate()
   }
 
   /** Validates this line, rebuilding its visualization. This is called when the line becomes
@@ -101,10 +100,5 @@ class LineViewImpl (_line :LineV) extends LineView {
 
     node.getChildren.clear()
     if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
-  }
-
-  private def invalidate () :Unit = if (_valid) {
-    _valid = false
-    if (node.isVisible) validate()
   }
 }

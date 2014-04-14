@@ -6,7 +6,7 @@ package scaled.impl
 
 import scala.collection.mutable.ArrayBuffer
 
-import reactual.{Future, Value}
+import reactual.{Future, Signal, Value}
 
 import scaled._
 
@@ -20,6 +20,8 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
     extends RBufferView(initWid, initHei) {
 
   private val _lines = ArrayBuffer[LineViewImpl]() ++ _buffer.lines.map(new LineViewImpl(_))
+  private val _changed = Signal[BufferView.Change]()
+  override def changed = _changed
 
   def clearEphemeralPopup () {
     if (popup.isDefined && popup().isEphemeral) popup.clear()
@@ -29,20 +31,33 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
   override def buffer :BufferImpl = _buffer
   override def lines :Seq[LineViewImpl] = _lines
 
-  // respond to buffer changes by adding/removing line views
-  _buffer.edited.onValue { change =>
-    if (change.deleted > 0) {
-      // _lines.slice(change.offset, change.offset+change.deleted) foreach onDeleted
-      _lines.remove(change.offset, change.deleted)
-    }
-    if (change.added > 0) {
-      val added = _buffer.lines.slice(change.offset, change.offset+change.added)
-      val newlns = added map(new LineViewImpl(_))
-      _lines.insert(change.offset, newlns :_*)
-    }
-  }
-  // pass line edits onto the line views
-  _buffer.lineEdited.onValue { change => _lines(change.loc.row).onEdit(change) }
+  // when the buffer is edited: add, remove and update lines
+  _buffer.edited.onValue { _ match {
+    case Buffer.Insert(start, end, _) =>
+      // the first line changed, the rest are new
+      _lines(start.row).invalidate()
+      if (end.row > start.row) {
+        val row = start.row+1
+        val added = _buffer.lines.slice(row, end.row+1)
+        val newlns = added map(new LineViewImpl(_))
+        _lines.insert(row, newlns :_*)
+        _changed.emit(BufferView.Change(row, added.length, this))
+      }
+
+    case ed @ Buffer.Delete(start, deleted, _) =>
+      // the first line changed, the rest are gone
+      _lines(start.row).invalidate()
+      val end = ed.end
+      if (end.row > start.row) {
+        val row = start.row+1 ; val deleted = end.row-row+1
+        _lines.remove(row, deleted)
+        _changed.emit(BufferView.Change(row, -deleted, this))
+      }
+
+    case ed @ Buffer.Transform(start, original, _) =>
+      val end = ed.end
+      start.row to end.row foreach { row => _lines(row).invalidate() }
+  }}
   // pass style changes onto the line views
   _buffer.lineStyled.onValue { loc => _lines(loc.row).onStyle(loc) }
 }
