@@ -4,7 +4,9 @@
 
 package scaled.major
 
+import reactual.OptValue
 import scaled._
+import scaled.util.{Block, Blocker}
 
 object CodeConfig extends Config.Defs {
 
@@ -36,6 +38,11 @@ object CodeConfig extends Config.Defs {
   val variableStyle = "codeVariableFace"
   /** The CSS style applied to `function` syntax. */
   val functionStyle = "codeFunctionFace"
+
+  /** The CSS style applied to the current block delimiters. */
+  val blockDelimStyle = "codeBlockDelimFace"
+  /** The CSS style applied to the current block delimiters when mismatched. */
+  val blockErrorStyle = "codeBlockErrorFace"
 }
 
 /** A base class for major modes which edit program code.
@@ -50,6 +57,32 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     "S-ENTER" -> "newline-and-indent",
     "TAB"     -> "reindent"
   )
+
+  /** Enumerates the open brackets that will be matched when tracking blocks. */
+  protected def openBrackets = "{(["
+  /** Enumerates the close brackets that will be matched when tracking blocks.
+    * These must match the order of [[openBrackets]] exactly. */
+  protected def closeBrackets = "})]"
+
+  /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
+  val curBlock = OptValue[Block]()
+  /** A helper that tracks blocks throughout the buffer. */
+  val blocker = new Blocker(buffer, openBrackets, closeBrackets)
+  // as the point moves around, track the active block
+  view.point onValue { p => curBlock() = blocker(p) }
+  // as the active block changes, highlight the delimiters
+  curBlock onChange { (nb, ob) =>
+    ob.map { b =>
+      buffer.removeStyle(blockDelimStyle, b.start, b.start.nextC)
+      if (b.isValid) buffer.removeStyle(blockDelimStyle, b.end, b.end.nextC)
+      else buffer.removeStyle(blockErrorStyle, b.start, b.start.nextC)
+    }
+    nb.map { b =>
+      buffer.addStyle(blockDelimStyle, b.start, b.start.nextC)
+      if (b.isValid) buffer.addStyle(blockDelimStyle, b.end, b.end.nextC)
+      else buffer.addStyle(blockErrorStyle, b.start, b.start.nextC)
+    }
+  }
 
   /** Returns the number of whitespace chars at the start of `line`. */
   def readIndent (line :LineV) :Int = {

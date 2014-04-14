@@ -47,6 +47,14 @@
   -fx-fill: #309797;
 }
 
+.codeBlockDelimFace {
+  -fx-underline: true;
+}
+
+.codeBlockErrorFace {
+  -fx-fill: Red;
+}
+
 /** TODO: from emacs
  '(show-paren-match ((t (:background "#330"))))
  '(show-paren-mismatch ((t (:background "red"))))
