@@ -29,14 +29,14 @@ object Utils {
       loop(start, 0, 0)
     }
 
-    buffer.edited.onValue { edit => edit match {
-      case Buffer.Insert(start, end, _) =>
+    buffer.edited.onValue { _ match {
+      case Buffer.Insert(start, end) =>
         // check inserted lines for new longest line
         _maxRow = math.max(_maxRow, longest(buffer.lines, start.row, end.row+1))
 
-      case Buffer.Delete(start, _, _) =>
+      case Buffer.Delete(start, end, _) =>
         // if our old longest line was in the deleted region, rescan buffer for new longest
-        if (_maxRow >= start.row && _maxRow <= edit.end.row)
+        if (_maxRow >= start.row && _maxRow <= end.row)
           _maxRow = longest(buffer.lines, 0, buffer.lines.length)
 
       case _ => // no changes on transform

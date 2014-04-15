@@ -66,6 +66,8 @@ object BufferImpl {
 class BufferImpl private (
   initName :String, initFile :File, initLines :ArrayBuffer[Array[Char]]
 ) extends RBuffer {
+  import Buffer._
+
   // TODO: character encoding
   // TODO: line endings
 
@@ -74,7 +76,7 @@ class BufferImpl private (
   private val _file = Value(initFile)
   private val _mark = Value(None :Option[Loc])
   private val _dirty = Value(false)
-  private val _edited = Signal[Buffer.Edit]()
+  private val _edited = Signal[Edit]()
   private val _lineStyled = Signal[Loc]()
 
   val undoStack = new UndoStack(this)
@@ -271,15 +273,15 @@ class BufferImpl private (
       deleted.map(_.slice(0))
     }
 
-  private def note (edit :Buffer.Edit) :Loc = {
+  private def note (edit :Edit) :Loc = {
     // println(edit)
     _dirty() = true
     _edited.emit(edit)
     edit.end
   }
-  private def noteInsert (start :Loc, end :Loc) = note(Buffer.Insert(start, end, this))
-  private def noteDelete (start :Loc, deleted :Seq[Line]) = note(Buffer.Delete(start, deleted, this))
-  private def noteTransform (start :Loc, orig :Seq[Line]) = note(Buffer.Transform(start, orig, this))
+  private def noteInsert (start :Loc, end :Loc) = note(new Insert(start, end, this))
+  private def noteDelete (start :Loc, deleted :Seq[Line]) = note(new Delete(start, deleted, this))
+  private def noteTransform (start :Loc, orig :Seq[Line]) = note(new Transform(start, orig, this))
 
   private[impl] def noteLineStyled (loc :Loc) {
     // println(s"Styles @$loc")

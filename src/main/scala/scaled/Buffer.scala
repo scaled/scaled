@@ -314,28 +314,35 @@ abstract class Buffer extends BufferV {
 object Buffer {
 
   /** Conveys information about a buffer edit. See [[Insert]], [[Delete]], [[Transform]]. */
-  sealed trait Edit extends Region with Undoable {
-    def buffer :Buffer
-  }
+  sealed trait Edit extends Region with Undoable
 
   /** An event emitted when text is inserted into a buffer. */
-  case class Insert (start :Loc, end :Loc, buffer :Buffer) extends Edit {
+  class Insert (val start :Loc, val end :Loc, buffer :Buffer) extends Edit {
     def undo () = buffer.delete(start, end)
     override def toString = s"Edit[+${Region.toString(this)}]"
   }
+  object Insert {
+    def unapply (edit :Insert) = Some((edit.start, edit.end))
+  }
 
   /** An event emitted when text is deleted from a buffer. */
-  case class Delete (start :Loc, deletedRegion :Seq[Line], buffer :Buffer) extends Edit {
+  class Delete (val start :Loc, val deletedRegion :Seq[Line], buffer :Buffer) extends Edit {
     val end :Loc = start + deletedRegion
     def undo () = buffer.insert(start, deletedRegion)
     override def toString = s"Edit[-${Region.toString(this)}]"
   }
+  object Delete {
+    def unapply (edit :Delete) = Some((edit.start, edit.end, edit.deletedRegion))
+  }
 
   /** An event emitted when text in a buffer is transformed. */
-  case class Transform (start :Loc, original :Seq[Line], buffer :Buffer) extends Edit {
+  class Transform (val start :Loc, val original :Seq[Line], buffer :Buffer) extends Edit {
     val end :Loc = start + original
     def undo () = buffer.replace(start, end, original)
     override def toString = s"Edit[!${Region.toString(this)}]"
+  }
+  object Transform {
+    def unapply (edit :Transform) = Some((edit.start, edit.end, edit.original))
   }
 }
 

@@ -83,7 +83,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
       val (isTyping, isWordBreak) = edits match {
         case Seq(le :Buffer.Edit) =>
           val isSingleChar = le.end == le.start.nextC
-          (isSingleChar, isSingleChar && isBreakChar(le.buffer.charAt(le.start)))
+          (isSingleChar, isSingleChar && isBreakChar(buffer.charAt(le.start)))
         case _ => (false, false)
       }
 

@@ -33,7 +33,7 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
 
   // when the buffer is edited: add, remove and update lines
   _buffer.edited.onValue { _ match {
-    case Buffer.Insert(start, end, _) =>
+    case Buffer.Insert(start, end) =>
       // the first line changed, the rest are new
       _lines(start.row).invalidate()
       if (end.row > start.row) {
@@ -44,18 +44,16 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
         _changed.emit(BufferView.Change(row, added.length, this))
       }
 
-    case ed @ Buffer.Delete(start, deleted, _) =>
+    case Buffer.Delete(start, end, deleted) =>
       // the first line changed, the rest are gone
       _lines(start.row).invalidate()
-      val end = ed.end
       if (end.row > start.row) {
         val row = start.row+1 ; val deleted = end.row-row+1
         _lines.remove(row, deleted)
         _changed.emit(BufferView.Change(row, -deleted, this))
       }
 
-    case ed @ Buffer.Transform(start, original, _) =>
-      val end = ed.end
+    case Buffer.Transform(start, end, _) =>
       start.row to end.row foreach { row => _lines(row).invalidate() }
   }}
   // pass style changes onto the line views
