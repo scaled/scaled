@@ -14,7 +14,7 @@ trait Region {
   def end :Loc
 
   /** Returns true if this region (`[start,end)`) contains `loc`. */
-  def contains (loc :Loc) :Boolean = !(loc < start) && (loc < end)
+  def contains (loc :Loc) :Boolean = (start <= loc) && (loc < end)
 }
 
 object Region {

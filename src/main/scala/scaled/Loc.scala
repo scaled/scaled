@@ -20,13 +20,17 @@ class Loc private (val rowCol :Long) extends AnyVal {
   /** The (zero-based) column of the buffer represented by this loc. */
   def col :Int = rowCol.toInt
 
-  /** Returns true if this loc is earlier than `other` (i.e. less than it). */
+  /** Returns true if this loc is earlier than `other`. */
   def < (other :Loc) :Boolean = {
     val trow = row ; val orow = other.row
     (trow < orow) || (trow == orow && col < other.col)
   }
-  /** Returns true if this loc is later than `other` (i.e. greather than it). */
+  /** Returns true if this loc is earlier than or equal to `other`. */
+  def <= (other :Loc) :Boolean = !(other < this)
+  /** Returns true if this loc is later than `other`. */
   def > (other :Loc) :Boolean = other < this
+  /** Returns true if this loc is later than or equal to `other`. */
+  def >= (other :Loc) :Boolean = !(this < other)
 
   /** Returns `< 0` if `this` is `<` `other`, `0` if `this` == `other` and `> 0` otherwise. */
   def compareTo (other :Loc) :Int = {
