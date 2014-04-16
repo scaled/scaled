@@ -143,6 +143,9 @@ object Config {
     protected def fnKey[T] (deffn :Config => T) = new Config.Key[T](global, null) {
       override def defval (config :Config) = deffn(config)
     }
+
+    // useful for loading resources in our configs
+    protected def stream (path :String) = getClass.getClassLoader.getResourceAsStream(path)
   }
 }
 
