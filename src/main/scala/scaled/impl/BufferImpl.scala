@@ -244,6 +244,7 @@ class BufferImpl private (
 
   override def updateStyles (fn :Styles => Styles, start :Loc, until :Loc) {
     if (until < start) updateStyles(fn, until, start)
+    else if (until > end) updateStyles(fn, start, end) // bound until into the buffer
     else if (start.row == until.row) line(start).updateStyles(fn, start, until.col)
     else onRows(start, until)(_.updateStyles(fn, _, _))
   }
