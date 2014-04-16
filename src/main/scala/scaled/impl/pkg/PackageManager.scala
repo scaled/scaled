@@ -106,20 +106,39 @@ class PackageManager (app :Main) {
       case None => Future.failure(new Exception(s"Unknown $thing: $name"))
     }
 
-  // resolve our "built-in" package, which we locate via the classloader
+  // resolve our "built-in" package(s), which we locate via the classloader
   getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
-    if ((url.getProtocol == "file") && !(url.getPath endsWith ".jar")) {
-      addPackage(new Package(this, PackageInfo.builtin(new File(url.getPath))))
-    }
+    if ((url.getProtocol == "file") && !(url.getPath endsWith ".jar"))
+      addBuiltin(new File(url.getPath))
   }
 
   // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
   // cache the results of our scans and load that instead)
   private val pkgsDir = Filer.requireDir(new File(app.metaDir, "Packages"))
-  Filer.descendDirs(pkgsDir) { dir =>
-    val pkgFile = new File(dir, "package.scaled")
-    if (!pkgFile.exists) true // descend into subdirs
-    else { addPackage(new Package(this, PackageInfo(pkgFile))) ; false } // stop descending
+
+  // if we have more than one built-in package then we're running in dev mode, which means we do
+  // package management a bit differently: we don't use custom classloaders (this enables JRebel to
+  // work) and we don't load packages from the Packages directory (because those would require
+  // custom classloaders to function); TODO: maybe separate these two modes
+  if (pkgs.size == 1) {
+    val mainDep = Some(pkgs.head._2.info.srcurl)
+    Filer.descendDirs(pkgsDir) { dir =>
+      val pkgFile = new File(dir, "package.scaled")
+      if (!pkgFile.exists) true // descend into subdirs
+      else {
+        addPackage(new Package(this, PackageInfo(pkgFile, mainDep)))
+        false // stop descending
+      }
+    }
+  }
+
+  // scans up from `dir` looking for 'package.scaled' file; then adds package from there
+  private def addBuiltin (dir :File) {
+    if (dir != null) {
+      val pfile = new File(dir, "package.scaled")
+      if (!pfile.exists) addBuiltin(dir.getParentFile)
+      else addPackage(new Package(this, PackageInfo(pfile, None)))
+    }
   }
 
   private def addPackage (pkg :Package) {

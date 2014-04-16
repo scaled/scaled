@@ -33,9 +33,9 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
 
   /** The class loader for classes in this package. */
   val loader :ClassLoader =
-    // if this is the special built-in package, use our normal class loader, otherwise we end up
+    // if this is a special built-in package, use our normal class loader, otherwise we end up
     // doubly defining all of our built-in classes which confuses tools like JRebel
-    if (info.isBuiltIn) getClass.getClassLoader
+    if (info.builtIn) getClass.getClassLoader
     else new URLClassLoader(Array(info.classesDir.toURI.toURL)) {
       override def getResource (path :String) :URL = {
         var loaders = dependLoaders // first try finding the resource in our dependencies

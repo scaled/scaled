@@ -1,0 +1,8 @@
+   name: scaled
+version: 1.0
+descrip: Built-in services.
+ weburl: https://github.com/samskivert/scaled/
+ srcurl: git:https://github.com/scaled/scaled.git
+license: New BSD
+ srcdir: src/main/scala
+ bindir: target/classes
