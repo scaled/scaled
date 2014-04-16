@@ -33,21 +33,21 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
 
     override protected def activate () {
       // respond to buffer edits
-      note(view.buffer.edited onValue { edit =>
+      note(buffer.edited onValue { edit =>
         queueRethink(edit.start.row until edit.end.row :_*)
       })
       // when the point moves, the line it left may now need highlighting and the line it moves to
       // may no longer need highlighting
       note(view.point onValue { point => queueRethink(_lastPoint.row, point.row) })
       // note existing trailing whitespace
-      0 until view.buffer.lines.size foreach tagTrailingWhitespace
+      0 until buffer.lines.size foreach tagTrailingWhitespace
       // TODO: defer marking trailing whitespace on non-visible lines until they're scrolled into
       // view, we can probably do this entirely in client code using RBufferView.scrollTop and
       // RBufferView.heightV; encapsulate it in a Colorizer helper class?
     }
 
     override protected def didDeactivate () {
-      view.buffer.removeStyle(trailingStyle, view.buffer.start, view.buffer.end)
+      buffer.removeStyle(trailingStyle, buffer.start, buffer.end)
     }
 
     private def queueRethink (row :Int*) {
@@ -61,8 +61,10 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
       _rethinkLines.clear()
     }
 
-    private val tagTrailingWhitespace = (ii :Int) => {
-      val line = view.buffer.lines(ii)
+    // we might have queued a line for a rethink that then disappeared, so be sure that the line
+    // we're rethinking is still part of the buffer
+    private val tagTrailingWhitespace = (ii :Int) => if (ii < buffer.lines.length) {
+      val line = buffer.lines(ii)
       val limit = if (view.point().row == ii) view.point().col else 0
       @tailrec def seek (col :Int) :Int = {
         if (col == limit || major.syntax(line.charAt(col-1)) != Syntax.Whitespace) col
@@ -71,8 +73,8 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
       val last = line.length
       val first = seek(last)
       val floc = Loc(ii, first)
-      if (first > 0) view.buffer.removeStyle(trailingStyle, Loc(ii, 0), floc)
-      if (first < last) view.buffer.addStyle(trailingStyle, floc, Loc(ii, last))
+      if (first > 0) buffer.removeStyle(trailingStyle, Loc(ii, 0), floc)
+      if (first < last) buffer.addStyle(trailingStyle, floc, Loc(ii, last))
     }
   }
   config.value(showTrailingWhitespace) onValueNotify trailingWhitespacer.setActive
