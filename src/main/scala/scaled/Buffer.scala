@@ -148,19 +148,23 @@ abstract class BufferV extends Region {
     seek(loc.row, loc.col, count)
   }
 
-  /** Searches forward from `loc` for a character that matches `pred`. If `loc` matches, it will be
-    * returned. If the end of the buffer is reached before finding a match, [[end]] is returned. */
-  def findForward (loc :Loc, pred :Char => Boolean) :Loc = {
-    val rows = lines.size
-    @inline @tailrec def seek (row :Int, col :Int) :Loc = if (row == rows) end else {
+  /** Searches forward from `start` for a character that matches `pred`. If `start` matches, it will
+    * be returned. If `end` is reached before finding a match, `end` is returned. */
+  def findForward (start :Loc, end :Loc, pred :Char => Boolean) :Loc = {
+    val erow = end.row ; val ecol = end.col
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = if (row > erow) end else {
       val line = this.line(row)
-      val last = line.length
+      val last = if (row == erow) ecol else line.length
       var p = col ; while (p <= last && !pred(line.charAt(p))) p += 1
       if (p <= last) Loc(row, p)
       else seek(row+1, 0)
     }
-    seek(loc.row, loc.col)
+    seek(start.row, start.col)
   }
+
+  /** Searches forward from `loc` for a character that matches `pred`. If `loc` matches, it will be
+    * returned. If the end of the buffer is reached before finding a match, [[end]] is returned. */
+  def findForward (loc :Loc, pred :Char => Boolean) :Loc = findForward(loc, end, pred)
 
   /** Searches backward from the location immediately previous to `loc` for a character that matches
     * `pred`. If the start of the buffer is reached before finding a match, [[start]] is
