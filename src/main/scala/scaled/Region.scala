@@ -15,9 +15,15 @@ trait Region {
 
   /** Returns true if this region (`[start,end)`) contains `loc`. */
   def contains (loc :Loc) :Boolean = (start <= loc) && (loc < end)
+
+  /** Returns true if this region is empty (`start >= end`). */
+  def isEmpty = start >= end
 }
 
 object Region {
+
+  /** An empty region from zero to zero. */
+  val Empty = apply(Loc.Zero, Loc.Zero)
 
   /** Creates a region that spans `[start:end)`. */
   def apply (start :Loc, end :Loc) :Region = new Simple(start, end)
