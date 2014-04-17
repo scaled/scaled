@@ -78,6 +78,7 @@ class BufferImpl private (
   private val _dirty = Value(false)
   private val _edited = Signal[Edit]()
   private val _lineStyled = Signal[Loc]()
+  private var _maxRow = longest(_lines, 0, _lines.length)
 
   val undoStack = new UndoStack(this)
 
@@ -93,6 +94,7 @@ class BufferImpl private (
   override def edited = _edited
   override def lineStyled = _lineStyled
   override def lines = _lines
+  override def maxLineLength = lines(_maxRow).length
   // refine return type to ease life for internal friends
   override def dirtyV :Value[Boolean] = _dirty
   override def line (idx :Int) :MutableLine = _lines(idx)
@@ -274,15 +276,35 @@ class BufferImpl private (
       deleted.map(_.slice(0))
     }
 
-  private def note (edit :Edit) :Loc = {
+  private def longest (lines :Seq[LineV], start :Int, end :Int) :Int = {
+    @inline @tailrec def loop (cur :Int, max :Int, maxLen :Int) :Int =
+      if (cur >= end) max
+      else {
+        val curLen = lines(cur).length
+        if (curLen > maxLen) loop(cur+1, cur, curLen)
+        else loop(cur+1, max, maxLen)
+      }
+    loop(start, 0, 0)
+  }
+
+  private def emit (edit :Edit) :Loc = {
     // println(edit)
     _dirty() = true
     _edited.emit(edit)
     edit.end
   }
-  private def noteInsert (start :Loc, end :Loc) = note(new Insert(start, end, this))
-  private def noteDelete (start :Loc, deleted :Seq[Line]) = note(new Delete(start, deleted, this))
-  private def noteTransform (start :Loc, orig :Seq[Line]) = note(new Transform(start, orig, this))
+  private def noteInsert (start :Loc, end :Loc) = {
+    // check inserted lines for new longest line
+    _maxRow = math.max(_maxRow, longest(_lines, start.row, end.row+1))
+    emit(new Insert(start, end, this))
+  }
+  private def noteDelete (start :Loc, deleted :Seq[Line]) = {
+    // if our old longest line was in the deleted region, rescan buffer for new longest
+    if (_maxRow >= start.row && _maxRow <= end.row) _maxRow = longest(_lines, 0, _lines.length)
+    emit(new Delete(start, deleted, this))
+  }
+  private def noteTransform (start :Loc, orig :Seq[Line]) =
+    emit(new Transform(start, orig, this))
 
   private[impl] def noteLineStyled (loc :Loc) {
     // println(s"Styles @$loc")

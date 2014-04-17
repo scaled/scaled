@@ -14,35 +14,6 @@ import scaled._
 /** Various utilities used by our controls. */
 object Utils {
 
-  class MaxLengthTracker (buffer :RBuffer) {
-    def maxLength :Int = buffer.lines(_maxRow).length
-
-    private var _maxRow = longest(buffer.lines, 0, buffer.lines.length)
-    private def longest (lines :Seq[LineV], start :Int, end :Int) :Int = {
-      @inline @tailrec def loop (cur :Int, max :Int, maxLen :Int) :Int =
-        if (cur >= end) max
-        else {
-          val curLen = lines(cur).length
-          if (curLen > maxLen) loop(cur+1, cur, curLen)
-          else loop(cur+1, max, maxLen)
-        }
-      loop(start, 0, 0)
-    }
-
-    buffer.edited.onValue { _ match {
-      case Buffer.Insert(start, end) =>
-        // check inserted lines for new longest line
-        _maxRow = math.max(_maxRow, longest(buffer.lines, start.row, end.row+1))
-
-      case Buffer.Delete(start, end, _) =>
-        // if our old longest line was in the deleted region, rescan buffer for new longest
-        if (_maxRow >= start.row && _maxRow <= end.row)
-          _maxRow = longest(buffer.lines, 0, buffer.lines.length)
-
-      case _ => // no changes on transform
-    }}
-  }
-
   def computeTextWidth (font :Font, text :String) :Double = {
     layout.setContent(if (text != null) text else "", font.impl_getNativeFont)
     layout.getBounds.getWidth

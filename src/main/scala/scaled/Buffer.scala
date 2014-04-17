@@ -91,6 +91,9 @@ abstract class BufferV extends Region {
     * the buffer or before its start. */
   def lineLength (loc :Loc) :Int = lineLength(loc.row)
 
+  /** Returns the length of the longest line in this buffer. */
+  def maxLineLength :Int
+
   /** Returns the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)

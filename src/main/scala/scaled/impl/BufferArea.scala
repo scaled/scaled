@@ -113,9 +113,6 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     uncursor.setVisible(!focused)
   }
 
-  // this tracks the maximum line length in the buffer
-  private val maxLenTracker = new Utils.MaxLengthTracker(bview.buffer)
-
   // contains the Text nodes for each line
   private val lineNodes = new Group()
   lineNodes.setManaged(false)
@@ -259,7 +256,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         bview.scrollTop() = math.min(scrollTopMax, math.max(0, point.row-height/2))
 
       val (scrollLeft, width) = (bview.scrollLeft(), bview.width())
-      val scrollLeftMax = math.max(0, maxLenTracker.maxLength-width+1)
+      val scrollLeftMax = math.max(0, bview.buffer.maxLineLength-width+1)
       if (point.col < scrollLeft || point.col >= scrollLeft + width || scrollLeft > scrollLeftMax)
         bview.scrollLeft() = math.min(scrollLeftMax, math.max(0, point.col-width+1))
 
