@@ -29,7 +29,6 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
 
   val trailingWhitespacer = new Behavior() {
     private val _rethinkLines = MSet[Int]()
-    private var _lastPoint = view.point()
 
     override protected def activate () {
       // respond to buffer edits
@@ -38,7 +37,7 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
       })
       // when the point moves, the line it left may now need highlighting and the line it moves to
       // may no longer need highlighting
-      note(view.point onValue { point => queueRethink(_lastPoint.row, point.row) })
+      note(view.point onChange { (p, op) => queueRethink(op.row, p.row) })
       // note existing trailing whitespace
       0 until buffer.lines.size foreach tagTrailingWhitespace
       // TODO: defer marking trailing whitespace on non-visible lines until they're scrolled into
