@@ -64,17 +64,24 @@ abstract class LineV extends CharSequence {
   /** Returns the index of the first occurance of `ch` at pos `from` or later.
     * Returns -1 if `ch` is not found. */
   def indexOf (ch :Char, from :Int = 0) :Int = {
-    var pos = from ; val end = length
-    while (pos < end && _chars(pos) != ch) pos += 1
+    val end = length
+    var pos = from ; while (pos < end && _chars(pos) != ch) pos += 1
     if (pos == end) -1 else pos
   }
 
   /** Returns the index of the first occurance of `ch` at pos `from` or earlier.
     * Returns -1 if `ch` is not found. */
   def lastIndexOf (ch :Char, from :Int = length-1) :Int = {
-    var pos = from
-    while (pos >= 0 && _chars(pos) != ch) pos -= 1
+    var pos = from ; while (pos >= 0 && _chars(pos) != ch) pos -= 1
     pos
+  }
+
+  /** Returns the index of the first character that matches `pred` at pos `from` or later.
+    * Returns -1 if no character matched. */
+  def find (pred :Char => Boolean, from :Int = 0) :Int = {
+    val end = length
+    var pos = from ; while (pos < end && !pred(_chars(pos))) pos += 1
+    if (pos == end) -1 else pos
   }
 
   /** Returns the offset into this line at which the characters of `cs` in `[offset, length)` are
