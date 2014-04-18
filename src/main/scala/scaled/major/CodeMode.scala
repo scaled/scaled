@@ -91,42 +91,36 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     pos
   }
 
-  /** Computes the indentation for the line at `pos`. */
-  def computeIndent (pos :Loc) :Int = if (pos.row == 0) 0 else {
-    def findNonBlank (row :Int) :LineV = {
-      val line = buffer.line(row)
-      if (row == 0 || line.length > 0) line
-      else findNonBlank(row-1)
-    }
-    val prev = findNonBlank(pos.row-1)
-    val prevIndent = readIndent(prev)
-    // if the previous line introduced a new scope, indent from that
-    if (opensScope(prev)) {
-      prevIndent + config(indentWidth)
-      // TODO: if 'line' closes the scope (starts with }), don't nest indent
-    }
-    // if the previous line opened an arg list, indent from that
-    else opensArgList(prev) match {
-      case -1 => prevIndent // otherwise indent the same as the previous line
-      case ii => ii
-    }
-  }
+  private val isNotWhitespace = syntax.isNot(Syntax.Whitespace)
 
-  /** Returns true if `line` opens a new scope.
-    * By default this means it has `{` without a closing `}`. */
-  def opensScope (line :LineV) :Boolean = line.lastIndexOf('{') > line.lastIndexOf('}')
+  /** Computes the indentation for the line at `row`. */
+  def computeIndent (row :Int) :Int = {
+    // find the position of the first non-whitespace character on the line
+    val wsp = buffer.line(row).find(isNotWhitespace)
+    val start = Loc(row, if (wsp == -1) 0 else wsp)
+    blocker(start) match {
+      // locate the innermost block that contains start
+      case Some(b) =>
+        buffer.charAt(b.start) match {
+          // if the block is an arglist (or brackets, TODO?), indent to just after the '('
+          case '(' | '[' => b.start.col + 1
+          // use block indentation for { and anything we don't grok
+          case _ =>
+            val bstart = readIndent(buffer.line(b.start))
+            // if the first non-whitespace character is our close brace, use the same indent
+            // as the line with the open brace
+            if (b.isValid && b.end == start) bstart
+            // otherwise indent one from there
+            else bstart + config(indentWidth)
+        }
 
-  /** Returns arg list indent column if `line` opens an argument list, -1 otherwise.
-    * By default this looks for `(` without a closing `)` and returns the column immediately to the
-    * right of the `(`. */
-  def opensArgList (line :LineV) :Int = {
-    val oidx = line.lastIndexOf('(')
-    if (oidx > line.lastIndexOf(')')) oidx+1 else -1
+      case None => 0 // TODO: is this always proper?
+    }
   }
 
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. */
   def reindent (pos :Loc) :Loc = {
-    val indent = computeIndent(pos)
+    val indent = computeIndent(pos.row)
     val curIndent = readIndent(buffer.line(pos))
     val delta = indent - curIndent
     if (delta > 0) buffer.insert(pos.atCol(0), " " * delta, Styles.None)
@@ -138,6 +132,13 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     view.point() = if (p.row != pos.row) p
                    else if (p.col < indent) p.atCol(indent)
                    else p + (0, delta)
+  }
+
+  override def selfInsertCommand (typed :String) {
+    super.selfInsertCommand(typed)
+    // TODO: this seems kind of hacky;
+    // we should at least have a postInsertHook() in EditingMode or something
+    if (typed == "}") reindent(view.point())
   }
 
   @Fn("Inserts a newline, then indents according to the code mode's indentation rules.")
