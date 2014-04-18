@@ -299,9 +299,10 @@ class BufferImpl private (
     emit(new Insert(start, end, this))
   }
   private def noteDelete (start :Loc, deleted :Seq[Line]) = {
+    val edit = new Delete(start, deleted, this)
     // if our old longest line was in the deleted region, rescan buffer for new longest
-    if (_maxRow >= start.row && _maxRow <= end.row) _maxRow = longest(_lines, 0, _lines.length)
-    emit(new Delete(start, deleted, this))
+    if (_maxRow >= start.row && _maxRow <= edit.end.row) _maxRow = longest(_lines, 0, _lines.length)
+    emit(edit)
   }
   private def noteTransform (start :Loc, orig :Seq[Line]) =
     emit(new Transform(start, orig, this))
