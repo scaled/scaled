@@ -51,11 +51,11 @@ class Blocker (buffer :RBuffer, openers :String, closers :String) {
   }
 
   // scans backwards, looking for an unmatched opener
-  class Scanner (starts :String, ends :String) extends Function1[Char,Boolean] {
+  class Scanner (starts :String, ends :String) extends Function3[Int,Int,Char,Boolean] {
     val counts = new Array[Int](starts.length)
     val zeros = counts.clone()
 
-    def apply (c :Char) :Boolean = {
+    def apply (row :Int, col :Int, c :Char) :Boolean = {
       // if we see a block starter, tick up a counter for that bracket
       val sidx = starts.indexOf(c)
       if (sidx >= 0) counts(sidx) += 1

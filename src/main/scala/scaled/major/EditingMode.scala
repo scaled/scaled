@@ -11,6 +11,7 @@ import reactual.{Future, Promise}
 import scala.annotation.tailrec
 
 import scaled._
+import scaled.util.Chars
 
 /** Configuration for [[EditingMode]]. */
 object EditingConfig extends Config.Defs {
@@ -24,13 +25,7 @@ object EditingConfig extends Config.Defs {
 abstract class EditingMode (env :Env) extends MajorMode(env) {
   import EditorConfig.killRing
   import EditingConfig._
-
-  /** The syntax table in use for this mode. */
-  val syntax :SyntaxTable = createSyntaxTable()
-
-  /** Creates the syntax table used for this mode. Defaults to the default syntax table. A major mode
-    * with special syntax should override this method and return a customized syntax table. */
-  protected def createSyntaxTable () = new SyntaxTable()
+  import Chars._
 
   override def defaultFn :Option[String] = Some("self-insert-command")
   override def missedFn  :Option[String] = Some("unknown-command")
@@ -151,12 +146,6 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     // meta commands
     "M-x" -> "execute-extended-command"
   )
-
-  /** A predicate that tests a character for word-ness. Used a lot so we expose it here. */
-  val isWord = syntax is Syntax.Word
-
-  /** A predicate that tests a character for non-word-ness. Used a lot so we expose it here. */
-  val isNotWord = syntax isNot Syntax.Word
 
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
     * and then keeps going until a non-word char is seen (or the end of the buffer is reached), and

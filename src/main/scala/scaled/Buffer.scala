@@ -152,13 +152,15 @@ abstract class BufferV extends Region {
   }
 
   /** Searches forward from `start` for a character that matches `pred`. If `start` matches, it will
-    * be returned. If `end` is reached before finding a match, `end` is returned. */
-  def findForward (start :Loc, end :Loc, pred :Char => Boolean) :Loc = {
+    * be returned. If `end` is reached before finding a match, `end` is returned.
+    * @param pred a predicate that will be passed `(row, col, char)`.
+    */
+  def findForward (start :Loc, end :Loc, pred :(Int,Int,Char) => Boolean) :Loc = {
     val erow = end.row ; val ecol = end.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = if (row > erow) end else {
       val line = this.line(row)
       val last = if (row == erow) ecol else line.length
-      var p = col ; while (p <= last && !pred(line.charAt(p))) p += 1
+      var p = col ; while (p <= last && !pred(row, p, line.charAt(p))) p += 1
       if (p <= last) Loc(row, p)
       else seek(row+1, 0)
     }
@@ -166,16 +168,19 @@ abstract class BufferV extends Region {
   }
 
   /** Searches forward from `loc` for a character that matches `pred`. If `loc` matches, it will be
-    * returned. If the end of the buffer is reached before finding a match, [[end]] is returned. */
-  def findForward (loc :Loc, pred :Char => Boolean) :Loc = findForward(loc, end, pred)
+    * returned. If the end of the buffer is reached before finding a match, [[end]] is returned.
+    * @param pred a predicate that will be passed `(row, col, char)`.
+    */
+  def findForward (loc :Loc, pred :(Int,Int,Char) => Boolean) :Loc = findForward(loc, end, pred)
 
   /** Searches backward from the location immediately previous to `loc` for a character that matches
-    * `pred`. If the start of the buffer is reached before finding a match, [[start]] is
-    * returned. */
-  def findBackward (loc :Loc, pred :Char => Boolean) :Loc = {
+    * `pred`. If the start of the buffer is reached before finding a match, [[start]] is returned.
+    * @param pred a predicate that will be passed `(row, col, char)`.
+    */
+  def findBackward (loc :Loc, pred :(Int,Int,Char) => Boolean) :Loc = {
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
-      var p = col ; while (p >= 0 && !pred(line.charAt(p))) p -= 1
+      var p = col ; while (p >= 0 && !pred(row, p, line.charAt(p))) p -= 1
       if (p >= 0) Loc(row, p)
       else if (row == 0) start
       else seek(row-1, this.line(row-1).length)

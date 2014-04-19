@@ -8,8 +8,8 @@ import scala.annotation.tailrec
 import scala.collection.mutable.{Set => MSet}
 
 import scaled._
-import scaled.major.{EditingMode, Syntax}
-import scaled.util.Behavior
+import scaled.major.EditingMode
+import scaled.util.{Behavior, Chars}
 
 object WhitespaceConfig extends Config.Defs {
 
@@ -26,6 +26,7 @@ object WhitespaceConfig extends Config.Defs {
                undesirable whitespace.""")
 class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
   import WhitespaceConfig._
+  import Chars._
 
   val trailingWhitespacer = new Behavior() {
     private val _rethinkLines = MSet[Int]()
@@ -66,7 +67,7 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
       val line = buffer.lines(ii)
       val limit = if (view.point().row == ii) view.point().col else 0
       @tailrec def seek (col :Int) :Int = {
-        if (col == limit || major.syntax(line.charAt(col-1)) != Syntax.Whitespace) col
+        if (col == limit || isNotWhitespace(line.charAt(col-1))) col
         else seek(col-1)
       }
       val last = line.length

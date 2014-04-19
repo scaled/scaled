@@ -6,7 +6,7 @@ package scaled.major
 
 import reactual.OptValue
 import scaled._
-import scaled.util.{Block, Blocker}
+import scaled.util.{Block, Blocker, Chars}
 
 object CodeConfig extends Config.Defs {
 
@@ -49,6 +49,7 @@ object CodeConfig extends Config.Defs {
   */
 abstract class CodeMode (env :Env) extends EditingMode(env) {
   import CodeConfig._
+  import Chars._
 
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
@@ -87,11 +88,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Returns the number of whitespace chars at the start of `line`. */
   def readIndent (line :LineV) :Int = {
     var pos = 0 ; val end = line.length
-    while (pos < end && syntax(line.charAt(pos)) == Syntax.Whitespace) pos += 1
+    while (pos < end && isWhitespace(line.charAt(pos))) pos += 1
     pos
   }
-
-  private val isNotWhitespace = syntax.isNot(Syntax.Whitespace)
 
   /** Computes the indentation for the line at `row`. */
   def computeIndent (row :Int) :Int = {
