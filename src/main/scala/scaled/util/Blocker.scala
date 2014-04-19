@@ -25,10 +25,19 @@ case class Block (start :Loc, end :Loc, isValid :Boolean) extends Region {
   */
 class Blocker (buffer :RBuffer, openers :String, closers :String) {
 
-  /** Returns the inner-most block that encloses `loc`. */
-  def apply (loc :Loc) :Option[Block] = {
+  /** Returns the inner-most block that encloses `loc`. The block will be restricted to characters
+    * that have the same syntax class as the character at `loc. See [[classify]]. */
+  def apply (loc :Loc) :Option[Block] = apply(loc, classify(loc.row, loc.col))
+
+  /** Returns the inner-most block that encloses `loc` and which has the specified syntax class.
+    * See [[classify]]. */
+  def apply (loc :Loc, clazz :Int) :Option[Block] = {
+    val srow = loc.row ; val scol = loc.col
+    findOpener.reset(clazz)
+    findCloser.reset(clazz)
     // if the character immediately prior to `loc` is a close bracket; return that block
-    val pcidx = if (loc.col > 0) closers.indexOf(buffer.charAt(loc.prevC)) else -1
+    val pcidx = if (scol == 0 || classify(srow, scol-1) != clazz) -1
+                else closers.indexOf(buffer.charAt(loc.prevC))
     if (pcidx >= 0) {
       val start = buffer.findBackward(loc.prevC, findOpener)
       val sbidx = openers.indexOf(buffer.charAt(start))
@@ -50,19 +59,25 @@ class Blocker (buffer :RBuffer, openers :String, closers :String) {
     }
   }
 
+  /** Provides a way for modes to define syntax classes for different parts of the buffer. This is
+    * mainly useful for differentiating between comments and strings so that brackets in one type
+    * of syntax do not match brackets in a different type. */
+  protected def classify (row :Int, col :Int) :Int = 0
+
   // scans backwards, looking for an unmatched opener
   class Scanner (starts :String, ends :String) extends Function3[Int,Int,Char,Boolean] {
     val counts = new Array[Int](starts.length)
     val zeros = counts.clone()
+    private[this] var clazz = 0
 
     def apply (row :Int, col :Int, c :Char) :Boolean = {
       // if we see a block starter, tick up a counter for that bracket
       val sidx = starts.indexOf(c)
-      if (sidx >= 0) counts(sidx) += 1
+      if (sidx >= 0 && classify(row, col) == clazz) counts(sidx) += 1
       else {
         // if we see a block ender, tick down the counter for that bracket
         val eidx = ends.indexOf(c)
-        if (eidx >= 0) {
+        if (eidx >= 0 && classify(row, col) == clazz) {
           val cur = counts(eidx)
           // if we haven't seen a starter for this opener, it's what we're looking for
           if (cur == 0) return true
@@ -73,7 +88,10 @@ class Blocker (buffer :RBuffer, openers :String, closers :String) {
     }
 
     // resets this scanner and prepares it for operation
-    def reset () :Unit = Arrays.fill(counts, 0)
+    def reset (clazz :Int) {
+      this.clazz = clazz
+      Arrays.fill(counts, 0)
+    }
 
     // we're valid if we find an unmatched opener and have no pending closers
     def isValid () = Arrays.equals(counts, zeros)

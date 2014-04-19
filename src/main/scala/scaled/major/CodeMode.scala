@@ -68,7 +68,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
   val curBlock = OptValue[Block]()
   /** A helper that tracks blocks throughout the buffer. */
-  val blocker = new Blocker(buffer, openBrackets, closeBrackets)
+  val blocker = new Blocker(buffer, openBrackets, closeBrackets) {
+    override def classify (row :Int, col :Int) :Int = CodeMode.this.classify(Loc(row, col))
+  }
+
   // as the point moves around, track the active block
   view.point onValue { p => curBlock() = blocker(p) }
   // as the active block changes, highlight the delimiters
@@ -97,7 +100,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     // find the position of the first non-whitespace character on the line
     val wsp = buffer.line(row).find(isNotWhitespace)
     val start = Loc(row, if (wsp == -1) 0 else wsp)
-    blocker(start) match {
+    blocker(start, 0) match {
       // locate the innermost block that contains start
       case Some(b) =>
         buffer.charAt(b.start) match {
@@ -118,7 +121,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. */
-  def reindent (pos :Loc) :Loc = {
+  def reindent (pos :Loc) {
     val indent = computeIndent(pos.row)
     val curIndent = readIndent(buffer.line(pos))
     val delta = indent - curIndent
@@ -129,8 +132,24 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     // line; otherwise shift it by the amount of whitespace adjusted
     val p = view.point()
     view.point() = if (p.row != pos.row) p
-                   else if (p.col < indent) p.atCol(indent)
+                   else if (p.col < curIndent) p.atCol(indent)
                    else p + (0, delta)
+  }
+
+  /** Returns an int identifying the syntax class for the character at `loc`. This is used by
+    * [[blocker]] to avoid matching brackets in normal code with brackets in comments or strings.
+    *
+    * The default implementation treats characters styled with [[commentStyle]], [[docStyle]],
+    * [[stringStyle]] and [[constantStyle]] as separate bracket classes. NOTE: zero should always
+    * be returned for brackets affect actual code.
+    */
+  protected def classify (loc :Loc) :Int = {
+    val styles = buffer.stylesAt(loc)
+    if (styles.contains(commentStyle)) 1
+    else if (styles.contains(docStyle)) 2
+    else if (styles.contains(stringStyle)) 3
+    else if (styles.contains(constantStyle)) 4
+    else 0
   }
 
   override def selfInsertCommand (typed :String) {
