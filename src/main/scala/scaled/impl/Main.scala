@@ -41,6 +41,28 @@ class Main extends Application {
     }
     stage.setScene(scene)
     stage.show()
+
+    // now that our main window is created, we can tweak the quit menu shortcut key
+    tweakQuitMenuItem()
+  }
+
+  // tweaks the shortcut on the quit menu to avoid conflict with M-q
+  private def tweakQuitMenuItem () :Unit = try {
+    import com.sun.glass._
+    val app = ui.Application.GetApplication
+    val getAppleMenu = app.getClass.getMethod("getAppleMenu")
+    if (getAppleMenu != null) {
+      getAppleMenu.setAccessible(true)
+      val menu = getAppleMenu.invoke(app).asInstanceOf[ui.Menu]
+      val items = menu.getItems
+      val quit = items.get(items.size-1).asInstanceOf[ui.MenuItem]
+      quit.setShortcut('q', events.KeyEvent.MODIFIER_COMMAND|events.KeyEvent.MODIFIER_SHIFT)
+    }
+
+  } catch {
+    case t :Throwable =>
+      println("Failed to tweak Quit menu item")
+      t.printStackTrace(System.err)
   }
 
   // TODO: platform specific app dirs
