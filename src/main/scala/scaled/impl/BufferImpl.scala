@@ -294,14 +294,20 @@ class BufferImpl private (
     edit.end
   }
   private def noteInsert (start :Loc, end :Loc) = {
-    // check inserted lines for new longest line
-    _maxRow = math.max(_maxRow, longest(_lines, start.row, end.row+1))
+    // shift max row, then check inserted lines for new longest line
+    if (_maxRow >= start.row) _maxRow += (end.row - start.row)
+    val editMaxRow = longest(_lines, start.row, end.row+1)
+    if (lines(editMaxRow).length > maxLineLength) _maxRow = editMaxRow
+    // TODO: if the insertion is in the max row, it might have split the max row into two non-max
+    // rows, in which case we have to rescan the whole buffer; sigh...
     emit(new Insert(start, end, this))
   }
   private def noteDelete (start :Loc, deleted :Seq[Line]) = {
     val edit = new Delete(start, deleted, this)
-    // if our old longest line was in the deleted region, rescan buffer for new longest
-    if (_maxRow >= start.row && _maxRow <= edit.end.row) _maxRow = longest(_lines, 0, _lines.length)
+    // if our max row was later in the buffer than the deleted region, shift it
+    if (_maxRow > edit.end.row) _maxRow -= (edit.end.row - edit.start.row)
+    // otherwise if our old max row was in the deleted region, rescan buffer for new longest
+    else if (_maxRow >= start.row) _maxRow = longest(_lines, 0, _lines.length)
     emit(edit)
   }
   private def noteTransform (start :Loc, orig :Seq[Line]) =
