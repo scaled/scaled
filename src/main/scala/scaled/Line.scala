@@ -22,8 +22,8 @@ abstract class LineV extends CharSequence {
   /** The length (in characters) of this line. */
   def length :Int
 
-  /** Returns the character at `pos`. If `pos` is >= [[length]] line 0 is returned. */
-  def charAt (pos :Int) :Char = if (pos < length) _chars(_offset+pos) else 0
+  /** Returns the character at `pos`. If `pos` is outside `[0,length)` 0 is returned. */
+  def charAt (pos :Int) :Char = if (pos >= 0 && pos < length) _chars(_offset+pos) else 0
 
   /** Returns the CSS style classes applied to the character at `pos`, if any. */
   def stylesAt (pos :Int) :Styles = if (pos < length) _styles(_offset+pos) else Styles.None
