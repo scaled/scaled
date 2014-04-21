@@ -485,8 +485,9 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   @Fn("""Inserts a newline at the point.
          Characters after the point on the current line wil be moved to a new line.""")
   def newline () {
-    buffer.split(view.point())
-    view.point() = Loc(view.point().row+1, 0)
+    val p = view.point()
+    buffer.split(p)
+    view.point() = p.nextStart
   }
 
   @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
