@@ -16,6 +16,9 @@ object WhitespaceConfig extends Config.Defs {
   @Var("If true, trailing whitespace will be highlighted.")
   val showTrailingWhitespace = key(true)
 
+  @Var("If true, trailing whitespace will be trimmed from a line when a newline is inserted.")
+  val trimTrailingWhitespace = key(true)
+
   /** The CSS style applied to trailing whitespace characters. */
   val trailingStyle = "whitespaceTrailingFace"
 }
@@ -27,8 +30,7 @@ object WhitespaceConfig extends Config.Defs {
 class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
   import WhitespaceConfig._
   import Chars._
-
-  val trailingWhitespacer = new Behavior() {
+  val twHighlighter = new Behavior() {
     private val _rethinkLines = MSet[Int]()
 
     override protected def activate () {
@@ -77,12 +79,36 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
       if (first < last) buffer.addStyle(trailingStyle, floc, Loc(ii, last))
     }
   }
-  config.value(showTrailingWhitespace) onValueNotify trailingWhitespacer.setActive
+  config.value(showTrailingWhitespace) onValueNotify twHighlighter.setActive
+
+  val twTrimmer = new Behavior() {
+    override protected def activate () {
+      note(buffer.edited onValue { _ match {
+        case Buffer.Insert(start, end) =>
+          if (end.col == 0 && end.row == start.row + 1)
+            editor defer trimTrailingWhitespaceAt(start.row)
+        case _ => // ignore
+      }})
+    }
+  }
+  config.value(WhitespaceConfig.trimTrailingWhitespace) onValueNotify twTrimmer.setActive
 
   override def keymap = Seq() // TODO
   override def configDefs = WhitespaceConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
   override def dispose () {
-    trailingWhitespacer.setActive(false)
+    twHighlighter.setActive(false)
+    twTrimmer.setActive(false)
+  }
+
+  def trimTrailingWhitespaceAt (row :Int) {
+    val line = buffer.line(row) ; val len = line.length
+    var pos = len-1 ; while (pos >= 0 && isWhitespace(line.charAt(pos))) pos -= 1
+    if (pos < len-1) buffer.delete(Loc(row, pos+1), Loc(row, len))
+  }
+
+  @Fn("Trims trailing whitespace from the line at the point.")
+  def trimTrailingWhitespaceFromLine () {
+    trimTrailingWhitespaceAt(view.point().row)
   }
 }
