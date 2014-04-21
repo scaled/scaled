@@ -11,8 +11,7 @@ import javafx.geometry.VPos
 import javafx.scene.Node
 import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
-import javafx.scene.text.Text
-import javafx.scene.text.TextFlow
+import javafx.scene.text.{Text, TextFlow, FontSmoothingType}
 
 import scaled._
 
@@ -86,6 +85,7 @@ class LineViewImpl (_line :LineV) extends LineView {
           assert(end > start)
           assert(text.indexOf('\r') == -1 && text.indexOf('\n') == -1)
           val tnode = new FillableText(text)
+          tnode.setFontSmoothingType(FontSmoothingType.LCD)
           tnode.getStyleClass.add("textFace")
           styles.addTo(tnode.getStyleClass)
           tnode.setTextOrigin(VPos.TOP)
