@@ -151,41 +151,64 @@ abstract class BufferV extends Region {
     seek(loc.row, loc.col, count)
   }
 
-  /** Searches forward from `start` for a character that matches `pred`. If `start` matches, it will
-    * be returned. If `end` is reached before finding a match, `end` is returned.
+  /** Scans forward from `start` for a character that matches `pred`. If `start` matches, it will be
+    * returned. If `stop` is reached before finding a match, `stop` is returned. Note that end of
+    * line characters are included in the scan.
     * @param pred a predicate that will be passed `(row, col, char)`.
     */
-  def findForward (start :Loc, end :Loc, pred :(Int,Int,Char) => Boolean) :Loc = {
-    val erow = end.row ; val ecol = end.col
-    @inline @tailrec def seek (row :Int, col :Int) :Loc = if (row > erow) end else {
-      val line = this.line(row)
-      val last = if (row == erow) ecol else line.length
-      var p = col ; while (p <= last && !pred(row, p, line.charAt(p))) p += 1
-      if (p <= last) Loc(row, p)
-      else seek(row+1, 0)
-    }
-    seek(start.row, start.col)
-  }
-
-  /** Searches forward from `loc` for a character that matches `pred`. If `loc` matches, it will be
-    * returned. If the end of the buffer is reached before finding a match, [[end]] is returned.
-    * @param pred a predicate that will be passed `(row, col, char)`.
-    */
-  def findForward (loc :Loc, pred :(Int,Int,Char) => Boolean) :Loc = findForward(loc, end, pred)
-
-  /** Searches backward from the location immediately previous to `loc` for a character that matches
-    * `pred`. If the start of the buffer is reached before finding a match, [[start]] is returned.
-    * @param pred a predicate that will be passed `(row, col, char)`.
-    */
-  def findBackward (loc :Loc, pred :(Int,Int,Char) => Boolean) :Loc = {
+  def scanForward (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
+    val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
-      var p = col ; while (p >= 0 && !pred(row, p, line.charAt(p))) p -= 1
-      if (p >= 0) Loc(row, p)
-      else if (row == 0) start
+      val last = if (row == stopr) stopc else line.length
+      var p = col ; while (p <= last && !pred(row, p, line.charAt(p))) p += 1
+      if (p <= last) Loc(row, p)
+      else if (row == stopr) stop
+      else seek(row+1, 0)
+    }
+    if (start < stop) seek(start.row, start.col) else stop
+  }
+
+  /** Scans backward from the location immediately previous to `start` for a character that matches
+    * `pred`. If `stop` is reached before finding a match, `stop` is returned. Note that end of
+    * line characters are included in the scan.
+    * @param pred a predicate that will be passed `(row, col, char)`.
+    */
+  def scanBackward (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
+    val stopr = stop.row ; val stopc = stop.col
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = {
+      val line = this.line(row)
+      val first = if (row == stopr) stopc else 0
+      var p = col ; while (p >= first && !pred(row, p, line.charAt(p))) p -= 1
+      if (p >= first) Loc(row, p)
+      else if (row == stopr) stop
       else seek(row-1, this.line(row-1).length)
     }
-    seek(loc.row, loc.col-1)
+    if (stop < start) seek(start.row, start.col-1) else stop
+  }
+
+  /** Searches forward from `start` for the first match of `m`, stopping before `stop` (`stop` is not
+    * checked for a match).
+    * @return the location of the match or `Loc.None`. */
+  def findForward (m :Matcher, start :Loc, stop :Loc = this.end) :Loc = {
+    val stopr = stop.row ; val stopc = stop.col
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).indexOf(m, col) match {
+      case -1 => if (row == stopr) stop else seek(row+1, 0)
+      case ii => if (row == stopr && ii >= stopc) Loc.None else Loc(row, ii)
+    }
+    if (start < stop) seek(start.row, start.col) else Loc.None
+  }
+
+  /** Searches backward from the location immediately previous to `start` for the first match of `m`,
+    * stopping when `stop` is reached (`stop` is checked for a match).
+    * @return the location of the match or `Loc.None`. */
+  def findBackward (m :Matcher, start :Loc, stop :Loc = this.end) :Loc = {
+    val stopr = stop.row ; val stopc = stop.col
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).lastIndexOf(m, col) match {
+      case -1 => if (row == stopr) Loc.None else seek(row-1, line(row-1).length)
+      case ii => if (row == stopr && ii < stopc) Loc.None else Loc(row, ii)
+    }
+    if (start > stop) seek(start.row, start.col-1) else Loc.None
   }
 
   /** Searches for `lns` in the buffer, starting at `start` and not searching beyond `end`. If only a
@@ -193,14 +216,18 @@ abstract class BufferV extends Region {
     * is sought, the first line must match the end of a buffer line, and subsequent lines must
     * match entirely until the last line which must match the start of the corresponding buffer
     * line. The text of the lines must not contain line separator characters.
-    * @param maxMatches the search is stopped once this many matches are found. */
+    *
+    * If the sought text is mixed case, exact-case matching is used, otherwise case-insensitive
+    * matching is used.
+    *
+    * @param maxMatches the search is stopped once this many matches are found.
+    */
   def search (lns :Seq[LineV], start :Loc, end :Loc, maxMatches :Int = Int.MaxValue) :Seq[Loc] = {
-    val comp = Line.compFor(lns)
     lns match {
       case Seq() => Seq()
       // searching for a single line can match anywhere in a line, so we handle specially
       case Seq(ln) => if (ln.length == 0) Seq()
-                      else searchFrom(comp, start, end, ln, maxMatches, Seq())
+                      else searchFrom(Matcher.on(ln), start, end, maxMatches, Seq())
       // multiline searches have to match the end of one line, zero or more intermediate lines, and
       // the start of the final line
       case lines =>
@@ -208,17 +235,17 @@ abstract class BufferV extends Region {
     }
   }
 
-  private def searchFrom (comp :(Char, Char) => Boolean, start :Loc, end :Loc, needle :LineV,
-                          maxMatches :Int, accum :Seq[Loc]) :Seq[Loc] =
+  private def searchFrom (m :Matcher, start :Loc, end :Loc, maxMatches :Int,
+                          accum :Seq[Loc]) :Seq[Loc] =
     if (maxMatches == 0 || start > end) accum
-    else line(start).search(comp, needle, start.col) match {
+    else line(start).indexOf(m, start.col) match {
       // if no match on this line, move to the next line and keep searching
-      case -1 => searchFrom(comp, start.nextStart, end, needle, maxMatches, accum)
+      case -1 => searchFrom(m, start.nextStart, end, maxMatches, accum)
       // if we did match on this line, make sure it's < end, add it, and keep searching
       case ii =>
-        val next = start atCol ii+needle.length
+        val next = start.atCol(ii+m.matchLength)
         if (next > end) accum
-        else searchFrom(comp, next, end, needle, maxMatches-1, accum :+ (start atCol ii))
+        else searchFrom(m, next, end, maxMatches-1, accum :+ (start atCol ii))
     }
 }
 

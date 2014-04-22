@@ -78,7 +78,11 @@ class Loc private (val rowCol :Long) extends AnyVal {
 /** [[Loc]] related utilities. */
 object Loc {
 
+  /** The location at row zero, column zero. */
   val Zero = Loc(0, 0)
+
+  /** A sentinel location indicating failure. No valid buffer location will ever equal this. */
+  val None = Loc(-1, -1)
 
   /** Creates a location with the specified row and column. */
   def apply (row :Int, col :Int) = new Loc((row.toLong << 32) + col)

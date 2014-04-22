@@ -39,7 +39,7 @@ class Blocker (buffer :RBuffer, openers :String, closers :String) {
     val pcidx = if (scol == 0 || classify(srow, scol-1) != clazz) -1
                 else closers.indexOf(buffer.charAt(loc.prevC))
     if (pcidx >= 0) {
-      val start = buffer.findBackward(loc.prevC, findOpener)
+      val start = buffer.scanBackward(findOpener, loc.prevC)
       val sbidx = openers.indexOf(buffer.charAt(start))
       if (sbidx == pcidx) Some(Block(start, loc.prevC, true))
       else None
@@ -47,12 +47,12 @@ class Blocker (buffer :RBuffer, openers :String, closers :String) {
     // otherwise scan backwards for the first opener (skipping matched pairs along the way)
     else {
       val start = if (openers.indexOf(buffer.charAt(loc)) != -1) loc
-                  else buffer.findBackward(loc, findOpener)
+                  else buffer.scanBackward(findOpener, loc)
       val sbidx = openers.indexOf(buffer.charAt(start))
       // we may have hit the start of the buffer and seen no opener
       if (sbidx == -1) None
       else {
-        val end = buffer.findForward(loc, findCloser)
+        val end = buffer.scanForward(findCloser, loc)
         val ebidx = closers.indexOf(buffer.charAt(end))
         Some(Block(start, end, sbidx == ebidx))
       }

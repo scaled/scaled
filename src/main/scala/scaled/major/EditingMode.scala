@@ -151,7 +151,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     * and then keeps going until a non-word char is seen (or the end of the buffer is reached), and
     * that point is returned.
     */
-  def forwardWord (p :Loc) :Loc = buffer.findForward(buffer.findForward(p, isWord), isNotWord)
+  def forwardWord (p :Loc) :Loc = buffer.scanForward(isNotWord, buffer.scanForward(isWord, p))
 
   /** Seeks backward to the start of a word. Moves backward from `p` until at least one word char is
     * seen (whether `p` is a word char is not relevant), and then keeps going until a non-word char
@@ -159,11 +159,11 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     * char.
     */
   def backwardWord (p :Loc) :Loc = {
-    val firstWordC = buffer.findBackward(p, isWord)
+    val firstWordC = buffer.scanBackward(isWord, p)
     // we may have hit the beginning of the buffer looking for a word char; if so, cope
     if (firstWordC == buffer.start) buffer.start
     else {
-      val nonWordC = buffer.findBackward(firstWordC, isNotWord)
+      val nonWordC = buffer.scanBackward(isNotWord, firstWordC)
       // we may have hit the beginning of the buffer looking for a non-word char; if so, cope
       if (isWord(buffer.charAt(nonWordC))) nonWordC else buffer.forward(nonWordC, 1)
     }
@@ -336,9 +336,9 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   @Fn("""Capitalizes the word at or following the point, moving the point to the end of the word.
          This gives the word a first character in upper case and the rest in lower case.""")
   def capitalizeWord () {
-    val first = buffer.findForward(view.point(), isWord)
+    val first = buffer.scanForward(isWord, view.point())
     val start = buffer.forward(first, 1)
-    val until = buffer.findForward(start, isNotWord)
+    val until = buffer.scanForward(isNotWord, start)
     upcase(first, start)
     downcase(start, until)
     view.point() = until

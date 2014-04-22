@@ -9,12 +9,13 @@ import org.junit.Assert._
 
 class LineTest {
 
-  @Test def testSearch () {
+  @Test def testIndexOf () {
+    //                 0123456789012345678901234567890123456789012
     val l1 = new Line("The quick brown fox jumps over the lazy dog.")
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val idx = s.indexOf(needle, start)
       assertEquals(s"offset (from $start) of '$needle' in '$s'", idx,
-                   line.search(Line.exact, new Line(needle), start))
+                   line.indexOf(Matcher.exact(needle), start))
       // println(s"$needle IN $s FROM $start => $idx")
     }
     test(l1, "quick", 0)
@@ -23,7 +24,7 @@ class LineTest {
     test(l1, "lazy dog.", 0)
     test(l1, "lazy dog.", 50)
 
-    val l2 = l1.slice(10, 34)
+    val l2 = l1.slice(10, 34) // "brown fox jumps over the "
     test(l2, "brown fox", 0)
     test(l2, "jumps", 0)
     test(l2, "brown", 1)
@@ -32,12 +33,36 @@ class LineTest {
     test(l2, "lazy dog.", 50)
   }
 
+  @Test def testLastIndexOf () {
+    //                 012345678901234567890123456789
+    val l1 = new Line("A man, a plan, a canal, Panama!")
+    def test (line :Line, needle :String, start :Int) {
+      val s = line.asString ; val idx = s.lastIndexOf(needle, start)
+      assertEquals(s"last offset (from $start) of '$needle' in '$s'", idx,
+                   line.lastIndexOf(Matcher.exact(needle), start))
+      // println(s"$needle IN $s FROM $start => $idx")
+    }
+    test(l1, "Panama", l1.length)
+    test(l1, "canal", l1.length)
+    test(l1, "canal", 16) // should not match
+    test(l1, "an", l1.length) // match an in Panama
+    test(l1, "an", 18) // match an in canal
+    test(l1, "an", 17) // match an in plan
+
+    val l2 = l1.slice(10, 21) // "lan, a cana"
+    test(l2, "cana", l2.length)
+    test(l2, "an", l2.length)
+    test(l2, "an", 8)
+    test(l2, "an", 7)
+    test(l2, "lan", l2.length)
+  }
+
   @Test def testMatches () {
     val l1 = new Line("The quick brown fox jumps over the lazy dog.")
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val matches = s.indexOf(needle, start) == start
       assertEquals(s"'$needle' matches (at $start) '$s'", matches,
-                   line.matches(Line.exact, new Line(needle), start))
+                   line.matches(Matcher.exact(needle), start))
       // println(s"$needle MATCH $s AT $start => $matches")
     }
     test(l1, "quick", 4)
