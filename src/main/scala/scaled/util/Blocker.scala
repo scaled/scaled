@@ -46,8 +46,7 @@ class Blocker (buffer :RBuffer, openers :String, closers :String) {
     }
     // otherwise scan backwards for the first opener (skipping matched pairs along the way)
     else {
-      val start = if (openers.indexOf(buffer.charAt(loc)) != -1) loc
-                  else buffer.scanBackward(findOpener, loc)
+      val start = buffer.scanBackward(findOpener, loc)
       val sbidx = openers.indexOf(buffer.charAt(start))
       // we may have hit the start of the buffer and seen no opener
       if (sbidx == -1) None
