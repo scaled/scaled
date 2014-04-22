@@ -46,7 +46,7 @@ class BlockerTest {
     assertEquals(None, blocker(Loc(2, 71)))
     assertEquals(Loc(6,18), blocker(Loc(7, 3)).get.start)
     assertEquals(Loc(6,18), blocker(Loc(12, 14)).get.start)
-    assertEquals(Loc(12,15), blocker(Loc(12, 15)).get.start)
+    assertEquals(Loc(6,18), blocker(Loc(12, 15)).get.start)
     assertEquals(Loc(12,15), blocker(Loc(12, 16)).get.start)
     assertEquals(Loc(12,15), blocker(Loc(12, 17)).get.start)
     assertEquals(Loc(6,18), blocker(Loc(13, 0)).get.start)
