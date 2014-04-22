@@ -5,8 +5,9 @@
 package scaled.major
 
 import reactual.OptValue
+import scala.annotation.tailrec
 import scaled._
-import scaled.util.{Block, Blocker, Chars}
+import scaled.util.{Block, Blocker, Chars, Indenter}
 
 object CodeConfig extends Config.Defs {
 
@@ -94,9 +95,6 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     else 0
   }
 
-  /** Handles indentation for this mode. */
-  val indenter = new Indenter(buffer, blocker, config.value(indentWidth))
-
   // as the point moves around, track the active block
   view.point onValue { p => curBlock() = blocker(p) }
   // as the active block changes, highlight the delimiters
@@ -113,13 +111,32 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
   }
 
+  /** The list of indenters used to indent code for this mode. */
+  val indenters :List[Indenter] = createIndenters()
+  protected def createIndenters () :List[Indenter]= List(Indenter.ByBlock)
+
+  /** Computes the indentation for the line at `row`. */
+  def computeIndent (row :Int) :Int = {
+    // find the position of the first non-whitespace character on the line
+    val line = buffer.line(row)
+    val wsp = line.find(isNotWhitespace)
+    val start = Loc(row, if (wsp == -1) 0 else wsp)
+    val block = blocker(start, 0) getOrElse Block(buffer.start, buffer.end, true)
+    @tailrec @inline def loop (ins :List[Indenter]) :Int =
+      if (ins.isEmpty) 0 else {
+        val opt = ins.head(config, buffer, block, line, start)
+        if (opt.isDefined) opt.get else loop(ins.tail)
+      }
+    loop(indenters)
+  }
+
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. If the
     * point is on the line at `pos` it will be adjusted to account for the changed indentation.
     * @return the new indentation for the line at `pos`.
     */
   def reindent (pos :Loc) :Int = {
-    val origIndent = indenter.readIndent(pos)
-    val indent = indenter.computeIndent(pos.row)
+    val origIndent = Indenter.readIndent(buffer, pos)
+    val indent = computeIndent(pos.row)
     val delta = indent - origIndent
     if (delta > 0) buffer.insert(pos.atCol(0), " " * delta, Styles.None)
     else if (delta < 0) buffer.delete(pos.atCol(0), -delta)

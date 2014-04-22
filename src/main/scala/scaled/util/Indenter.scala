@@ -2,39 +2,32 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.major
+package scaled.util
 
 import reactual.ValueV
 import scala.annotation.tailrec
 import scaled._
-import scaled.util.{Blocker, Block, Chars}
+import scaled.major.CodeConfig
 
-/** Handles indenting code for a [[CodeMode]].
-  */
-class Indenter (buffer :BufferV, blocker :Blocker, indentWidth :ValueV[Int]) {
+/** Encapsulates a strategy for indenting a line of code. */
+abstract class Indenter {
+
+  /** Requests that the indentation for `line` be computed.
+    *
+    * @param config the configuration for the mode doing the indenting.
+    * @param buffer the buffer in which we are indenting.
+    * @param block the nearest enclosing block that encloses line.
+    * @param line the line to be indented.
+    * @param pos position of the first non-whitespace character on `line`.
+    *
+    * @return `Some(col)` indicating the column to which `line` should be indented, or `None` if
+    * this strategy is not appropriate for `line`.
+    */
+  def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int]
+}
+
+object Indenter {
   import Chars._
-
-  /** Encapsulates a strategy for indenting a line of code. */
-  trait IndentFn {
-
-    /** Attempts to indent `line`.
-      *
-      * @param line the line to be indented.
-      * @param pos position of the first non-whitespace character on `line`.
-      * @param block the nearest enclosing block that encloses line.
-      *
-      * @return `Some(col)` indicating the column to which `line` should be indented, or `None` if
-      * this strategy is not appropriate for `line`.
-      */
-    def apply (line :LineV, pos :Loc, block :Block) :Option[Int]
-  }
-
-  /** A list of indentation functions which will be applied in order to determine the indentation for
-    * a line. The first fn to return `Some(col)` is used. */
-  val indentFns :List[IndentFn] = List(
-    new IndentOneLiner(List("else", "else if", "if")),
-    IndentByBlock
-  )
 
   /** Returns the number of whitespace chars at the start of `line`. */
   def readIndent (line :LineV) :Int = {
@@ -44,22 +37,7 @@ class Indenter (buffer :BufferV, blocker :Blocker, indentWidth :ValueV[Int]) {
   }
 
   /** Returns the number of whitespace chars at the start of the line at `pos`. */
-  def readIndent (pos :Loc) :Int = readIndent(buffer.line(pos))
-
-  /** Computes the indentation for the line at `row`. */
-  def computeIndent (row :Int) :Int = {
-    // find the position of the first non-whitespace character on the line
-    val line = buffer.line(row)
-    val wsp = line.find(isNotWhitespace)
-    val start = Loc(row, if (wsp == -1) 0 else wsp)
-    val block = blocker(start, 0) getOrElse Block(buffer.start, buffer.end, true)
-    @tailrec @inline def loop (fns :List[IndentFn]) :Int =
-      if (fns.isEmpty) 0 else {
-        val opt = fns.head(line, start, block)
-        if (opt.isDefined) opt.get else loop(fns.tail)
-      }
-    loop(indentFns)
-  }
+  def readIndent (buffer :BufferV, pos :Loc) :Int = readIndent(buffer.line(pos))
 
   /** Indents based on the innermost block that contains pos.
     *
@@ -99,8 +77,8 @@ class Indenter (buffer :BufferV, blocker :Blocker, indentWidth :ValueV[Int]) {
     *      "baz"
     *    ]
     */
-  object IndentByBlock extends IndentFn {
-    def apply (line :LineV, pos :Loc, block :Block) :Option[Int] = {
+  object ByBlock extends Indenter {
+    def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
       val bstart = block.start
       val openLine = buffer.line(bstart)
       val openNonWS = openLine.find(isNotWhitespace, bstart.col+1)
@@ -117,7 +95,7 @@ class Indenter (buffer :BufferV, blocker :Blocker, indentWidth :ValueV[Int]) {
           // as the line with the open brace
           if (block.isValid && block.end == pos) openIndent
           // otherwise indent one from there
-          else openIndent + indentWidth()
+          else openIndent + config(CodeConfig.indentWidth)
       }
       Some(indent)
     }
@@ -131,10 +109,10 @@ class Indenter (buffer :BufferV, blocker :Blocker, indentWidth :ValueV[Int]) {
     * up to the bounds of the current block. Thus `else` will align to `else if` or `if`, but `else
     * if` will only align to `if`.
     */
-  protected class IndentOneLiner (keywords :List[String]) extends IndentFn {
+  class OneLiner (keywords :List[String]) extends Indenter {
     private val matchers = keywords.map(Matcher.exact)
 
-    def apply (line :LineV, pos :Loc, block :Block) :Option[Int] = {
+    def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
       // seeks one of the tokens in ms prior to pos and returns its column if found
       @inline @tailrec def indent (ms :List[Matcher]) :Option[Int] = {
         if (ms.isEmpty) None
