@@ -22,8 +22,12 @@ abstract class LineV extends CharSequence {
   /** The length (in characters) of this line. */
   def length :Int
 
-  /** Returns the character at `pos`. If `pos` is outside `[0,length)` 0 is returned. */
-  def charAt (pos :Int) :Char = if (pos >= 0 && pos < length) _chars(_offset+pos) else 0
+  /** Returns the character at `pos`. If `pos == length` `\n` is returned. Otherwise if `pos` is
+    * outside `[0,length]` 0 is returned. */
+  def charAt (pos :Int) :Char = {
+    val l = length
+    if (pos >= 0 && pos < l) _chars(_offset+pos) else if (pos == l) '\n' else 0
+  }
 
   /** Returns the CSS style classes applied to the character at `pos`, if any. */
   def stylesAt (pos :Int) :Styles = if (pos < length) _styles(_offset+pos) else Styles.None
@@ -126,7 +130,7 @@ abstract class LineV extends CharSequence {
   override def equals (other :Any) = other match {
     case ol :LineV =>
       @inline @tailrec def charsEq (ii :Int) :Boolean = {
-        if (ii == length) true else charAt(ii) == ol.charAt(ii) && charsEq(ii+1)
+        if (ii == length) true else _chars(ii) == ol._chars(ii) && charsEq(ii+1)
       }
       length == ol.length && charsEq(0) && ol.styleMatches(_styles, _offset, length, 0)
     case _ => false
