@@ -80,4 +80,21 @@ class LineTest {
     test(l2, "lazy dog.", 0)
     test(l2, "lazy dog.", 50)
   }
+
+  @Test def testRegexpMatcher () {
+    val t1 = "The quick brown fox jumps over the lazy dog."
+    val l1 = new Line(t1)
+    assertEquals(t1.indexOf("quick"), l1.indexOf(Matcher.regexp("q.*k")))
+    assertEquals(t1.indexOf("The"), l1.indexOf(Matcher.regexp("[Tt]he")))
+    assertEquals(t1.lastIndexOf("the"), l1.lastIndexOf(Matcher.regexp("[Tt]he")))
+
+    val t2 = "Em, tee, blah. Blah blah, teleblah."
+    val l2 = new Line(t2)
+    assertTrue(l2.matches(Matcher.regexp("Em.*, blah.")))
+    assertTrue(l2.matches(Matcher.regexp("Em.*, teleblah.")))
+    assertFalse(l2.matches(Matcher.regexp("Em.*hello.*blah.")))
+    assertEquals(9, l2.indexOf(Matcher.regexp("blah")))
+    assertEquals(t2.lastIndexOf("blah"), l2.lastIndexOf(Matcher.regexp("blah")))
+    assertEquals(t2.lastIndexOf("blah,"), l2.lastIndexOf(Matcher.regexp("\\bblah")))
+  }
 }

@@ -121,7 +121,9 @@ abstract class LineV extends CharSequence {
     if (n == -1) n else n - offset
   }
 
-  /** Returns true if `m` matches this line starting at `start`. */
+  /** Returns true if `m` matches this line starting at `start`. NOTE: this is merely a (potentially)
+    * more efficient way to say `indexOf(m, start) == start)`, it does not mean that the matcher
+    * matches ALL of the remaining characters on the line. */
   def matches (m :Matcher, start :Int = 0) :Boolean =
     m.matches(_chars, _offset+start, _offset+length)
 

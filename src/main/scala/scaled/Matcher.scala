@@ -4,6 +4,7 @@
 
 package scaled
 
+import java.util.regex.{MatchResult, Pattern}
 import scala.annotation.tailrec
 
 /** Handles searching and matching in [[Line]]s. */
@@ -17,8 +18,8 @@ abstract class Matcher {
     * @return the index at which a match occurred or -1. */
   def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int
 
-  /** Returns true if this matcher matches `haystack` starting at `begin` without extending to or
-    * beyond `end`. */
+  /** Returns true if this matcher matches a prefix of `haystack` starting at `begin` without
+    * extending to or beyond `end`. */
   def matches (haystack :Array[Char], begin :Int, end :Int) :Boolean
 
   /** Returns the length of the most recent match. This method must be preceeded by a call to
@@ -37,6 +38,59 @@ object Matcher {
   /** Returns a case-insensitive matcher on `cs`. NOTE: `cs` must be all lower case. */
   def loose (cs :CharSequence) :Matcher = new CSMatcher(cs) {
     protected def eq (have :Char, want :Char) = have == want || have == Character.toLowerCase(want)
+  }
+
+  /** Returns a regep matcher on `pattern`. */
+  def regexp (pattern :String) :Matcher = new Matcher() {
+    private val p = Pattern.compile(pattern)
+    private val m = p.matcher("")
+
+    // contains the last successful match result; in searchBackward we have to repeatedly apply our
+    // matcher looking for the last match in the region, so we store the last successful match here
+    // to avoid having to recompute it after we learn that it was the last match by failing a
+    // subsequent match
+    private var result :MatchResult = _
+
+    // java's Matcher wants to operate on CharSequence, but we have an array, so we create use this
+    // reusable facade to avoid creating garbage on every match (assuming java's Matcher doesn't
+    // create garbage itself; probably wishful thinking...)
+    private var current :Array[Char] = _
+    private val curseq = new CharSequence() {
+      def length = current.length
+      def charAt (ii :Int) = current(ii)
+      def subSequence (start :Int, end :Int) = throw new UnsupportedOperationException()
+    }
+
+    def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
+      prep(haystack, begin, end)
+      if (!m.find) -1 else m.start
+    }
+
+    def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
+      prep(haystack, begin, end)
+      var start = begin
+      while (start <= from && m.find(start)) {
+        result = m.toMatchResult
+        start = m.end
+      }
+      if (start == begin) -1 else result.start
+    }
+
+    def matches (haystack :Array[Char], hfirst :Int, hlast :Int) :Boolean = {
+      prep(haystack, hfirst, hlast)
+      m.lookingAt
+    }
+
+    def matchLength = result.end - result.start
+
+    override def toString = pattern
+
+    private def prep (haystack :Array[Char], start :Int, end :Int) {
+      current = haystack
+      m.reset(curseq)
+      m.region(start, end)
+      result = m
+    }
   }
 
   /** Returns matchers for use in searching for `sought`. If `sought` contains all lower-case
