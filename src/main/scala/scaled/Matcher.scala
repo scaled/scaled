@@ -75,6 +75,8 @@ object Matcher {
 
     def matchLength = needle.length
 
+    override def toString = needle.toString
+
     private def search (n :CharSequence, hay :Array[Char], start :Int, stop :Int, dd :Int) = {
       val length = n.length
       var ss = start ; while (ss != stop && !check(length, n, 0, hay, ss)) ss += dd
