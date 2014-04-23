@@ -115,8 +115,10 @@ object Matcher {
 
   abstract class CSMatcher (needle :CharSequence) extends Matcher {
 
-    def search (haystack :Array[Char], begin :Int, end :Int) :Int =
-      if (end < begin) -1 else search(needle, haystack, begin, end, 1)
+    def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
+      val searchEnd = end-needle.length+1
+      if (searchEnd < begin) -1 else search(needle, haystack, begin, searchEnd, 1)
+    }
 
     def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
       val start = math.min(from, end-needle.length)
@@ -131,10 +133,13 @@ object Matcher {
 
     override def toString = needle.toString
 
-    private def search (n :CharSequence, hay :Array[Char], start :Int, stop :Int, dd :Int) = {
+    private def search (n :CharSequence, hay :Array[Char], start :Int, stop :Int, dd :Int) = try {
       val length = n.length
       var ss = start ; while (ss != stop && !check(length, n, 0, hay, ss)) ss += dd
       if (ss == stop) -1 else ss
+    } catch {
+      case e :ArrayIndexOutOfBoundsException =>
+        println(s"Gack! [m=$this, hay=${hay.length}, start=$start, stop=$stop, dd=$dd] $e") ; -1
     }
 
     @tailrec

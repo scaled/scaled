@@ -23,6 +23,7 @@ class LineTest {
     test(l1, "The", 1)
     test(l1, "lazy dog.", 0)
     test(l1, "lazy dog.", 50)
+    test(l1, "lazy dog..", 0)
 
     val l2 = l1.slice(10, 34) // "brown fox jumps over the "
     test(l2, "brown fox", 0)
