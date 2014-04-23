@@ -10,12 +10,10 @@ import scaled._
 import scaled.major.CodeConfig
 
 /** Encapsulates a strategy for indenting a line of code. */
-abstract class Indenter {
+abstract class Indenter (val config :Config, val buffer :BufferV) {
 
   /** Requests that the indentation for `line` be computed.
     *
-    * @param config the configuration for the mode doing the indenting.
-    * @param buffer the buffer in which we are indenting.
     * @param block the nearest enclosing block that encloses line.
     * @param line the line to be indented.
     * @param pos position of the first non-whitespace character on `line`.
@@ -23,21 +21,57 @@ abstract class Indenter {
     * @return `Some(col)` indicating the column to which `line` should be indented, or `None` if
     * this strategy is not appropriate for `line`.
     */
-  def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int]
+  def apply (block :Block, line :LineV, pos :Loc) :Option[Int]
+
+  /** Returns an indentation `steps` steps inset from `anchor`.
+    * @param anchor the indentation of the anchor line (in characters, not steps).
+    */
+  protected def indentFrom (anchor :Int, steps :Int) :Int =
+    anchor + steps * config(CodeConfig.indentWidth)
+
+  /** Issues an indentation debugging message. Uncomment below to debug your indenters. */
+  protected def debug (msg :String) :Unit = if (config(CodeConfig.debugIndent)) println(msg)
 }
 
 object Indenter {
   import Chars._
 
   /** Returns the number of whitespace chars at the start of `line`. */
-  def readIndent (line :LineV) :Int = {
-    var pos = 0 ; val end = line.length
-    while (pos < end && isWhitespace(line.charAt(pos))) pos += 1
-    pos
+  def readIndent (line :LineV) :Int = line.indexOf(isNotWhitespace, 0) match {
+    case -1 => line.length
+    case  n => n
   }
 
   /** Returns the number of whitespace chars at the start of the line at `pos`. */
   def readIndent (buffer :BufferV, pos :Loc) :Int = readIndent(buffer.line(pos))
+
+  /** Returns true if `m` matches the first non-whitespace characters of `line`. */
+  def startsWith (line :LineV, m :Matcher) :Boolean = line.indexOf(isNotWhitespace) match {
+    case -1 => false
+    case ii => line.matches(m, ii)
+  }
+
+  /** Returns true if `m` matches the last non-whitespace characters of `line`. */
+  def endsWith (line :LineV, m :Matcher) :Boolean = line.lastIndexOf(m) match {
+    case -1 => false
+    case ii => line.indexOf(isNotWhitespace, ii+m.matchLength) == -1
+  }
+
+  /** Returns the token (word) immediately preceding `pos` in `line`. If non-whitespace, non-word
+    * characters precede `pos` or no word characters precede `pos`, `None` is returned.
+    *
+    * If `pos` itself and the character immediately preceding `pos` are both word characters, this
+    * function will "work" in that the token up to but not including `pos` will be returned, but
+    * that's a strange thing to ask for, so beware.
+    */
+  def prevToken (line :LineV, pos :Int) :Option[String] = line.lastIndexOf(isWord, pos-1) match {
+    case -1     => None
+    case endIdx =>
+      // make sure only whitespace characters intervene between endIdx and pos
+      val nonWhite = line.indexOf(isNotWhitespace, endIdx+1)
+      if (nonWhite != -1 && nonWhite < pos) None
+      else Some(line.sliceString(line.lastIndexOf(isNotWord, endIdx)+1, endIdx+1))
+  }
 
   /** Indents based on the innermost block that contains pos.
     *
@@ -77,61 +111,165 @@ object Indenter {
     *      "baz"
     *    ]
     */
-  object ByBlock extends Indenter {
-    def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
+  class ByBlock (config :Config, buffer :BufferV) extends Indenter(config, buffer) {
+
+    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       val bstart = block.start
-      val openLine = buffer.line(bstart)
-      val openNonWS = openLine.find(isNotWhitespace, bstart.col+1)
+      val openNonWS = buffer.line(bstart).indexOf(isNotWhitespace, bstart.col+1)
       val openIsEOL = openNonWS == -1
       val indent = buffer.charAt(bstart) match {
         // align to the first non-whitespace character following the bracket (for non-danglers)
-        case '[' if (!openIsEOL) => openNonWS
+        case '[' if (!openIsEOL) =>
+          debug(s"Aligning to firstNonWs after square bracket ($block $openNonWS)")
+          openNonWS
         // align to the open paren (for non-danglers)
-        case '(' if (!openIsEOL) => bstart.col + 1
+        case '(' if (!openIsEOL) =>
+          debug(s"Aligning to (non-dangling) open paren ($block)")
+          bstart.col + 1
         // use block indentation for everything else (including {)
         case _ =>
-          val openIndent = readIndent(openLine)
+          val blockIndent = readBlockIndent(bstart)
           // if the first non-whitespace character is our close brace, use the same indent
           // as the line with the open brace
-          if (block.isValid && block.end == pos) openIndent
+          if (block.isValid && block.end == pos) {
+            debug(s"Aligning close brace with open ($block)")
+            blockIndent
+          }
           // if the block start is the start of the buffer, don't indent
-          else if (bstart == buffer.start) 0
+          else if (bstart == buffer.start) {
+            debug(s"Block start is buffer start, no indent. ($block)")
+            0
+          }
           // otherwise indent one from there; TODO: otherwise use previous line's indent?
-          else openIndent + config(CodeConfig.indentWidth)
+          else {
+            debug(s"Identing one step from block ($block @ $blockIndent)")
+            indentFrom(blockIndent, 1)
+          }
       }
       Some(indent)
+    }
+
+    /** Determines the "base" indentation of a block that starts at `bstart`. This is roughly the
+      * indentation of the line that contains the block start character (`bstart`), but if the
+      * start of that line falls in the middle of an arglist (i.e. looks like `param, param) {`),
+      * then we scan to the start of the arglist and return the indentation of the line that
+      * contains the arglist start.
+      *
+      * Modes that have other special rules for block indentation may wish to further customize
+      * this logic.
+      */
+    protected def readBlockIndent (bstart :Loc) :Int = {
+      val firstNonWS = bstart.atCol(buffer.line(bstart).indexOf(isNotWhitespace))
+      // TODO: make this more easily customizable
+      val start = if (inArgList(firstNonWS, bstart)) {
+        debug(s"Skipping arglist to read block indent (bstart=$bstart, firstNonWS=$firstNonWS)")
+        findArgListStart(firstNonWS)
+      } else firstNonWS
+      readIndent(buffer, start)
+    }
+
+    protected def inArgList (start :Loc, end :Loc) =
+      // scan forward to look for ( or ), if we see a ) first, then we're in an arglist
+      buffer.charAt(buffer.scanForward((_,_,c) => c == ')' || c == '(', start, end)) == ')'
+    protected def findArgListStart (from :Loc) =
+      buffer.scanBackward((_,_,c) => c == '(', from)
+  }
+
+  /** Indents the line following one-liner conditionals like `if` and `while`. The conditionals must
+    * have an arg list, i.e. this rule checks that the previous line ends with `)`, then matches
+    * the token preceding the open `(` against `tokens` to check for applicability. Examples:
+    *
+    * ```
+    * if (foo)
+    *   bar()
+    * while (foo)
+    *   bar()
+    * // etc.
+    * ```
+    *
+    * Use `OneLinerNoArgs` for non-conditional one liners, like `else`, `do`, etc.
+    */
+  class OneLinerWithArgs (config :Config, buffer :BufferV, tokens :Set[String])
+      extends Indenter(config, buffer) {
+
+    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+      // seek backward to the first non-whitespace character
+      val pc = buffer.scanBackward(isNotWhitespace, pos, block.start)
+      // if it's not on the preceding line, or it's not a ')', we're inapplicable
+      if (pc.row != pos.row-1 || buffer.charAt(pc) != ')') None
+      else {
+        // find the open paren, and check that the token preceding it is in `tokens`
+        val open = buffer.scanBackward((_,_,c) => c == '(', pc, block.start)
+        prevToken(buffer.line(open), open.col) flatMap { token =>
+          if (!tokens(token)) None
+          else {
+            debug(s"Indenting one liner + args '$token' @ $open")
+            Some(indentFrom(readIndent(buffer, open), 1))
+          }
+        }
+      }
+    }
+  }
+
+  /** Indents the line following one-liner non-conditionals like `else` and `do`. The token on the
+    * line preceding must exactly match one of our candidate tokens. Use `OneLinerWithArgs` for
+    * conditional one liners, like `if`, `while`, etc.
+    */
+  class OneLinerNoArgs (config :Config, buffer :BufferV, tokens :Set[String])
+      extends Indenter(config, buffer) {
+
+    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+      // check whether the line immediately preceding this one ends with one of our tokens
+      if (pos.row == 0) None
+      else {
+        val pline = buffer.line(pos.row-1)
+        prevToken(pline, pline.length) flatMap { token =>
+          if (!tokens(token)) None
+          else {
+            debug(s"Indenting one liner (no args) '$token' @ $pos")
+            Some(indentFrom(readIndent(pline), 1))
+          }
+        }
+      }
     }
   }
 
   /** Aligns `catch` statements with their preceding `try`. */
-  object TryCatchAlign extends PairAnchorAlign("catch", "try")
+  class TryCatchAlign (config :Config, buffer :BufferV)
+      extends PairAnchorAlign(config, buffer, "catch", "try")
 
   /** Aligns `finally` statements with their preceding `try`. */
-  object TryFinallyAlign extends PairAnchorAlign("finally", "try")
+  class TryFinallyAlign (config :Config, buffer :BufferV)
+      extends PairAnchorAlign(config, buffer, "finally", "try")
 
   /** Aligns `else` and `else if` statements with their preceding `if`. */
-  object IfElseIfElseAlign extends TripleAnchorAlign("else", "else if", "if")
+  class IfElseIfElseAlign (config :Config, buffer :BufferV)
+      extends TripleAnchorAlign(config, buffer, "else", "else if", "if")
 
   /** Aligns `else` and `elif` statements with their preceding `if`. */
-  object IfElifElseAlign extends TripleAnchorAlign("else", "elif", "if")
+  class IfElifElseAlign (config :Config, buffer :BufferV)
+      extends TripleAnchorAlign(config, buffer, "else", "elif", "if")
 
   /** Aligns `else` statements with their preceding `if`. NOTE: this does not handle `else if`.
     * If your language uses those, use `IfElseIfElse` instead. */
-  object IfElseAlign extends PairAnchorAlign("else", "if")
+  class IfElseAlign (config :Config, buffer :BufferV)
+      extends PairAnchorAlign(config, buffer, "else", "if")
 
   /** Indents `bar` and `baz` statements to match the `foo` statement for `foo / bar* / baz?`
     * constructs. This is generally only needed for `if / else if / else` because the `else if` can
     * repeat. For `foo / bar? / baz?` constructs (like `try/catch/finally`) just use a pair of
     * `PairAnchorAlign` rules `(foo, bar)` and `(foo, baz)`.
     */
-  class TripleAnchorAlign (last :String, middle :String, anch :String) extends AnchorAlign(anch) {
+  class TripleAnchorAlign (config :Config, buffer :BufferV,
+                           last :String, middle :String, anch :String)
+      extends AnchorAlign(config, buffer, anch) {
     protected val middleM = Matcher.exact(middle)
     protected val lastM = Matcher.exact(last)
     protected val anchors = List(middleM, anchorM)
 
-    def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
+    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       if (!line.matches(lastM, pos.col) && !line.matches(middleM, pos.col)) None
-      else indentToAnchors(buffer, block, pos, anchors)
+      else indentToAnchors(block, pos, anchors)
     }
   }
 
@@ -140,12 +278,13 @@ object Indenter {
     * `if/else if/else` because the `else if` can repeat, which this won't handle. Use
     * `TripleAnchorAlign` for that case.
     */
-  class PairAnchorAlign (second :String, anch :String) extends AnchorAlign(anch) {
+  class PairAnchorAlign (config :Config, buffer :BufferV, second :String, anch :String)
+      extends AnchorAlign(config, buffer, anch) {
     protected val secondM = Matcher.exact(second)
 
-    def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
+    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       if (!line.matches(secondM, pos.col)) None
-      else indentToAnchor(buffer, block, pos)
+      else indentToAnchor(block, pos)
     }
   }
 
@@ -154,21 +293,22 @@ object Indenter {
     *
     * @param anchor the keyword that identifies the anchor statement.
     */
-  abstract class AnchorAlign (anchor :String) extends Indenter {
+  abstract class AnchorAlign (config :Config, buffer :BufferV, anchor :String)
+      extends Indenter(config, buffer) {
     protected val anchorM = Matcher.exact(anchor)
 
-    protected def indentToAnchor (buffer :BufferV, block :Block, pos :Loc) :Option[Int] =
+    protected def indentToAnchor (block :Block, pos :Loc) :Option[Int] =
       buffer.findBackward(anchorM, pos, block.start) match {
         case Loc.None => None
-        case loc      => Some(loc.col)
+        case loc      => debug(s"Aligning to '$anchorM' @ $loc") ; Some(loc.col)
       }
 
-    @tailrec protected final def indentToAnchors (buffer :BufferV, block :Block, pos :Loc,
+    @tailrec protected final def indentToAnchors (block :Block, pos :Loc,
                                                   anchors :List[Matcher]) :Option[Int] =
       if (anchors.isEmpty) None
       else buffer.findBackward(anchors.head, pos, block.start) match {
-        case Loc.None => indentToAnchors(buffer, block, pos, anchors.tail)
-        case loc      => Some(loc.col)
+        case Loc.None => indentToAnchors(block, pos, anchors.tail)
+        case loc      => debug(s"Aligning to '${anchors.head}' @ $loc") ; Some(loc.col)
       }
   }
 }

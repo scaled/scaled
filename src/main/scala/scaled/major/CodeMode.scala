@@ -21,6 +21,9 @@ object CodeConfig extends Config.Defs {
           block containing a single blank line, on which the point will be positioned.""")
   val electricBrace = key(true)
 
+  @Var("Enables debug logging for indentation logic.")
+  val debugIndent = key(false)
+
   /** The CSS style applied to `builtin` syntax. */
   val builtinStyle = "codeBuiltinFace"
   /** The CSS style applied to `preprocessor` syntax. */
@@ -113,48 +116,48 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** The list of indenters used to indent code for this mode. */
   val indenters :List[Indenter] = createIndenters()
-  protected def createIndenters () :List[Indenter]= List(Indenter.ByBlock)
+  protected def createIndenters () :List[Indenter]= List(
+    new Indenter.ByBlock(config, buffer)
+  )
 
   /** Computes the indentation for the line at `row`. */
   def computeIndent (row :Int) :Int = {
     // find the position of the first non-whitespace character on the line
     val line = buffer.line(row)
-    val wsp = line.find(isNotWhitespace)
+    val wsp = line.indexOf(isNotWhitespace)
     val start = Loc(row, if (wsp == -1) 0 else wsp)
     val block = blocker(start, 0) getOrElse Block(buffer.start, buffer.end, false)
     @tailrec @inline def loop (ins :List[Indenter]) :Int =
       if (ins.isEmpty) 0 else {
-        val opt = ins.head(config, buffer, block, line, start)
+        val opt = ins.head(block, line, start)
         if (opt.isDefined) opt.get else loop(ins.tail)
       }
     loop(indenters)
   }
 
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. If the
-    * point is on the line at `pos` it will be adjusted to account for the changed indentation.
-    * @return the new indentation for the line at `pos`.
+    * point is in the whitespace at the start of the indented line, it will be moved to the first
+    * non-whitespace character in the line, otherwise it will be shifted along with the line to
+    * retain its relative position in the line.
     */
-  def reindent (pos :Loc) :Int = {
+  def reindent (pos :Loc) {
     val origIndent = Indenter.readIndent(buffer, pos)
     val indent = computeIndent(pos.row)
+    // shift the line, if needed
     val delta = indent - origIndent
     if (delta > 0) buffer.insert(pos.atCol(0), " " * delta, Styles.None)
     else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
-    // shift the point if appropriate
-    if (delta != 0) {
-      val p = view.point()
-      if (p.row == pos.row && p.col >= origIndent) view.point() = p + (0, delta)
+    // shift the point, if needed
+    val p = view.point()
+    if (p.row == pos.row) {
+      if (p.col < origIndent) view.point() = Loc(p.row, indent)
+      else view.point() = p + (0, delta)
     }
-    indent
   }
 
-  /** Reindents the line at the point. If the point is in the whitespace at the start of the line,
-    * it will be moved to the first non-whitespace character in the line. */
+  /** Reindents the line at the point. */
   def reindentAtPoint () {
-    val indent = reindent(view.point())
-    // if the point is in the whitespace at the start of the line, move it to the start
-    val p = view.point()
-    if (p.col < indent) view.point() = p.atCol(indent)
+    reindent(view.point())
   }
 
   @Fn("Inserts a newline, then indents according to the code mode's indentation rules.")
