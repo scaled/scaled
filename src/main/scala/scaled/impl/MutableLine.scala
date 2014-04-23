@@ -162,7 +162,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
   // impl details
 
   private def prepInsert (pos :Int, length :Int) {
-    require(pos >= 0 && pos <= _end)
+    require(pos >= 0 && pos <= _end, s"0 <= $pos <= ${_end} ($length)")
     val curlen = _chars.length
     val curend = _end
     val tailpos = pos+length
