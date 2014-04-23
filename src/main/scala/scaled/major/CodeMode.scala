@@ -116,9 +116,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** The list of indenters used to indent code for this mode. */
   val indenters :List[Indenter] = createIndenters()
-  protected def createIndenters () :List[Indenter]= List(
-    new Indenter.ByBlock(config, buffer)
-  )
+  protected def createIndenters () :List[Indenter]= Nil
 
   /** Computes the indentation for the line at `row`. */
   def computeIndent (row :Int) :Int = {

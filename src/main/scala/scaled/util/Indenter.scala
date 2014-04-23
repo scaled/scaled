@@ -45,6 +45,23 @@ object Indenter {
   /** Returns the number of whitespace chars at the start of the line at `pos`. */
   def readIndent (buffer :BufferV, pos :Loc) :Int = readIndent(buffer.line(pos))
 
+  /** Reads the indentation of the line at `pos`, with the caveat that if the start of that line
+    * appears to be the continuation of an arglist, we scan back to the line that starts the
+    * arglist and return the indentation of that line instead.
+    */
+  def readIndentSkipArglist (buffer :BufferV, pos :Loc) :Int = {
+    // scans forward to look for ( or ); if we see a ) first, then we're in an arglist
+    def inArgList (start :Loc, end :Loc) =
+      buffer.charAt(buffer.scanForward((_,_,c) => c == ')' || c == '(', start, end)) == ')'
+    // scans backward to find the ( which opens our arglist; doesn't handle nesting or scala style
+    // multiple arglists...
+    def findArgListStart (from :Loc) =
+      buffer.scanBackward((_,_,c) => c == '(', from)
+    val firstNonWS = pos.atCol(buffer.line(pos).indexOf(isNotWhitespace))
+    val start = if (inArgList(firstNonWS, pos)) findArgListStart(firstNonWS) else firstNonWS
+    readIndent(buffer, start)
+  }
+
   /** Returns true if `m` matches the first non-whitespace characters of `line`. */
   def startsWith (line :LineV, m :Matcher) :Boolean = line.indexOf(isNotWhitespace) match {
     case -1 => false
@@ -149,30 +166,11 @@ object Indenter {
       Some(indent)
     }
 
-    /** Determines the "base" indentation of a block that starts at `bstart`. This is roughly the
-      * indentation of the line that contains the block start character (`bstart`), but if the
-      * start of that line falls in the middle of an arglist (i.e. looks like `param, param) {`),
-      * then we scan to the start of the arglist and return the indentation of the line that
-      * contains the arglist start.
-      *
-      * Modes that have other special rules for block indentation may wish to further customize
-      * this logic.
+    /** Reads the indentation of the block starting at `pos`. The default implementation uses
+      * [[readIndentSkipArglist]] to handle blocks that start on arglist continuation lines. Modes
+      * with other special needs may wish to customize this further.
       */
-    protected def readBlockIndent (bstart :Loc) :Int = {
-      val firstNonWS = bstart.atCol(buffer.line(bstart).indexOf(isNotWhitespace))
-      // TODO: make this more easily customizable
-      val start = if (inArgList(firstNonWS, bstart)) {
-        debug(s"Skipping arglist to read block indent (bstart=$bstart, firstNonWS=$firstNonWS)")
-        findArgListStart(firstNonWS)
-      } else firstNonWS
-      readIndent(buffer, start)
-    }
-
-    protected def inArgList (start :Loc, end :Loc) =
-      // scan forward to look for ( or ), if we see a ) first, then we're in an arglist
-      buffer.charAt(buffer.scanForward((_,_,c) => c == ')' || c == '(', start, end)) == ')'
-    protected def findArgListStart (from :Loc) =
-      buffer.scanBackward((_,_,c) => c == '(', from)
+    protected def readBlockIndent (pos :Loc) = readIndentSkipArglist(buffer, pos)
   }
 
   /** Indents the line following one-liner conditionals like `if` and `while`. The conditionals must
