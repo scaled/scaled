@@ -94,41 +94,81 @@ object Indenter {
           // if the first non-whitespace character is our close brace, use the same indent
           // as the line with the open brace
           if (block.isValid && block.end == pos) openIndent
-          // otherwise indent one from there
+          // if the block start is the start of the buffer, don't indent
+          else if (bstart == buffer.start) 0
+          // otherwise indent one from there; TODO: otherwise use previous line's indent?
           else openIndent + config(CodeConfig.indentWidth)
       }
       Some(indent)
     }
   }
 
-  /** Indents bare one liner statements like `if/else if/else` or `try/catch`.
-    *
-    * @param keywords a list of keywords that identify the one liner statements, in reverse order
-    * of occurrence. For example: `List("else", "else if", "if")`. If a line starts with a keyword
-    * in the list, it will be aligned to the first keyword after it in the list that can be found,
-    * up to the bounds of the current block. Thus `else` will align to `else if` or `if`, but `else
-    * if` will only align to `if`.
+  /** Aligns `catch` statements with their preceding `try`. */
+  object TryCatchAlign extends PairAnchorAlign("catch", "try")
+
+  /** Aligns `finally` statements with their preceding `try`. */
+  object TryFinallyAlign extends PairAnchorAlign("finally", "try")
+
+  /** Aligns `else` and `else if` statements with their preceding `if`. */
+  object IfElseIfElseAlign extends TripleAnchorAlign("else", "else if", "if")
+
+  /** Aligns `else` and `elif` statements with their preceding `if`. */
+  object IfElifElseAlign extends TripleAnchorAlign("else", "elif", "if")
+
+  /** Aligns `else` statements with their preceding `if`. NOTE: this does not handle `else if`.
+    * If your language uses those, use `IfElseIfElse` instead. */
+  object IfElseAlign extends PairAnchorAlign("else", "if")
+
+  /** Indents `bar` and `baz` statements to match the `foo` statement for `foo / bar* / baz?`
+    * constructs. This is generally only needed for `if / else if / else` because the `else if` can
+    * repeat. For `foo / bar? / baz?` constructs (like `try/catch/finally`) just use a pair of
+    * `PairAnchorAlign` rules `(foo, bar)` and `(foo, baz)`.
     */
-  class OneLiner (keywords :List[String]) extends Indenter {
-    private val matchers = keywords.map(Matcher.exact)
+  class TripleAnchorAlign (last :String, middle :String, anch :String) extends AnchorAlign(anch) {
+    protected val middleM = Matcher.exact(middle)
+    protected val lastM = Matcher.exact(last)
+    protected val anchors = List(middleM, anchorM)
 
     def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
-      // seeks one of the tokens in ms prior to pos and returns its column if found
-      @inline @tailrec def indent (ms :List[Matcher]) :Option[Int] = {
-        if (ms.isEmpty) None
-        else buffer.findBackward(ms.head, pos, block.start) match {
-          case Loc.None => indent(ms.tail)
-          case loc      => Some(loc.col)
-        }
-      }
-      // if we see one of our keywords, look backward for one of the matching keywords and indent
-      // to its column if we find one
-      @inline @tailrec def loop (ms :List[Matcher]) :Option[Int] = {
-        if (line.matches(ms.head, pos.col)) indent(ms.tail)
-        else if (ms.size > 2) loop(ms.tail)
-        else None
-      }
-      loop(matchers)
+      if (!line.matches(lastM, pos.col) && !line.matches(middleM, pos.col)) None
+      else indentToAnchors(buffer, block, pos, anchors)
     }
+  }
+
+  /** Indents `bar` statements to match their `foo` counterpart. Examples of `foo/bar` may include
+    * `if/else`, `try/catch`, `try/finally`, `for/yield`. NOTE: this should not be used for
+    * `if/else if/else` because the `else if` can repeat, which this won't handle. Use
+    * `TripleAnchorAlign` for that case.
+    */
+  class PairAnchorAlign (second :String, anch :String) extends AnchorAlign(anch) {
+    protected val secondM = Matcher.exact(second)
+
+    def apply (config :Config, buffer :BufferV, block :Block, line :LineV, pos :Loc) :Option[Int] = {
+      if (!line.matches(secondM, pos.col)) None
+      else indentToAnchor(buffer, block, pos)
+    }
+  }
+
+  /** Indents statements relative to an anchor statement. This is chiefly useful for things like
+    * aligning an `else` with the `if` that preceded it, etc.
+    *
+    * @param anchor the keyword that identifies the anchor statement.
+    */
+  abstract class AnchorAlign (anchor :String) extends Indenter {
+    protected val anchorM = Matcher.exact(anchor)
+
+    protected def indentToAnchor (buffer :BufferV, block :Block, pos :Loc) :Option[Int] =
+      buffer.findBackward(anchorM, pos, block.start) match {
+        case Loc.None => None
+        case loc      => Some(loc.col)
+      }
+
+    @tailrec protected final def indentToAnchors (buffer :BufferV, block :Block, pos :Loc,
+                                                  anchors :List[Matcher]) :Option[Int] =
+      if (anchors.isEmpty) None
+      else buffer.findBackward(anchors.head, pos, block.start) match {
+        case Loc.None => indentToAnchors(buffer, block, pos, anchors.tail)
+        case loc      => Some(loc.col)
+      }
   }
 }

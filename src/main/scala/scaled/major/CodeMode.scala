@@ -121,7 +121,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val line = buffer.line(row)
     val wsp = line.find(isNotWhitespace)
     val start = Loc(row, if (wsp == -1) 0 else wsp)
-    val block = blocker(start, 0) getOrElse Block(buffer.start, buffer.end, true)
+    val block = blocker(start, 0) getOrElse Block(buffer.start, buffer.end, false)
     @tailrec @inline def loop (ins :List[Indenter]) :Int =
       if (ins.isEmpty) 0 else {
         val opt = ins.head(config, buffer, block, line, start)
