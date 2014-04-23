@@ -108,7 +108,7 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
   def replace (loc :Loc, delete :Int, line :LineV) :Line = {
     val pos = loc.col
     val lastDeleted = pos + delete
-    require(lastDeleted <= _end)
+    require(lastDeleted <= _end, s"$lastDeleted <= ${_end} in replace($loc, $delete)")
     val added = line.length
     val lastAdded = pos + added
     val replaced = if (delete > 0) slice(pos, pos+delete) else Line.Empty
