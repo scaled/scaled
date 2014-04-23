@@ -68,8 +68,8 @@ abstract class LineV extends CharSequence {
   /** Returns the index of the first occurrence of `ch` at pos `from` or later.
     * Returns -1 if `ch` is not found. */
   def indexOf (ch :Char, from :Int) :Int = {
-    val end = length
-    var pos = from ; while (pos < end && _chars(pos) != ch) pos += 1
+    val offset = _offset ; val end = length
+    var pos = from ; while (pos < end && _chars(offset+pos) != ch) pos += 1
     if (pos == end) -1 else pos
   }
   /** Returns the index of the first occurrence of `ch`. Returns -1 if `ch` is not found. */
@@ -78,7 +78,8 @@ abstract class LineV extends CharSequence {
   /** Returns the index of the first occurrence of `ch` at pos `from` or earlier. Returns -1 if `ch`
     * is not found. */
   def lastIndexOf (ch :Char, from :Int) :Int = {
-    var pos = from ; while (pos >= 0 && _chars(pos) != ch) pos -= 1
+    val offset = _offset
+    var pos = from ; while (pos >= 0 && _chars(offset+pos) != ch) pos -= 1
     pos
   }
   /** Returns the index of the first occurrence of `ch` seeking backward from the end of the line.
@@ -87,11 +88,24 @@ abstract class LineV extends CharSequence {
 
   /** Returns the index of the first character that matches `pred` at pos `from` or later.
     * Returns -1 if no character matched. */
-  def find (pred :Char => Boolean, from :Int = 0) :Int = {
-    val end = length
-    var pos = from ; while (pos < end && !pred(_chars(pos))) pos += 1
+  def indexOf (pred :Char => Boolean, from :Int) :Int = {
+    val offset = _offset ; val end = length
+    var pos = from ; while (pos < end && !pred(_chars(offset+pos))) pos += 1
     if (pos == end) -1 else pos
   }
+  /** Returns the index of the first character that matches `pred`. Returns -1 for no match. */
+  def indexOf (pred :Char => Boolean) :Int = indexOf(pred, 0)
+
+  /** Returns the index of the first character that matches `pred` at pos `from` or earlier.
+    * Returns -1 if no character matched. */
+  def lastIndexOf (pred :Char => Boolean, from :Int) :Int = {
+    val offset = _offset
+    var pos = from ; while (pos >= 0 && !pred(_chars(offset+pos))) pos -= 1
+    pos
+  }
+  /** Returns the index of the first character that matches `pred`, starting at the last character of
+    * the line and seeking backwards. Returns -1 for no match. */
+  def lastIndexOf (pred :Char => Boolean) :Int = lastIndexOf(pred, length-1)
 
   /** Returns the first offset into this line at which `m` matches, starting from `from`.
     * -1 is returned if no match is found. */
