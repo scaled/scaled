@@ -202,7 +202,7 @@ abstract class BufferV extends Region {
   /** Searches backward from the location immediately previous to `start` for the first match of `m`,
     * stopping when `stop` is reached (`stop` is checked for a match).
     * @return the location of the match or `Loc.None`. */
-  def findBackward (m :Matcher, start :Loc, stop :Loc = this.end) :Loc = {
+  def findBackward (m :Matcher, start :Loc, stop :Loc = this.start) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).lastIndexOf(m, col) match {
       case -1 => if (row == stopr) Loc.None else seek(row-1, line(row-1).length)
