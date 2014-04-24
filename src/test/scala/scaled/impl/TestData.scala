@@ -18,10 +18,11 @@ object TestData {
     def showURL (url :String) {}
     def defer (op :Runnable) = op.run()
     def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
-    def emitStatus (msg :String, subtext :String) {
+    def popStatus (msg :String, subtext :String) {
       println(msg)
       if (subtext != null) println(subtext)
     }
+    def emitStatus (msg :String) :Unit = println(msg)
     def emitError (err :Throwable) = err.printStackTrace(System.err)
     def clearStatus () {}
     def exit (code :Int) {}

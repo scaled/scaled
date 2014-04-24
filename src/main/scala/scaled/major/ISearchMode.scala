@@ -143,7 +143,7 @@ class ISearchMode (
   }
   private def popState () :Unit = _states match {
     case cur :: prev :: t => prev.apply(cur) ; _states = prev :: t
-    case _ => editor.emitStatus("Can't pop empty isearch state stack!")
+    case _ => editor.popStatus("Can't pop empty isearch state stack!")
   }
 
   // machinery for handling coalesced search term refreshing
@@ -214,7 +214,7 @@ class ISearchMode (
   @Fn("Cancels the last change to the isearch, reverting to the previous search.")
   def prevSearch () {
     if (_states.tail != Nil) popState()
-    else editor.emitStatus("No previous search.")
+    else editor.popStatus("No previous search.")
   }
 
   @Fn("""Moves forward to the next occurrance of the current matched text, if any.
@@ -237,6 +237,6 @@ class ISearchMode (
 
   protected def setFromHistory (idx :Int) :Unit = config(isearchRing).entry(0) match {
     case Some(sought) => setContents(sought)
-    case None => editor.emitStatus("No previous search string.")
+    case None => editor.popStatus("No previous search string.")
   }
 }

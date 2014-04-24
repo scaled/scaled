@@ -8,6 +8,7 @@ import java.io.{File, StringReader}
 import javafx.application.{Application, Platform}
 import javafx.beans.binding.Bindings
 import javafx.geometry.{HPos, VPos}
+import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region, VBox}
 import javafx.stage.Stage
 import reactual.{Future, Promise, Value}
@@ -24,6 +25,8 @@ import scaled.major.TextMode
   * largely an island unto itself.
   */
 class EditorPane (app :Main, stage :Stage) extends Region with Editor {
+
+  getStyleClass.add("editor")
 
   private case class OpenBuffer (content :BorderPane, area :BufferArea, view :BufferViewImpl) {
     def buffer = view.buffer
@@ -47,6 +50,11 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   _statusPopup.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
   getChildren.add(_statusPopup)
 
+  private val _statusLine = new Label(" ")
+  _statusLine.setWrapText(true)
+  _statusLine.getStyleClass.add("status")
+  getChildren.add(_statusLine)
+
   private val _mini = new MiniOverlay(this) {
     override def onClear () = _focus().area.requestFocus() // restore buffer focus on clear
   }
@@ -66,8 +74,11 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override def defer (op :Runnable) = Platform.runLater(op)
 
-  override def emitStatus (msg :String, subtext :String) {
+  override def popStatus (msg :String, subtext :String) {
     _statusPopup.showStatus(msg, subtext)
+  }
+  override def emitStatus (msg :String) {
+    _statusLine.setText(msg)
   }
   override def emitError (err :Throwable) {
     // TODO
@@ -76,6 +87,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   }
   override def clearStatus () = {
     _statusPopup.clear()
+    _statusLine.setText("")
     _active.view.clearEphemeralPopup()
   }
 
@@ -137,12 +149,14 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   override def layoutChildren () {
     val bounds = getLayoutBounds
-    _active.content.resize(bounds.getWidth, bounds.getHeight)
-
     val vw = bounds.getWidth ; val vh = bounds.getHeight
+    val statusHeight = _statusLine.prefHeight(vw) ; val contentHeight = vh-statusHeight
+    _active.content.resize(vw, contentHeight)
+    _statusLine.resizeRelocate(0, contentHeight, vw, statusHeight)
+
     // the status overlay is centered in the top 1/4th of the screen
     if (_statusPopup.isVisible) layoutInArea(
-      _statusPopup, 0, 3*vh/4, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
+      _statusPopup, 0, 0, vw, vh/4, 0, null, false, false, HPos.CENTER, VPos.CENTER)
     // the minibuffer overlay is top-aligned at height/4 and extends downward
     if (_mini.isVisible) layoutInArea(
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)

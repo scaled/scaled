@@ -214,7 +214,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     * message is emitted that indicates that the current region is not set and `fn` is not
     * invoked. */
   def withRegion (fn :(Loc, Loc) => Unit) :Unit = buffer.mark match {
-    case None => editor.emitStatus("The mark is not set now, so there is no region.")
+    case None => editor.popStatus("The mark is not set now, so there is no region.")
     case Some(mp) => val p = view.point() ; if (mp < p) fn(mp, p) else fn(p, mp)
   }
 
@@ -236,7 +236,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     editor.miniRead("Var:", "", Completer.from(vars, true)(_.v.name)) onSuccess { vname =>
       vars.find(_.v.name == vname) match {
         case Some(v) => fn(v)
-        case None    => editor.emitStatus(s"No such var: $vname")
+        case None    => editor.popStatus(s"No such var: $vname")
       }
     }
   }
@@ -299,7 +299,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       // unless the current line has no characters...
       else buffer.lineLength(prev) match {
         // if the previous line is also an empty line, we got nothing
-        case 0 =>  editor.emitStatus("Nothing to transpose.")
+        case 0 =>  editor.popStatus("Nothing to transpose.")
         // otherwise pull the last character of the previous line into this one
         case len =>
           val last = Loc(prev, len-1)
@@ -399,7 +399,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
          moved to the end if the inserted text.""")
   def yank () {
     config(killRing).entry(0) match {
-      case None => editor.emitStatus("Kill ring is empty.")
+      case None => editor.popStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point()
         view.point() = buffer.insert(view.point(), region)
@@ -408,11 +408,11 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Replaces the just-yanked stretch of killed text with a different stretch.""")
   def yankPop () {
-    if (!yanks(disp.prevFn)) editor.emitStatus(s"Previous command was not a yank (${disp.prevFn}).")
+    if (!yanks(disp.prevFn)) editor.popStatus(s"Previous command was not a yank (${disp.prevFn}).")
     else {
       yankCount = if (disp.prevFn == "yank-pop") yankCount + 1 else 1
       config(killRing).entry(yankCount) match {
-        case None => editor.emitStatus("Kill ring is empty.")
+        case None => editor.popStatus("Kill ring is empty.")
         case Some(region) =>
           // since the last command was a yank, the mark must be set
           val mark = buffer.mark.get
@@ -509,19 +509,19 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
         buffer.mark = view.point()
         view.point() = m
       case None =>
-        editor.emitStatus("No mark set in this buffer.")
+        editor.popStatus("No mark set in this buffer.")
     }
   }
 
   @Fn("Undoes the last change to the buffer.")
   def undo () = buffer.undoer.undo() match {
-    case None    => editor.emitStatus("Nothing to undo.")
+    case None    => editor.popStatus("Nothing to undo.")
     case Some(p) => view.point() = p
   }
 
   @Fn("Redoes the last undone to the buffer.")
   def redo () = buffer.undoer.redo() match {
-    case None    => editor.emitStatus("Nothing to redo.")
+    case None    => editor.popStatus("Nothing to redo.")
     case Some(p) => view.point() = p
   }
 
@@ -589,7 +589,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Reads line number from minibuffer and goes to that line, counting from line 1 at
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
-         it will be set to the point prior to moving to the new line. """")
+         it will be set to the point prior to moving to the new line. """)
   def gotoLine () {
     editor.miniRead("Goto line:", "", Completer.none) onSuccess { lineStr =>
       val line = try { lineStr.toInt } catch {
@@ -640,7 +640,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     val prompt = s"Kill buffer (default $current):"
     editor.miniRead(prompt, "", Completer.buffer(editor)) onSuccess { read =>
       val buffer = if (read == "") current else read
-      if (!editor.killBuffer(buffer)) editor.emitStatus(s"No buffer named: $buffer")
+      if (!editor.killBuffer(buffer)) editor.popStatus(s"No buffer named: $buffer")
     }
 
     // TODO: document our process when we have one:
@@ -656,7 +656,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   def findFile () {
     val bufwd = buffer.dir.getAbsolutePath + File.separator
     editor.miniRead("Find file:", bufwd, Completer.file) onSuccess { file =>
-      if (file.isDirectory) editor.emitStatus(
+      if (file.isDirectory) editor.popStatus(
         "Scaled does not support editing directories. Use Emacs.")
       else editor.visitFile(file)
     }
@@ -669,7 +669,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
       // what else does emacs do?
       buffer.save()
-      editor.emitStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
+      editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
     }
   }
 
@@ -684,15 +684,15 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       // the buffer will automatically be renamed (by internals) after it is saved
       (if (!editor.buffers.exists(_.file == file)) Future.success(true)
       else editor.miniReadYN(s"A buffer is visiting '$lfile'; proceed?")) onSuccess {
-        case false => editor.emitStatus("Canceled.")
+        case false => editor.popStatus("Canceled.")
         case true =>
           // require confirmation if the target file already exists
           (if (!file.exists) Future.success(true)
           else editor.miniReadYN(s"File '$lfile' exists; overwrite?")) onSuccess {
-            case false => editor.emitStatus("Canceled.")
+            case false => editor.popStatus("Canceled.")
             case true =>
               buffer.saveTo(file)
-              editor.emitStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
+              editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
           }
       }
     }
@@ -735,15 +735,15 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   def describeFn () {
     editor.miniRead("Fn:", "", Completer.from(disp.fns, true)) onSuccess { fn =>
       disp.describeFn(fn) match {
-        case Some(descrip) => editor.emitStatus(s"Fn: $fn", descrip)
-        case None => editor.emitStatus(s"No such fn: $fn")
+        case Some(descrip) => editor.popStatus(s"Fn: $fn", descrip)
+        case None => editor.popStatus(s"No such fn: $fn")
       }
     }
   }
 
   @Fn("Displays the documentation for a config var as well as its current value.")
   def describeVar () {
-    withConfigVar(b => editor.emitStatus(
+    withConfigVar(b => editor.popStatus(
       s"Mode: ${b.m.name}\nVar: ${b.v.name} (currently: ${b.current})", b.v.descrip))
   }
 
@@ -754,7 +754,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
       editor.miniRead(prompt, b.current, Completer.none) onSuccess { newval =>
         try b.update(newval) catch {
-          case e :Exception => editor.emitStatus(s"Unable to parse '$newval':", e.toString)
+          case e :Exception => editor.popStatus(s"Unable to parse '$newval':", e.toString)
         }
       }
     }
@@ -765,13 +765,13 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Reports that a key sequence is unknown.")
   def unknownCommand (trigger :String) {
-    editor.emitStatus(s"$trigger is undefined.")
+    editor.popStatus(s"$trigger is undefined.")
   }
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
     editor.miniRead("M-x", "", Completer.from(disp.fns, true)) onSuccess { fn =>
-      if (!disp.invoke(fn)) editor.emitStatus(s"Unknown fn: $fn")
+      if (!disp.invoke(fn)) editor.popStatus(s"Unknown fn: $fn")
     }
   }
 

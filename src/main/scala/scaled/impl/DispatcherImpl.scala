@@ -49,7 +49,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
         addMode(false), editor.emitError)
     }
     // if we were replacing an existing major mode, give feedback to the user
-    if (hadMajor) editor.emitStatus("${major.name} activated.")
+    if (hadMajor) editor.popStatus("${major.name} activated.")
   }
 
   // resolve our major mode first thing
@@ -138,7 +138,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     _metas map(_.mode) find(_.name == mode) match {
       case Some(minor :MinorMode) =>
         removeMode(minor)
-        editor.emitStatus(s"$mode mode deactivated.")
+        editor.popStatus(s"$mode mode deactivated.")
       case _ =>
         resolver.resolveMinor(mode, view, this, major(), Nil).onComplete(
           addMode(true), editor.emitError)
@@ -151,19 +151,19 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   }
 
   override def press (trigger :String) {
-    KeyPress.toKeyPresses(err => editor.emitStatus(s"Invalid trigger: $err"), trigger) match {
+    KeyPress.toKeyPresses(err => editor.popStatus(s"Invalid trigger: $err"), trigger) match {
       case Some(kps) => resolve(kps, _metas) match {
         case Some(fn) => invoke(fn, kps.last.text)
         case None     => invokeMissed(trigger)
       }
-      case None => editor.emitStatus(s"Unable to simulate press of $trigger")
+      case None => editor.popStatus(s"Unable to simulate press of $trigger")
     }
   }
 
   private def addMode (feedback :Boolean)(mode :MinorMode) {
     _metas = new ModeMeta(mode) :: _metas
     rebuildPrefixes()
-    if (feedback) editor.emitStatus(s"${mode.name} mode activated.")
+    if (feedback) editor.popStatus(s"${mode.name} mode activated.")
   }
 
   private def removeMode (minor :MinorMode) {

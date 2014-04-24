@@ -27,12 +27,16 @@ trait Editor {
   /** Invokes `op` on the next UI tick. */
   def defer (op :Runnable) :Unit
 
-  /** Briefly displays a status message to the user. The status message will also be appeneded to an
-    * editor-wide messages list. */
-  def emitStatus (msg :String, subtext :String = null) :Unit
+  /** Briefly displays a status message to the user in a popup.
+    * The status message will also be appeneded to an editor-wide messages list. */
+  def popStatus (msg :String, subtext :String = null) :Unit
 
-  /** Reports an unexpected error to the user. The message will also be appended to an editor-wide
-    * messages list. */
+  /** Briefly displays a status message to the user.
+    * The status message will also be appeneded to an editor-wide messages list. */
+  def emitStatus (msg :String) :Unit
+
+  /** Reports an unexpected error to the user.
+    * The message will also be appended to an editor-wide messages list. */
   def emitError (err :Throwable) :Unit
 
   /** Clears any lingering status message. A status message usually remains visible until the user

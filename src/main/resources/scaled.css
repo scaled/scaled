@@ -5,7 +5,7 @@
   -fx-text-fill: white;
 }
 
-.buffer {
+.editor, .buffer {
   -fx-background-color: #424242;
 }
 
@@ -24,14 +24,18 @@
   -fx-effect: dropshadow( one-pass-box , black , 8 , 0.0 , 4 , 4 );
 }
 
-.status {
+.overpop .status {
   -fx-text-fill: white;
   -fx-font-size: 18px;
 }
 
-.substatus {
+.overpop .substatus {
   -fx-text-fill: white;
   -fx-font-size: 14px;
+}
+
+.editor .status {
+  -fx-text-fill: white;
 }
 
 .mini {
