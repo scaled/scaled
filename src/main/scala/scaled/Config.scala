@@ -168,7 +168,7 @@ object EditorConfig extends Config.Defs(true) {
   val killRingSize = key(40)
 
   /** The ring in which killed blocks of text are stored. */
-  val killRing = fnKey(cfg => new Ring(cfg(killRingSize)))
+  val killRing = fnKey(cfg => new KillRing(cfg(killRingSize)))
 
   /** The default CSS class name for text. */
   val textStyle = "textFace"

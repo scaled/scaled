@@ -54,3 +54,51 @@ class Ring (val size :Int) {
   protected def merge (as :Seq[LineV], bs :Seq[LineV]) =
     (as.dropRight(1) :+ as.last.merge(bs.head)) ++ bs.drop(1)
 }
+
+/** A special ring that manages killed text. The chief specialization is that this ring
+  * interoperates with the system clipboard. When data is added or appended to the kill ring, the
+  * system clipboard is updated with the pasted text.
+  */
+class KillRing (size :Int) extends Ring(size) {
+  import javafx.scene.input.{Clipboard, ClipboardContent}
+  private val clipboard = Clipboard.getSystemClipboard
+  private var lastSaved = ""
+
+  override def entry (age :Int) :Option[Seq[LineV]] = {
+    // if we're yanking the zeroth entry and the clipboard has something other than what we last
+    // wrote to it, pull the contents of the clipboard into a new kill ring entry and return that
+    if (age == 0 && clipboard.hasString()) {
+      val clip = clipboard.getString()
+      if (clip != lastSaved) add(Line.fromText(clip))
+    }
+    super.entry(age)
+  }
+
+  override def add (region :Seq[LineV]) {
+    super.add(region)
+    copyToClipboard(region)
+  }
+
+  override def append (region :Seq[LineV]) {
+    super.append(region)
+    copyToClipboard(entry(0).get)
+  }
+
+  override def prepend (region :Seq[LineV]) {
+    super.prepend(region)
+    copyToClipboard(entry(0).get)
+  }
+
+  private def copyToClipboard (region :Seq[LineV]) {
+    val buf = new StringBuilder()
+    var ii = 0 ; while (ii < region.length) {
+      if (ii > 0) buf.append(System.lineSeparator)
+      buf.append(region(ii).asString)
+      ii += 1
+    }
+    val clip = new ClipboardContent()
+    lastSaved = buf.toString
+    clip.putString(lastSaved)
+    clipboard.setContent(clip)
+  }
+}
