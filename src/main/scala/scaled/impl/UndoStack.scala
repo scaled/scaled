@@ -78,19 +78,17 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
 
   private def accumTo (edits :ArrayBuffer[Undoable], actions :ArrayBuffer[Action]) {
     if (!edits.isEmpty) {
-      // determine whether the edits we're accumulating are a simple single character insert (which
-      // we call 'typing') and whether the inserted character is a word break character
-      val (isTyping, isWordBreak) = edits match {
+      // determine whether these edits are "typing" (inserting or deleting a single char), and
+      // whether we can accumulate them with the last action on the stack
+      val (isTyping, canAccum) = edits match {
         case Seq(le :Buffer.Edit) =>
           val isSingleChar = le.end == le.start.nextC
-          (isSingleChar, isSingleChar && isBreakChar(buffer.charAt(le.start)))
+          val isBreak = isBreakChar(buffer.charAt(le.start))
+          (isSingleChar, isSingleChar && !isBreak && actions.size > 0 && actions.last.canAccum(le))
         case _ => (false, false)
       }
 
-      // if we're typing and the top of the undo stack is more typing merge this insertion as well;
-      // this enables us to undo simple typing in larger chunks; we stop merging when we hit a word
-      // break character (i.e. space)
-      val action = if (isTyping && actions.size > 0 && actions.last.isTyping && !isWordBreak) {
+      val action = if (canAccum) {
         val accum = actions.last.accum(edits)
         actions.trimEnd(1)
         accum
@@ -118,5 +116,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
     def undo () = edits.reverse.foreach { _.undo() }
     // accumulates additional edits to this action
     def accum (edits :Seq[Undoable]) = Action(point, isTyping, this.edits ++ edits)
+    // we must be a typing edit, and the new edit must be the same kind (insert vs. delete)
+    def canAccum (edit :Buffer.Edit) = isTyping && edits.head.getClass == edit.getClass
   }
 }
