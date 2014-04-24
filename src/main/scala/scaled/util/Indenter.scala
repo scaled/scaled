@@ -128,7 +128,13 @@ object Indenter {
     *      "baz"
     *    ]
     */
-  class ByBlock (config :Config, buffer :BufferV) extends Indenter(config, buffer) {
+  class ByBlock (cfg :Config, buf :BufferV) extends Indenter(cfg, buf) {
+
+    /** Reads the indentation of the block starting at `pos`. The default implementation uses
+      * [[readIndentSkipArglist]] to handle blocks that start on arglist continuation lines. Modes
+      * with other special needs may wish to customize this further.
+      */
+    protected def readBlockIndent (pos :Loc) = readIndentSkipArglist(buffer, pos)
 
     def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       val bstart = block.start
@@ -165,12 +171,6 @@ object Indenter {
       }
       Some(indent)
     }
-
-    /** Reads the indentation of the block starting at `pos`. The default implementation uses
-      * [[readIndentSkipArglist]] to handle blocks that start on arglist continuation lines. Modes
-      * with other special needs may wish to customize this further.
-      */
-    protected def readBlockIndent (pos :Loc) = readIndentSkipArglist(buffer, pos)
   }
 
   /** Indents the line following one-liner conditionals like `if` and `while`. The conditionals must
@@ -187,9 +187,8 @@ object Indenter {
     *
     * Use `OneLinerNoArgs` for non-conditional one liners, like `else`, `do`, etc.
     */
-  class OneLinerWithArgs (config :Config, buffer :BufferV, tokens :Set[String])
-      extends Indenter(config, buffer) {
-
+  class OneLinerWithArgs (cfg :Config, buf :BufferV, tokens :Set[String])
+      extends Indenter(cfg, buf) {
     def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       // seek backward to the first non-whitespace character
       val pc = buffer.scanBackward(isNotWhitespace, pos, block.start)
@@ -213,9 +212,7 @@ object Indenter {
     * line preceding must exactly match one of our candidate tokens. Use `OneLinerWithArgs` for
     * conditional one liners, like `if`, `while`, etc.
     */
-  class OneLinerNoArgs (config :Config, buffer :BufferV, tokens :Set[String])
-      extends Indenter(config, buffer) {
-
+  class OneLinerNoArgs (cfg :Config, buf :BufferV, tokens :Set[String]) extends Indenter(cfg, buf) {
     def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       // check whether the line immediately preceding this one ends with one of our tokens
       if (pos.row == 0) None
@@ -233,35 +230,34 @@ object Indenter {
   }
 
   /** Aligns `catch` statements with their preceding `try`. */
-  class TryCatchAlign (config :Config, buffer :BufferV) extends PairAnchorAlign(config, buffer) {
+  class TryCatchAlign (cfg :Config, buf :BufferV) extends PairAnchorAlign(cfg, buf) {
     protected val anchorM = Matcher.regexp("\\btry\\b")
     protected val secondM = Matcher.regexp("catch\\b")
   }
 
   /** Aligns `finally` statements with their preceding `try`. */
-  class TryFinallyAlign (config :Config, buffer :BufferV) extends PairAnchorAlign(config, buffer) {
+  class TryFinallyAlign (cfg :Config, buf :BufferV) extends PairAnchorAlign(cfg, buf) {
     protected val anchorM = Matcher.regexp("\\btry\\b")
     protected val secondM = Matcher.regexp("finally\\b")
   }
 
   /** Aligns `else` and `else if` statements with their preceding `if`. */
-  class IfElseIfElseAlign (config :Config, buffer :BufferV)
-      extends TripleAnchorAlign(config, buffer) {
-    protected val anchorM = Matcher.regexp("\\bif\\b")
+  class IfElseIfElseAlign (cfg :Config, buf :BufferV) extends TripleAnchorAlign(cfg, buf) {
+    protected val firstMiddleM = Matcher.regexp("\\b(if|else\\s+if)\\b")
     protected val middleM = Matcher.regexp("else\\s+if\\b")
     protected val lastM = Matcher.regexp("else\\b")
   }
 
   /** Aligns `else` and `elif` statements with their preceding `if`. */
-  class IfElifElseAlign (config :Config, buffer :BufferV) extends TripleAnchorAlign(config, buffer) {
-    protected val anchorM = Matcher.regexp("\\bif\\b")
+  class IfElifElseAlign (cfg :Config, buf :BufferV) extends TripleAnchorAlign(cfg, buf) {
+    protected val firstMiddleM = Matcher.regexp("\\b(if|elif)\\b")
     protected val middleM = Matcher.regexp("elif\\b")
     protected val lastM = Matcher.regexp("else\\b")
   }
 
   /** Aligns `else` statements with their preceding `if`. NOTE: this does not handle `else if`.
     * If your language uses those, use `IfElseIfElse` instead. */
-  class IfElseAlign (config :Config, buffer :BufferV) extends PairAnchorAlign(config, buffer) {
+  class IfElseAlign (cfg :Config, buf :BufferV) extends PairAnchorAlign(cfg, buf) {
     protected val anchorM = Matcher.regexp("\\bif\\b")
     protected val secondM = Matcher.regexp("else\\b")
   }
@@ -272,8 +268,11 @@ object Indenter {
     * For `foo / bar? / baz?` constructs (like `try/catch/finally`) just use a pair of
     * `PairAnchorAlign` rules `(foo, bar)` and `(foo, baz)`.
     */
-  abstract class TripleAnchorAlign (config :Config, buffer :BufferV)
-      extends AnchorAlign(config, buffer) {
+  abstract class TripleAnchorAlign (cfg :Config, buf :BufferV) extends AnchorAlign(cfg, buf) {
+
+    /** The matcher that matches the first or middle keyword (must be regexp).
+      * This will be used to match the keywords anywhere in a line. */
+    protected val firstMiddleM :Matcher
 
     /** The matcher that matches the middle keyword.
       * This will only be used to match the keyword at the start of a line. */
@@ -283,11 +282,9 @@ object Indenter {
       * This will only be used to match the keyword at the start of a line. */
     protected val lastM :Matcher
 
-    private lazy val anchors = List(middleM, anchorM)
-
     def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       if (!line.matches(lastM, pos.col) && !line.matches(middleM, pos.col)) None
-      else indentToAnchors(block, pos, anchors)
+      else indentToAnchor(block, pos, firstMiddleM)
     }
   }
 
@@ -296,8 +293,11 @@ object Indenter {
     * `if/else if/else` because the `else if` can repeat, which this won't handle. Use
     * `TripleAnchorAlign` for that case.
     */
-  abstract class PairAnchorAlign (config :Config, buffer :BufferV)
-      extends AnchorAlign(config, buffer) {
+  abstract class PairAnchorAlign (cfg :Config, buf :BufferV) extends AnchorAlign(cfg, buf) {
+
+    /** The matcher that matches the anchor.
+      * This will be used to match the anchor anywhere on a line. */
+    protected val anchorM :Matcher
 
     /** The matcher that matches the second keyword.
       * This will only be used to match the keyword at the start of a line. */
@@ -305,31 +305,19 @@ object Indenter {
 
     def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       if (!line.matches(secondM, pos.col)) None
-      else indentToAnchor(block, pos)
+      else indentToAnchor(block, pos, anchorM)
     }
   }
 
   /** Indents statements relative to an anchor keyword. This is chiefly useful for things like
     * aligning an `else` with the `if` that preceded it, etc.
     */
-  abstract class AnchorAlign (config :Config, buffer :BufferV) extends Indenter(config, buffer) {
+  abstract class AnchorAlign (cfg :Config, buf :BufferV) extends Indenter(cfg, buf) {
 
-    /** The matcher that matches the anchor.
-      * This will be used to match the anchor anywhere on a line. */
-    protected val anchorM :Matcher
-
-    protected def indentToAnchor (block :Block, pos :Loc) :Option[Int] =
+    protected def indentToAnchor (block :Block, pos :Loc, anchorM :Matcher) :Option[Int] =
       buffer.findBackward(anchorM, pos, block.start) match {
         case Loc.None => None
         case      loc => debug(s"Aligning to '$anchorM' @ $loc") ; Some(loc.col)
-      }
-
-    @tailrec protected final def indentToAnchors (block :Block, pos :Loc,
-                                                  anchors :List[Matcher]) :Option[Int] =
-      if (anchors.isEmpty) None
-      else buffer.findBackward(anchors.head, pos, block.start) match {
-        case Loc.None => indentToAnchors(block, pos, anchors.tail)
-        case      loc => debug(s"Aligning to '${anchors.head}' @ $loc") ; Some(loc.col)
       }
   }
 }
