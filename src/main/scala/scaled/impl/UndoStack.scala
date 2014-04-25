@@ -41,6 +41,9 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
       val action = pop(_actions)
       _undoing = true
       try action.undo()
+      catch {
+        case t :Throwable => println(s"Undo choke: $action") ; t.printStackTrace(System.err)
+      }
       finally _undoing = false
       // accumulate the undone edits to the redo stack as a redo action
       accumTo(_redoEdits, _redoActions)
@@ -120,10 +123,12 @@ object UndoStack {
       case Seq(ins :Buffer.Insert) if (ins.start == edit.end) => edit = edit.merge(ins) ; true
       case _ => false
     }
+    override def toString = s"SimpleInsert($p, $edit)"
   }
 
   private class General (p :Loc, edits :Seq[Buffer.Edit]) extends Action(p) {
     def undo () = edits.reverse.foreach { _.undo() }
     def accum (edits :Seq[Buffer.Edit]) = false
+    override def toString = s"General($p, $edits)"
   }
 }
