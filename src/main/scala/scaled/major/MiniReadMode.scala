@@ -20,6 +20,7 @@ class MiniReadMode[T] (
   promise   :Promise[T],
   prompt    :String,
   initText  :Seq[LineV],
+  history   :Ring,
   completer :Completer[T]
 ) extends MinibufferMode(env, promise) {
 
@@ -27,10 +28,11 @@ class MiniReadMode[T] (
   setContents(initText)
 
   override def keymap = super.keymap ++ Seq(
+    "UP"    -> "previous-history-entry",
+    "DOWN"  -> "next-history-entry",
     "TAB"   -> "complete",
     "S-TAB" -> "complete",
     // TODO: special C-d that updates completions if at eol (but does not complete max prefix)
-    // TODO: history commands
     "ENTER" -> "commit-read"
   )
 
@@ -39,9 +41,45 @@ class MiniReadMode[T] (
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
     completer.commit(current) match {
-      case Some(result) => promise.succeed(result)
-      case None         => complete()
+      // if they attempt to commit and the completer doesn't like it, complete with the current
+      // contents instead to let them know they need to complete with something valid
+      case None => complete()
+      // otherwise save the current contents to our history and send back our result
+      case Some(result) =>
+        // only add contents to history if it's non-empty
+        val lns = buffer.region(buffer.start, buffer.end)
+        if (lns.size > 1 || lns.head.length > 0) history.filterAdd(lns)
+        promise.succeed(result)
     }
+  }
+
+  private var currentText = initText
+  private var historyAge = -1
+  // reset to historyAge -1 whenever the buffer is modified
+  buffer.edited.onEmit { historyAge = -1 }
+
+  private def showHistory (age :Int) {
+    if (age == -1) setContents(currentText)
+    else {
+      // if we were showing currentText, save it before overwriting it with history
+      if (historyAge == -1) currentText = buffer.region(buffer.start, buffer.end)
+      setContents(history.entry(age).get)
+    }
+    // update historyAge after setting contents because setting contents wipes historyAge
+    historyAge = age
+  }
+
+  @Fn("Puts the previous history entry into the minibuffer.")
+  def previousHistoryEntry () {
+    val prevAge = historyAge+1
+    if (prevAge >= history.entries) editor.popStatus("Beginning of history; no preceding item")
+    else showHistory(prevAge)
+  }
+
+  @Fn("Puts the next history entry into the minibuffer.")
+  def nextHistoryEntry () {
+    if (historyAge == -1) editor.popStatus("End of history")
+    else showHistory(historyAge-1)
   }
 
   @Fn("Completes the minibuffer contents as much as possible.")
@@ -64,6 +102,8 @@ class MiniReadMode[T] (
       miniui.showCompletions(comps.map(_.substring(preLen)).toSeq)
     }
   }
+
+  private def copyContents = buffer.region(buffer.start, buffer.end)
 
   private def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
     val buf = new StringBuilder

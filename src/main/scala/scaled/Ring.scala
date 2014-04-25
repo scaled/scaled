@@ -18,6 +18,9 @@ class Ring (val size :Int) {
   private val _entries = ArrayBuffer[Seq[LineV]]()
   private var _pos = -1 // the position of the most recently added entry
 
+  /** Returns the number of elements in this ring. This will always be `<= size`. */
+  def entries :Int = _entries.size
+
   /** Returns `Some` ring entry at `age` or `None` if the ring is empty.
     *
     * @param age the offset from the most recently added entry: 0 means the most recently added
@@ -37,6 +40,17 @@ class Ring (val size :Int) {
     _pos = (_pos + 1) % size
     if (_entries.size < size) _entries += region
     else _entries(_pos) = region
+  }
+
+  /** Removes any regions from the ring that are equal to `region`, then [[add]]s `region`. */
+  def filterAdd (region :Seq[LineV]) {
+    var ii = _entries.indexOf(region)
+    while (ii != -1) {
+      _entries.remove(ii)
+      if (ii <= _pos) _pos -= 1
+      ii = _entries.indexOf(region, ii)
+    }
+    add(region)
   }
 
   /** Appends `region` to the youngest ring entry. */

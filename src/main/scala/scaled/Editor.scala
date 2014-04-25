@@ -66,10 +66,12 @@ trait Editor {
     *
     * @param prompt the text to display to the left of the minibuffer when requesting input.
     * @param defval the default value with which to populate the minibuffer.
+    * @param history a ring that's used for history when the user presses UP/DOWN.
     * @param completer used to generate completions when the user presses TAB.
     */
-  def miniRead[R] (prompt :String, defval :String, completer :Completer[R]) :Future[R] =
-    mini("read", Promise[R](), prompt, Line.fromText(defval), completer)
+  def miniRead[R] (prompt :String, defval :String, history :Ring,
+                   completer :Completer[R]) :Future[R] =
+    mini("read", Promise[R](), prompt, Line.fromText(defval), history, completer)
 
   /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield true
     * for 'y', false for 'n', and which will fail if input was canceled.

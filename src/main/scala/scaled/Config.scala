@@ -167,8 +167,29 @@ object EditorConfig extends Config.Defs(true) {
   @Var("The number of entries retained by the kill ring.")
   val killRingSize = key(40)
 
+  @Var("The number of entries retained in most minibuffer histories.")
+  val historySize = key(40)
+
   /** The ring in which killed blocks of text are stored. */
   val killRing = fnKey(cfg => new KillRing(cfg(killRingSize)))
+
+  /** The history ring for file names (find-file, write-file, etc.). */
+  val fileHistory = fnKey(cfg => new Ring(cfg(historySize)))
+
+  /** The history ring for buffer names (switch-to-buffer, kill-buffer, etc.). */
+  val bufferHistory = fnKey(cfg => new Ring(cfg(historySize)))
+
+  /** The history ring used for mode names. */
+  val modeHistory = fnKey(cfg => new Ring(cfg(historySize)))
+
+  /** The history ring used for fns. */
+  val fnHistory = fnKey(cfg => new Ring(cfg(historySize)))
+
+  /** The history ring used for config var names. */
+  val varHistory = fnKey(cfg => new Ring(cfg(historySize)))
+
+  /** The history ring used for config var values. */
+  val setVarHistory = fnKey(cfg => new Ring(cfg(historySize)))
 
   /** The default CSS class name for text. */
   val textStyle = "textFace"

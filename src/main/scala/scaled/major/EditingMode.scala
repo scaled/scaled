@@ -15,17 +15,19 @@ import scaled.util.Chars
 
 /** Configuration for [[EditingMode]]. */
 object EditingConfig extends Config.Defs {
+  import EditorConfig._
 
-  // nada for now
+  /** The history ring for goto-line. */
+  val gotoLineHistory = fnKey(cfg => new Ring(cfg(historySize)))
 }
 
 /** A base class for all modes that support interactive text editing. This mode defines all of the
   * basic cursor movement and text editing commands. Most major modes will inherit from this mode.
   */
 abstract class EditingMode (env :Env) extends MajorMode(env) {
-  import EditorConfig.killRing
-  import EditingConfig._
   import Chars._
+  import EditingConfig._
+  import EditorConfig._
 
   override def defaultFn :Option[String] = Some("self-insert-command")
   override def missedFn  :Option[String] = Some("unknown-command")
@@ -233,7 +235,8 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
     val vars = disp.modes.flatMap(m => m.varBindings)
-    editor.miniRead("Var:", "", Completer.from(vars, true)(_.v.name)) onSuccess { vname =>
+    val comp = Completer.from(vars, true)(_.v.name)
+    editor.miniRead("Var:", "", config(varHistory), comp) onSuccess { vname =>
       vars.find(_.v.name == vname) match {
         case Some(v) => fn(v)
         case None    => editor.popStatus(s"No such var: $vname")
@@ -591,7 +594,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
          it will be set to the point prior to moving to the new line. """)
   def gotoLine () {
-    editor.miniRead("Goto line:", "", Completer.none) onSuccess { lineStr =>
+    editor.miniRead("Goto line:", "", config(gotoLineHistory), Completer.none) onSuccess { lineStr =>
       val line = try { lineStr.toInt } catch {
         case e :Throwable => 1 // this is what emacs does, seems fine to me
       }
@@ -629,7 +632,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     val defb = editor.buffers.drop(1).headOption.map(_.name) getOrElse fstb
     val defp = if (defb == "") "" else s" (default $defb)"
     val comp = Completer.buffer(editor, Set(fstb))
-    editor.miniRead(s"Switch to buffer$defp:", "", comp) onSuccess { read =>
+    editor.miniRead(s"Switch to buffer$defp:", "", config(bufferHistory), comp) onSuccess { read =>
       editor.openBuffer(if (read == "") defb else read)
     }
   }
@@ -638,7 +641,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   def killBuffer () {
     val current = editor.buffers.head.name
     val prompt = s"Kill buffer (default $current):"
-    editor.miniRead(prompt, "", Completer.buffer(editor)) onSuccess { read =>
+    editor.miniRead(prompt, "", config(bufferHistory), Completer.buffer(editor)) onSuccess { read =>
       val buffer = if (read == "") current else read
       if (!editor.killBuffer(buffer)) editor.popStatus(s"No buffer named: $buffer")
     }
@@ -655,7 +658,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   @Fn("""Reads a filename from the minibuffer and switches to a filename visiting it.""")
   def findFile () {
     val bufwd = buffer.dir.getAbsolutePath + File.separator
-    editor.miniRead("Find file:", bufwd, Completer.file) onSuccess { file =>
+    editor.miniRead("Find file:", bufwd, config(fileHistory), Completer.file) onSuccess { file =>
       if (file.isDirectory) editor.popStatus(
         "Scaled does not support editing directories. Use Emacs.")
       else editor.visitFile(file)
@@ -678,7 +681,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
          in the specified directory.""")
   def writeFile () {
     val bufwd = buffer.dir.getAbsolutePath + File.separator
-    editor.miniRead("Write file:", bufwd, Completer.file) onSuccess { lfile =>
+    editor.miniRead("Write file:", bufwd, config(fileHistory), Completer.file) onSuccess { lfile =>
       val file = lfile.getCanonicalFile
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
@@ -733,7 +736,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Displays the documentation for a fn.")
   def describeFn () {
-    editor.miniRead("Fn:", "", Completer.from(disp.fns, true)) onSuccess { fn =>
+    editor.miniRead("Fn:", "", config(fnHistory), Completer.from(disp.fns, true)) onSuccess { fn =>
       disp.describeFn(fn) match {
         case Some(descrip) => editor.popStatus(s"Fn: $fn", descrip)
         case None => editor.popStatus(s"No such fn: $fn")
@@ -752,7 +755,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
   def setVar () {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
-      editor.miniRead(prompt, b.current, Completer.none) onSuccess { newval =>
+      editor.miniRead(prompt, b.current, config(setVarHistory), Completer.none) onSuccess { newval =>
         try b.update(newval) catch {
           case e :Exception => editor.popStatus(s"Unable to parse '$newval':", e.toString)
         }
@@ -770,20 +773,21 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
-    editor.miniRead("M-x", "", Completer.from(disp.fns, true)) onSuccess { fn =>
+    editor.miniRead("M-x", "", config(fnHistory), Completer.from(disp.fns, true)) onSuccess { fn =>
       if (!disp.invoke(fn)) editor.popStatus(s"Unknown fn: $fn")
     }
   }
 
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
-    editor.miniRead("Mode:", "", Completer.from(disp.minorModes, true)) onSuccess disp.toggleMode
+    val comp = Completer.from(disp.minorModes, true)
+    editor.miniRead("Mode:", "", config(modeHistory), comp) onSuccess disp.toggleMode
   }
 
   @Fn("Opens the configuration file for the specified mode in a buffer.")
   def editModeConfig () {
     val comp = Completer.from(disp.majorModes ++ disp.minorModes, true)
-    editor.miniRead("Mode:", name, comp) onSuccess editor.visitConfig
+    editor.miniRead("Mode:", name, config(modeHistory), comp) onSuccess editor.visitConfig
   }
 
   @Fn("Opens the configuration file for the Scaled editor in a buffer.")
