@@ -57,7 +57,8 @@ object Indenter {
     // multiple arglists...
     def findArgListStart (from :Loc) =
       buffer.scanBackward((_,_,c) => c == '(', from)
-    val firstNonWS = pos.atCol(buffer.line(pos).indexOf(isNotWhitespace))
+    val nonWSIdx = buffer.line(pos).indexOf(isNotWhitespace)
+    val firstNonWS = pos.atCol(if (nonWSIdx == -1) 0 else nonWSIdx)
     val start = if (inArgList(firstNonWS, pos)) findArgListStart(firstNonWS) else firstNonWS
     readIndent(buffer, start)
   }
