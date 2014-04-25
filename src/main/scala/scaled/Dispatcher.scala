@@ -4,9 +4,20 @@
 
 package scaled
 
-/** Handles the invocation of fns and their binding to names and key combinations. */
+import reactual.SignalV
 
+/** Handles the invocation of fns and their binding to names and key combinations. */
 abstract class Dispatcher {
+
+  /** A signal that is emitted with the name of the `fn` about to be invoked.
+    * Any changes to the buffer made by hooks registered here will accumulate to the
+    * to-be-invoked fn for undo purposes. */
+  def willInvoke :SignalV[String]
+
+  /** A signal that is emitted with the name of the `fn` that was just invoked.
+    * Any changes to the buffer made by hooks registered here will accumulate to the
+    * just-invoked fn for undo purposes. */
+  def didInvoke :SignalV[String]
 
   /** The name of the currently executing fn. Is null when no fn is executing. */
   def curFn :String

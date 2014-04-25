@@ -5,7 +5,7 @@
 package scaled.impl
 
 import javafx.scene.input.{KeyCode, KeyEvent}
-import reactual.Value
+import reactual.{Signal, Value}
 import scaled._
 
 /** Handles the conversion of key presses into execution of the appropriate fns. This includes
@@ -22,6 +22,8 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
                                KeyCode.COMMAND, KeyCode.WINDOWS)
 
+  private val _willInvoke = Signal[String]()
+  private val _didInvoke = Signal[String]()
   private var _curFn :String = _
   private var _prevFn :String = _
 
@@ -124,6 +126,8 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     _prefixes = Set()
   }
 
+  override def willInvoke = _willInvoke
+  override def didInvoke = _didInvoke
   override def curFn = _curFn
   override def prevFn = _prevFn
 
@@ -193,24 +197,26 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     _curFn = fn.name
     editor.clearStatus()
     view.buffer.undoStack.actionWillStart(view.point())
+    _willInvoke.emit(fn.name)
 
     // TODO: pass view to fn for (internal) error reporting?
     fn.invoke(typed)
 
     // finish up after invoking our fn
+    _didInvoke.emit(fn.name)
     view.buffer.undoStack.actionDidComplete()
     _prevFn = _curFn
     _curFn = null
-    didInvoke()
+    didInvokeFn()
   }
 
   private def invokeMissed () :Unit = invokeMissed(_trigger.mkString(" "))
   private def invokeMissed (trigger :String) :Unit = _majorMeta.missedFn match {
     case Some(fn) => invoke(fn, trigger)
-    case None     => _prevFn = null ; didInvoke()
+    case None     => _prevFn = null ; didInvokeFn()
   }
 
-  private def didInvoke () {
+  private def didInvokeFn () {
     _trigger = Seq()
     _dispatchTyped = false
     _escapeNext = false
