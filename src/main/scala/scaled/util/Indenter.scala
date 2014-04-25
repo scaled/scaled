@@ -188,7 +188,7 @@ object Indenter {
     *
     * Use `OneLinerNoArgs` for non-conditional one liners, like `else`, `do`, etc.
     */
-  class OneLinerWithArgs (cfg :Config, buf :BufferV, tokens :Set[String])
+  class OneLinerWithArgs (cfg :Config, buf :BufferV, blocker :Blocker, tokens :Set[String])
       extends Indenter(cfg, buf) {
     def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       // seek backward to the first non-whitespace character
@@ -197,12 +197,13 @@ object Indenter {
       if (pc.row != pos.row-1 || buffer.charAt(pc) != ')') None
       else {
         // find the open paren, and check that the token preceding it is in `tokens`
-        val open = buffer.scanBackward((_,_,c) => c == '(', pc, block.start)
-        prevToken(buffer.line(open), open.col) flatMap { token =>
-          if (!tokens(token)) None
-          else {
-            debug(s"Indenting one liner + args '$token' @ $open")
-            Some(indentFrom(readIndent(buffer, open), 1))
+        blocker.apply(pc.nextC, 0) flatMap { b =>
+          prevToken(buffer.line(b.start), b.start.col) flatMap { token =>
+            if (!tokens(token)) None
+            else {
+              debug(s"Indenting one liner + args '$token' @ $b")
+              Some(indentFrom(readIndent(buffer, b.start), 1))
+            }
           }
         }
       }
