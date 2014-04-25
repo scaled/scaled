@@ -5,11 +5,9 @@
 package scaled.major
 
 import java.io.File
-
 import reactual.{Future, Promise}
-
 import scala.annotation.tailrec
-
+import scala.collection.mutable.ArrayBuffer
 import scaled._
 import scaled.util.Chars
 
@@ -144,6 +142,7 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
     // help commands
     "C-h f" -> "describe-fn",
     "C-h v" -> "describe-var",
+    "C-h m" -> "describe-mode",
 
     // meta commands
     "M-x" -> "execute-extended-command"
@@ -761,6 +760,49 @@ abstract class EditingMode (env :Env) extends MajorMode(env) {
         }
       }
     }
+  }
+
+  @Fn("Describes the current major mode along with all of its key bindings.")
+  def describeMode () {
+    val major = disp.modes.last
+    val buf = editor.openBuffer(s"*${major.name}-mode*").buffer
+    val keysByMode = disp.triggers.groupBy(_._1)
+    val text = new ArrayBuffer[String]()
+
+    // TODO: wrap at the current width
+    def format (text :String) = text.replaceAll("\n", "").replaceAll(" +", " ")
+
+    disp.modes foreach { m =>
+      val title = s"${m.name}-mode:"
+      text += title
+      text += "=" * title.length
+      text += format(m.desc)
+      text += s"(tags: ${m.tags.mkString(" ")})"
+
+      keysByMode.get(m.name) map { keys =>
+        text += ""
+        text += "Key sequence    Binding"
+        text += "------------    -------"
+        keys.sorted foreach {
+          case (m, t, fn) => text += "%-15s %s".format(t, fn)
+        }
+      }
+
+      val vbs = m.varBindings
+      if (!vbs.isEmpty) {
+        text += ""
+        text += "Config vars"
+        text += "-----------"
+        vbs.map(vb => (vb.v.name, vb.current, vb.v.descrip)).sorted foreach {
+          case (n, c, d) => text += "%5s = %s".format(n, c) ; text += s"  $d"
+        }
+      }
+
+      text += ""
+    }
+
+    buf.replace(buf.start, buf.end, text.map(new Line(_)))
+    // TODO: put the buffer in a special "describe mode" mode
   }
 
   //

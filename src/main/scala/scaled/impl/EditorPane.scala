@@ -98,12 +98,15 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   override def buffers = _buffers.map(_.buffer)
 
-  override def openBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
-    case Some(ob) => _focus() = ob
-    // if we find no buffer, create a new one with the specified name
-    case None =>
-      val file = _buffers.headOption map(_.buffer.dir) getOrElse(cwd())
-      newBuffer(BufferImpl.empty(buffer, file))
+  override def openBuffer (buffer :String) = {
+    _buffers.find(_.name == buffer) match {
+      case Some(ob) => _focus() = ob
+      // if we find no buffer, create a new one with the specified name
+      case None =>
+        val file = _buffers.headOption map(_.buffer.dir) getOrElse(cwd())
+        newBuffer(BufferImpl.empty(buffer, file))
+    }
+    _focus().view
   }
 
   override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {

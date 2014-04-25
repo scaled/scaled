@@ -5,6 +5,7 @@
 package scaled
 
 /** Handles the invocation of fns and their binding to names and key combinations. */
+
 abstract class Dispatcher {
 
   /** The name of the currently executing fn. Is null when no fn is executing. */
@@ -18,6 +19,9 @@ abstract class Dispatcher {
   /** Returns the names of all available fns. */
   def fns :Set[String]
 
+  /** Returns `(defining mode, key sequence, fn name)` for all registered key bindings. */
+  def triggers :Seq[(String,String,String)]
+
   /** Returns the documentation for `fn` if such fn exists. */
   def describeFn (fn :String) :Option[String]
 
@@ -27,7 +31,7 @@ abstract class Dispatcher {
   /** Returns the names of all known minor modes. */
   def minorModes :Set[String]
 
-  /** Returns a list of all active modes. */
+  /** Returns a list of all active modes. The last mode will be the major mode. */
   def modes :List[Mode]
 
   /** Toggles the activation of the minor mode named `mode`. */

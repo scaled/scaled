@@ -128,6 +128,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   override def prevFn = _prevFn
 
   override def fns = (Set[String]() /: _metas) { _ ++ _.fns.bindings.map(_.name) }
+  override def triggers = (Seq[(String,String,String)]() /: _metas) { _ ++ _.triggers }
   override def describeFn (fn :String) = findFn(fn) map(_.descrip)
   override def majorModes = resolver.modes(true)
   override def minorModes = resolver.modes(false)
@@ -228,9 +229,14 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
       mode.keymap, fns,
       (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
       (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
+
     // enumerate all prefix sequences (we use these when processing key input)
     val prefixes :Set[Seq[KeyPress]] = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
     // TODO: report an error if a key prefix is bound to an fn? WDED?
+
+    def triggers :Iterable[(String,String,String)] = map.map {
+      case (kps, fn) => (mode.name, kps.mkString(" "), fn.name)
+    }
 
     // add this mode's stylesheet (if any) to the editor
     private def addSheets (sheets :List[String]) :Unit = if (!sheets.isEmpty) {

@@ -98,7 +98,7 @@ trait Editor {
 
   /** Makes the buffer with the specified name the active buffer. If no buffer exists with that
     * name, a new empty buffer will be created with that name. */
-  def openBuffer (buffer :String) :Unit
+  def openBuffer (buffer :String) :BufferView
 
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
     * to buffer kill hooks which can abort the kill.
