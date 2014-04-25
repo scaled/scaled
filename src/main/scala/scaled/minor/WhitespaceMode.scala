@@ -8,7 +8,6 @@ import scala.annotation.tailrec
 import scala.collection.mutable.{Set => MSet}
 
 import scaled._
-import scaled.major.EditingMode
 import scaled.util.{Behavior, Chars}
 
 object WhitespaceConfig extends Config.Defs {
@@ -27,7 +26,7 @@ object WhitespaceConfig extends Config.Defs {
        tags=Array("text", "code"),
        desc="""A minor mode that provides whitespace manipulation fns and can highlight
                undesirable whitespace.""")
-class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
+class WhitespaceMode (env :Env) extends MinorMode(env) {
   import WhitespaceConfig._
   import Chars._
 
