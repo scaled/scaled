@@ -358,6 +358,10 @@ object Buffer {
   /** An event emitted when text is inserted into a buffer. */
   class Insert (val start :Loc, val end :Loc, buffer :Buffer) extends Edit {
     def undo () = buffer.delete(start, end)
+    def merge (other :Insert) :Insert = {
+      assert(end == other.start, "Cannot merge non-adjacent $this and $other")
+      new Insert(start, other.end, buffer)
+    }
     override def toString = s"Edit[+${Region.toString(this)}]"
   }
   object Insert {

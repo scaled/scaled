@@ -12,6 +12,7 @@ import scaled._
   * actions. Then handles reversing said actions, on request.
   */
 class UndoStack (buffer :BufferImpl) extends Undoer {
+  import UndoStack._
 
   buffer.edited.onValue { edit => accum += edit }
 
@@ -76,47 +77,53 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   // come in during that time are triggered by our undoing, not by user actions
   private def accum = if (_undoing) _redoEdits else _edits
 
-  private def accumTo (edits :ArrayBuffer[Undoable], actions :ArrayBuffer[Action]) {
+  private def accumTo (edits :ArrayBuffer[Buffer.Edit], actions :ArrayBuffer[Action]) {
     if (!edits.isEmpty) {
-      // determine whether these edits are "typing" (inserting or deleting a single char), and
-      // whether we can accumulate them with the last action on the stack
-      val (isTyping, canAccum) = edits match {
-        case Seq(le :Buffer.Edit) =>
-          val isSingleChar = le.end == le.start.nextC
-          val isBreak = isBreakChar(buffer.charAt(le.start))
-          (isSingleChar, isSingleChar && !isBreak && actions.size > 0 && actions.last.canAccum(le))
-        case _ => (false, false)
-      }
-
-      val action = if (canAccum) {
-        val accum = actions.last.accum(edits)
-        actions.trimEnd(1)
-        accum
-      }
-      else Action(_point, isTyping, Seq() ++ edits)
-      actions += action
+      // if we can't accumulate these edits with the most recent action, add a new action
+      if (actions.isEmpty || !actions.last.accum(edits)) actions += toAction(_point, edits.clone)
       edits.clear()
     }
   }
 
   private def isBreakChar (c :Char) = Character.isWhitespace(c) // TODO: delegate this to the mode
 
-  private val _edits = ArrayBuffer[Undoable]()
+  private val _edits = ArrayBuffer[Buffer.Edit]()
   private val _actions = ArrayBuffer[Action]()
-  private val _redoEdits = ArrayBuffer[Undoable]()
+  private val _redoEdits = ArrayBuffer[Buffer.Edit]()
   private val _redoActions = ArrayBuffer[Action]()
   private var _point = Loc(0, 0)
   private var _undoing = false
   private var _redoing = false
   private var _cleanUndoIdx = 0
   private var _cleanRedoIdx = -1
+}
 
-  private case class Action (point :Loc, isTyping :Boolean, edits :Seq[Undoable]) {
-    // undo the edits in the reverse of the order they were accumulated
+object UndoStack {
+
+  /** Encapsulates an undoable group of buffer edits. */
+  abstract class Action (val point :Loc) {
+    /** Undoes the edits in the reverse of the order they were accumulated. */
+    def undo () :Unit
+    /** Requests to merge `edits` into this action. Returns true on success, false otherwise. */
+    def accum (edits :Seq[Buffer.Edit]) :Boolean
+  }
+
+  /** Creates the appropriate action for `edits`. */
+  def toAction (point :Loc, edits :Seq[Buffer.Edit]) :Action = edits match {
+    case Seq(le :Buffer.Insert) => new SimpleInsert(point, le)
+    case                      _ => new General(point, edits)
+  }
+
+  private class SimpleInsert (p :Loc, private var edit :Buffer.Insert) extends Action(p) {
+    def undo () = edit.undo()
+    def accum (edits :Seq[Buffer.Edit]) :Boolean = edits match {
+      case Seq(ins :Buffer.Insert) if (ins.start == edit.end) => edit = edit.merge(ins) ; true
+      case _ => false
+    }
+  }
+
+  private class General (p :Loc, edits :Seq[Buffer.Edit]) extends Action(p) {
     def undo () = edits.reverse.foreach { _.undo() }
-    // accumulates additional edits to this action
-    def accum (edits :Seq[Undoable]) = Action(point, isTyping, this.edits ++ edits)
-    // we must be a typing edit, and the new edit must be the same kind (insert vs. delete)
-    def canAccum (edit :Buffer.Edit) = isTyping && edits.head.getClass == edit.getClass
+    def accum (edits :Seq[Buffer.Edit]) = false
   }
 }
