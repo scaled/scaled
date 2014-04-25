@@ -30,6 +30,7 @@ object WhitespaceConfig extends Config.Defs {
 class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
   import WhitespaceConfig._
   import Chars._
+
   val twHighlighter = new Behavior() {
     private val _rethinkLines = MSet[Int]()
 
@@ -82,13 +83,22 @@ class WhitespaceMode (env :Env, major :EditingMode) extends MinorMode(env) {
   config.value(showTrailingWhitespace) onValueNotify twHighlighter.setActive
 
   val twTrimmer = new Behavior() {
+    private val _trimLines = MSet[Int]()
+
     override protected def activate () {
+      // note lines to be trimmed when we see edits of the appropriate form
       note(buffer.edited onValue { _ match {
         case Buffer.Insert(start, end) =>
-          if (end.col == 0 && end.row == start.row + 1)
-            editor defer trimTrailingWhitespaceAt(start.row)
+          if (end.col == 0 && end.row == start.row + 1) _trimLines += start.row
         case _ => // ignore
       }})
+      // trim the to-be-trimmed lines in the did-invoke hook; we cannot modify the buffer when
+      // responding to buffer modifications, but doing it in did-invoke ensures that our changes
+      // are bundled up with the original fns with regard to the undo stack
+      note(disp.didInvoke onEmit {
+        _trimLines foreach trimTrailingWhitespaceAt
+        _trimLines.clear()
+      })
     }
   }
   config.value(WhitespaceConfig.trimTrailingWhitespace) onValueNotify twTrimmer.setActive
