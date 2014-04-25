@@ -83,7 +83,8 @@ class LineViewImpl (_line :LineV) extends LineView {
         if (end > 0) {
           val text = _line.sliceString(start, end)
           assert(end > start)
-          assert(text.indexOf('\r') == -1 && text.indexOf('\n') == -1)
+          assert(text.indexOf('\r') == -1 && text.indexOf('\n') == -1,
+                 s"Text cannot have newlines: $text")
           val tnode = new FillableText(text)
           tnode.setFontSmoothingType(FontSmoothingType.LCD)
           tnode.getStyleClass.add("textFace")
