@@ -100,6 +100,15 @@ trait Editor {
     * name, a new empty buffer will be created with that name. */
   def openBuffer (buffer :String) :BufferView
 
+  /** Creates a new buffer with the specified name, in the specified major mode.
+    *
+    * @param reuse if true and a buffer named `buffer` exists, it will be returned directly
+    * (as is, so be careful you're not getting an unexpected buffer in this case). Otherwise
+    * in the event of name collision, a fresh buffer name will be generated from `buffer` by
+    * appending <N> to the name with increasing values of N until an unused name is obtained.
+    */
+  def createBuffer (buffer :String, mode :String, reuse :Boolean) :BufferView
+
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
     * to buffer kill hooks which can abort the kill.
     * @return true if `buffer` exists and the request was initiated, false if no such buffer

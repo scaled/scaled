@@ -100,13 +100,20 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   override def openBuffer (buffer :String) = {
     _buffers.find(_.name == buffer) match {
+      case None     => newBuffer(createEmptyBuffer(buffer))
       case Some(ob) => _focus() = ob
-      // if we find no buffer, create a new one with the specified name
-      case None =>
-        val file = _buffers.headOption map(_.buffer.dir) getOrElse(cwd())
-        newBuffer(BufferImpl.empty(buffer, file))
     }
     _focus().view
+  }
+
+  override def createBuffer (buffer :String, mode :String, reuse :Boolean) = {
+    _buffers.find(_.name == buffer) match {
+      case None     => newBuffer(createEmptyBuffer(buffer), mode)
+      case Some(ob) => if (reuse) _focus() = ob
+                       else newBuffer(createEmptyBuffer(freshName(buffer)), mode)
+    }
+    _focus().view
+
   }
 
   override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
@@ -165,12 +172,23 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
   }
 
+  private def createEmptyBuffer (name :String) = {
+    val file = _buffers.headOption map(_.buffer.dir) getOrElse(cwd())
+    BufferImpl.empty(name, file)
+  }
+
+  private def freshName (name :String, n :Int = 1) :String = {
+    val revName = s"$name<$n>"
+    if (_buffers.exists(_.name == revName)) freshName(name, n+1)
+    else revName
+  }
+
   private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
 
-  private def newBuffer (buf :BufferImpl) {
+  private def newBuffer (buf :BufferImpl) :Unit = newBuffer(buf, app.pkgMgr.detectMode(buf))
+  private def newBuffer (buf :BufferImpl, mode :String) {
     val config = app.cfgMgr.editorConfig
     val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
-    val mode = app.pkgMgr.detectMode(buf)
     val view = new BufferViewImpl(this, buf, width, height)
     val disp = new DispatcherImpl(this, resolver, view, mode, Nil)
 
