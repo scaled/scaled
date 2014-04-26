@@ -19,8 +19,8 @@ class PackageManager (app :Main) {
   def mode (major :Boolean, name :String) :Future[Class[_]] =
     lookup(modeMap(major), name, "major mode")
 
-  /** Resolves the class for the service with classname `name`. */
-  def service (name :String) :Future[Class[_]] = lookup(serviceMap, name, "service")
+  /** Resolves the implementation class for the service with fq classname `name`. */
+  def service (name :String) :Option[Class[_]] = serviceMap.get(name).map(_.apply(name))
 
   /** Returns the name of all modes provided by all packages. */
   def modes (major :Boolean) :Iterable[String] = modeMap(major).keySet
@@ -148,7 +148,7 @@ class PackageManager (app :Main) {
     // map this package's major and minor modes, and services
     pkg.majors.keySet foreach { majorMap.put(_, pkg.major _) }
     pkg.minors.keySet foreach { minorMap.put(_, pkg.minor _) }
-    pkg.services foreach { serviceMap.put(_, pkg.service _) }
+    pkg.services.keySet foreach { serviceMap.put(_, pkg.service _) }
     // map the file patterns and interpreters defined by this package's major modes
     pkg.patterns.asMap foreach { case (m, ps) => ps foreach { p =>
       try patterns += (Pattern.compile(p) -> m)

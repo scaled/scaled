@@ -21,11 +21,11 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   /** Loads and returns the class for the minor mode named `name`. */
   def minor (name :String) :Class[_] = loader.loadClass(minors(name))
   /** Loads and returns the class for the service with class name `name`. */
-  def service (name :String) :Class[_] = loader.loadClass(name)
+  def service (name :String) :Class[_] = loader.loadClass(services(name))
 
-  val majors = MMap[String,String]() // mode -> classname for all this package's major modes
-  val minors = MMap[String,String]() // mode -> classname for all this package's minor modes
-  val services = ArrayBuffer[String]() // service classname for all this package's services
+  val majors = MMap[String,String]() // mode -> classname for this package's major modes
+  val minors = MMap[String,String]() // mode -> classname for this package's minor modes
+  val services = MMap[String,String]() // svc classname -> impl classname for this package's svcs
 
   val patterns  = HashMultimap.create[String,String]() // major mode -> mode's file patterns
   val interps   = HashMultimap.create[String,String]() // major mode -> mode's interpreters
@@ -66,8 +66,8 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   // scan the package directory locating FooMode.class and FooService.class
   Filer.descendFiles(info.root) { f =>
     try {
-      if (f.getName.endsWith("Mode.class")) parseMode(f)
-      if (f.getName.endsWith("Service.class")) parseService(f)
+      if (f.getName endsWith "Mode.class") parseMode(f)
+      if (f.getName endsWith "Service.class") parseService(f)
     } catch {
       case e :Exception => println("Error parsing $f: $e")
     }
@@ -126,7 +126,9 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   private def parseService (file :File) = parse(file, new Visitor() {
     override def visitEnd () {
       _anns.get("Lscaled/Service;") foreach { attrs =>
-        services += _cname
+        val impl = attrs.get("impl")
+        val pre = _cname.substring(0, _cname.lastIndexOf(".")+1)
+        services.put(_cname, if (impl.isEmpty) _cname else pre+impl.iterator.next)
       }
     }
   })

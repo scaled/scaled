@@ -31,6 +31,7 @@ abstract class ModeResolver (editor :Editor) {
 
   protected def locate (major :Boolean, mode :String) :Future[Class[_]]
   protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
+  protected def resolveService (sclass :Class[_]) :Option[AbstractService] = None
 
   private def requireMajor (mode :String) =
     reqType(classOf[MajorMode], s"$mode is not a major mode.") _
@@ -62,8 +63,12 @@ abstract class ModeResolver (editor :Editor) {
     val params = ctor.getParameterTypes.map { p =>
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg
-        case None => throw new IllegalArgumentException(
-          s"Unable to satisfy mode dependency [type=$p, remargs=$remargs]")
+        case None => resolveService(p) match {
+          case Some(svc) => svc
+          case None =>
+            println(s"Unable to satisfy mode dependency [type=$p, remargs=$remargs]")
+            null
+        }
       }
     }
     Future.success(ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T])
@@ -83,4 +88,5 @@ class AppModeResolver (app :Main, editor :Editor) extends ModeResolver(editor) {
   override protected def locate (major :Boolean, mode :String) = app.pkgMgr.mode(major, mode)
   override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
     app.cfgMgr.resolveConfig(mode, defs)
+  override protected def resolveService (sclass :Class[_]) = app.svcMgr.resolveService(sclass)
 }

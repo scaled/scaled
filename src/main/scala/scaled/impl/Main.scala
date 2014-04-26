@@ -20,6 +20,7 @@ class Main extends Application {
   val watchMgr = new WatchManager()
   val pkgMgr = new pkg.PackageManager(this)
   val cfgMgr = new ConfigManager(this)
+  val svcMgr = new ServiceManager(this)
 
   override def start (stage :Stage) {
     val epane = new EditorPane(this, stage)

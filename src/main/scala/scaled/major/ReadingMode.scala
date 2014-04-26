@@ -365,7 +365,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     // not change the current buffer.
   }
 
-  @Fn("""Reads a filename from the minibuffer and switches to a filename visiting it.""")
+  @Fn("""Reads a filename from the minibuffer and visits it in a buffer.""")
   def findFile () {
     val bufwd = buffer.dir.getAbsolutePath + File.separator
     editor.miniRead("Find file:", bufwd, config(fileHistory), Completer.file) onSuccess { file =>
