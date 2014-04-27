@@ -25,6 +25,7 @@ class KeyPressTest {
     assertEquals(Some(fromCode(KeyCode.A, T, T, F, F)), toKeyPress("C-S-a"))
     assertEquals(Some(fromCode(KeyCode.A, T, T, T, T)), toKeyPress("S-C-A-M-a"))
     assertEquals(Some(fromCode(KeyCode.Z, F, T, F, F)), toKeyPress("C-z"))
+    assertEquals(Some(fromCode(KeyCode.X, T, T, F, F)), toKeyPress("S-C-x"))
     assertEquals(Some(fromCode(KeyCode.TAB, F, F, F, F)), toKeyPress("TAB"))
     assertEquals(None, KeyPress.toKeyPress("BOB"))
     assertEquals(None, KeyPress.toKeyPress("G-z"))

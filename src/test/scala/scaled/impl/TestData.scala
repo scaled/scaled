@@ -28,6 +28,7 @@ object TestData {
     def exit (code :Int) {}
     def buffers = Seq()
     def openBuffer (buffer :String) = null
+    def createBuffer (buffer :String, mode :String, reuse :Boolean) = null
     def visitFile (file :File) = null
     def visitConfig (name :String) = null
     def killBuffer (buffer :String) = false

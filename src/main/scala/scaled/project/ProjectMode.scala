@@ -36,6 +36,7 @@ class ProjectMode (env :Env, psvc :ProjectService) extends MinorMode(env) {
 
   override def keymap = Seq(
     "C-x C-f"     -> "find-file-in-project",
+    // TODO: this doens't work, we need to wire up major:find-find to route to major mode fn
     "S-C-x S-C-f" -> "find-file"
   )
 
