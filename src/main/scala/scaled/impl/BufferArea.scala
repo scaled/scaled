@@ -251,9 +251,15 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
       // if the cursor is out of view, scroll it back to the center of the screen
       val (scrollTop, height) = (bview.scrollTop(), bview.height())
-      val scrollTopMax = math.max(0, bview.buffer.lines.length-height+1)
-      if (point.row < scrollTop || point.row >= scrollTop + height || scrollTop > scrollTopMax)
-        bview.scrollTop() = math.min(scrollTopMax, math.max(0, point.row-height/2))
+      // only force a recenter if we're beyond the hard top max (the point at which none of our
+      // lines are visible on screen); this could happen if the buffer shrinks a bunch
+      val hardTopMax = math.max(0, bview.buffer.lines.length-1)
+      if (point.row < scrollTop || point.row >= scrollTop + height || scrollTop > hardTopMax) {
+        // if we do adjust due to hard top max overflow, adjust back to soft top max, which
+        // means putting a whole screen full of lines in view, not just one
+        val softTopMax = math.max(0, bview.buffer.lines.length-height+1)
+        bview.scrollTop() = math.min(softTopMax, math.max(0, point.row-height/2))
+      }
 
       val (scrollLeft, width) = (bview.scrollLeft(), bview.width())
       val scrollLeftMax = math.max(0, bview.buffer.maxLineLength-width+1)
