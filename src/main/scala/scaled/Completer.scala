@@ -5,6 +5,7 @@
 package scaled
 
 import java.io.File
+import scala.annotation.tailrec
 import scala.collection.SortedMap
 import scala.collection.immutable.TreeMap
 
@@ -33,6 +34,13 @@ abstract class Completer[T] {
     * shared by the currently displayed prefix and the current completions. */
   def pathSeparator :Option[String] = None
 
+  /** Gives the completer a chance to "massage" the currently displayed prefix. By default the
+    * prefix is replaced with the longest shared prefix of all the completions. In normal
+    * circumstnaces this is useful, but if a completer is doing special stuff, it might not be.
+    */
+  def massageCurrent (cur :String, comps :Iterable[String]) :String =
+    comps reduce sharedPrefix
+
   /** Generates a `T` from the supplied string. Return `None` to restrict the user to selecting
     * from one of the returned prefixes, return `Some(t)` to allow the user to enter any string
     * and have it turned into a valid result. */
@@ -42,6 +50,26 @@ abstract class Completer[T] {
     * via `fn`, an arbitrary selection is made. */
   protected def mapBy (rs :Seq[T], fn :(T => String)) :SortedMap[String,T] =
     TreeMap(rs.map(r => (fn(r), r)) :_*)
+
+  /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
+    * only when both strings have the character in uppercase, lowercase otherwise. */
+  protected def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
+    val buf = new StringBuilder
+    @inline @tailrec def loop (ii :Int) {
+      if (ii < a.length && ii < b.length) {
+        val ra = a.charAt(ii) ; val la = Character.toLowerCase(ra)
+        val rb = b.charAt(ii) ; val lb = Character.toLowerCase(rb)
+        if (la == lb) {
+          // if everyone uses uppercase here, keep the prefix uppercase, otherwise lower
+          val c = if (Character.isUpperCase(ra) && Character.isUpperCase(rb)) ra else la
+          buf.append(c)
+          loop(ii+1)
+        }
+      }
+    }
+    loop(0)
+    buf.toString
+  }
 }
 
 /** Some useful completion functions. */

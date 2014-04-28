@@ -92,8 +92,9 @@ class MiniReadMode[T] (
       setContents(comps.head)
     }
     else {
-      // replace the current contents with the longest shared prefix of the completions
-      val pre = longestPrefix(comps)
+      // allow the completer to massage the currently displayed prefix (usually this means
+      // replacing it with the longest shared prefix of the completions)
+      val pre = completer.massageCurrent(cur, comps)
       if (pre != cur) setContents(pre)
       // if we have a path separator, strip off the path prefix shared by the current completion;
       // this results in substantially smaller and more readable completions when we're completing
@@ -104,23 +105,4 @@ class MiniReadMode[T] (
   }
 
   private def copyContents = buffer.region(buffer.start, buffer.end)
-
-  private def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
-    val buf = new StringBuilder
-    @inline @tailrec def loop (ii :Int) {
-      if (ii < a.length && ii < b.length) {
-        val ra = a.charAt(ii) ; val la = Character.toLowerCase(ra)
-        val rb = b.charAt(ii) ; val lb = Character.toLowerCase(rb)
-        if (la == lb) {
-          // if everyone uses uppercase here, keep the prefix uppercase, otherwise lower
-          val c = if (Character.isUpperCase(ra) && Character.isUpperCase(rb)) ra else la
-          buf.append(c)
-          loop(ii+1)
-        }
-      }
-    }
-    loop(0)
-    buf.toString
-  }
-  private def longestPrefix (comps :Iterable[String]) = comps reduce sharedPrefix
 }
