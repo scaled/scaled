@@ -11,10 +11,13 @@ import scaled._
 
 /** Implements [[ProjectService]]. Hides implementation details from clients. */
 class ProjectManager (pluginSvc :PluginService) extends AbstractService with ProjectService {
-  import ProjectManager._
 
   private val projects = MMap[File,Project]() // TODO: use concurrent map? need we worry?
   private val finders = pluginSvc.resolvePlugins[ProjectFinderPlugin]("project-finder")
+
+  // TODO: have projects export names, allow switching between projects by names
+  // (persist project name to project root, once we see one)
+  // then also finding files in other projects? (i.e. C-x C-f -> codex:somefile)
 
   def didStartup () {
     // TODO!
@@ -27,9 +30,14 @@ class ProjectManager (pluginSvc :PluginService) extends AbstractService with Pro
   def projectFor (file :File) = {
     // compute the path tree from this file to the file system root
     val paths = parents(file.getParentFile)
-    // either we have an open project, we can resolve one, or we use the default
-    findOpenProject(paths) orElse resolveProject(paths) getOrElse defaultProject
+    // either we have an open project, we can resolve one, or we use the last ditch project
+    findOpenProject(paths) orElse resolveProject(paths) getOrElse FileProject.lastDitch(paths.head)
   }
+
+  def loadedProjects = projects.values.toSeq
+
+  // TODO: store known projects somewhere
+  def knownProjects = projects.values.map(p => (p.name -> p.root)).toSeq
 
   private def findOpenProject (paths :List[File]) :Option[Project] =
     if (paths.isEmpty) None
@@ -69,12 +77,4 @@ class ProjectManager (pluginSvc :PluginService) extends AbstractService with Pro
       case null => accum.reverse
       case prnt => parents(prnt, file :: accum)
     }
-}
-
-object ProjectManager {
-
-  /** The project used if we absolutely cannot find another project. */
-  val defaultProject = new Project() {
-    override val fileCompleter = Completer.file
-  }
 }

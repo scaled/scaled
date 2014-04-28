@@ -34,4 +34,10 @@ abstract class Project {
     * When completing on `Ba`.
     */
   val fileCompleter :Completer[File]
+
+  /** Returns the name of this project. */
+  def name :String
+
+  /** Returns the root of this project. */
+  def root :File
 }

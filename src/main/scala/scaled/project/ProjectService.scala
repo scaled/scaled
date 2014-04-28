@@ -35,4 +35,11 @@ trait ProjectService {
     * This may be [[DefaultProject]] if no more sophisticated project can be determined.
     */
   def projectFor (file :File) :Project
+
+  /** Returns all currently resolved projects. */
+  def loadedProjects :Seq[Project]
+
+  /** Returns the names and root directories of all known projects (most of which are probably
+    * not currently resolved). */
+  def knownProjects :Seq[(String,File)]
 }

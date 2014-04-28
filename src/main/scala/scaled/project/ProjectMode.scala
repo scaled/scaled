@@ -48,7 +48,7 @@ class ProjectMode (env :Env, psvc :ProjectService, major :EditingMode) extends M
   @Fn("Reads a project file name from the minibuffer (with smart completion), and visits it.")
   def findFileInProject () {
     editor.miniRead(
-      "Find file in project:", "", project.fileHistory, project.fileCompleter
+      s"Find file in project (${project.name}):", "", project.fileHistory, project.fileCompleter
     ) onSuccess editor.visitFile
   }
 
