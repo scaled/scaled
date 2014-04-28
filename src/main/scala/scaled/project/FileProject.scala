@@ -7,7 +7,7 @@ package scaled.project
 import java.io.File
 import scala.collection.mutable.{Map => MMap}
 import scala.collection.immutable.TreeMap
-import scaled.Completer
+import scaled._
 
 /** A simple project used when we can't identify anything other than the root directory of the
   * project. This will be used if we see a `.git`, `.hg`, etc. directory or some other indicator
@@ -74,24 +74,27 @@ class FileProject (root :File, ignores :Set[String]) extends Project {
 object FileProject {
 
   /** The directories ignored by file projects. */
-  val fileIgnores = ProjectFinder.stockIgnores // TODO ++ others?
-
-  abstract class FileProjectFinder (nm :String) extends ProjectFinder(nm, false) {
-    def createProject (root :File) = new FileProject(root, fileIgnores)
-  }
+  val fileIgnores = ProjectFinderPlugin.stockIgnores // TODO ++ others?
 
   /** Creates file projects rooted at .git directories. */
-  val gitFinder = new FileProjectFinder("git") {
+  @Plugin(tag="project-finder")
+  class GitFinderPlugin extends FileProjectFinderPlugin("git") {
     def checkRoot (root :File) = if (new File(root, ".git").isDirectory()) 1 else -1
   }
 
   /** Creates file projects rooted at .hg directories. */
-  val hgFinder = new FileProjectFinder("mercurial") {
+  @Plugin(tag="project-finder")
+  class MercurialFinderPlugin extends FileProjectFinderPlugin("mercurial") {
     def checkRoot (root :File) = if (new File(root, ".hg").isDirectory()) 1 else -1
   }
 
   /** Creates file projects rooted at the highest .svn directory. */
-  val svnFinder = new FileProjectFinder("subversion") {
+  @Plugin(tag="project-finder")
+  class SubversionFinderPlugin extends FileProjectFinderPlugin("subversion") {
     def checkRoot (root :File) = if (new File(root, ".svn").isDirectory()) 0 else -1
+  }
+
+  abstract class FileProjectFinderPlugin (nm :String) extends ProjectFinderPlugin(nm, false) {
+    def createProject (root :File) = new FileProject(root, fileIgnores)
   }
 }

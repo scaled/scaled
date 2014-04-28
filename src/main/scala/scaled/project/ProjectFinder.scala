@@ -5,10 +5,13 @@
 package scaled.project
 
 import java.io.File
+import scaled.AbstractPlugin
 
 /** Finders are used to identify projects given only the location of a file somewhere in the bowels
   * of the project. This is generally done by searching up the directory hierarchy, looking for
   * sentinel files that indicate that a particular kind of project is in effect.
+  *
+  * ProjectFinderPlugin implementations must be tagged with `@Plugin("project-finder")`.
   *
   * @param name a `foo-bar` style name that is used to allow the user to configure custom
   * priorities for project finders if they don't like the defaults. Examples: `git`, `maven`,
@@ -21,7 +24,8 @@ import java.io.File
   * override the chosen project type, if desired, in the `.scaled/config.properties` file placed
   * in the project root.
   */
-abstract class ProjectFinder (val name :String, val intelligent :Boolean) {
+abstract class ProjectFinderPlugin (val name :String, val intelligent :Boolean)
+    extends AbstractPlugin {
 
   /** Checks whether `root` could be a root of a project of the type sought by this finder.
     *
@@ -45,7 +49,7 @@ abstract class ProjectFinder (val name :String, val intelligent :Boolean) {
   /** Applies this finder to the supplied path list. If it matches, `Some(this,root)` is returned,
     * otherwise `None`.
     */
-  def apply (paths :List[File]) :Option[(ProjectFinder,File)] = {
+  def apply (paths :List[File]) :Option[(ProjectFinderPlugin,File)] = {
     var best :File = null ; var cur = paths
     while (!cur.isEmpty) {
       checkRoot(cur.head) match {
@@ -58,7 +62,7 @@ abstract class ProjectFinder (val name :String, val intelligent :Boolean) {
   }
 }
 
-object ProjectFinder {
+object ProjectFinderPlugin {
 
   /** The standard set of directories that are ignored when enumerating all project dirs. */
   val stockIgnores = Set(".git", ".hg", ".svn") // TODO: more

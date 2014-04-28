@@ -9,6 +9,7 @@ import java.io.File
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
+import scala.collection.{Set => GSet}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scaled.impl.Filer
 
@@ -22,11 +23,14 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   def minor (name :String) :Class[_] = loader.loadClass(minors(name))
   /** Loads and returns the class for the service with class name `name`. */
   def service (name :String) :Class[_] = loader.loadClass(services(name))
+  /** Loads and returns all plugin classes with tag `tag`. */
+  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(loader.loadClass)
 
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes
   val services = MMap[String,String]() // svc classname -> impl classname for this package's svcs
 
+  val plugins   = HashMultimap.create[String,String]() // plugin tag -> classname(s)
   val patterns  = HashMultimap.create[String,String]() // major mode -> mode's file patterns
   val interps   = HashMultimap.create[String,String]() // major mode -> mode's interpreters
   val minorTags = HashMultimap.create[String,String]() // tag -> minor mode
@@ -67,7 +71,8 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   Filer.descendFiles(info.root) { f =>
     try {
       if (f.getName endsWith "Mode.class") parseMode(f)
-      if (f.getName endsWith "Service.class") parseService(f)
+      else if (f.getName endsWith "Service.class") parseService(f)
+      else if (f.getName endsWith "Plugin.class") parsePlugin(f)
     } catch {
       case e :Exception => println("Error parsing $f: $e")
     }
@@ -129,6 +134,15 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
         val impl = attrs.get("impl")
         val pre = _cname.substring(0, _cname.lastIndexOf(".")+1)
         services.put(_cname, if (impl.isEmpty) _cname else pre+impl.iterator.next)
+      }
+    }
+  })
+
+  private def parsePlugin (file :File) = parse(file, new Visitor() {
+    override def visitEnd () {
+      _anns.get("Lscaled/Plugin;") foreach { attrs =>
+        val tag = attrs.get("tag").iterator.next
+        plugins.put(tag, _cname)
       }
     }
   })

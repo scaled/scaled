@@ -10,10 +10,11 @@ import scala.collection.mutable.{Map => MMap}
 import scaled._
 
 /** Implements [[ProjectService]]. Hides implementation details from clients. */
-class ProjectManager extends AbstractService with ProjectService {
+class ProjectManager (pluginSvc :PluginService) extends AbstractService with ProjectService {
   import ProjectManager._
 
   private val projects = MMap[File,Project]() // TODO: use concurrent map? need we worry?
+  private val finders = pluginSvc.resolvePlugins[ProjectFinderPlugin]("project-finder")
 
   def didStartup () {
     // TODO!
@@ -30,15 +31,12 @@ class ProjectManager extends AbstractService with ProjectService {
     findOpenProject(paths) orElse resolveProject(paths) getOrElse defaultProject
   }
 
-  // TODO: the finders need to come from some sort of package plugin mechanism
-  private val finders = List(FileProject.gitFinder, FileProject.hgFinder)
-
   private def findOpenProject (paths :List[File]) :Option[Project] =
     if (paths.isEmpty) None
     else projects.get(paths.head) orElse findOpenProject(paths.tail)
 
   private def resolveProject (paths :List[File]) :Option[Project] = {
-    def create (pi :(ProjectFinder,File)) = {
+    def create (pi :(ProjectFinderPlugin,File)) = {
       val (pf, root) = pi
       println(s"Creating ${pf.name} project in $root")
       val proj = pf.createProject(root)
@@ -46,15 +44,22 @@ class ProjectManager extends AbstractService with ProjectService {
       Some(proj)
     }
     // apply each of our finders to the path tree
-    val (iprojs, dprojs) = finders.flatMap(_.apply(paths)).partition(_._1.intelligent)
+    val (iprojs, dprojs) = finders.plugins.flatMap(_.apply(paths)).partition(_._1.intelligent)
     // if there are more than one intelligent project matches, complain
     if (!iprojs.isEmpty) {
       if (iprojs.size > 1) println(
         s"Multiple intelligent project matches: ${iprojs.mkString(" ")}")
       create(iprojs.head)
     }
-    // if there are any non-intelligent project matches, use one
-    else if (!dprojs.isEmpty) create(dprojs.head)
+    // if there are any non-intelligent project matches, use the deepest match
+    else if (!dprojs.isEmpty) {
+      var deep = dprojs.head ; var dps = dprojs.toList.tail
+      while (!dps.isEmpty) {
+        if (dps.head._2.getPath.length > deep._2.getPath.length) deep = dps.head
+        dps = dps.tail
+      }
+      create(deep)
+    }
     else None
   }
 

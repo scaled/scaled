@@ -4,9 +4,7 @@
 
 package scaled
 
-/** All Scaled services must extend this class so that they can be notified of certain lifecycle
-  * events.
-  */
+/** Scaled services must extend this class so that they can be notified of lifecycle events. */
 abstract class AbstractService {
 
   /** A callback invoked when a service is first started by Scaled. */

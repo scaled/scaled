@@ -8,12 +8,21 @@ import com.google.common.collect.HashMultimap
 import java.io.File
 import java.net.URLClassLoader
 import java.util.regex.Pattern
-import reactual.Future
+import reactual.{Future, Signal}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scaled.impl._
 
 class PackageManager (app :Main) {
   import scala.collection.convert.WrapAsScala._
+
+  /** A signal emitted when a package is installed. */
+  val packageAdded = Signal[Package]()
+
+  /** A signal emitted when a package is uninstalled. */
+  val packageRemoved = Signal[Package]()
+
+  /** Returns all currently installed packages. */
+  def packages :Iterable[Package] = pkgs.values
 
   /** Resolves the class for the mode named `name`. */
   def mode (major :Boolean, name :String) :Future[Class[_]] =
@@ -145,7 +154,7 @@ class PackageManager (app :Main) {
     // TODO: report errors in pkg.info
     pkgs.put(pkg.info.srcurl, pkg)
 
-    // map this package's major and minor modes, and services
+    // map this package's major and minor modes, services and plugins
     pkg.majors.keySet foreach { majorMap.put(_, pkg.major _) }
     pkg.minors.keySet foreach { minorMap.put(_, pkg.minor _) }
     pkg.services.keySet foreach { serviceMap.put(_, pkg.service _) }
@@ -161,7 +170,8 @@ class PackageManager (app :Main) {
     }
     // map the tags defined by this pattern's minor modes
     minorTags.putAll(pkg.minorTags)
-
+    // tell any interested parties about this new package
+    packageAdded.emit(pkg)
     // println(s"Added package $pkg")
   }
 

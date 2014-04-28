@@ -11,6 +11,9 @@ import java.lang.annotation.Target;
 
 /**
  * Marks a class as implementing a major mode.
+ *
+ * <p>Note: modes <em>must</em> be implemented by classes named {@code FooMode}. The @Major
+ * annotation is only sought on classes matching that name pattern.</p>
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
