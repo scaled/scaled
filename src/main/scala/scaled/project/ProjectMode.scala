@@ -5,6 +5,7 @@
 package scaled.project
 
 import scaled._
+import scaled.major.EditingMode
 
 /** Provides configuration for [[ProjectMode]]. */
 object ProjectConfig extends Config.Defs {
@@ -23,7 +24,7 @@ object ProjectConfig extends Config.Defs {
 @Minor(name="project",
        tags=Array("project"),
        desc="""A minor mode that provides project-centric fns.""")
-class ProjectMode (env :Env, psvc :ProjectService) extends MinorMode(env) {
+class ProjectMode (env :Env, psvc :ProjectService, major :EditingMode) extends MinorMode(env) {
 
   // TODO: it's possible that our buffer's file could change and become part of a new project;
   // do we really want to handle that crazy case?
@@ -35,9 +36,10 @@ class ProjectMode (env :Env, psvc :ProjectService) extends MinorMode(env) {
   }
 
   override def keymap = Seq(
-    "C-x C-f"     -> "find-file-in-project",
-    // TODO: this doens't work, we need to wire up major:find-find to route to major mode fn
-    "S-C-x S-C-f" -> "find-file"
+    "C-x C-f" -> "find-file-in-project",
+    // TODO: this doens't work, we need to wire up major:find-file to route to major mode fn
+    // "S-C-x S-C-f" -> "find-file"
+    "S-C-x S-C-f" -> "find-file-default"
   )
 
   //
@@ -49,4 +51,7 @@ class ProjectMode (env :Env, psvc :ProjectService) extends MinorMode(env) {
       "Find file in project:", "", project.fileHistory, project.fileCompleter
     ) onSuccess editor.visitFile
   }
+
+  @Fn("TEMP: forwards find-file to major mode")
+  def findFileDefault () :Unit = major.findFile()
 }
