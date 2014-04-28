@@ -187,20 +187,20 @@ abstract class BufferV extends Region {
     if (stop < start) seek(start.row, start.col-1) else stop
   }
 
-  /** Searches forward from `start` for the first match of `m`, stopping before `stop` (`stop` is not
-    * checked for a match).
+  /** Searches forward from `start` for the first match of `m`, stopping before `stop` (`stop` is
+    * not checked for a match).
     * @return the location of the match or `Loc.None`. */
   def findForward (m :Matcher, start :Loc, stop :Loc = this.end) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).indexOf(m, col) match {
-      case -1 => if (row == stopr) stop else seek(row+1, 0)
+      case -1 => if (row == stopr) Loc.None else seek(row+1, 0)
       case ii => if (row == stopr && ii >= stopc) Loc.None else Loc(row, ii)
     }
     if (start < stop) seek(start.row, start.col) else Loc.None
   }
 
-  /** Searches backward from the location immediately previous to `start` for the first match of `m`,
-    * stopping when `stop` is reached (`stop` is checked for a match).
+  /** Searches backward from the location immediately previous to `start` for the first match of
+    * `m`, stopping when `stop` is reached (`stop` is checked for a match).
     * @return the location of the match or `Loc.None`. */
   def findBackward (m :Matcher, start :Loc, stop :Loc = this.start) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
@@ -211,8 +211,8 @@ abstract class BufferV extends Region {
     if (start > stop) seek(start.row, start.col-1) else Loc.None
   }
 
-  /** Searches for `lns` in the buffer, starting at `start` and not searching beyond `end`. If only a
-    * single line is sought, it can match anywhere in a line in the buffer. If more than one line
+  /** Searches for `lns` in the buffer, starting at `start` and not searching beyond `end`. If only
+    * a single line is sought, it can match anywhere in a line in the buffer. If more than one line
     * is sought, the first line must match the end of a buffer line, and subsequent lines must
     * match entirely until the last line which must match the start of the corresponding buffer
     * line. The text of the lines must not contain line separator characters.
