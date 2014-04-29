@@ -202,4 +202,13 @@ object EditorConfig extends Config.Defs(true) {
   val warnStyle = "warnFace"
   /** The CSS class name for `error` face. */
   val errorStyle = "errorFace"
+
+  /** The CSS class name for (non-semantic) bold text. */
+  val boldStyle = "boldFace"
+  /** The CSS class name for (non-semantic) italicized text. */
+  val italicStyle = "italicFace"
+  /** The CSS class name for (non-semantic) underlined text. */
+  val underlineStyle = "underlineFace"
+  /** The CSS class name for (non-semantic) struck-through text. */
+  val strikeStyle = "strikeFace"
 }
