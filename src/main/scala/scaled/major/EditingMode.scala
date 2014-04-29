@@ -396,7 +396,6 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       val next = buffer.findForward(fromM, loc, end)
       if (next != Loc.None) loop(fromM.replace(buffer, next, to))
     }
-    println(fromM)
     loop(start)
   }
 
