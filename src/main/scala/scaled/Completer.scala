@@ -122,9 +122,11 @@ object Completer {
     override def pathSeparator = Some(File.separator)
     override protected def fromString (value :String) = Some(new File(value))
 
+    private def ignore (file :File) :Boolean = file.getName.startsWith(".")
+
     private def expand (dir :File, prefix :String) = {
       val edir = massage(dir)
-      val files = if (edir.exists) edir.listFiles else Array[File]()
+      val files = if (edir.exists) edir.listFiles.filterNot(ignore) else Array[File]()
       val matches = files.filter(f => defang(f.getName) startsWith prefix)
       val file = new File(edir, prefix)
       if (file.exists && file.isDirectory && matches.length > 1) mapBy(file.listFiles, format)

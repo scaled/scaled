@@ -70,7 +70,10 @@ class FileProject (val root :File, ignores :Set[String]) extends Project {
 
   def name = root.getName
 
-  protected def ignore (dir :File) :Boolean = ignores(dir.getName)
+  protected def ignore (dir :File) :Boolean = {
+    val name = dir.getName
+    name.startsWith(".") || ignores(name)
+  }
 }
 
 object FileProject {
