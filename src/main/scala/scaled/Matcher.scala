@@ -6,6 +6,7 @@ package scaled
 
 import java.util.regex.{MatchResult, Pattern}
 import scala.annotation.tailrec
+import scaled.util.Chars
 
 /** Handles searching and matching in [[Line]]s. */
 abstract class Matcher {
@@ -26,18 +27,40 @@ abstract class Matcher {
     * [[search]], [[searchBackward]] or [[matches]] which returned a successful match, otherwise
     * its return value is undefined. */
   def matchLength :Int
+
+  /** Replaces a match from this matcher in `buffer` at `at` with `lines`.
+    * @return the location immediately following the replaced text. */
+  def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) :Loc
 }
 
 object Matcher {
+  import Chars._
 
   /** Returns a case-sensitive matcher on `cs`. */
   def exact (cs :CharSequence) :Matcher = new CSMatcher(cs) {
+    def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) = {
+      val end = buffer.forward(at, matchLength)
+      buffer.replace(at, end, lines)
+      at + lines
+    }
     protected def eq (have :Char, want :Char) = have == want
+    override def toString = super.toString + ":exact"
   }
 
   /** Returns a case-insensitive matcher on `cs`. NOTE: `cs` must be all lower case. */
   def loose (cs :CharSequence) :Matcher = new CSMatcher(cs) {
+    def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) = {
+      val end = buffer.forward(at, matchLength)
+      val isCaps = isUpperCase(buffer.charAt(at))
+      val isUpper = isCaps && buffer.scanForward(isNotUpperCase, at, end) == end
+      val newend = at + lines
+      buffer.replace(at, end, lines)
+      if (isUpper) buffer.transform(at, newend, Character.toUpperCase)
+      else if (isCaps) buffer.transform(at, at.nextC, Character.toUpperCase)
+      newend
+    }
     protected def eq (have :Char, want :Char) = have == want || have == Character.toLowerCase(want)
+    override def toString = super.toString + ":loose"
   }
 
   /** Returns a regep matcher on `pattern`. */
@@ -83,6 +106,16 @@ object Matcher {
 
     def matchLength = result.end - result.start
 
+    def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) = {
+      val end = buffer.forward(at, matchLength)
+      val sb = new StringBuffer()
+      m.appendReplacement(sb, Line.toText(lines))
+      sb.delete(0, m.start) // sigh...
+      val repl = Line.fromText(sb.toString)
+      buffer.replace(at, end, repl)
+      at + repl
+    }
+
     override def toString = pattern
 
     private def prep (haystack :Array[Char], start :Int, end :Int) {
@@ -107,7 +140,7 @@ object Matcher {
 
   private def mixedCase (cs :CharSequence, ii :Int) :Boolean =
     if (ii == cs.length) false
-    else if (Character.isUpperCase(cs.charAt(ii))) false
+    else if (Character.isUpperCase(cs.charAt(ii))) true
     else mixedCase(cs, ii+1)
 
   // TODO: if it turns out to be worth it performance-wise, we can create specialized matchers on
