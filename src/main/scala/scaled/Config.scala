@@ -179,6 +179,9 @@ object EditorConfig extends Config.Defs(true) {
   /** The history ring for buffer names (switch-to-buffer, kill-buffer, etc.). */
   val bufferHistory = fnKey(cfg => new Ring(cfg(historySize)))
 
+  /** The history ring for replace fns (replace-string, replace-regexp, query-replace, etc.). */
+  val replaceHistory = fnKey(cfg => new Ring(cfg(historySize)))
+
   /** The history ring used for mode names. */
   val modeHistory = fnKey(cfg => new Ring(cfg(historySize)))
 

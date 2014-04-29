@@ -358,7 +358,79 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   //
   // REPLACING FNS
 
-  // TODO
+  /** Handles querying the user for the FROM and TO string, offering and using defaults, etc.
+    * If search terms are obtained, `repFn` is invoked with them.
+    */
+  def getReplaceArgs (prefix :String, repFn :(String, String) => Unit) {
+    val history = config(replaceHistory)
+    val defrep = history.entries match {
+      case 0 => None
+      case 1 => Some(Line.toText(history.entry(0).get) -> "")
+      case n => Some(Line.toText(history.entry(1).get) -> Line.toText(history.entry(0).get))
+    }
+    val defprompt = defrep match {
+      case Some((from, to)) => s" default ($from -> $to)"
+      case _ => ""
+    }
+    editor.miniRead(s"$prefix$defprompt:", "", history, Completer.none) onSuccess { from =>
+      if (from == "") defrep match {
+        case Some((from, to)) => repFn(from, to)
+        case                _ => editor.emitStatus("Aborted")
+      }
+      else {
+        val prompt = s"$prefix '$from' with:"
+        editor.miniRead(prompt, "", history, Completer.none) onSuccess { to =>
+          // normally MiniReadMode won't add a blank response to the history, but in the case of
+          // a blank 'to' replacement, we do want to add it to the history
+          if (to == "") history.add(Line.fromText(to))
+          // now invoke the replacement fn
+          repFn(from, to)
+        }
+      }
+    }
+  }
+
+  /** Non-interactively replaces all matches of `fromM` with `to` between `start` and `end`. */
+  def replaceAll (fromM :Matcher, to :Seq[LineV], start :Loc, end :Loc) {
+    @inline @tailrec def loop (loc :Loc) {
+      val next = buffer.findForward(fromM, loc, end)
+      if (next != Loc.None) loop(fromM.replace(buffer, next, to))
+    }
+    println(fromM)
+    loop(start)
+  }
+
+  @Fn("""Queries the user for a FROM and TO string. Replaces all instances of FROM with TO
+         from the point to the end of the buffer.""")
+  def replaceString () {
+    getReplaceArgs("Replace string", (from, to) => {
+      // TODO: provide a way to force exact matching on lower-case strings? or just have 'em
+      // use a regexp for that?
+
+      // TODO: transient mark mode and replacing in the region; that's super useful, so maybe
+      // this alone is worth the trouble of emulating transient mark mode...
+      replaceAll(Matcher.on(from), Line.fromText(to), view.point(), buffer.end)
+    })
+  }
+
+  @Fn("""Queries the user for a FROM regexp and TO string. Replaces all instances of FROM with TO
+         from the point to the end of the buffer.""")
+  def replaceRegexp () {
+    getReplaceArgs("Replace regexp", (from, to) => {
+      // TODO: transient mark mode and replacing in the region
+      replaceAll(Matcher.regexp(from), Line.fromText(to), view.point(), buffer.end)
+    })
+  }
+
+  @Fn("""Queries the user for a FROM and TO string. Replaces all instances of FROM with TO
+         from the point to the end of the buffer with interactive confirmation.""")
+  def queryReplace () {
+    getReplaceArgs("Query replace", (from, to) => {
+      println(s"TODO: query replace '$from' with '$to'")
+    })
+  }
+
+  // TODO: query-replace-regexp
 
   //
   // BUFFER FNS
