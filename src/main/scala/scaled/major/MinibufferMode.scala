@@ -73,8 +73,5 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
     view.point() = view.buffer.end
   }
 
-  protected def contents :String = mkString(view.buffer.lines)
-
-  /** Converts a sequence of lines to a string. TODO: what about line endings? */
-  protected def mkString (lines :Seq[LineV]) = lines.map(_.asString).mkString("\n")
+  protected def contents :String = Line.toText(view.buffer.lines)
 }

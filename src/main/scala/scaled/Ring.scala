@@ -104,14 +104,8 @@ class KillRing (size :Int) extends Ring(size) {
   }
 
   private def copyToClipboard (region :Seq[LineV]) {
-    val buf = new StringBuilder()
-    var ii = 0 ; while (ii < region.length) {
-      if (ii > 0) buf.append(System.lineSeparator)
-      buf.append(region(ii).asString)
-      ii += 1
-    }
     val clip = new ClipboardContent()
-    lastSaved = buf.toString
+    lastSaved = Line.toText(region)
     clip.putString(lastSaved)
     clipboard.setContent(clip)
   }

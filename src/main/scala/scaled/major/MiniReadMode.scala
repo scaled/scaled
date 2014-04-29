@@ -36,7 +36,7 @@ class MiniReadMode[T] (
     "ENTER" -> "commit-read"
   )
 
-  def current = mkString(view.buffer.region(view.buffer.start, view.buffer.end))
+  def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
 
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {

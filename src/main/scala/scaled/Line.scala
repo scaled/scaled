@@ -242,4 +242,15 @@ object Line {
   /** Creates one or more lines from the supplied text. Newlines are assumed to be equal to
     * [[System.lineSeparator]]. */
   def fromText (text :String) :Seq[Line] = text.split(System.lineSeparator).map(new Line(_))
+
+  /** Converts `lines` to a string which will contain line separators between lines. */
+  def toText (lines :Seq[LineV]) :String = {
+    val buf = new StringBuilder()
+    var ii = 0 ; while (ii < lines.length) {
+      if (ii > 0) buf.append(System.lineSeparator)
+      buf.append(lines(ii).asString)
+      ii += 1
+    }
+    buf.toString
+  }
 }
