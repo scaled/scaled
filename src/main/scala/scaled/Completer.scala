@@ -106,6 +106,11 @@ object Completer {
     override protected def fromString (value :String) = Some(value)
   }
 
+  /** Replaces newlines with whitespace. This should be called on any string that will be used
+    * as a completion key which may potentially contain newlines. File names are the primary
+    * culprit here. */
+  def defang (name :String) = name.replace('\n', ' ').replace('\r', ' ')
+
   private def selfMap (names :Seq[String]) = TreeMap(names.map(n => (n, n)) :_*)
 
   /** A completer on file system files. */
@@ -120,7 +125,7 @@ object Completer {
     private def expand (dir :File, prefix :String) = {
       val edir = massage(dir)
       val files = if (edir.exists) edir.listFiles else Array[File]()
-      val matches = files.filter(_.getName startsWith prefix)
+      val matches = files.filter(f => defang(f.getName) startsWith prefix)
       val file = new File(edir, prefix)
       if (file.exists && file.isDirectory && matches.length > 1) mapBy(file.listFiles, format)
       else mapBy(matches, format)
@@ -132,7 +137,7 @@ object Completer {
     }
 
     private def format (file :File) = {
-      val path = file.getAbsolutePath
+      val path = defang(file.getAbsolutePath)
       if (file.isDirectory) path + File.separator else path
     }
   }

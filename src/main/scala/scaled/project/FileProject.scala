@@ -55,7 +55,7 @@ class FileProject (val root :File, ignores :Set[String]) extends Project {
   private def allFiles = {
     if (_allFiles == null) {
       _allFiles = TreeMap[String,File]() ++ dirMap.values.flatMap(_.files).map(
-        f => (f.getName -> f))
+        f => (Completer.defang(f.getName) -> f))
       // println(s"Rebuilt all files map (size: ${_allFiles.size})")
     }
     _allFiles
