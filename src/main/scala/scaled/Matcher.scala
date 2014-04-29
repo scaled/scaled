@@ -53,8 +53,8 @@ object Matcher {
       val end = buffer.forward(at, matchLength)
       val isCaps = isUpperCase(buffer.charAt(at))
       val isUpper = isCaps && buffer.scanForward(isNotUpperCase, at, end) == end
-      val newend = at + lines
       buffer.replace(at, end, lines)
+      val newend = at + lines
       if (isUpper) buffer.transform(at, newend, Character.toUpperCase)
       else if (isCaps) buffer.transform(at, at.nextC, Character.toUpperCase)
       newend
