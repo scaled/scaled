@@ -218,7 +218,9 @@ class BufferImpl private (
       // of transforms; overkill perhaps, but whatever, it's four lines of code
       if (until == start + lines) {
         val original = new ArrayBuffer[Line]()
-        onRows(start, until) { (l, s, c) => original += l.replace(s, c, lines(s.row-start.row)) }
+        onRows(start, until) { (l, s, c) =>
+          original += l.replace(s, c-s.col, lines(s.row-start.row))
+        }
         noteTransform(start, original)
       } else {
         delete(start, until)
