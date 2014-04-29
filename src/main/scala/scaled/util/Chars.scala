@@ -47,6 +47,18 @@ object Chars {
     override def toString = "isNotPunctuation"
   }
 
+  /** Returns true for characters that are uppercase. */
+  lazy val isUpperCase = new Pred() {
+    protected def slowApply (c :Char) = Character.isUpperCase(c)
+    override def toString = "isUpperCase"
+  }
+
+  /** Returns true for characters that are not uppercase. */
+  lazy val isNotUpperCase = new Pred() {
+    protected def slowApply (c :Char) = !Character.isUpperCase(c)
+    override def toString = "isNotUpperCase"
+  }
+
   abstract class Pred extends Function1[Char,Boolean] with Function3[Int,Int,Char,Boolean] {
     private[this] val masks = new Array[Long](4)
     private def computeMask (mm :Int) :Long = {
