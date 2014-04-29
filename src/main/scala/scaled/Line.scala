@@ -241,7 +241,9 @@ object Line {
 
   /** Creates one or more lines from the supplied text. Newlines are assumed to be equal to
     * [[System.lineSeparator]]. */
-  def fromText (text :String) :Seq[Line] = text.split(System.lineSeparator).map(new Line(_))
+  def fromText (text :String) :Seq[Line] =
+    // TODO: remove tab hackery when we support tabs
+    text.split(System.lineSeparator).map(_.replace('\t', ' ')).map(new Line(_))
 
   /** Converts `lines` to a string which will contain line separators between lines. */
   def toText (lines :Seq[LineV]) :String = {

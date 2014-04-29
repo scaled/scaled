@@ -30,7 +30,8 @@ object BufferImpl {
     val lines = ArrayBuffer[Array[Char]]()
     var line :String = buffed.readLine()
     while (line != null) {
-      lines += line.toCharArray
+      // TODO: remove tab hackery when we support tabs
+      lines += line.replace('\t', ' ').toCharArray
       line = buffed.readLine()
     }
     // TEMP: tack a blank line on the end to simulate a trailing line sep
