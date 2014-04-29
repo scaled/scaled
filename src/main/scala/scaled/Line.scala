@@ -138,6 +138,14 @@ abstract class LineV extends CharSequence {
     }
   }
 
+  /** Compares this line to `other` lexically and sensitive to case. */
+  def compare (other :LineV) :Int = LineV.compare(
+    _chars, _offset, length, other._chars, other._offset, other.length, LineV.CaseCmp)
+
+  /** Compares this line to `other` lexically and insensitive to case. */
+  def compareIgnoreCase (other :LineV) :Int = LineV.compare(
+    _chars, _offset, length, other._chars, other._offset, other.length, LineV.NoCaseCmp)
+
   /** Returns the contents of this line as a string. */
   def asString :String = new String(_chars, _offset, length)
 
@@ -145,10 +153,7 @@ abstract class LineV extends CharSequence {
 
   override def equals (other :Any) = other match {
     case ol :LineV =>
-      @inline @tailrec def charsEq (ii :Int) :Boolean = {
-        if (ii == length) true else _chars(ii) == ol._chars(ii) && charsEq(ii+1)
-      }
-      length == ol.length && charsEq(0) && ol.styleMatches(_styles, _offset, length, 0)
+      length == ol.length && compare(ol) == 0 && ol.styleMatches(_styles, _offset, length, 0)
     case _ => false
   }
 
@@ -168,6 +173,39 @@ abstract class LineV extends CharSequence {
 
   /** Returns the offset into [[_chars]] and [[_styles]] at which our data starts. */
   protected def _offset :Int
+}
+
+/** `LineV` related types and utilities. */
+object LineV {
+
+  /** A ordering that sorts lines lexically, sensitive to case. */
+  implicit val ordering = new Ordering[LineV]() {
+    def compare (a :LineV, b :LineV) :Int = a compare b
+  }
+
+  /** A ordering that sorts lines lexically, insensitive to case. */
+  val orderingIgnoreCase = new Ordering[LineV]() {
+    def compare (a :LineV, b :LineV) :Int = a compareIgnoreCase b
+  }
+
+  /** A character comparator function that sorts upper before lower case. */
+  val CaseCmp :(Char, Char) => Int = Character.compare
+
+  /** A character comparator function that ignores case. */
+  val NoCaseCmp :(Char, Char) => Int =
+    (c1, c2) => Character.compare(Character.toLowerCase(c1), Character.toLowerCase(c2))
+
+  private def compare (cs1 :Array[Char], o1 :Int, l1 :Int, cs2 :Array[Char], o2 :Int, l2 :Int,
+                       cmp :(Char, Char) => Int) :Int = {
+    var ii = 0 ; val ll = math.min(l1, l2)
+    while (ii < ll) {
+      val c1 = cs1(o1+ii) ; val c2 = cs2(o2+ii)
+      val ccmp = cmp(c1, c2)
+      if (ccmp != 0) return ccmp
+      ii += 1
+    }
+    l1 - l2
+  }
 }
 
 /** Models a single immutable line of text that is not associated with a buffer.

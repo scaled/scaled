@@ -9,6 +9,41 @@ import org.junit.Assert._
 
 class LineTest {
 
+  @Test def testEquals () {
+    val l1 = new Line("The quick brown fox jumps over the lazy dog.")
+    val l2 = new Line("The quick brown fox jumps over the lazy dog.")
+    val l3 = new Line("The quick brown pig jumps over the lazy dog.")
+
+    assertTrue(l1 == l2)
+    assertFalse(l1 == l3)
+    assertTrue(l1.view(20) == l2.view(20))
+    assertTrue(l1.view(20) == l3.view(20))
+    assertTrue(l1.view(5, 20) == l2.view(5, 20))
+    assertFalse(l1.view(5, 20) == l3.view(5, 20))
+  }
+
+  @Test def testCompare () {
+    // sort is lexical
+    val a = new Line("abc")
+    val x = new Line("xyz")
+    assertTrue((a compare x) < 0)
+    assertTrue((x compare a) > 0)
+
+    // upper case sorts before lower case
+    val l1 = new Line("Every good boy deserves fudge.")
+    val l2 = new Line("every good boy deserves fudge.")
+    assertTrue((l1 compare l2) < 0)
+    assertTrue((l2 compare l1) > 0)
+    assertEquals(0, l1 compareIgnoreCase l2)
+    assertEquals(0, l2 compareIgnoreCase l1)
+
+    // prefix sorts before longer line
+    val short = new Line("won")
+    val long = new Line("wonder")
+    assertTrue((short compare long) < 0)
+    assertTrue((long compare short) > 0)
+  }
+
   @Test def testIndexOf () {
     //                 0123456789012345678901234567890123456789012
     val l1 = new Line("The quick brown fox jumps over the lazy dog.")
