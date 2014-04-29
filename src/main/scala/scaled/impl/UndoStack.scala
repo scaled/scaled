@@ -16,20 +16,22 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
 
   buffer.edited.onValue { edit => accum += edit }
 
-  def actionWillStart (point :Loc) {
+  def delimitAction (point :Loc) {
+    // first commit any edits that came in since our last delimiting
+    if (!_edits.isEmpty) {
+      accumTo(_edits, _actions)
+      // since we've applied one or more normal edits, clear the redo buffer
+      _redoActions.clear()
+      _cleanRedoIdx = -1
+    }
+
+    // now prepare to capture new edits up to our next delimiting
     _point = point
     // if the buffer is currently clean, move the undo clean pointer here
     if (!buffer.dirty) {
       _cleanUndoIdx = _actions.size
       _cleanRedoIdx = -1 // and wipe the clean redo index
     }
-  }
-
-  def actionDidComplete () :Unit = if (!_edits.isEmpty) {
-    accumTo(_edits, _actions)
-    // since we've applied one or more normal edits, clear the redo buffer
-    _redoActions.clear()
-    _cleanRedoIdx = -1
   }
 
   override def undo () :Option[Loc] = {

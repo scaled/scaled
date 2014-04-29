@@ -196,7 +196,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     // prepare to invoke our fn
     _curFn = fn.name
     editor.clearStatus()
-    view.buffer.undoStack.actionWillStart(view.point())
+    view.buffer.undoStack.delimitAction(view.point())
     _willInvoke.emit(fn.name)
 
     // TODO: pass view to fn for (internal) error reporting?
@@ -204,7 +204,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
 
     // finish up after invoking our fn
     _didInvoke.emit(fn.name)
-    view.buffer.undoStack.actionDidComplete()
+    view.buffer.undoStack.delimitAction(view.point())
     _prevFn = _curFn
     _curFn = null
     didInvokeFn()
