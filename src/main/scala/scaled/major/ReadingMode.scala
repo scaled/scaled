@@ -137,6 +137,43 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     case Some(mp) => val p = view.point() ; if (mp < p) fn(mp, p) else fn(p, mp)
   }
 
+  /** Invokes `fn` with the start and end of the paragraph under the point. A paragraph is a
+    * series of lines delimited on both ends by blank lines or an end of the buffer. If the point
+    * is on a blank line, the previous paragraph will be sought. If no previous paragraph can be
+    * found, the paragraph following the point is sought. If no paragraph can still be found
+    * (the buffer is completely empty), an error message is reported to the user and `fn` is not
+    * invoked.
+    */
+  def withParagraph (fn :(Loc, Loc) => Unit) :Unit = {
+    def isEmpty (row :Int) = buffer.line(row).length == 0
+    def isNonEmpty (row :Int) = !isEmpty(row)
+    @tailrec def seek (row :Int, drow :Int, erow :Int, pred :(Int => Boolean)) :Int = {
+      if (row == erow) erow
+      else if (pred(row)) row
+      else seek(row+drow, drow, erow, pred)
+    }
+
+    val p = view.point()
+    val lastLine = buffer.lines.size-1
+    // use the current line, if non-empty, or the first preceding non-empty line
+    val curPrev = seek(p.row, -1, 0, isNonEmpty)
+    // curPrev may refer to an empty row if there were no non-empty rows before the point;
+    // in that case seek forward for a non-empty line
+    val anchor = if (isEmpty(curPrev)) seek(p.row, 1, lastLine, isNonEmpty) else curPrev
+    // anchor may also be empty if there were no non-empty rows after the point
+    if (isEmpty(anchor)) editor.popStatus("Unable to find a paragraph.")
+    else {
+      // yay, we found a non-empty line, now determine the bounds of the paragraph
+      val start = seek(anchor, -1, 0, isEmpty)
+      val end = seek(anchor, 1, lastLine, isEmpty)
+      // translate our boundary lines into buffer locations
+      val sloc = if (isEmpty(start)) Loc(start+1, 0) else Loc(start, 0)
+      val eloc = if (isEmpty(end)) Loc(end, 0) else Loc(end, buffer.line(end).length)
+      // and finally invoke our fn
+      fn(sloc, eloc)
+    }
+  }
+
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
     val vars = disp.modes.flatMap(m => m.varBindings)

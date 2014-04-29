@@ -46,6 +46,9 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     "M-l"     -> "downcase-word",
     "M-c"     -> "capitalize-word",
 
+    "C-M-l"   -> "sort-paragraph",
+    // NONE   -> "sort-lines",
+
     // killing and yanking commands
     "C-w"     -> "kill-region",
     "C-M-w"   -> "append-next-kill",
@@ -131,6 +134,15 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * @return the end of the upcased region (the larger of `from` and `to`).
     */
   def downcase (from :Loc, to :Loc) :Loc = buffer.transform(from, to, Character.toLowerCase)
+
+  /** Sorts the lines in the region `[start, end)`. */
+  def sortLinesIn (start :Loc, end :Loc) {
+    val r = Region(start, buffer.backward(end, 1))
+    val lines = buffer.region(r)
+    val sorted = lines.sorted(LineV.ordering)
+    if (lines != sorted) buffer.replace(r, sorted)
+    else editor.popStatus("Region already sorted.")
+  }
 
   //
   // CHARACTER EDITING FNS
@@ -247,6 +259,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     downcase(start, until)
     view.point() = until
   }
+
+  @Fn("""Alphabetically sorts the lines in the paragraph under the point or the previous paragraph
+         if the point is on an empty line.""")
+  def sortParagraph () :Unit = withParagraph(sortLinesIn)
+
+  @Fn("""Alphabetically sorts the lines in the current region.""")
+  def sortLines () :Unit = withRegion(sortLinesIn)
 
   //
   // KILLING AND YANKING FNS
