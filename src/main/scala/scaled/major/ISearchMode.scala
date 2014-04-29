@@ -4,10 +4,9 @@
 
 package scaled.major
 
+import reactual.{Value, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
-
-import reactual.{Value, Promise}
 import scaled._
 
 /** Configuration for [[ISearchMode]]. */

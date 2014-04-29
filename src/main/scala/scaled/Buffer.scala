@@ -5,9 +5,7 @@
 package scaled
 
 import java.io.File
-
 import reactual.{SignalV, ValueV}
-
 import scala.annotation.tailrec
 
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.

@@ -4,10 +4,8 @@
 
 package scaled.impl
 
-import scala.collection.mutable.ArrayBuffer
-
 import reactual.{Future, Signal, Value}
-
+import scala.collection.mutable.ArrayBuffer
 import scaled._
 
 // TODO: should the point be automatically adjusted when text is inserted into the buffer before

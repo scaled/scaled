@@ -5,9 +5,7 @@
 package scaled.impl
 
 import java.lang.reflect.{InvocationTargetException, Method}
-
 import scala.collection.mutable.{Map => MMap}
-
 import scaled._
 
 /** A single fn-binding.

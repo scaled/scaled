@@ -5,8 +5,8 @@
 package scaled.project
 
 import java.io.File
-import scala.collection.mutable.{Map => MMap}
 import scala.collection.immutable.TreeMap
+import scala.collection.mutable.{Map => MMap}
 import scaled._
 
 /** A simple project used when we can't identify anything other than the root directory of the

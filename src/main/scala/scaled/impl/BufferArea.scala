@@ -4,8 +4,7 @@
 
 package scaled.impl
 
-import java.util.concurrent.Callable
-
+import com.sun.javafx.tk.Toolkit
 import javafx.application.Platform
 import javafx.beans.binding.{Bindings, ObjectBinding}
 import javafx.beans.property.{DoubleProperty, ObjectProperty, SimpleDoubleProperty}
@@ -23,11 +22,9 @@ import javafx.scene.paint.{Color, Paint}
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
-import com.sun.javafx.tk.Toolkit
-
+import java.util.concurrent.Callable
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
-
 import scaled._
 
 // TODO
