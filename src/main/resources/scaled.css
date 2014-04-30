@@ -114,9 +114,11 @@
 
 /** ISearch mode faces. */
 .isearchMatchFace {
-  -fx-bg-fill: DarkOrange;
+  -fx-bg-stroke: Red !important;
 }
 
 .isearchActiveMatchFace {
-  -fx-bg-fill: #AB1500;
+  -fx-fill: White !important;
+  -fx-bg-fill: Red !important;
+  -fx-bg-stroke: White !important;
 }
