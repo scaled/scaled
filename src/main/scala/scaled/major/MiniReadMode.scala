@@ -40,7 +40,7 @@ class MiniReadMode[T] (
 
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
-    completer.commit(current) match {
+    completer.commit(curcomp, current) match {
       // if they attempt to commit and the completer doesn't like it, complete with the current
       // contents instead to let them know they need to complete with something valid
       case None => complete()
@@ -53,6 +53,7 @@ class MiniReadMode[T] (
     }
   }
 
+  private var curcomp :Option[Completion[T]] =  None
   private var currentText = initText
   private var historyAge = -1
   // reset to historyAge -1 whenever the buffer is modified
@@ -84,23 +85,24 @@ class MiniReadMode[T] (
 
   @Fn("Completes the minibuffer contents as much as possible.")
   def complete () {
-    val cur = current
-    val comps = completer(cur).keySet
-    if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
-    else if (comps.size == 1) {
+    val curpre = current
+    val comp = completer.complete(curpre)
+    curcomp = Some(comp)
+    if (comp.comps.isEmpty) miniui.showCompletions(Seq("No match."))
+    else if (comp.comps.size == 1) {
       miniui.showCompletions(Seq())
-      setContents(comps.head)
+      setContents(comp.comps.head)
     }
     else {
       // allow the completer to massage the currently displayed prefix (usually this means
       // replacing it with the longest shared prefix of the completions)
-      val pre = completer.massageCurrent(cur, comps)
-      if (pre != cur) setContents(pre)
+      val pre = comp.massageCurrent(curpre)
+      if (pre != curpre) setContents(pre)
       // if we have a path separator, strip off the path prefix shared by the current completion;
       // this results in substantially smaller and more readable completions when we're completing
       // things like long file system paths
       val preLen = completer.pathSeparator map(sep => pre.lastIndexOf(sep)+1) getOrElse 0
-      miniui.showCompletions(comps.map(_.substring(preLen)).toSeq)
+      miniui.showCompletions(comp.comps.map(_.substring(preLen)).toSeq)
     }
   }
 

@@ -177,7 +177,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
     val vars = disp.modes.flatMap(m => m.varBindings)
-    val comp = Completer.from(vars, true)(_.v.name)
+    val comp = Completer.from(vars)(_.v.name)
     editor.miniRead("Var:", "", config(varHistory), comp) onSuccess { vname =>
       vars.find(_.v.name == vname) match {
         case Some(v) => fn(v)

@@ -51,20 +51,19 @@ class FileProject (val root :File, ignores :Set[String]) extends Project {
   }
   private val dirMap = MMap[File,Dir](root -> new Dir(root))
 
-  private var _allFiles :TreeMap[String,File] = _
+  private var _allFiles :Set[File] = _
   private def allFiles = {
     if (_allFiles == null) {
-      _allFiles = TreeMap[String,File]() ++ dirMap.values.flatMap(_.files).map(
-        f => (Completer.defang(f.getName) -> f))
+      _allFiles = Set() ++ dirMap.values.flatMap(_.files)
       // println(s"Rebuilt all files map (size: ${_allFiles.size})")
     }
     _allFiles
   }
 
   val fileCompleter = new Completer[File]() {
-    def apply (prefix :String) /*:SortedMap[String,File]*/ = {
+    def complete (prefix :String) = {
       dirMap(root).refresh()
-      allFiles.filterKeys(_ startsWith prefix)
+      completion(allFiles.filter(_.getName startsWith prefix), f => Completer.defang(f.getName))
     }
   }
 
