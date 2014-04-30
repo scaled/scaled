@@ -4,6 +4,8 @@
 
 package scaled.impl
 
+import java.io.InputStreamReader
+import java.util.zip.ZipFile
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
@@ -49,6 +51,18 @@ object BufferImpl {
       apply(cfile.getName, cfile, reader)
     } finally {
       reader.close
+    }
+  }
+
+  /** Reads the archive entry specified by `path` into a buffer. */
+  def fromArchiveEntry (path :String) :BufferImpl = {
+    val Array(apath, epath) = path.split("!", 2)
+    val zfile = new ZipFile(apath)
+    zfile.getEntry(epath) match {
+      case null  => empty(epath, new File(path))
+      case entry =>
+        val efile = new File(epath)
+        apply(efile.getName, efile, new InputStreamReader(zfile.getInputStream(entry), "UTF-8"))
     }
   }
 

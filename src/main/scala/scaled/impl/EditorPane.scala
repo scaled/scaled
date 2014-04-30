@@ -128,6 +128,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
         _focus() = ob
       case None =>
         if (file.exists) newBuffer(BufferImpl.fromFile(file))
+        else if (Filer.isArchiveEntry(file)) newBuffer(BufferImpl.fromArchiveEntry(file.getPath))
         else {
           newBuffer(BufferImpl.empty(file.getName, file))
           emitStatus("(New file)")

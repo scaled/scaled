@@ -42,6 +42,14 @@ object Filer {
     apply(root)
   }
 
+  /** Returns true if this file represents an entry in a `zip` or `jar` archive. It will have a
+    * path of the form `foo/bar.jar!entryname.suff`.
+    */
+  def isArchiveEntry (file :File) :Boolean = {
+    val path = file.getPath
+    path.contains(".zip!") || path.contains(".jar!")
+  }
+
   private def fail (msg :String) :Nothing = {
     System.err.println(s"$msg Scaled cannot operate without this directory.")
     sys.exit(255)
