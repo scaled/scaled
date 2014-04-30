@@ -1,5 +1,6 @@
 package scaled.impl
 
+import com.google.common.collect.HashBiMap
 import java.io.File
 import java.util.concurrent.Executors
 import javafx.application.Application
@@ -16,22 +17,43 @@ class Main extends Application {
   // locate and create our metadata dir
   val homeDir = new File(System.getProperty("user.home"))
   val metaDir = Filer.requireDir(locateMetaDir)
+  val editors = HashBiMap.create[String,EditorPane]()
 
+  val server = new Server(this)
   val watchMgr = new WatchManager()
   val pkgMgr = new pkg.PackageManager(this)
   val cfgMgr = new ConfigManager(this)
   val svcMgr = new ServiceManager(this)
 
-  override def start (stage :Stage) {
-    val epane = new EditorPane(this, stage)
-    // open a pane/tab for each file passed on the command line
-    getParameters.getRaw foreach { p =>
-      // TODO: should Editor just take a path and do this massaging internally? or should we export
-      // a public Files utility class and recommend callers use that? meh...
-      val f = new File(p)
-      epane.visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), p))
+  def openInWorkspace (path :String, workspace :String) {
+    val epane = editors.get(workspace) match {
+      case null => createEditor(new Stage(), workspace)
+      case epane => epane
     }
+    println(s"Opening $workspace / $path")
+    epane.visitPath(path)
+  }
 
+  def closeEditor (epane :EditorPane, ecode :Int) {
+    epane.stage.close()
+    editors.inverse.remove(epane)
+    if (editors.isEmpty()) sys.exit(ecode) // TODO: cleanup?
+  }
+
+  override def start (stage :Stage) {
+    val epane = createEditor(stage, System.getProperty("scaled.workspace", "default"))
+    // open a pane/tab for each file passed on the command line
+    getParameters.getRaw foreach epane.visitPath
+
+    // start our command server
+    server.start()
+
+    // now that our main window is created, we can tweak the quit menu shortcut key
+    tweakQuitMenuItem()
+  }
+
+  private def createEditor (stage :Stage, workspace :String) :EditorPane = {
+    val epane = new EditorPane(this, stage)
     val scene = new Scene(epane)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     cfgMgr.editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
@@ -42,9 +64,8 @@ class Main extends Application {
     }
     stage.setScene(scene)
     stage.show()
-
-    // now that our main window is created, we can tweak the quit menu shortcut key
-    tweakQuitMenuItem()
+    editors.put(workspace, epane)
+    epane
   }
 
   // tweaks the shortcut on the quit menu to avoid conflict with M-q

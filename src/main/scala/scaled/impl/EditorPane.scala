@@ -24,7 +24,7 @@ import scaled.major.TextMode
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (app :Main, stage :Stage) extends Region with Editor {
+class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   getStyleClass.add("editor")
 
@@ -70,7 +70,7 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
 
   newScratch() // always start with a scratch buffer
 
-  override def exit (code :Int) = sys.exit(code) // TODO: cleanup?
+  override def exit (code :Int) = app.closeEditor(this, code)
   override def showURL (url :String) = app.getHostServices.showDocument(url)
   override def defer (op :Runnable) = Platform.runLater(op)
 
@@ -119,6 +119,14 @@ class EditorPane (app :Main, stage :Stage) extends Region with Editor {
   override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
     case Some(ob) => killBuffer(ob) ; true
     case None     => false
+  }
+
+  // used internally to open files passed on the command line or via remote cmd
+  def visitPath (path :String) {
+    val f = new File(path)
+    visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), path))
+    stage.toFront() // move our window to front if it's not there already
+    stage.requestFocus() // and request window manager focus
   }
 
   // if another buffer exists that is visiting this file, just open it
