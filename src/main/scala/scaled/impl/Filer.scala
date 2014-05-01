@@ -11,6 +11,9 @@ import scala.collection.mutable.{Set => MSet}
 /** Helper routines for working with the file system. */
 object Filer {
 
+  /** Composes `root` and `comps` into a new file representing the final path component. */
+  def file (root :File, comps :String*) :File = (root /: comps)(new File(_, _))
+
   /** Ensures that `dir` exists and is a directory.
     * Terminates the editor with an error message on failure. */
   def requireDir (dir :File) :File = {
