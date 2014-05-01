@@ -18,7 +18,13 @@
 
   <properties>
     <scala.version>2.11.0</scala.version>
+    <scala.major.version>2.11</scala.major.version>
   </properties>
+
+  <scm>
+    <connection>scm:git:https://github.com/scaled/scaled.git</connection>
+    <url>https://github.com/scaled/scaled/</url>
+  </scm>
 
   <licenses>
     <license>
@@ -67,7 +73,13 @@
       <version>${scala.version}</version>
     </dependency>
 
-    <!-- TEMP: nix when I fix mvn and ivy package depends -->
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-xml_${scala.major.version}</artifactId>
+      <version>1.0.1</version>
+    </dependency>
+
+    <!-- TEMP: nix these when I fix mvn and ivy package depends -->
     <dependency>
       <groupId>com.googlecode.plist</groupId>
       <artifactId>dd-plist</artifactId>
