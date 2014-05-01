@@ -25,6 +25,4 @@ class TextMode (env :Env) extends EditingMode(env) {
 
   override def configDefs = TextConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/text.css") :: super.stylesheets
-
-  override def dispose () {}  // nothing to dispose
 }

@@ -11,5 +11,5 @@ import scaled._
 """)
 class HelpMode (env :Env) extends ReadingMode(env) {
 
-  override def dispose () {}  // nothing to dispose
+  // TODO: things?
 }

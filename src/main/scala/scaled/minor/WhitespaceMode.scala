@@ -79,7 +79,8 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
       if (first < last) buffer.addStyle(trailingStyle, floc, Loc(ii, last))
     }
   }
-  config.value(showTrailingWhitespace) onValueNotify twHighlighter.setActive
+  note(twHighlighter)
+  note(config.value(showTrailingWhitespace) onValueNotify twHighlighter.setActive)
 
   val twTrimmer = new Behavior() {
     private val _trimLines = MSet[Int]()
@@ -100,15 +101,12 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
       })
     }
   }
-  config.value(WhitespaceConfig.trimTrailingWhitespace) onValueNotify twTrimmer.setActive
+  note(twTrimmer)
+  note(config.value(WhitespaceConfig.trimTrailingWhitespace) onValueNotify twTrimmer.setActive)
 
   override def keymap = Seq() // TODO
   override def configDefs = WhitespaceConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
-  override def dispose () {
-    twHighlighter.setActive(false)
-    twTrimmer.setActive(false)
-  }
 
   def trimTrailingWhitespaceAt (row :Int) {
     val line = buffer.line(row) ; val len = line.length

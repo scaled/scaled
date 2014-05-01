@@ -31,16 +31,17 @@ class ProjectMode (env :Env, psvc :ProjectService, major :EditingMode) extends M
   val project :Project = psvc.projectFor(buffer.file).reference(buffer)
 
   override def configDefs = ProjectConfig :: super.configDefs
-  override def dispose () {
-    project.release(buffer)
-  }
-
   override def keymap = Seq(
     "C-x C-f" -> "find-file-in-project",
     // TODO: this doens't work, we need to wire up major:find-file to route to major mode fn
     // "S-C-x S-C-f" -> "find-file"
     "S-C-x S-C-f" -> "find-file-default"
   )
+
+  override def dispose () {
+    super.dispose()
+    project.release(buffer)
+  }
 
   //
   // FNs

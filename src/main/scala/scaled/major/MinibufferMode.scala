@@ -55,8 +55,6 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
     // looks like that might be what emacs does
   )
 
-  override def dispose () {} // nada
-
   @Fn("""Aborts the current minibuffer action.""")
   def abort () {
     editor.emitStatus("Quit")

@@ -5,6 +5,7 @@
 package scaled
 
 import java.io.FileNotFoundException
+import scala.collection.mutable.ArrayBuffer
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
   *  - one it makes passing a bundle of standard depends on to a superclass constructor less
@@ -119,13 +120,32 @@ abstract class Mode (env :Env) {
 
   /** Cleans up any external resources managed by this mode. This is called when the mode is disabled
     * or the buffer containing the mode is going away. */
-  def dispose () :Unit
+  def dispose () {
+    _toClose foreach { c =>
+      try c.close()
+      catch {
+        case e :Exception => editor.emitError(e)
+      }
+    }
+  }
 
   // a view methods to make life easier for modes
   @inline protected final def editor = env.editor
   @inline protected final def view = env.view
   @inline protected final def buffer = env.view.buffer
   @inline protected final def disp = env.disp
+
+  /** Adds `close` to a list to be closed when this mode is disposed. This is useful for noting
+    * Reactual connections that must be closed when a mode is disconnected, or [[Behavior]]s that
+    * must be deactivated when a mode is disposed, etc.
+    */
+  protected def note (close :AutoCloseable) :Unit = _toClose += close
+
+  /** Removes `close` from the to-close-on-dispose list. This is unnecessary if the closeable
+    * is idempotent as the extra `close()` call will be ignored. But if repeated `close()` causes
+    * trouble, then this enables manual management.
+    */
+  protected def unnote (close :AutoCloseable) :Unit = _toClose -= close
 
   /** A helper function for obtaining a stylesheet URL from a classpath. A mode will generally call
     * this like so: `stylesheetURL("/mymode.css")` and place `mymode.css` in the top-level of the
@@ -134,18 +154,9 @@ abstract class Mode (env :Env) {
     case null => throw new FileNotFoundException(s"Unable to find stylesheet resource '$path'")
     case rsrc => rsrc.toExternalForm
   }
+
+  private[this] val _toClose = ArrayBuffer[AutoCloseable]()
 }
-
-// /** [[Mode]] related types and helpers. */
-// object Mode {
-
-//   /** Defines a hook that can be used to customize a mode's keymap, initialization or cleanup. */
-//   class Hook[M <: Mode] {
-
-//     def onInit (mode :M) {}
-
-//   }
-// }
 
 /** Provides the foundation for a major editing mode. A major editing mode customizes the behavior
   * of the editor, usually while editing a certain type of file (a `.java` source file, for

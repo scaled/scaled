@@ -4,14 +4,13 @@
 
 package scaled.util
 
-import scala.collection.mutable.ArrayBuffer
-
 import reactual.Connection
+import scala.collection.mutable.ArrayBuffer
 
 /** Encapsulates a reactive behavior and simplifies the process of wiring up a bunch of reactions
   * when the behavior is enabled and clearing those reactions when the behavior is disabled.
   */
-abstract class Behavior {
+abstract class Behavior extends AutoCloseable {
 
   /** Activate or deactivates this behavior, as appropriate. */
   def setActive (active :Boolean) {
@@ -27,6 +26,9 @@ abstract class Behavior {
       assert(!_conns.isEmpty, "Behaviors must note at least one connection in activate().")
     }
   }
+
+  /** Deactivates this behavior on close. */
+  override def close () :Unit = setActive(false)
 
   /** Wires up all reactions in this method and performs any other activation processing. Be sure to
     * use [[note]] to note all connections created when wiring up reactions */

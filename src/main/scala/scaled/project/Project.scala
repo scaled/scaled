@@ -5,6 +5,7 @@
 package scaled.project
 
 import java.io.File
+import reactual.{Value, ValueV}
 import scaled._
 
 /** Provides services for a particular project. See [[ProjectService]] for a more detailed
@@ -59,19 +60,19 @@ abstract class Project {
     if (_refcount == 0) hibernate()
   }
 
-  // tracks the number of references to this project
-  private[this] var _refcount = 0
+  /** Exposes the most recent compilation results to anyone who cares. */
+  def compileNotes :ValueV[Seq[Compiler.Note]] = _compileNotes
 
-  /** Returns a `Compiler` that can be used to recompile this project, if supported. */
-  def compiler :Option[Compiler] = {
+  /** Initiates a recompilation of this project, if supported.
+    * @return true if compilation initiated, false if project does not support compiles.
+    */
+  def recompile () :Boolean = {
     if (_compiler == null) _compiler = createCompiler()
-    _compiler
+    _compiler match {
+      case Some(comp) => comp.compile().onSuccess(_compileNotes.update) ; true
+      case None       => false
+    }
   }
-
-  // a reference to our active compiler, if one is resolved; a compiler is created on demand
-  // when a project mode references this project and requests it; the compiler remains active
-  // until all project modes relinquish the project, at which point it's shutdown
-  private[this] var _compiler :Option[Compiler] = null
 
   override def toString = s"Project($root, $name, $id, $sourceURL)"
 
@@ -88,4 +89,11 @@ abstract class Project {
 
   /** If this mode supports a compiler, this should create and return a new compiler instance. */
   protected def createCompiler () :Option[Compiler] = None
+
+  private[this] var _refcount = 0 // see reference/release
+  private[this] val _compileNotes = Value(Seq[Compiler.Note]())
+  // a reference to our active compiler, if one is resolved; a compiler is created on demand
+  // when a project mode references this project and requests it; the compiler remains active
+  // until all project modes relinquish the project, at which point it's shutdown
+  private[this] var _compiler :Option[Compiler] = null
 }
