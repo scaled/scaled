@@ -12,7 +12,11 @@ import scaled._
 /** Implements [[ProjectService]]. Hides implementation details from clients. */
 class ProjectManager (pluginSvc :PluginService) extends AbstractService with ProjectService {
 
-  private val projects = MMap[File,Project]() // TODO: use concurrent map? need we worry?
+  private val byRoot = MMap[File,Project]() // TODO: use concurrent maps? need we worry?
+  private val byName = MMap[String,Project]()
+  private val byID   = MMap[String,Project]()
+  private val byURL  = MMap[String,Project]()
+
   private val finders = pluginSvc.resolvePlugins[ProjectFinderPlugin]("project-finder")
 
   // TODO: have projects export names, allow switching between projects by names
@@ -34,23 +38,29 @@ class ProjectManager (pluginSvc :PluginService) extends AbstractService with Pro
     findOpenProject(paths) orElse resolveProject(paths) getOrElse FileProject.lastDitch(paths.head)
   }
 
-  def loadedProjects = projects.values.toSeq
+  def loadedProjects = byRoot.values.toSeq
 
   // TODO: store known projects somewhere
-  def knownProjects = projects.values.map(p => (p.name -> p.root)).toSeq
+  def knownProjects = byRoot.values.map(p => (p.id, p.sourceURL, p.root)).toSeq
 
   private def findOpenProject (paths :List[File]) :Option[Project] =
     if (paths.isEmpty) None
-    else projects.get(paths.head) orElse findOpenProject(paths.tail)
+    else byRoot.get(paths.head) orElse findOpenProject(paths.tail)
 
   private def resolveProject (paths :List[File]) :Option[Project] = {
     def create (pi :(ProjectFinderPlugin,File)) = {
       val (pf, root) = pi
-      println(s"Creating ${pf.name} project in $root")
+      // println(s"Creating ${pf.name} project in $root")
       val proj = pf.createProject(root)
-      projects += (root -> proj)
+      // map the project six ways to sunday
+      byRoot += (root -> proj)
+      byName += (proj.name -> proj)
+      proj.id map { id => byID += (id -> proj) }
+      proj.sourceURL map { url => byURL += (url -> proj) }
+      // println(s"Created $proj")
       Some(proj)
     }
+
     // apply each of our finders to the path tree
     val (iprojs, dprojs) = finders.plugins.flatMap(_.apply(paths)).partition(_._1.intelligent)
     // if there are more than one intelligent project matches, complain

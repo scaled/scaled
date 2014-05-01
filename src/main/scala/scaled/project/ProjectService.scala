@@ -39,7 +39,7 @@ trait ProjectService {
   /** Returns all currently resolved projects. */
   def loadedProjects :Seq[Project]
 
-  /** Returns the names and root directories of all known projects (most of which are probably
+  /** Returns the `(id, sourceURL, root)` for all known projects (most of which are probably
     * not currently resolved). */
-  def knownProjects :Seq[(String,File)]
+  def knownProjects :Seq[(Option[String],Option[String],File)]
 }
