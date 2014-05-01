@@ -30,6 +30,8 @@ abstract class Watcher {
   def onModify (dir :File, child :String) {}
 }
 
+// TODO: turn this into an injectable service?
+
 /** Handles watching the filesystem for changes. */
 class WatchManager {
   import java.nio.file.StandardWatchEventKinds._
