@@ -8,11 +8,11 @@ import com.sun.javafx.tk.Toolkit
 import javafx.geometry.Insets
 import javafx.scene.control.Label
 import javafx.scene.layout.BorderPane
+import reactual.{Future, Promise}
 import scala.annotation.tailrec
 import scaled._
-import scaled.major.MiniUI
-import scaled.major.MinibufferMode
-import reactual.{Future, Promise}
+import scaled.major.{MiniUI, MinibufferMode}
+import scaled.util.Error
 
 abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
@@ -58,7 +58,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
   /** Displays a minibuffer with the specified mode. */
   def read[R] (mode :String, result :Promise[R], args :List[Any]) :Future[R] = try {
-    if (getCenter != null) throw new Exception(
+    if (getCenter != null) throw Error.feedback(
       "Command attempted to use minibuffer while in minibuffer")
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)

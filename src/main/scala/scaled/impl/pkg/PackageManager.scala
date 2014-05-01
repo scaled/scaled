@@ -11,6 +11,7 @@ import java.util.regex.Pattern
 import reactual.{Future, Signal}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scaled.impl._
+import scaled.util.Error
 
 class PackageManager (app :Main) {
   import scala.collection.convert.WrapAsScala._
@@ -112,7 +113,7 @@ class PackageManager (app :Main) {
   private def lookup (map :MMap[String,Finder], name :String, thing :String) :Future[Class[_]] =
     map.get(name).map(_.apply(name)) match {
       case Some(mode) => Future.success(mode)
-      case None => Future.failure(new Exception(s"Unknown $thing: $name"))
+      case None       => Error.futureFeedback(s"Unknown $thing: $name")
     }
 
   // resolve our "built-in" package(s), which we locate via the classloader

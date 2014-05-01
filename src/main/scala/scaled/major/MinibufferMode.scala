@@ -5,8 +5,8 @@
 package scaled.major
 
 import reactual.Promise
-
 import scaled._
+import scaled.util.Error
 
 /** Provides some stock UI services to minibuffer modes. This is a special dependency that can be
   * injected by [[MinibufferMode]]s. */
@@ -58,7 +58,7 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
   @Fn("""Aborts the current minibuffer action.""")
   def abort () {
     editor.emitStatus("Quit")
-    promise.fail(new Exception("Aborted"))
+    promise.fail(Error.feedback("Aborted"))
   }
 
   /** Sets contents of the minibuffer to `text`. Positions the point at the end of the text. */
