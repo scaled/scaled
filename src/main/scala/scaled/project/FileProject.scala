@@ -63,7 +63,8 @@ class FileProject (val root :File) extends Project {
   val fileCompleter = new Completer[File]() {
     def complete (prefix :String) = {
       dirMap(root).refresh()
-      completion(allFiles.filter(_.getName startsWith prefix), f => Completer.defang(f.getName))
+      completion(allFiles.filter(f => startsWithI(prefix)(f.getName)),
+                 f => Completer.defang(f.getName))
     }
   }
 

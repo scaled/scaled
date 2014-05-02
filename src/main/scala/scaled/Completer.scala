@@ -90,6 +90,23 @@ abstract class Completer[T] {
 
   /** Returns a sorted completion over some strings. */
   protected def stringCompletion (ss :Iterable[String]) = sortedCompletion(ss, identity[String])
+
+  /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */
+  protected def startsWithI (prefix :String)(full :String) :Boolean = {
+    @inline @tailrec def loop (ii :Int) :Boolean = {
+      if (ii == prefix.length) true
+      else {
+        val ra = full.charAt(ii) ; val rb = prefix.charAt(ii)
+        if (ra == rb) loop(ii+1)
+        else {
+          val la = Character.toLowerCase(ra) ; val lb = Character.toLowerCase(rb)
+          if (la == lb) loop(ii+1)
+          else false
+        }
+      }
+    }
+    if (prefix.length > full.length) false else loop(0)
+  }
 }
 
 /** Some useful completion functions. */
@@ -104,14 +121,14 @@ object Completer {
   /** Returns a completer over `names`.
     * @param requireComp whether to require a completion from the supplied set. */
   def from (names :Iterable[String], requireComp :Boolean) = new Completer[String] {
-    def complete (prefix :String) = stringCompletion(names.filter(_ startsWith prefix))
+    def complete (prefix :String) = stringCompletion(names.filter(startsWithI(prefix)))
     override protected def fromString (value :String) = if (requireComp) None else Some(value)
   }
 
   /** Returns a completer over `things` using `nameFn` to obtain each thing's name. */
   def from[T] (things :Iterable[T])(nameFn :T => String) = new Completer[T]() {
     def complete (prefix :String) = completion(
-      things.filter(t => nameFn(t) startsWith prefix), nameFn)
+      things.filter(t => startsWithI(prefix)(nameFn(t))), nameFn)
   }
 
   /** Returns a completer on buffer name. */
@@ -142,7 +159,7 @@ object Completer {
     private def expand (dir :File, prefix :String) = {
       val edir = massage(dir)
       val files = if (edir.exists) edir.listFiles.filterNot(ignore) else Array[File]()
-      val matches = files.filter(f => defang(f.getName) startsWith prefix)
+      val matches = files.filter(f => startsWithI(prefix)(defang(f.getName)))
       val file = new File(edir, prefix)
       sortedCompletion(if (file.exists && file.isDirectory && matches.length > 1) file.listFiles
                        else matches, formatFile)
