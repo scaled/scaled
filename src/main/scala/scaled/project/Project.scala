@@ -5,8 +5,9 @@
 package scaled.project
 
 import java.io.File
-import reactual.{Value, ValueV}
+import reactual.{Future, Value, ValueV}
 import scaled._
+import scaled.util.Error
 
 /** Provides services for a particular project. See [[ProjectService]] for a more detailed
   * description of what Scaled defines to be a project.
@@ -64,13 +65,14 @@ abstract class Project {
   def compileNotes :ValueV[Seq[Compiler.Note]] = _compileNotes
 
   /** Initiates a recompilation of this project, if supported.
-    * @return true if compilation initiated, false if project does not support compiles.
+    * @return a future which will report a summary of the compilation, or a failure if compilation
+    * is not supported by this project.
     */
-  def recompile () :Boolean = {
+  def recompile () :Future[String] = {
     if (_compiler == null) _compiler = createCompiler()
     _compiler match {
-      case Some(comp) => comp.compile().onSuccess(_compileNotes.update) ; true
-      case None       => false
+      case Some(comp) => comp.compile().onSuccess(_compileNotes.update).map(summarizeNotes)
+      case None       => Error.futureFeedback("Compilation is not supported by this project.")
     }
   }
 
@@ -89,6 +91,12 @@ abstract class Project {
 
   /** If this mode supports a compiler, this should create and return a new compiler instance. */
   protected def createCompiler () :Option[Compiler] = None
+
+  protected def summarizeNotes (notes :Seq[Compiler.Note]) :String = {
+    val errors = notes.count(_.isInstanceOf[Compiler.Error])
+    val warnings = notes.count(_.isInstanceOf[Compiler.Warning])
+    s"Compilation completed with $warnings warning(s) and $errors error(s)."
+  }
 
   private[this] var _refcount = 0 // see reference/release
   private[this] val _compileNotes = Value(Seq[Compiler.Note]())
