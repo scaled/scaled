@@ -4,19 +4,28 @@
 
 package scaled.project
 
-import java.io.File
+import com.google.common.collect.HashBiMap
+import java.io.{File, FileWriter, PrintWriter}
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
+import scala.io.Source
 import scaled._
 
 /** Implements [[ProjectService]]. Hides implementation details from clients. */
 class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
     extends AbstractService with ProjectService {
 
-  private val byRoot = MMap[File,Project]() // TODO: use concurrent maps? need we worry?
-  private val byName = MMap[String,Project]()
-  private val byID   = MMap[String,Project]()
-  private val byURL  = MMap[String,Project]()
+  // maps from id, srcurl to project root for all known projects
+  private val byID  = HashBiMap.create[String,File]()
+  private val byURL = HashBiMap.create[String,File]()
+  // map from root to name for all known projects (name is not necessarily unique)
+  private val toName = MMap[File,String]()
+
+  private val mapFile = metaSvc.metaFile("projects.txt")
+  readProjectMap() // TODO: set up a file watch on mapFile; reload on change
+
+  // currently resolved projects
+  private val projects = MMap[File,Project]() // TODO: use concurrent maps? need we worry?
 
   private val finders = pluginSvc.resolvePlugins[ProjectFinderPlugin]("project-finder")
 
@@ -39,25 +48,37 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
     findOpenProject(paths) orElse resolveProject(paths) getOrElse FileProject.lastDitch(paths.head)
   }
 
-  def loadedProjects = byRoot.values.toSeq
-
-  // TODO: store known projects somewhere
-  def knownProjects = byRoot.values.map(p => (p.id, p.sourceURL, p.root)).toSeq
+  def projectForId (id :String) = byID.get(id) match {
+    case null => None
+    case root => Some(projectFor(root))
+  }
+  def projectForSrcURL (srcURL :String) = byURL.get(srcURL) match {
+    case null => None
+    case root => Some(projectFor(root))
+  }
+  def loadedProjects = projects.values.toSeq
+  def knownProjects = toName.toSeq
 
   private def findOpenProject (paths :List[File]) :Option[Project] =
     if (paths.isEmpty) None
-    else byRoot.get(paths.head) orElse findOpenProject(paths.tail)
+    else projects.get(paths.head) orElse findOpenProject(paths.tail)
 
   private def resolveProject (paths :List[File]) :Option[Project] = {
     def create (pi :(ProjectFinderPlugin,File)) = {
       val (pf, root) = pi
       // println(s"Creating ${pf.name} project in $root")
       val proj = metaSvc.injectInstance(pf.projectClass, List(root))
-      // map the project six ways to sunday
-      byRoot += (root -> proj)
-      byName += (proj.name -> proj)
-      proj.id map { id => byID += (id -> proj) }
-      proj.sourceURL map { url => byURL += (url -> proj) }
+      projects += (root -> proj)
+
+      // add this project to our all-projects maps, and save them if it's new
+      val newID = proj.id.map(id => byID.put(id, root) != root).getOrElse(false)
+      val newURL = proj.sourceURL.map(url => byURL.put(url, root) != root).getOrElse(false)
+      val newName = toName.put(root, proj.name) != Some(proj.name)
+      if (newID || newURL || newName) {
+        metaSvc.log(s"New project in '$root', updating '${mapFile.getName}'.")
+        writeProjectMap()
+      }
+
       // println(s"Created $proj")
       Some(proj)
     }
@@ -66,7 +87,7 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
     val (iprojs, dprojs) = finders.plugins.flatMap(_.apply(paths)).partition(_._1.intelligent)
     // if there are more than one intelligent project matches, complain
     if (!iprojs.isEmpty) {
-      if (iprojs.size > 1) println(
+      if (iprojs.size > 1) metaSvc.log(
         s"Multiple intelligent project matches: ${iprojs.mkString(" ")}")
       create(iprojs.head)
     }
@@ -88,4 +109,38 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
       case null => accum.reverse
       case prnt => parents(prnt, file :: accum)
     }
+
+  private def readProjectMap () {
+    if (mapFile.exists) try {
+      Source.fromFile(mapFile).getLines.foreach { line => line.split("\t") match {
+        case Array(rpath, id, url, name) =>
+          val root = new File(rpath)
+          if (id   != "none") byID.put(id, root)
+          if (url  != "none") byURL.put(url, root)
+          if (name != "none") toName.put(root, name)
+        case _ => metaSvc.log(s"Invalid line in projects.txt: $line")
+      }}
+    } catch {
+      case e :Exception => metaSvc.log(s"Failed to read $mapFile", e)
+    }
+  }
+
+  private def writeProjectMap () {
+    import scala.collection.convert.WrapAsScala._
+    val roots = byID.values ++ byURL.values ++ toName.keySet
+    val out = new PrintWriter(new FileWriter(mapFile))
+    try {
+      def orNone (str :String) = if (str == null) "none" else str
+      roots foreach { root =>
+        val id = byID.inverse.get(root)
+        val url = byURL.inverse.get(root)
+        val name = toName.getOrElse(root, null)
+        if (id != null || url != null || name != null) {
+          out.println(s"$root\t${orNone(id)}\t${orNone(url)}\t${orNone(name)}")
+        }
+      }
+    } finally {
+      out.close()
+    }
+  }
 }

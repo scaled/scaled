@@ -36,10 +36,15 @@ trait ProjectService {
     */
   def projectFor (file :File) :Project
 
+  /** Returns the project with id `id` if such a project is known. */
+  def projectForId (id :String) :Option[Project]
+
+  /** Returns the project with source URL `srcURL if such a project is known. */
+  def projectForSrcURL (srcURL :String) :Option[Project]
+
   /** Returns all currently resolved projects. */
   def loadedProjects :Seq[Project]
 
-  /** Returns the `(id, sourceURL, root)` for all known projects (most of which are probably
-    * not currently resolved). */
-  def knownProjects :Seq[(Option[String],Option[String],File)]
+  /** Returns `(root, name)` for all known projects (which may or may not be resolved). */
+  def knownProjects :Seq[(File,String)]
 }
