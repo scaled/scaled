@@ -33,7 +33,7 @@ abstract class Watcher {
 // TODO: turn this into an injectable service?
 
 /** Handles watching the filesystem for changes. */
-class WatchManager {
+class WatchManager (app :Main) {
   import java.nio.file.StandardWatchEventKinds._
 
   private val _service = FileSystems.getDefault.newWatchService()
@@ -51,7 +51,7 @@ class WatchManager {
         case ENTRY_CREATE => watcher.onCreate(dir, name)
         case ENTRY_DELETE => watcher.onDelete(dir, name)
         case ENTRY_MODIFY => watcher.onModify(dir, name)
-        case _ => println(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
+        case _ => app.log(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
       })
     }
     def cancel () {
@@ -93,6 +93,6 @@ class WatchManager {
     }
   } catch {
     case ie :InterruptedException => // loop!
-    case ex :Exception => ex.printStackTrace(System.err)
+    case ex :Exception => app.log("pollWatches failure", ex)
   }
 }

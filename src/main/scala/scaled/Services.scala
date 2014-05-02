@@ -4,6 +4,8 @@
 
 package scaled
 
+import java.io.File
+
 /** Scaled services must extend this class so that they can be notified of lifecycle events. */
 abstract class AbstractService {
 
@@ -16,8 +18,17 @@ abstract class AbstractService {
 
 /** Provides services relating to services. */
 @Service(name="service", impl="impl.ServiceManager",
-         desc="Provides meta-services. Mainly dependency injection.")
+         desc="Provides meta-services. Mainly logging and dependency injection.")
 trait MetaService {
+
+  /** Records a message to the log. */
+  def log (msg :String) :Unit
+
+  /** Records a message and exception stack trace to the log. */
+  def log (msg :String, exn :Throwable) :Unit
+
+  /** Returns a `File` for a file/directory with name `name` in the Scaled metadata directory. */
+  def metaFile (name :String) :File
 
   /** Creates an instance of `clazz` via Scaled's dependency injection mechanism. `clazz` must have
     * a single public constructor.

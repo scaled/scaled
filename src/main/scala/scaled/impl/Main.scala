@@ -21,7 +21,7 @@ class Main extends Application with Logger {
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val watchMgr = new WatchManager()
+  val watchMgr = new WatchManager(this)
   val pkgMgr = new pkg.PackageManager(this)
   val cfgMgr = new ConfigManager(this)
   val svcMgr = new ServiceManager(this)

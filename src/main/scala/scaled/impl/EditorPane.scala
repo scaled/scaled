@@ -223,8 +223,8 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     else {
       // create or recreate the *messages* buffer as needed
       val ob = _buffers.find(_.name == MessagesName) getOrElse newMessages()
-      ob.buffer.insert(ob.buffer.end, Line.fromText(msg + System.lineSeparator))
-      ob.buffer.markClean()
+      val end = ob.buffer.insert(ob.buffer.end, Line.fromText(msg + System.lineSeparator))
+      ob.view.point() = end
     }
   }
 

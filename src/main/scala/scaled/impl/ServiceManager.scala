@@ -4,14 +4,17 @@
 
 package scaled.impl
 
+import java.io.File
 import scaled._
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 
 // this is factored out so that we can do basic service injection in tests without having
 // the whole package manager enchilada up and running
-class ServiceInjector extends AbstractService with MetaService {
+class ServiceInjector extends AbstractService {
 
-  override def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
+  def log (msg :String) = println(msg)
+
+  def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
     println(s"Creating instance of ${clazz.getName}")
     val ctor = clazz.getConstructors match {
       case Array(ctor) => ctor
@@ -30,11 +33,8 @@ class ServiceInjector extends AbstractService with MetaService {
     val params = ctor.getParameterTypes.map { p =>
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg
-        case None => resolveService(p) match {
-          case Some(svc) => svc
-          case None =>
-            println(s"Unable to satisfy dependency [type=$p, remargs=$remargs]")
-            null
+        case None      => resolveService(p) getOrElse {
+          log(s"Unable to satisfy dependency [type=$p, remargs=$remargs]") ; null
         }
       }
     }
@@ -49,7 +49,7 @@ class ServiceInjector extends AbstractService with MetaService {
   protected def resolveService (sclass :Class[_]) :Option[AbstractService] = None
 }
 
-class ServiceManager (app :Main) extends ServiceInjector {
+class ServiceManager (app :Main) extends ServiceInjector with MetaService {
 
   private var services = CacheBuilder.newBuilder.build(
     new CacheLoader[Class[_],AbstractService]() {
@@ -64,6 +64,10 @@ class ServiceManager (app :Main) extends ServiceInjector {
   // create our plugin manager and manually register it in the cache
   private var pluginMgr = new PluginManager(app)
   services.put(pluginMgr.getClass, pluginMgr)
+
+  override def log (msg :String) = app.log(msg)
+  override def log (msg :String, exn :Throwable) = app.log(msg, exn)
+  override def metaFile (name :String) = new File(app.metaDir, name)
 
   override def resolveService (sclass :Class[_]) :Option[AbstractService] = {
     if (!sclass.getName.endsWith("Service")) None
