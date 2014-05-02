@@ -1,15 +1,16 @@
 package scaled.impl
 
 import com.google.common.collect.HashBiMap
-import java.io.File
+import java.io.{File, PrintWriter, StringWriter}
 import java.util.concurrent.Executors
 import javafx.application.Application
 import javafx.scene.Scene
 import javafx.stage.Stage
+import reactual.Signal
 import scala.collection.JavaConversions._
 import scaled.EditorConfig
 
-class Main extends Application {
+class Main extends Application with Logger {
 
   /** An executor service for great concurrency. */
   val exec = Executors.newFixedThreadPool(4) // TODO: config
@@ -25,6 +26,13 @@ class Main extends Application {
   val cfgMgr = new ConfigManager(this)
   val svcMgr = new ServiceManager(this)
 
+  /** A signal emitted when a message is appended to the log. Because logging is app-global, but
+    * buffers are associated with a particular editor pane, we just have every editor pane create a
+    * *messages* buffer which appends anything it hears from the global log to itself. */
+  val log = Signal[String]()
+
+  /** Opens `path` in the editor pane associated with `workspace`. If no such editor pane exists one
+    * is created. */
   def openInWorkspace (path :String, workspace :String) {
     val epane = editors.get(workspace) match {
       case null => createEditor(new Stage(), workspace)
@@ -34,10 +42,19 @@ class Main extends Application {
     epane.visitPath(path)
   }
 
+  /** Closes `epane`. If that was the last open editor pane, terminates Scaled. */
   def closeEditor (epane :EditorPane, ecode :Int) {
     epane.stage.close()
     editors.inverse.remove(epane)
     if (editors.isEmpty()) sys.exit(ecode) // TODO: cleanup?
+  }
+
+  override def log (msg :String) :Unit = this.log.emit(msg)
+  override def log (msg :String, exn :Throwable) {
+    this.log.emit(msg)
+    val trace = new StringWriter()
+    exn.printStackTrace(new PrintWriter(trace))
+    this.log.emit(trace.toString)
   }
 
   override def start (stage :Stage) {
