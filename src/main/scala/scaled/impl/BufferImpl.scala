@@ -140,6 +140,8 @@ class BufferImpl private (
     _dirty() = false
   }
 
+  override def markClean () :Unit = _dirty() = false
+
   override def loc (offset :Int) = {
     assert(offset >= 0)
     def seek (off :Int, idx :Int) :Loc = {

@@ -261,6 +261,11 @@ abstract class Buffer extends BufferV {
   /** Saves this buffer to `file`, updating [[file]] and [[name]] appropriately. */
   def saveTo (file :File) :Unit
 
+  /** Marks this buffer as clean. In general one should not use this method, as a buffer will
+    * automatically be marked clean on being saved. However, some buffers are special and don't
+    * represent the contents of a file and may wish to manage cleanliness specially. */
+  def markClean () :Unit
+
   /** Sets the current mark to `loc`. The mark will be [[bound]] into the buffer. */
   def mark_= (loc :Loc) :Unit
   /** Clears the current mark. */

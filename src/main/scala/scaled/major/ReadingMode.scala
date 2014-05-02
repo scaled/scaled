@@ -514,7 +514,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     }
 
     buf.replace(buf.start, buf.end, text.map(new Line(_)))
-    // TODO: put the buffer in a special "describe mode" mode
+    buf.markClean()
   }
 
   //
