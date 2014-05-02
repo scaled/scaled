@@ -39,11 +39,11 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     "C-x C-x" -> "exchange-point-and-mark",
 
     // the one non-destructive kill command
-    "C-M-w"   -> "append-next-kill",
+    "M-w" -> "kill-ring-save",
 
-    // searching and replacing commands
-    "C-s"   -> "isearch-forward",
-    "C-r"   -> "isearch-backward",
+    // searching commands
+    "C-s" -> "isearch-forward",
+    "C-r" -> "isearch-backward",
 
     // motion commands
     "C-b"   -> "backward-char",
@@ -439,7 +439,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
           case "." => buf.save() ; saveLoop(Nil)
         })
     }
-    saveLoop(editor.buffers.filter(_.dirty).toList)
+    saveLoop(editor.buffers.filter(_.needsSave).toList)
   }
 
   //

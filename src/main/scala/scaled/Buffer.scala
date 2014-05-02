@@ -54,6 +54,13 @@ abstract class BufferV extends Region {
   /** Whether or not this buffer has been modified since it was loaded or last saved. */
   def dirty :Boolean
 
+  /** Whether or not this buffer should be saved before being closed. If it is a transient buffer
+    * (was not loaded from a file and has never been written to a file), then it will never report
+    * needing to be saved. If it was loaded from a file or written to a file at any point, it
+    * will report needing to be saved if it is dirty.
+    */
+  def needsSave :Boolean = dirty && file.isFile
+
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
     * exists for symmetry with [[end]]. */
   def start :Loc = Loc.Zero
