@@ -31,7 +31,7 @@ abstract class ModeResolver (editor :Editor) {
 
   protected def locate (major :Boolean, mode :String) :Future[Class[_]]
   protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
-  protected def resolveService (sclass :Class[_]) :Option[AbstractService] = None
+  protected def injectInstance[T] (clazz :Class[T], args :List[Any]) :T
 
   private def requireMajor (mode :String) =
     reqType(classOf[MajorMode], s"$mode is not a major mode.") _
@@ -43,36 +43,11 @@ abstract class ModeResolver (editor :Editor) {
 
   private def resolve[T] (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
                           args :List[Any])(modeClass :Class[T]) :Future[T] = try {
-    val ctor = modeClass.getConstructors match {
-      case Array(ctor) => ctor
-      case ctors       => throw new IllegalArgumentException(
-        s"Modes must have only one constructor: $modeClass [${ctors.mkString(", ")}]")
-    }
-
-    // match the args to the ctor parameters; the first arg of the desired type is used and then
-    // removed from the arg list, so we can request multiple args of the same type as long as
-    // they're in the 'correct' order
-    def minus (args :List[Any], elem :Any) :List[Any] = args match {
-      case Nil => Nil
-      case h :: t => if (elem == h) t else h :: minus(t, elem)
-    }
-    var remargs = new EnvImpl(editor, view, disp) {
+    val envargs = new EnvImpl(editor, view, disp) {
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
         ModeResolver.this.resolveConfig(mode, defs)
     } :: args
-    val params = ctor.getParameterTypes.map { p =>
-      remargs.find(p.isInstance) match {
-        case Some(arg) => remargs = minus(remargs, arg) ; arg
-        case None => resolveService(p) match {
-          case Some(svc) => svc
-          case None =>
-            println(s"Unable to satisfy mode dependency [type=$p, remargs=$remargs]")
-            null
-        }
-      }
-    }
-    Future.success(ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T])
-
+    Future.success(injectInstance(modeClass, envargs))
   } catch {
     case cnfe :ClassNotFoundException => Future.failure(
       new IllegalArgumentException(s"$mode bound to unknown class: $modeClass"))
@@ -85,8 +60,10 @@ class AppModeResolver (app :Main, editor :Editor) extends ModeResolver(editor) {
   override def modes (major :Boolean) = Set() ++ app.pkgMgr.modes(major)
   override def minorModes (tags :Array[String]) = app.pkgMgr.minorModes(tags)
 
-  override protected def locate (major :Boolean, mode :String) = app.pkgMgr.mode(major, mode)
+  override protected def locate (major :Boolean, mode :String) =
+    app.pkgMgr.mode(major, mode)
   override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
     app.cfgMgr.resolveConfig(mode, defs)
-  override protected def resolveService (sclass :Class[_]) = app.svcMgr.resolveService(sclass)
+  override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
+    app.svcMgr.injectInstance(clazz, args)
 }

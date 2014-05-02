@@ -36,10 +36,13 @@ object TestData {
 
   val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
 
+  val injector = new ServiceInjector()
   val resolver = new ModeResolver(editor) {
     override protected def locate (major :Boolean, mode :String) = Future.success(classOf[TextMode])
     override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
       modeConfig(mode, defs)
+    override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
+      injector.injectInstance(clazz, args)
   }
 
   def modeConfig (mode :String, defs :List[Config.Defs]) = new ConfigImpl(mode, defs, Some(config))
