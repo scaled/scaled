@@ -48,16 +48,15 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
     findOpenProject(paths) orElse resolveProject(paths) getOrElse FileProject.lastDitch(paths.head)
   }
 
-  def projectForId (id :String) = byID.get(id) match {
-    case null => None
-    case root => Some(projectFor(root))
-  }
-  def projectForSrcURL (srcURL :String) = byURL.get(srcURL) match {
-    case null => None
-    case root => Some(projectFor(root))
-  }
+  def projectForId (id :String) = projectInRoot(byID.get(id))
+  def projectForSrcURL (srcURL :String) = projectInRoot(byURL.get(srcURL))
   def loadedProjects = projects.values.toSeq
   def knownProjects = toName.toSeq
+
+  // the root passed here may have disappeared in the fullness of time, so validate it
+  private def projectInRoot (root :File) =
+    if (root == null || !root.exists) None
+    else projects.get(root) orElse resolveProject(parents(root))
 
   private def findOpenProject (paths :List[File]) :Option[Project] =
     if (paths.isEmpty) None
