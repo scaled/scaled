@@ -23,8 +23,13 @@ import scaled.AbstractPlugin
   * structure, one will be chosen arbitrarily and a warning will be issued. The user can then
   * override the chosen project type, if desired, in the `.scaled/config.properties` file placed
   * in the project root.
+  * @param projectClass the class that implements projects identified by this finder. This class
+  * will be instantiated using the Scaled dependency injection mechanism, with a single `File`
+  * argument (the root of the project). Using the dependency injection mechanism allows the project
+  * to inject any Scaled services it may need.
   */
-abstract class ProjectFinderPlugin (val name :String, val intelligent :Boolean)
+abstract class ProjectFinderPlugin (val name :String, val intelligent :Boolean,
+                                    val projectClass :Class[_ <: Project])
     extends AbstractPlugin {
 
   /** Checks whether `root` could be a root of a project of the type sought by this finder.
@@ -41,11 +46,6 @@ abstract class ProjectFinderPlugin (val name :String, val intelligent :Boolean)
     */
   def checkRoot (root :File) :Int
 
-  /** Creates a project of this finder's type with the given `root`. This is called if this finder
-    * "wins" the project root identification process.
-    */
-  def createProject (root :File) :Project
-
   /** Applies this finder to the supplied path list. If it matches, `Some(this,root)` is returned,
     * otherwise `None`.
     */
@@ -60,10 +60,4 @@ abstract class ProjectFinderPlugin (val name :String, val intelligent :Boolean)
     }
     if (best == null) None else Some(this -> best)
   }
-}
-
-object ProjectFinderPlugin {
-
-  /** The standard set of directories that are ignored when enumerating all project dirs. */
-  val stockIgnores = Set(".git", ".hg", ".svn") // TODO: more
 }

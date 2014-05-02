@@ -10,7 +10,8 @@ import scala.collection.mutable.{Map => MMap}
 import scaled._
 
 /** Implements [[ProjectService]]. Hides implementation details from clients. */
-class ProjectManager (pluginSvc :PluginService) extends AbstractService with ProjectService {
+class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
+    extends AbstractService with ProjectService {
 
   private val byRoot = MMap[File,Project]() // TODO: use concurrent maps? need we worry?
   private val byName = MMap[String,Project]()
@@ -51,7 +52,7 @@ class ProjectManager (pluginSvc :PluginService) extends AbstractService with Pro
     def create (pi :(ProjectFinderPlugin,File)) = {
       val (pf, root) = pi
       // println(s"Creating ${pf.name} project in $root")
-      val proj = pf.createProject(root)
+      val proj = metaSvc.injectInstance(pf.projectClass, List(root))
       // map the project six ways to sunday
       byRoot += (root -> proj)
       byName += (proj.name -> proj)

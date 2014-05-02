@@ -13,7 +13,7 @@ import scaled._
   * project. This will be used if we see a `.git`, `.hg`, etc. directory or some other indicator
   * of the root of a project.
   */
-class FileProject (val root :File, ignores :Set[String]) extends Project {
+class FileProject (val root :File) extends Project {
 
   private class Dir (dir :File) {
     var files = Set[File]()
@@ -73,16 +73,17 @@ class FileProject (val root :File, ignores :Set[String]) extends Project {
     val name = dir.getName
     name.startsWith(".") || ignores(name)
   }
+  protected def ignores :Set[String] = FileProject.stockIgnores
 }
 
 object FileProject {
 
-  /** The directories ignored by file projects. */
-  val fileIgnores = ProjectFinderPlugin.stockIgnores // TODO ++ others?
+  /** The standard set of directories that are ignored when enumerating all project dirs. */
+  val stockIgnores = Set(".git", ".hg", ".svn") // TODO: more
 
   /** Creates a last ditch project, which is generally rooted in the parent directory of the
     * file for whom we're trying to create a project. */
-  def lastDitch (root :File) = new FileProject(root, fileIgnores)
+  def lastDitch (root :File) = new FileProject(root)
 
   /** Creates file projects rooted at .git directories. */
   @Plugin(tag="project-finder")
@@ -102,7 +103,6 @@ object FileProject {
     def checkRoot (root :File) = if (new File(root, ".svn").isDirectory()) 0 else -1
   }
 
-  abstract class FileProjectFinderPlugin (nm :String) extends ProjectFinderPlugin(nm, false) {
-    def createProject (root :File) = new FileProject(root, fileIgnores)
-  }
+  abstract class FileProjectFinderPlugin (nm :String)
+      extends ProjectFinderPlugin(nm, false, classOf[FileProject])
 }
