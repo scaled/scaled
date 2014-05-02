@@ -6,6 +6,7 @@ package scaled.impl
 
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.Toolkit
+import java.io.{StringWriter, PrintWriter}
 import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
 import scala.annotation.tailrec
@@ -27,6 +28,12 @@ object Utils {
       TextLayout.BOUNDS_CENTER);
     else layout.setBoundsType(0)
     layout.getBounds.getHeight
+  }
+
+  def stackTraceToString (exn :Throwable) :String = {
+    val trace = new StringWriter()
+    exn.printStackTrace(new PrintWriter(trace))
+    trace.toString
   }
 
   private val layout = Toolkit.getToolkit.getTextLayoutFactory.createLayout()

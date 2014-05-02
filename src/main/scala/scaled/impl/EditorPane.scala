@@ -27,6 +27,104 @@ import scaled.util.Error
   */
 class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
+  /** Used to resolve modes in this editor. */
+  val resolver = new AppModeResolver(app, this)
+
+  /** Called when this editor pane is going away. Cleans up. */
+  def dispose () {
+    _logcon.close()
+  }
+
+  //
+  // Editor interface methods
+
+  override def exit (code :Int) = app.closeEditor(this, code)
+  override def showURL (url :String) = app.getHostServices.showDocument(url)
+  override def defer (op :Runnable) = Platform.runLater(op)
+
+  override def popStatus (msg :String, subtext :String) {
+    _statusPopup.showStatus(msg, subtext)
+    recordMessage(msg)
+    if (subtext.length > 0) recordMessage(subtext)
+  }
+  override def emitStatus (msg :String, ephemeral :Boolean) {
+    _statusLine.setText(msg)
+    if (!ephemeral) recordMessage(msg)
+  }
+  override def emitError (err :Throwable) {
+    // TODO: color the status label red or something
+    emitStatus(err.getMessage, false)
+    if (!err.isInstanceOf[Error.FeedbackException]) recordMessage(Utils.stackTraceToString(err))
+  }
+  override def clearStatus () = {
+    _statusPopup.clear()
+    _statusLine.setText("")
+    _active.view.clearEphemeralPopup()
+  }
+
+  override def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = {
+    _mini.toFront()
+    _mini.read(mode, result, args.toList)
+  }
+
+  override def buffers = _buffers.map(_.buffer)
+
+  override def openBuffer (buffer :String) = {
+    _focus() = _buffers.find(_.name == buffer) getOrElse(newBuffer(createEmptyBuffer(buffer)))
+    _focus().view
+  }
+
+  override def createBuffer (buffer :String, mode :String, reuse :Boolean) = {
+    _focus() = _buffers.find(_.name == buffer) match {
+      case None     => newBuffer(createEmptyBuffer(buffer), mode)
+      case Some(ob) => if (reuse) ob
+                       else newBuffer(createEmptyBuffer(freshName(buffer)), mode)
+    }
+    _focus().view
+  }
+
+  override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
+    case Some(ob) => killBuffer(ob) ; true
+    case None     => false
+  }
+
+  // used internally to open files passed on the command line or via remote cmd
+  def visitPath (path :String) {
+    val f = new File(path)
+    visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), path))
+    stage.toFront() // move our window to front if it's not there already
+    stage.requestFocus() // and request window manager focus
+  }
+
+  // if another buffer exists that is visiting this file, just open it
+  override def visitFile (file :File) = {
+    _focus() = _buffers.find(_.buffer.file == file) getOrElse {
+      if (file.exists) newBuffer(BufferImpl.fromFile(file))
+      else if (Filer.isArchiveEntry(file)) newBuffer(BufferImpl.fromArchiveEntry(file.getPath))
+      else {
+        emitStatus("(New file)")
+        newBuffer(BufferImpl.empty(file.getName, file))
+      }
+    }
+    _focus().view
+  }
+
+  override def visitConfig (mode :String) = {
+    val file = app.cfgMgr.configFile(mode)
+    val view = visitFile(file)
+    app.cfgMgr.configText(mode) match {
+      case Some(lines) =>
+        if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
+          view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(new Line(_)))
+        }
+      case None => // TODO
+    }
+    view
+  }
+
+  //
+  // implementation details
+
   getStyleClass.add("editor")
 
   private case class OpenBuffer (content :BorderPane, area :BufferArea, view :BufferViewImpl) {
@@ -66,99 +164,12 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private val _focus = Value[OpenBuffer](null)
   _focus onValue onFocusChange
 
-  /** Used to resolve modes in this editor. */
-  val resolver = new AppModeResolver(app, this)
+  // create a *messages* and *scratch* buffer to start
+  newMessages()
+  _focus() = newScratch()
 
-  newScratch() // always start with a scratch buffer
-
-  override def exit (code :Int) = app.closeEditor(this, code)
-  override def showURL (url :String) = app.getHostServices.showDocument(url)
-  override def defer (op :Runnable) = Platform.runLater(op)
-
-  override def popStatus (msg :String, subtext :String) {
-    _statusPopup.showStatus(msg, subtext)
-  }
-  override def emitStatus (msg :String) {
-    _statusLine.setText(msg)
-  }
-  override def emitError (err :Throwable) {
-    // TODO: color the status label red or something
-    emitStatus(err.getMessage)
-    // TODO: send this to the *messages* buffer
-    if (!err.isInstanceOf[Error.FeedbackException]) err.printStackTrace(System.err)
-  }
-  override def clearStatus () = {
-    _statusPopup.clear()
-    _statusLine.setText("")
-    _active.view.clearEphemeralPopup()
-  }
-
-  override def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = {
-    _mini.toFront()
-    _mini.read(mode, result, args.toList)
-  }
-
-  override def buffers = _buffers.map(_.buffer)
-
-  override def openBuffer (buffer :String) = {
-    _buffers.find(_.name == buffer) match {
-      case None     => newBuffer(createEmptyBuffer(buffer))
-      case Some(ob) => _focus() = ob
-    }
-    _focus().view
-  }
-
-  override def createBuffer (buffer :String, mode :String, reuse :Boolean) = {
-    _buffers.find(_.name == buffer) match {
-      case None     => newBuffer(createEmptyBuffer(buffer), mode)
-      case Some(ob) => if (reuse) _focus() = ob
-                       else newBuffer(createEmptyBuffer(freshName(buffer)), mode)
-    }
-    _focus().view
-
-  }
-
-  override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
-    case Some(ob) => killBuffer(ob) ; true
-    case None     => false
-  }
-
-  // used internally to open files passed on the command line or via remote cmd
-  def visitPath (path :String) {
-    val f = new File(path)
-    visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), path))
-    stage.toFront() // move our window to front if it's not there already
-    stage.requestFocus() // and request window manager focus
-  }
-
-  // if another buffer exists that is visiting this file, just open it
-  override def visitFile (file :File) = {
-    _buffers.find(_.buffer.file == file) match {
-      case Some(ob) =>
-        _focus() = ob
-      case None =>
-        if (file.exists) newBuffer(BufferImpl.fromFile(file))
-        else if (Filer.isArchiveEntry(file)) newBuffer(BufferImpl.fromArchiveEntry(file.getPath))
-        else {
-          newBuffer(BufferImpl.empty(file.getName, file))
-          emitStatus("(New file)")
-        }
-    }
-    _focus().view
-  }
-
-  override def visitConfig (mode :String) = {
-    val file = app.cfgMgr.configFile(mode)
-    val view = visitFile(file)
-    app.cfgMgr.configText(mode) match {
-      case Some(lines) =>
-        if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
-          view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(new Line(_)))
-        }
-      case None => // TODO
-    }
-    view
-  }
+  // record all log messages to the *messages* buffer
+  private val _logcon = app.log.onValue(recordMessage)
 
   // we manage layout manually for a variety of nefarious reasons
   override protected def computeMinWidth (height :Double) = _active.content.minWidth(height)
@@ -194,10 +205,34 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     else revName
   }
 
-  private def newScratch () = newBuffer(BufferImpl.scratch("*scratch*"))
+  private var _pendingMessages :List[String] = null
+  private final val MessagesName = "*messages*"
+  private def newMessages () = try {
+    _pendingMessages = Nil
+    newBuffer(BufferImpl.scratch(MessagesName), "log")
+  } finally {
+    val msgs = _pendingMessages
+    _pendingMessages = null
+    msgs foreach recordMessage
+  }
 
-  private def newBuffer (buf :BufferImpl) :Unit = newBuffer(buf, app.pkgMgr.detectMode(buf))
-  private def newBuffer (buf :BufferImpl, mode :String) {
+  private def recordMessage (msg :String) {
+    // we may get a recordMessage call while we're creating the *messages* buffer, so to avoid
+    // the infinite loop of doom in that case, we buffer messages during that process
+    if (_pendingMessages != null) _pendingMessages = msg :: _pendingMessages
+    else {
+      // create or recreate the *messages* buffer as needed
+      val ob = _buffers.find(_.name == MessagesName) getOrElse newMessages()
+      ob.buffer.insert(ob.buffer.end, Line.fromText(msg + System.lineSeparator))
+      ob.buffer.markClean()
+    }
+  }
+
+  private final val ScratchName = "*scratch*"
+  private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName))
+
+  private def newBuffer (buf :BufferImpl) :OpenBuffer = newBuffer(buf, app.pkgMgr.detectMode(buf))
+  private def newBuffer (buf :BufferImpl, mode :String) :OpenBuffer = {
     val config = app.cfgMgr.editorConfig
     val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
     val view = new BufferViewImpl(this, buf, width, height)
@@ -214,7 +249,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
     val obuf = OpenBuffer(content, area, view)
     _buffers prepend obuf
-    _focus() = obuf
+    obuf
   }
 
   private def killBuffer (obuf :OpenBuffer) {

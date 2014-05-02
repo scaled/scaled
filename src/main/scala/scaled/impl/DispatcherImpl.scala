@@ -226,7 +226,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     * Thus if a user types a command prefix, we wait for the rest of the command, but we also
     * eventually provide some feedback as to what's going on in case they did it unwittingly. */
   private def deferDisplayPrefix (trigger :Seq[KeyPress]) {
-    editor.emitStatus(trigger.mkString(" "))
+    editor.emitStatus(trigger.mkString(" "), true)
   }
 
   private class ModeMeta (val mode :Mode) {

@@ -29,11 +29,12 @@ trait Editor {
 
   /** Briefly displays a status message to the user in a popup.
     * The status message will also be appeneded to an editor-wide messages list. */
-  def popStatus (msg :String, subtext :String = null) :Unit
+  def popStatus (msg :String, subtext :String = "") :Unit
 
   /** Briefly displays a status message to the user.
-    * The status message will also be appeneded to an editor-wide messages list. */
-  def emitStatus (msg :String) :Unit
+    * @param ephemeral if false, the status message will also be appended to an editor-wide
+    * messages list; if true, it disappears forever in a poof of quantum decoherence. */
+  def emitStatus (msg :String, ephemeral :Boolean = false) :Unit
 
   /** Reports an unexpected error to the user.
     * The message will also be appended to an editor-wide messages list. */

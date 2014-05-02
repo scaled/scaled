@@ -1,7 +1,7 @@
 package scaled.impl
 
 import com.google.common.collect.HashBiMap
-import java.io.{File, PrintWriter, StringWriter}
+import java.io.File
 import java.util.concurrent.Executors
 import javafx.application.Application
 import javafx.scene.Scene
@@ -44,17 +44,17 @@ class Main extends Application with Logger {
 
   /** Closes `epane`. If that was the last open editor pane, terminates Scaled. */
   def closeEditor (epane :EditorPane, ecode :Int) {
+    epane.dispose()
     epane.stage.close()
     editors.inverse.remove(epane)
     if (editors.isEmpty()) sys.exit(ecode) // TODO: cleanup?
   }
 
-  override def log (msg :String) :Unit = this.log.emit(msg)
+  override def log (msg :String) :Unit = log.emit(msg)
   override def log (msg :String, exn :Throwable) {
-    this.log.emit(msg)
-    val trace = new StringWriter()
-    exn.printStackTrace(new PrintWriter(trace))
-    this.log.emit(trace.toString)
+    log.emit(msg)
+    log.emit(Utils.stackTraceToString(exn))
+    // TODO: if in devel mode, record these to system.err?
   }
 
   override def start (stage :Stage) {

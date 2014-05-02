@@ -27,7 +27,7 @@ class StatusPopup extends VBox {
   def showStatus (msg :String, subtext :String) {
     toFront()
     _text.setText(msg)
-    if (subtext != null) _subtext.setText(subtext)
+    if (subtext.length > 0) _subtext.setText(subtext)
     _subtext.setVisible(subtext != null)
     _subtext.setManaged(subtext != null)
     _fade.stop()
