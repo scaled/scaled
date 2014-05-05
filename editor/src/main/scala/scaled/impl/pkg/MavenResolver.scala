@@ -37,7 +37,7 @@ class MavenResolver (log :Logger) {
   private def partitionBy[A,B,C] (seq :Seq[A])(fn :A => Either[B,C]) :(Seq[B], Seq[C]) = {
     val bb = Seq.newBuilder[B] ; val cc = Seq.newBuilder[C]
     seq foreach { a => fn(a) match {
-      case Left(b) => bb += b
+      case Left(b)  => bb += b
       case Right(c) => cc += c
     }}
     (bb.result, cc.result)
