@@ -134,23 +134,24 @@ interface. Right now, you have to download and build them manually.
 
 To make interesting things happen, check out the following extensions:
 
-  * `git clone https://github.com/scaled/textmate-grammar.git`
-  * `git clone https://github.com/scaled/maven-project.git`
-  * `git clone https://github.com/scaled/java-mode.git`
-  * `git clone https://github.com/scaled/scala-mode.git`
-  * `git clone https://github.com/scaled/xml-mode.git`
+    cd scaled
+    git clone https://github.com/scaled/textmate-grammar.git
+    git clone https://github.com/scaled/maven-project.git
+    git clone https://github.com/scaled/java-mode.git
+    git clone https://github.com/scaled/scala-mode.git
+    git clone https://github.com/scaled/xml-mode.git
 
-Check them out under the top-level `scaled` directory so that they can be integrated into the
-`devel` build. Once you have them checked out, your directory structure will look like:
+Check them out under the top-level `scaled` directory so that they can be automatically integrated
+into the `devel` build. Once you have them checked out, your directory structure will look like:
 
-  * `scaled/api`
-  * `scaled/editor`
-  * `scaled/devel`
-  * `scaled/textmate-grammar`
-  * `scaled/maven-project`
-  * `scaled/java-mode`
-  * `scaled/scala-mode`
-  * `scaled/xml-mode`
+  * `scaled/api` - same as before
+  * `scaled/editor` - same as before
+  * `scaled/devel` - same as before
+  * `scaled/textmate-grammar` - a library for grokking TextMate grammars
+  * `scaled/maven-project` - extends project-mode with some Maven project smarts
+  * `scaled/java-mode` - a (primitive) major mode for editing .java, and .properties files
+  * `scaled/scala-mode` - a (less primitive) major mode for editing .scala files
+  * `scaled/xml-mode` - a (primitive) major mode for editing XML files
 
 Now you can use the `bootstrap` Maven profile to automatically include these depends into the
 build:
