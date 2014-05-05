@@ -23,4 +23,7 @@ object ScaledBuild extends samskivert.MavenBuild {
     case "devel" => spray.revolver.RevolverPlugin.Revolver.settings
     case _       => Nil
   }
+
+  override def profiles = Seq("devel")
+  // override def profiles = Seq("devel", "bootstrap")
 }

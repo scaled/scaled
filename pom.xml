@@ -66,14 +66,20 @@
       </modules>
     </profile>
     <profile>
-      <!-- mdb's working additions -->
-      <id>mdb</id>
+      <!-- useful extensions for "bootstrapping" (working on Scaled in Scaled) -->
+      <id>bootstrap</id>
       <modules>
         <module>textmate-grammar</module>
         <module>maven-project</module>
         <module>java-mode</module>
         <module>scala-mode</module>
         <module>xml-mode</module>
+      </modules>
+    </profile>
+    <profile>
+      <!-- mdb's extra stuff -->
+      <id>mdb</id>
+      <modules>
         <module>todo-mode</module>
         <module>codex-mode</module>
       </modules>

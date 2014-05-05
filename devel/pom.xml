@@ -53,8 +53,8 @@
 
   <profiles>
     <profile>
-      <!-- mdb's working additions -->
-      <id>mdb</id>
+      <!-- bootstrap profile depends -->
+      <id>bootstrap</id>
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
@@ -85,7 +85,13 @@
           <artifactId>xml-mode</artifactId>
           <version>${project.version}</version>
         </dependency>
+      </dependencies>
+    </profile>
 
+    <profile>
+      <!-- mdb profile depends -->
+      <id>mdb</id>
+      <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>codex-mode</artifactId>
