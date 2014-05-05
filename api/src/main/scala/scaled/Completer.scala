@@ -9,14 +9,23 @@ import scala.annotation.tailrec
 import scala.collection.immutable.TreeSet
 
 /** Represents a computed completion. */
-class Completion[T] (values :Iterable[T], val comps :Iterable[String]) {
+class Completion[T] (values :Iterable[T], format :T => String, sort :Boolean) {
 
-  private val _map :Map[String,T] = {
+  private[this] val (_comps :Iterable[String], _map :Map[String,T]) = {
     val b = Map.newBuilder[String,T]
-    var citer = comps.iterator ; val viter = values.iterator
-    while (citer.hasNext) b += (citer.next -> viter.next)
-    b.result
+    val c = if (sort) TreeSet.newBuilder[String] else Seq.newBuilder[String]
+    val viter = values.iterator
+    while (viter.hasNext) {
+      val value = viter.next
+      val comp = format(value)
+      b += (comp -> value)
+      c += comp
+    }
+    (c.result, b.result)
   }
+
+  /** Returns the completion display strings, in the order they should be displayed. */
+  def comps :Iterable[String] = _comps
 
   /** Returns `Some` value associated with the completion `comp`, or `None`. */
   def apply (comp :String) :Option[T] = _map.get(comp)
@@ -29,6 +38,8 @@ class Completion[T] (values :Iterable[T], val comps :Iterable[String]) {
     * circumstnaces this is useful, but if a completer is doing special stuff, it might not be.
     */
   def massageCurrent (cur :String) :String = comps reduce sharedPrefix
+
+  override def toString = _map.toString
 
   /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
     * only when both strings have the character in uppercase, lowercase otherwise. */
@@ -82,11 +93,11 @@ abstract class Completer[T] {
 
   /** Returns a completion over `values` in iteration order. */
   protected def completion[T] (values :Iterable[T], format :T => String) =
-    new Completion[T](values, Seq() ++ values.map(format))
+    new Completion[T](values, format, false)
 
-  /** Returns a completion over `values` in lexical order. */
+  /** Returns a completion over `values` in lexical order (of the formatted completions). */
   protected def sortedCompletion[T] (values :Iterable[T], format :T => String) =
-    new Completion[T](values, TreeSet[String]() ++ values.map(format))
+    new Completion[T](values, format, true)
 
   /** Returns a sorted completion over some strings. */
   protected def stringCompletion (ss :Iterable[String]) = sortedCompletion(ss, identity[String])
