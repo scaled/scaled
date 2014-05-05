@@ -207,13 +207,14 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   private var _pendingMessages :List[String] = null
   private final val MessagesName = "*messages*"
-  private def newMessages () = try {
+  private def newMessages () = {
     _pendingMessages = Nil
-    newBuffer(BufferImpl.scratch(MessagesName), "log")
-  } finally {
-    val msgs = _pendingMessages
+    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), "log")
+    _pendingMessages foreach { msg =>
+      mbuf.view.point() = mbuf.buffer.append(Line.fromText(msg + System.lineSeparator))
+    }
     _pendingMessages = null
-    msgs foreach recordMessage
+    mbuf
   }
 
   private def recordMessage (msg :String) {
@@ -223,8 +224,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     else {
       // create or recreate the *messages* buffer as needed
       val ob = _buffers.find(_.name == MessagesName) getOrElse newMessages()
-      val end = ob.buffer.insert(ob.buffer.end, Line.fromText(msg + System.lineSeparator))
-      ob.view.point() = end
+      ob.view.point() = ob.buffer.append(Line.fromText(msg + System.lineSeparator))
     }
   }
 
