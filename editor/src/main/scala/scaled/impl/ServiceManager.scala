@@ -15,7 +15,7 @@ class ServiceInjector extends AbstractService {
   def log (msg :String) = println(msg)
 
   def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
-    println(s"Creating instance of ${clazz.getName}")
+    // println(s"Creating instance of ${clazz.getName}")
     val ctor = clazz.getConstructors match {
       case Array(ctor) => ctor
       case ctors       => throw new IllegalArgumentException(

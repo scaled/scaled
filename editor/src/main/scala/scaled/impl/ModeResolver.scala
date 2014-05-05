@@ -5,7 +5,6 @@
 package scaled.impl
 
 import java.lang.reflect.Field
-import reactual.Future
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 
@@ -21,37 +20,34 @@ abstract class ModeResolver (editor :Editor) {
 
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
   def resolveMajor (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
-                    args :List[Any]) :Future[MajorMode] =
-    locate(true, mode) flatMap(requireMajor(mode)) flatMap(resolve(mode, view, disp, args))
+                    args :List[Any]) :MajorMode =
+    resolve(mode, view, disp, args, requireMajor(mode))
 
   /** Resolves and instantiates the minor mode `mode` with the supplied environment. */
   def resolveMinor (mode :String, view :BufferViewImpl, disp :DispatcherImpl, major :MajorMode,
-                    args :List[Any]) :Future[MinorMode] =
-    locate(false, mode) flatMap(requireMinor(mode)) flatMap(resolve(mode, view, disp, major :: args))
+                    args :List[Any]) :MinorMode =
+    resolve(mode, view, disp, major :: args, requireMinor(mode))
 
-  protected def locate (major :Boolean, mode :String) :Future[Class[_]]
+  protected def locate (major :Boolean, mode :String) :Class[_]
   protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
   protected def injectInstance[T] (clazz :Class[T], args :List[Any]) :T
 
-  private def requireMajor (mode :String) =
-    reqType(classOf[MajorMode], s"$mode is not a major mode.") _
-  private def requireMinor (mode :String) =
-    reqType(classOf[MinorMode], s"$mode is not a minor mode.") _
-  private def reqType[T] (mclass :Class[T], errmsg :String)(clazz :Class[_]) =
-    if (mclass.isAssignableFrom(clazz)) Future.success(clazz.asInstanceOf[Class[T]])
-    else Future.failure(new IllegalArgumentException(errmsg))
+  private def requireMajor (mode :String) = reqType(mode, classOf[MajorMode])
+  private def requireMinor (mode :String) = reqType(mode, classOf[MinorMode])
+  private def reqType[T] (mode :String, mclass :Class[T]) = {
+    val isMajor = mclass == classOf[MajorMode]
+    val clazz = locate(isMajor, mode)
+    if (mclass.isAssignableFrom(clazz)) clazz.asInstanceOf[Class[T]]
+    else throw new IllegalArgumentException(s"$mode is not a ${mclass.getSimpleName}.")
+  }
 
   private def resolve[T] (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
-                          args :List[Any])(modeClass :Class[T]) :Future[T] = try {
+                          args :List[Any], modeClass :Class[T]) :T = {
     val envargs = new EnvImpl(editor, view, disp) {
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
         ModeResolver.this.resolveConfig(mode, defs)
     } :: args
-    Future.success(injectInstance(modeClass, envargs))
-  } catch {
-    case cnfe :ClassNotFoundException => Future.failure(
-      new IllegalArgumentException(s"$mode bound to unknown class: $modeClass"))
-    case e :Exception => Future.failure(e)
+    injectInstance(modeClass, envargs)
   }
 }
 

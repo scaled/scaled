@@ -36,8 +36,8 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private var _escapeNext = false
 
   /** The major mode with which we interact. */
-  val major = Value[MajorMode](null)
-  major onValue { major =>
+  val major = Value[MajorMode](resolver.resolveMajor(majorMode, view, this, modeArgs))
+  major onValueNotify { major =>
     val hadMajor = (_majorMeta != null)
     // all old modes need to be cleaned out, and applicable minor modes re-resolved
     _metas foreach { _.dispose() }
@@ -47,17 +47,11 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     rebuildPrefixes()
     // automatically activate any minor modes that match our major mode's tags
     resolver.minorModes(major.tags) foreach { mode =>
-      resolver.resolveMinor(mode, view, this, major, Nil).onComplete(
-        addMode(false), editor.emitError)
+      addMode(false)(resolver.resolveMinor(mode, view, this, major, Nil))
     }
     // if we were replacing an existing major mode, give feedback to the user
     if (hadMajor) editor.popStatus("${major.name} activated.")
   }
-
-  // resolve our major mode first thing
-  resolver.resolveMajor(majorMode, view, this, modeArgs).
-    onSuccess(major.update).
-    onFailure(editor.emitError) // TODO: we're hosed in this case, what to do?
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
   def keyPressed (kev :KeyEvent) :Unit = {
@@ -145,8 +139,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
         removeMode(minor)
         editor.popStatus(s"$mode mode deactivated.")
       case _ =>
-        resolver.resolveMinor(mode, view, this, major(), Nil).onComplete(
-          addMode(true), editor.emitError)
+        addMode(true)(resolver.resolveMinor(mode, view, this, major(), Nil))
     }
   }
 
