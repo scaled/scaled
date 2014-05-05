@@ -13,6 +13,10 @@
   <name>Scaled Devel</name>
   <description>A bootstrap module used when developing Scaled.</description>
 
+  <properties>
+    <mainClass>scaled.impl.DevelMain</mainClass>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -26,6 +30,23 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+      </plugin>
+      <!-- runs the editor on 'mvn test' -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <executions>
+          <execution>
+            <phase>test</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <mainClass>${mainClass}</mainClass>
+        </configuration>
       </plugin>
     </plugins>
   </build>
