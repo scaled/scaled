@@ -22,7 +22,7 @@ object TestData {
       println(msg)
       if (subtext != null) println(subtext)
     }
-    def emitStatus (msg :String) :Unit = println(msg)
+    def emitStatus (msg :String, ephemeral :Boolean) :Unit = println(msg)
     def emitError (err :Throwable) = err.printStackTrace(System.err)
     def clearStatus () {}
     def exit (code :Int) {}
