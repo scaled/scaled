@@ -83,8 +83,11 @@ class PackageManager (app :Main) {
   def resolveDepend (info :PackageInfo)(depURL :String) :Option[ClassLoader] = {
     def fail (msg :String) = { warn(s"$msg [pkg=${info.name}, dep=$depURL]"); None }
     depURL.split(":", 2) match {
-      case Array("mvn", mvnURL) => fail(s"TODO: mvn depend")
-      case Array("ivy", ivyURL) => Ivy.dependFromURL(ivyURL) match {
+      case Array("mvn", depURL) => Depend.fromURL(depURL) match {
+        case Some(depend) => mvn.resolveDepend(depend)
+        case None         => fail(s"Invalid Maven dependency URL")
+      }
+      case Array("ivy", depURL) => Depend.fromURL(depURL) match {
         case Some(depend) => ivy.resolveDepend(depend)
         case None         => fail(s"Invalid Ivy dependency URL")
       }
@@ -98,6 +101,7 @@ class PackageManager (app :Main) {
     * is what is used to express inter-package dependencies. */
   private val pkgs = MMap[String,Package]()
 
+  private val mvn = new MavenResolver(app)
   private val ivy = new IvyResolver()
 
   private type Finder = String => Class[_]

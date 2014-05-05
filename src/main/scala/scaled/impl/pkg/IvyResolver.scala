@@ -7,24 +7,7 @@ package scaled.impl.pkg
 import java.io.File
 import java.net.URLClassLoader
 
-object Ivy {
-
-  /** Models an Ivy dependency. */
-  case class Depend (groupId :String, artifactId :String, version :String, kind :String)
-
-  /** Parses the supplied URL into a `Depend`. The URL must be of the form:
-    * `groupId:artifactId:version:kind`. `kind` can be omitted and `jar` will be assumed.
-    */
-  def dependFromURL (url :String) = url.split(":") match {
-    case Array(groupId, artifactId, version, kind) =>
-      Some(Depend(groupId, artifactId, version, kind))
-    case Array(groupId, artifactId, version) =>
-      Some(Depend(groupId, artifactId, version, "jar"))
-    case other =>
-      None
-  }
-}
-
+/** Handles dependencies from the local Ivy repository. */
 class IvyResolver {
 
   val (cacheDir, localDir) = {
@@ -36,7 +19,7 @@ class IvyResolver {
   /** Resolves the supplied Ivy dependency (and its transitive dependencies) and returns a
     * classloader which can deliver classes therefrom.
     */
-  def resolveDepend (depend :Ivy.Depend) :Option[ClassLoader] = {
+  def resolveDepend (depend :Depend) :Option[ClassLoader] = {
     val kindDir = s"${depend.kind}s"
     val localFile = file(localDir, depend.groupId, depend.artifactId, depend.version, kindDir,
                          s"${depend.artifactId}.${depend.kind}")
