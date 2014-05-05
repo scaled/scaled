@@ -15,6 +15,11 @@ class Main extends Application with Logger {
   /** An executor service for great concurrency. */
   val exec = Executors.newFixedThreadPool(4) // TODO: config
 
+  /** A signal emitted when a message is appended to the log. Because logging is app-global, but
+    * buffers are associated with a particular editor pane, we just have every editor pane create a
+    * *messages* buffer which appends anything it hears from the global log to itself. */
+  val log = Signal[String]()
+
   // locate and create our metadata dir
   val homeDir = new File(System.getProperty("user.home"))
   val metaDir = Filer.requireDir(locateMetaDir)
@@ -25,11 +30,6 @@ class Main extends Application with Logger {
   val pkgMgr = new pkg.PackageManager(this)
   val cfgMgr = new ConfigManager(this)
   val svcMgr = new ServiceManager(this)
-
-  /** A signal emitted when a message is appended to the log. Because logging is app-global, but
-    * buffers are associated with a particular editor pane, we just have every editor pane create a
-    * *messages* buffer which appends anything it hears from the global log to itself. */
-  val log = Signal[String]()
 
   /** Opens `path` in the editor pane associated with `workspace`. If no such editor pane exists one
     * is created. */
