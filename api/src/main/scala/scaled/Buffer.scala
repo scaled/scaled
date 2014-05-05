@@ -310,6 +310,11 @@ abstract class Buffer extends BufferV {
     */
   def insert (loc :Loc, region :Seq[LineV]) :Loc
 
+  /** Appends `region` to the end of this buffer.
+    * @return the buffer location just after the end of the appended region.
+    */
+  def append (region :Seq[LineV]) :Loc = insert(end, region)
+
   /** Deletes `count` characters from the line at `loc`.
     * @return the deleted chars as a line. */
   def delete (loc :Loc, count :Int) :Line
