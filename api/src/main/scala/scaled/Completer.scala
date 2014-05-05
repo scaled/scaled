@@ -11,7 +11,7 @@ import scala.collection.immutable.TreeSet
 /** Represents a computed completion. */
 class Completion[T] (values :Iterable[T], format :T => String, sort :Boolean) {
 
-  private[this] val (_comps :Iterable[String], _map :Map[String,T]) = {
+  private[this] val (_comps, _map) = {
     val b = Map.newBuilder[String,T]
     val c = if (sort) TreeSet.newBuilder[String] else Seq.newBuilder[String]
     val viter = values.iterator
