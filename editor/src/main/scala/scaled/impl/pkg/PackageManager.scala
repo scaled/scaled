@@ -144,6 +144,9 @@ class PackageManager (app :Main) {
         false // stop descending
       }
     }
+  } else {
+    app.log("*** Package manager running in development mode.")
+    app.log("*** Only packages visible via the development classpath will be loaded.")
   }
 
   // scans up from `dir` looking for 'package.scaled' file; then adds package from there
