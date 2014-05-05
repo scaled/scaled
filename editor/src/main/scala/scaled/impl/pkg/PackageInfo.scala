@@ -47,9 +47,10 @@ object PackageInfo {
     * add a dependency. If `None`, this package is assumed to be a built-in package.
     */
   def apply (file :File, mainDep :Option[String]) :PackageInfo =
-    parse(file.getParentFile, mainDep, Source.fromFile(file))
+    apply(file.getParentFile, Source.fromFile(file), mainDep)
 
-  private def parse (root :File, mainDep :Option[String], source :Source) = {
+  /** Creates a package info from the `package.scaled` contents in `source`. */
+  def apply (root :File, source :Source, mainDep :Option[String]) :PackageInfo = {
     val props = MMap[String,String]()
     var depends = List[String]()
     val errors = ArrayBuffer[String]()

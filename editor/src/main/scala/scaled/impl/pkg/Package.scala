@@ -8,9 +8,10 @@ import com.google.common.collect.HashMultimap
 import java.io.File
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
+import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
-import scala.collection.{Set => GSet}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
+import scala.collection.{Set => GSet}
 import scaled.impl.Filer
 
 // NOTE: package instances are constructed on a background thread
@@ -67,15 +68,34 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
     info.name, majors.keySet, minors.keySet, services, info.depends)
 
-  // scan the package directory locating FooMode.class and FooService.class
-  Filer.descendFiles(info.root) { f =>
-    try {
-      if (f.getName endsWith "Mode.class") parseMode(f)
-      else if (f.getName endsWith "Service.class") parseService(f)
-      else if (f.getName endsWith "Plugin.class") parsePlugin(f)
-    } catch {
-      case e :Exception => println("Error parsing $f: $e")
+  // our root may be a directory or a jar file, in either case we scan it for class files
+  if (info.root.isDirectory) {
+    Filer.descendFiles(info.root) { f =>
+      val name = f.getName ; val fn = apply(name)
+      if (fn != null) fn(name, Files.readAllBytes(f.toPath))
     }
+  }
+  else if (info.root.getName endsWith ".jar") {
+    val jfile = new JarFile(info.root)
+    val enum = jfile.entries()
+    while (enum.hasMoreElements()) {
+      val jentry = enum.nextElement() ; val fn = apply(jentry.getName)
+      if (fn != null) {
+        val data = new Array[Byte](jentry.getSize.toInt)
+        val in = jfile.getInputStream(jentry)
+        in.read(data)
+        in.close
+        fn(jentry.getName, data)
+      }
+    }
+  }
+  else throw new IllegalArgumentException("Unsupported package root ${info.root}")
+
+  private def apply (name :String) = {
+    if (name endsWith "Mode.class") parseMode
+    else if (name endsWith "Service.class") parseService
+    else if (name endsWith "Plugin.class") parsePlugin
+    else null
   }
 
   private abstract class Visitor extends ClassVisitor(Opcodes.ASM5) {
@@ -107,12 +127,14 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     }
   }
 
-  private def parse (file :File, viz :Visitor) {
-    val r = new ClassReader(Files.readAllBytes(file.toPath))
+  private def parse (viz :Visitor) = (name :String, data :Array[Byte]) => try {
+    val r = new ClassReader(data)
     r.accept(viz, ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
+  } catch {
+    case e :Exception => mgr.app.log("Error parsing package class: $name", e)
   }
 
-  private def parseMode (file :File) = parse(file, new Visitor() {
+  private def parseMode = parse(new Visitor() {
     override def visitEnd () {
       _anns.get("Lscaled/Major;") foreach { attrs =>
         val mode = attrs.get("name").iterator.next
@@ -128,7 +150,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     }
   })
 
-  private def parseService (file :File) = parse(file, new Visitor() {
+  private def parseService = parse(new Visitor() {
     override def visitEnd () {
       _anns.get("Lscaled/Service;") foreach { attrs =>
         val impl = attrs.get("impl")
@@ -138,7 +160,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     }
   })
 
-  private def parsePlugin (file :File) = parse(file, new Visitor() {
+  private def parsePlugin = parse(new Visitor() {
     override def visitEnd () {
       _anns.get("Lscaled/Plugin;") foreach { attrs =>
         val tag = attrs.get("tag").iterator.next

@@ -8,12 +8,13 @@ import com.google.common.collect.HashMultimap
 import java.io.File
 import java.net.URLClassLoader
 import java.util.regex.Pattern
-import reactual.{Future, Signal}
+import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
+import scala.io.Source
 import scaled.impl._
 import scaled.util.Error
 
-class PackageManager (app :Main) {
+class PackageManager (val app :Main) {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
@@ -26,8 +27,11 @@ class PackageManager (app :Main) {
   def packages :Iterable[Package] = pkgs.values
 
   /** Resolves the class for the mode named `name`. */
-  def mode (major :Boolean, name :String) :Future[Class[_]] =
-    lookup(modeMap(major), name, "major mode")
+  def mode (major :Boolean, name :String) :Class[_] =
+    modeMap(major).get(name).map(_.apply(name)) match {
+      case Some(mode) => mode
+      case None       => throw Error.feedback(s"Unknown mode: $name")
+    }
 
   /** Resolves the implementation class for the service with fq classname `name`. */
   def service (name :String) :Option[Class[_]] = serviceMap.get(name).map(_.apply(name))
@@ -57,7 +61,7 @@ class PackageManager (app :Main) {
       if (ms.size > 1) warn(s"Multiple modes match buffer name '$name': $ms")
       ms.headOption
     }
-    println(s"Detecting mode for ${buf.name}")
+    // println(s"Detecting mode for ${buf.name}")
     fileLocal orElse interp orElse pattern(buf.name) getOrElse "text"
   }
   private val skipToks = Set("", "usr", "local", "bin", "env", "opt")
@@ -114,16 +118,22 @@ class PackageManager (app :Main) {
   private val interps   = HashMultimap.create[String,String]()
   private val minorTags = HashMultimap.create[String,String]()
 
-  private def lookup (map :MMap[String,Finder], name :String, thing :String) :Future[Class[_]] =
-    map.get(name).map(_.apply(name)) match {
-      case Some(mode) => Future.success(mode)
-      case None       => Error.futureFeedback(s"Unknown $thing: $name")
-    }
-
   // resolve our "built-in" package(s), which we locate via the classloader
   getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
-    if ((url.getProtocol == "file") && !(url.getPath endsWith ".jar"))
-      addBuiltin(new File(url.getPath))
+    if (url.getProtocol == "file") {
+      val file = new File(url.getPath)
+      val isJar = file.getName endsWith ".jar"
+      // if this is a directory of classes, we're running in development mode; search this
+      // directory for a package.scaled file which indicates that it provides a built-in package
+      if (!isJar) addBuiltin(file)
+      // if we see a scaled-editor*.jar then we're running in pre-packaged mode; extract the
+      // built-in package metadata from our jar file
+      else if (isJar && (file.getName startsWith "scaled-editor")) {
+        val pkg = getClass.getClassLoader.getResourceAsStream("package.scaled")
+        if (pkg == null) app.log(s"Expected to find package.scaled on classpath, but didn't!")
+        else addPackage(PackageInfo(file, Source.fromInputStream(pkg), None))
+      }
+    }
   }
 
   // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
@@ -140,7 +150,7 @@ class PackageManager (app :Main) {
       val pkgFile = new File(dir, "package.scaled")
       if (!pkgFile.exists) true // descend into subdirs
       else {
-        addPackage(new Package(this, PackageInfo(pkgFile, mainDep)))
+        addPackage(PackageInfo(pkgFile, mainDep))
         false // stop descending
       }
     }
@@ -154,13 +164,17 @@ class PackageManager (app :Main) {
     if (dir != null) {
       val pfile = new File(dir, "package.scaled")
       if (!pfile.exists) addBuiltin(dir.getParentFile)
-      else addPackage(new Package(this, PackageInfo(pfile, None)))
+      else addPackage(PackageInfo(pfile, None))
     }
   }
 
-  private def addPackage (pkg :Package) {
-    // TODO: report errors in pkg.info
-    pkgs.put(pkg.info.srcurl, pkg)
+  private def addPackage (info :PackageInfo) {
+    // log any errors noted when resolving this package info
+    info.errors foreach app.log
+
+    // create our package and map it by srcurl
+    val pkg = new Package(this, info)
+    pkgs.put(info.srcurl, pkg)
 
     // map this package's major and minor modes, services and plugins
     pkg.majors.keySet foreach { majorMap.put(_, pkg.major _) }
