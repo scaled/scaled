@@ -41,6 +41,18 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${basedir}</directory>
+        <includes>
+          <include>package.scaled</include>
+        </includes>
+      </resource>
+      <resource>
+        <!-- we have to repeat the default since we added an extra directory; yay! -->
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.scala-tools</groupId>
