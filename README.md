@@ -160,8 +160,10 @@ build:
 
     mvn test -Pdevel -Pbootstrap
 
-In SBT you have to edit `project/Build.scala` and uncomment the `profiles` line that contains
-`"bootstrap"` and comment out the one that doesn't. Then run Scaled in SBT as before.
+SBT is informed of profiles via a Java System property (`-Dprofiles="foo bar baz"`) so assuming
+your SBT script supports it (as the excellent [sbt-extras] does), invoke SBT thusly:
+
+    sbt -Dprofiles="devel bootstrap"
 
 ## Using Scaled
 
@@ -206,5 +208,5 @@ by key binding description.
 Scaled is released under the New BSD License. The most recent version of the code is available at
 https://github.com/scaled/scaled
 
-
 [Emacs reference card]: http://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
+[sbt-extras]: https://github.com/paulp/sbt-extras

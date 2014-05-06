@@ -24,6 +24,6 @@ object ScaledBuild extends samskivert.MavenBuild {
     case _       => Nil
   }
 
-  override def profiles = Seq("devel")
-  // override def profiles = Seq("devel", "bootstrap")
+  // invoke SBT with -Dprofiles="devel bootstrap" to activate bootstrap profile
+  override def profiles = System.getProperty("profiles", "devel").split(" ").toSeq
 }
