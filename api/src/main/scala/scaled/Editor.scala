@@ -5,11 +5,11 @@
 package scaled
 
 import java.io.File
-
+import java.util.concurrent.Executor
 import reactual.{Future, Promise}
 
 /** Provides access to certain global functionality that doesn't fit nicely elsewhere. */
-trait Editor {
+trait Editor extends Executor {
 
   /** Terminates the editor.
     * @param code the status code to report to the operating system.
@@ -26,6 +26,9 @@ trait Editor {
 
   /** Invokes `op` on the next UI tick. */
   def defer (op :Runnable) :Unit
+
+  /** Invokes `op` on the next UI tick. From [[Executor]]. */
+  def execute (command :Runnable) = defer(command)
 
   /** Briefly displays a status message to the user in a popup.
     * The status message will also be appeneded to an editor-wide messages list. */
