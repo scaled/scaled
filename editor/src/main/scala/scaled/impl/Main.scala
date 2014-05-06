@@ -9,6 +9,7 @@ import javafx.stage.Stage
 import reactual.Signal
 import scala.collection.JavaConversions._
 import scaled.EditorConfig
+import scaled.util.Logger
 
 class Main extends Application with Logger {
 

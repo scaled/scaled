@@ -88,6 +88,10 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     case None     => false
   }
 
+  // route logging through to the app logger
+  override def log (msg :String) = app.log(msg)
+  override def log (msg :String, err :Throwable) = app.log(msg, err)
+
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :String) {
     val f = new File(path)
