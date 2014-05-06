@@ -17,6 +17,8 @@ with no more cognitive dissonance than they already endure when using a third pa
 in Java. We may never reach perfection in that regard, but it will be a damned sight better than
 extending the editor in elisp (nothing against lisp, use Clojure if that's your bag).
 
+![Hello Scaled screenshot](http://scaled.github.io/images/screenshots/hello-scaled.png)
+
 ## Development
 
 Presently, the only way to run Scaled is to build it yourself from source. This is not terribly
