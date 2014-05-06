@@ -5,7 +5,7 @@
 package scaled.impl.pkg
 
 import java.io.File
-import java.net.URLClassLoader
+import java.net.{URL, URLClassLoader}
 import pomutil.{Dependency, DependResolver, POM}
 import scaled.impl.Logger
 
@@ -36,21 +36,12 @@ class MavenResolver (log :Logger) {
   }
 
   private def loader (orig :Depend, deps :Seq[Dependency]) :URLClassLoader = {
-    val (jars, errs) = partitionBy(deps)(dep => dep.localArtifact match {
-      case Some(jar) => Left(jar)
-      case None => Right(s"Missing local artifact for $dep")
-    })
-    errs foreach log.log
-    new URLClassLoader(jars.map(_.toURI.toURL).toArray)
-  }
-
-  private def partitionBy[A,B,C] (seq :Seq[A])(fn :A => Either[B,C]) :(Seq[B], Seq[C]) = {
-    val bb = Seq.newBuilder[B] ; val cc = Seq.newBuilder[C]
-    seq foreach { a => fn(a) match {
-      case Left(b)  => bb += b
-      case Right(c) => cc += c
+    val urls = Array.newBuilder[URL]
+    deps foreach { dep => dep.localArtifact match {
+      case Some(jar) => urls += jar.toURI.toURL
+      case None      => log.log(s"Missing local artifact for $dep")
     }}
-    (bb.result, cc.result)
+    new URLClassLoader(urls.result)
   }
 
   private def file (root :File, subs :String*) = (root /: subs)(new File(_, _))
