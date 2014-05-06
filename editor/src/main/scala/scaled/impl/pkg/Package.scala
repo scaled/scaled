@@ -72,7 +72,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   if (info.root.isDirectory) {
     Filer.descendFiles(info.root) { f =>
       val name = f.getName ; val fn = apply(name)
-      if (fn != null) fn(name, Files.readAllBytes(f.toPath))
+      if (fn != null) fn(name, new ClassReader(Files.readAllBytes(f.toPath)))
     }
   }
   else if (info.root.getName endsWith ".jar") {
@@ -81,11 +81,9 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     while (enum.hasMoreElements()) {
       val jentry = enum.nextElement() ; val fn = apply(jentry.getName)
       if (fn != null) {
-        val data = new Array[Byte](jentry.getSize.toInt)
         val in = jfile.getInputStream(jentry)
-        in.read(data)
+        fn(jentry.getName, new ClassReader(in))
         in.close
-        fn(jentry.getName, data)
       }
     }
   }
@@ -127,9 +125,8 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     }
   }
 
-  private def parse (viz :Visitor) = (name :String, data :Array[Byte]) => try {
-    val r = new ClassReader(data)
-    r.accept(viz, ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
+  private def parse (viz :Visitor) = (name :String, reader :ClassReader) => try {
+    reader.accept(viz, ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
   } catch {
     case e :Exception => mgr.app.log("Error parsing package class: $name", e)
   }
