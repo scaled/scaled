@@ -7,9 +7,10 @@ package scaled
 import java.io.File
 import java.util.concurrent.Executor
 import reactual.{Future, Promise}
+import scaled.util.Logger
 
 /** Provides access to certain global functionality that doesn't fit nicely elsewhere. */
-trait Editor extends Executor {
+trait Editor extends Executor with Logger {
 
   /** Terminates the editor.
     * @param code the status code to report to the operating system.
@@ -26,9 +27,6 @@ trait Editor extends Executor {
 
   /** Invokes `op` on the next UI tick. */
   def defer (op :Runnable) :Unit
-
-  /** Invokes `op` on the next UI tick. From [[Executor]]. */
-  def execute (command :Runnable) = defer(command)
 
   /** Briefly displays a status message to the user in a popup.
     * The status message will also be appeneded to an editor-wide messages list. */
@@ -118,4 +116,22 @@ trait Editor extends Executor {
     * @return true if `buffer` exists and the request was initiated, false if no such buffer
     * exists. */
   def killBuffer (buffer :String) :Boolean
+
+  //
+  // Executor methods
+
+  /** Invokes `op` on the next UI tick. From [[Executor]]. */
+  def execute (command :Runnable) = defer(command)
+
+  //
+  // Logger methods
+
+  /** Records `msg` to the log. This will be appended to the `*messages*` buffer but will not
+    * be emitted as status to the user. This is mainly for debugging. */
+  def log (msg :String) :Unit
+
+  /** Records `msg` and the stack trace for `exn` to the log. These will be appended to the
+    * `*messages*` buffer but will not be emitted as status to the user. This is mainly for
+    * debugging. */
+  def log (msg :String, exn :Throwable) :Unit
 }
