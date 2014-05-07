@@ -68,18 +68,18 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   override def buffers = _buffers.map(_.buffer)
 
-  override def openBuffer (buffer :String) = {
+  override def visitBuffer (buffer :String) = {
     _focus() = _buffers.find(_.name == buffer) getOrElse(newBuffer(createEmptyBuffer(buffer)))
     _focus().view
   }
 
-  override def createBuffer (buffer :String, mode :String, reuse :Boolean) = {
-    _focus() = _buffers.find(_.name == buffer) match {
-      case None     => newBuffer(createEmptyBuffer(buffer), mode)
+  override def createBuffer (buffer :String, mode :String, reuse :Boolean, args :List[Any]) = {
+    val ob = _buffers.find(_.name == buffer) match {
+      case None     => newBuffer(createEmptyBuffer(buffer), mode, args)
       case Some(ob) => if (reuse) ob
-                       else newBuffer(createEmptyBuffer(freshName(buffer)), mode)
+                       else newBuffer(createEmptyBuffer(freshName(buffer)), mode, args)
     }
-    _focus().view
+    ob.view
   }
 
   override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
@@ -208,7 +208,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private final val MessagesName = "*messages*"
   private def newMessages () = {
     _pendingMessages = Nil
-    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), "log")
+    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), "log", Nil)
     _pendingMessages foreach { msg =>
       mbuf.view.point() = mbuf.buffer.append(Line.fromText(msg + System.lineSeparator))
     }
@@ -230,12 +230,13 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private final val ScratchName = "*scratch*"
   private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName))
 
-  private def newBuffer (buf :BufferImpl) :OpenBuffer = newBuffer(buf, app.pkgMgr.detectMode(buf))
-  private def newBuffer (buf :BufferImpl, mode :String) :OpenBuffer = {
+  private def newBuffer (buf :BufferImpl) :OpenBuffer =
+    newBuffer(buf, app.pkgMgr.detectMode(buf), Nil)
+  private def newBuffer (buf :BufferImpl, mode :String, args :List[Any]) :OpenBuffer = {
     val config = app.cfgMgr.editorConfig
     val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
     val view = new BufferViewImpl(this, buf, width, height)
-    val disp = new DispatcherImpl(this, resolver, view, mode, Nil)
+    val disp = new DispatcherImpl(this, resolver, view, mode, args)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has
@@ -247,7 +248,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     content.setBottom(new ModeLine(this, view, disp))
 
     val obuf = OpenBuffer(content, area, view)
-    _buffers prepend obuf
+    _buffers += obuf
     obuf
   }
 

@@ -380,7 +380,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     val defp = if (defb == "") "" else s" (default $defb)"
     val comp = Completer.buffer(editor, Set(fstb))
     editor.miniRead(s"Switch to buffer$defp:", "", config(bufferHistory), comp) onSuccess { read =>
-      editor.openBuffer(if (read == "") defb else read)
+      editor.visitBuffer(if (read == "") defb else read)
     }
   }
 
@@ -515,6 +515,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
     buf.replace(buf.start, buf.end, text.map(new Line(_)))
     buf.markClean()
+    editor.visitBuffer(buf.name)
   }
 
   //
