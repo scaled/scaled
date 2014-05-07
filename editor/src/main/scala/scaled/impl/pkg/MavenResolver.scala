@@ -7,7 +7,7 @@ package scaled.impl.pkg
 import java.io.File
 import java.net.{URL, URLClassLoader}
 import pomutil.{Dependency, DependResolver, POM}
-import scaled.impl.Logger
+import scaled.util.Logger
 
 /** Handles dependencies from the local Maven repository. */
 class MavenResolver (log :Logger) {
