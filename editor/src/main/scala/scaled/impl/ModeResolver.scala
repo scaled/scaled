@@ -8,9 +8,10 @@ import java.lang.reflect.Field
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 
-abstract class EnvImpl (val editor :Editor, val view :RBufferView, val disp :Dispatcher) extends Env
+abstract class EnvImpl (val log :Logger, val exec :Executor, val editor :Editor,
+                        val view :RBufferView, val disp :Dispatcher) extends Env
 
-abstract class ModeResolver (editor :Editor) {
+abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
 
   /** Returns the names of all known modes, major if `major`, minor if not. */
   def modes (major :Boolean) :Set[String] = Set()
@@ -43,7 +44,7 @@ abstract class ModeResolver (editor :Editor) {
 
   private def resolve[T] (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
                           args :List[Any], modeClass :Class[T]) :T = {
-    val envargs = new EnvImpl(editor, view, disp) {
+    val envargs = new EnvImpl(log, exec, editor, view, disp) {
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
         ModeResolver.this.resolveConfig(mode, defs)
     } :: args
@@ -51,7 +52,8 @@ abstract class ModeResolver (editor :Editor) {
   }
 }
 
-class AppModeResolver (app :Main, editor :Editor) extends ModeResolver(editor) {
+class AppModeResolver (app :Main, editor :Editor)
+    extends ModeResolver(app.logger, app.exec, editor) {
 
   override def modes (major :Boolean) = Set() ++ app.pkgMgr.modes(major)
   override def minorModes (tags :Array[String]) = app.pkgMgr.minorModes(tags)

@@ -188,7 +188,9 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         val pw = prefWidth(-1) ; val ph = prefHeight(-1)
         // we can't just call resize() directly here because JavaFX doesn't take kindly to a Node
         // resizing itself during the layout process, so we defer it
-        if (pw != getWidth || ph != getHeight) editor.defer { resize(pw, ph) }
+        if (pw != getWidth || ph != getHeight) Platform.runLater(new Runnable() {
+          def run = resize(pw, ph)
+        })
         else {
           super.layoutChildren()
           setLayoutX(_pos.vx(_ax, pw, getPadding.getLeft, getPadding.getRight))

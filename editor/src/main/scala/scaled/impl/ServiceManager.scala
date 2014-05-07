@@ -29,7 +29,7 @@ class ServiceInjector extends AbstractService {
       case Nil => Nil
       case h :: t => if (elem == h) t else h :: minus(t, elem)
     }
-    var remargs = args
+    var remargs = args ++ stockArgs
     val params = ctor.getParameterTypes.map { p =>
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg
@@ -43,6 +43,9 @@ class ServiceInjector extends AbstractService {
 
   override def didStartup () {} // unused
   override def willShutdown () {} // unused
+
+  /** Provides stock injectables (e.g. logger and executor). */
+  protected def stockArgs :List[AnyRef] = Nil
 
   /** Resolves `sclass` as a Scaled service. If no such service exists, `None` is returned,
     * otherwise the resolved service implementation is returned. */
@@ -65,9 +68,10 @@ class ServiceManager (app :Main) extends ServiceInjector with MetaService {
   private var pluginMgr = new PluginManager(app)
   services.put(pluginMgr.getClass, pluginMgr)
 
-  override def log (msg :String) = app.log(msg)
-  override def log (msg :String, exn :Throwable) = app.log(msg, exn)
+  override def log (msg :String) = app.logger.log(msg)
   override def metaFile (name :String) = new File(app.metaDir, name)
+
+  override protected def stockArgs :List[AnyRef] = List(app.exec, app.logger)
 
   override def resolveService (sclass :Class[_]) :Option[AbstractService] = {
     if (!sclass.getName.endsWith("Service")) None

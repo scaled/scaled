@@ -38,9 +38,8 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   //
   // Editor interface methods
 
-  override def exit (code :Int) = app.closeEditor(this, code)
+  override def exit () = app.closeEditor(this)
   override def showURL (url :String) = app.getHostServices.showDocument(url)
-  override def defer (op :Runnable) = Platform.runLater(op)
 
   override def popStatus (msg :String, subtext :String) {
     _statusPopup.showStatus(msg, subtext)
@@ -87,10 +86,6 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     case Some(ob) => killBuffer(ob) ; true
     case None     => false
   }
-
-  // route logging through to the app logger
-  override def log (msg :String) = app.log(msg)
-  override def log (msg :String, err :Throwable) = app.log(msg, err)
 
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :String) {

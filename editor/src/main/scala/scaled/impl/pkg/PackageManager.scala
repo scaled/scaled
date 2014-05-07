@@ -14,7 +14,7 @@ import scala.io.Source
 import scaled.impl._
 import scaled.util.Error
 
-class PackageManager (val app :Main) {
+class PackageManager (app :Main) {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
@@ -22,6 +22,9 @@ class PackageManager (val app :Main) {
 
   /** A signal emitted when a package is uninstalled. */
   val packageRemoved = Signal[Package]()
+
+  /** A reference to the logger, for use by us and Packages. */
+  val log = app.logger
 
   /** Returns all currently installed packages. */
   def packages :Iterable[Package] = pkgs.values
@@ -105,7 +108,7 @@ class PackageManager (val app :Main) {
     * is what is used to express inter-package dependencies. */
   private val pkgs = MMap[String,Package]()
 
-  private val mvn = new MavenResolver(app)
+  private val mvn = new MavenResolver(log)
   private val ivy = new IvyResolver()
 
   private type Finder = String => Class[_]
@@ -130,7 +133,7 @@ class PackageManager (val app :Main) {
       // built-in package metadata from our jar file
       else if (isJar && (file.getName startsWith "scaled-editor")) {
         val pkg = getClass.getClassLoader.getResourceAsStream("package.scaled")
-        if (pkg == null) app.log(s"Expected to find package.scaled on classpath, but didn't!")
+        if (pkg == null) log.log(s"Expected to find package.scaled on classpath, but didn't!")
         else addPackage(PackageInfo(file, Source.fromInputStream(pkg), None))
       }
     }
@@ -155,8 +158,8 @@ class PackageManager (val app :Main) {
       }
     }
   } else {
-    app.log("*** Package manager running in development mode.")
-    app.log("*** Only packages visible via the development classpath will be loaded.")
+    log.log("*** Package manager running in development mode.")
+    log.log("*** Only packages visible via the development classpath will be loaded.")
   }
 
   // scans up from `dir` looking for 'package.scaled' file; then adds package from there
@@ -170,7 +173,7 @@ class PackageManager (val app :Main) {
 
   private def addPackage (info :PackageInfo) {
     // log any errors noted when resolving this package info
-    info.errors foreach app.log
+    info.errors foreach log.log
 
     // create our package and map it by srcurl
     val pkg = new Package(this, info)

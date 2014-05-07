@@ -25,7 +25,7 @@ class Server (app :Main) extends Thread {
     try {
       val sock = new DatagramSocket(Port)
       val buffer = new Array[Byte](4096)
-      app.log(s"Listening for commands on localhost:$Port")
+      app.logger.log(s"Listening for commands on localhost:$Port")
       while (true) {
         val pkt = new DatagramPacket(buffer, buffer.length)
         sock.receive(pkt)
@@ -34,12 +34,12 @@ class Server (app :Main) extends Thread {
           case OpenRe(id, path) =>
             val workspace = if (id == null) "default" else id.trim.substring(1)
             onMainThread { app.openInWorkspace(path.trim, workspace) }
-          case _ => app.log(s"Unknown command: '$cmd'")
+          case _ => app.logger.log(s"Unknown command: '$cmd'")
         }
       }
 
     } catch {
-      case e :Exception => app.log(s"Failed to bind to $Port", e)
+      case e :Exception => app.logger.log(s"Failed to bind to $Port", e)
     }
   }
 

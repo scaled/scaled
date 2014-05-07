@@ -8,15 +8,8 @@ import javafx.application.Application
 
 class DevelMain extends Main {
 
-  override def log (msg :String) {
-    super.log(msg)
-    System.err.println(msg)
-  }
-  override def log (msg :String, exn :Throwable) {
-    super.log(msg, exn)
-    System.err.println(msg)
-    exn.printStackTrace(System.err)
-  }
+  // send log messages to the console
+  log onValue System.err.println
 }
 
 object DevelMain {

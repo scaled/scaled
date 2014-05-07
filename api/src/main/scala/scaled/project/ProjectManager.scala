@@ -12,7 +12,7 @@ import scala.io.Source
 import scaled._
 
 /** Implements [[ProjectService]]. Hides implementation details from clients. */
-class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
+class ProjectManager (log :Logger, metaSvc :MetaService, pluginSvc :PluginService)
     extends AbstractService with ProjectService {
 
   // maps from id, srcurl to project root for all known projects
@@ -74,7 +74,7 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
       val newURL = proj.sourceURL.map(url => byURL.put(url, root) != root).getOrElse(false)
       val newName = toName.put(root, proj.name) != Some(proj.name)
       if (newID || newURL || newName) {
-        metaSvc.log(s"New project in '$root', updating '${mapFile.getName}'.")
+        log.log(s"New project in '$root', updating '${mapFile.getName}'.")
         writeProjectMap()
       }
 
@@ -86,8 +86,7 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
     val (iprojs, dprojs) = finders.plugins.flatMap(_.apply(paths)).partition(_._1.intelligent)
     // if there are more than one intelligent project matches, complain
     if (!iprojs.isEmpty) {
-      if (iprojs.size > 1) metaSvc.log(
-        s"Multiple intelligent project matches: ${iprojs.mkString(" ")}")
+      if (iprojs.size > 1) log.log(s"Multiple intelligent project matches: ${iprojs.mkString(" ")}")
       create(iprojs.head)
     }
     // if there are any non-intelligent project matches, use the deepest match
@@ -117,10 +116,10 @@ class ProjectManager (metaSvc :MetaService, pluginSvc :PluginService)
           if (id   != "none") byID.put(id, root)
           if (url  != "none") byURL.put(url, root)
           if (name != "none") toName.put(root, name)
-        case _ => metaSvc.log(s"Invalid line in projects.txt: $line")
+        case _ => log.log(s"Invalid line in projects.txt: $line")
       }}
     } catch {
-      case e :Exception => metaSvc.log(s"Failed to read $mapFile", e)
+      case e :Exception => log.log(s"Failed to read $mapFile", e)
     }
   }
 

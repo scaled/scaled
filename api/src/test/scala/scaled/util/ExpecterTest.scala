@@ -4,16 +4,17 @@
 
 package scaled.util
 
-import java.util.concurrent.Executor
 import org.junit.Assert._
 import org.junit._
 import scala.collection.mutable.ArrayBuffer
+import scaled.Executor
 
 class ExpecterTest {
 
   class AccumExec extends Executor {
     private val rs = ArrayBuffer[Runnable]()
-    def execute (r :Runnable) :Unit = rs += r
+    def runOnUI (r :Runnable) :Unit = rs += r
+    def runInBackground (r :Runnable) :Unit = rs += r
     def executeAll () = {
       rs foreach { _.run() }
       rs.clear()

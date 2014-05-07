@@ -5,8 +5,7 @@
 package scaled.util
 
 import java.io.{BufferedReader, File, InputStreamReader, OutputStreamWriter, PrintWriter}
-import java.util.concurrent.Executor
-import scaled.Editor
+import scaled._
 
 /** Manages an interaction with a separate process, via its stdin, stdout and stderr.
   * This is something sufficiently common for modes and services to do that Scaled provides this
@@ -15,7 +14,7 @@ import scaled.Editor
   * When an expecter instance is constructed, the associated command is immediately spawned and
   * interaction begins.
   *
-  * @param exec the executor on which callbacks are invoked (usually pass in `editor`).
+  * @param exec the executor via which callbacks are invoked on the UI thread.
   * @param command the command to invoke and arguments passed thereto.
   */
 abstract class Expecter (exec :Executor, command :String*) {
@@ -104,10 +103,10 @@ abstract class Expecter (exec :Executor, command :String*) {
     while (true) {
       val line = reader.readLine
       if (line == null) return
-      exec.execute(new Runnable() { override def run () = handleInput(line, isErr) })
+      exec.runOnUI(handleInput(line, isErr))
     }
   } catch {
-    case e :Exception => exec.execute(new Runnable() { override def run () = onFailure(e) })
+    case e :Exception => exec.runOnUI(onFailure(e))
   }
 
   private def handleInput (line :String, isErr :Boolean) {
@@ -118,16 +117,15 @@ abstract class Expecter (exec :Executor, command :String*) {
 
 object Expecter {
 
-  /** Returns an expecter that logs output received outside interactions to editor,
-    * prefixed with `ident`.
-    */
-  def inEditor (editor :Editor, prefix :String) :Expecter = new Expecter(editor) {
-    def onUnexpected (line :String, isErr :Boolean) {
-      val kind = if (isErr) "stderr" else "stdout"
-      editor.log(s"$prefix: [$kind] $line")
+  /** Returns an expecter that logs unexpected output to `log`, prefixed with `ident`. */
+  def withLogger (exec :Executor, log :Logger, prefix :String, command :String*) :Expecter =
+    new Expecter(exec, command :_*) {
+      def onUnexpected (line :String, isErr :Boolean) {
+        val kind = if (isErr) "stderr" else "stdout"
+        log.log(s"$prefix: [$kind] $line")
+      }
+      def onFailure (err :Exception) {
+        log.log(s"$prefix: expect failure", err)
+      }
     }
-    def onFailure (err :Exception) {
-      editor.log(s"$prefix: expect failure", err)
-    }
-  }
 }

@@ -9,6 +9,7 @@ import java.io.File
 import java.nio.file.{FileSystems, WatchKey, WatchEvent}
 import java.util.concurrent.ConcurrentHashMap
 import scala.annotation.tailrec
+import scaled.Logger
 
 /** Used to cancel file and directory watches when they're no longer needed. */
 trait Watch {
@@ -33,7 +34,7 @@ abstract class Watcher {
 // TODO: turn this into an injectable service?
 
 /** Handles watching the filesystem for changes. */
-class WatchManager (app :Main) {
+class WatchManager (log :Logger) {
   import java.nio.file.StandardWatchEventKinds._
 
   private val _service = FileSystems.getDefault.newWatchService()
@@ -51,7 +52,7 @@ class WatchManager (app :Main) {
         case ENTRY_CREATE => watcher.onCreate(dir, name)
         case ENTRY_DELETE => watcher.onDelete(dir, name)
         case ENTRY_MODIFY => watcher.onModify(dir, name)
-        case _ => app.log(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
+        case _ => log.log(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
       })
     }
     def cancel () {
@@ -93,6 +94,6 @@ class WatchManager (app :Main) {
     }
   } catch {
     case ie :InterruptedException => // loop!
-    case ex :Exception => app.log("pollWatches failure", ex)
+    case ex :Exception => log.log("pollWatches failure", ex)
   }
 }

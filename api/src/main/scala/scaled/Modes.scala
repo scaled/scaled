@@ -14,6 +14,12 @@ import scala.collection.mutable.ArrayBuffer
   * signatures of every mode in the known universe. */
 abstract class Env {
 
+  /** For debug logging. */
+  val log :Logger
+
+  /** For executing operations on the UI thread and background threads. */
+  val exec :Executor
+
   /** The editor in which this mode is operating. */
   val editor :Editor
 

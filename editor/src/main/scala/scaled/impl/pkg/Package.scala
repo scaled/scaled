@@ -128,7 +128,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   private def parse (viz :Visitor) = (name :String, reader :ClassReader) => try {
     reader.accept(viz, ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
   } catch {
-    case e :Exception => mgr.app.log("Error parsing package class: $name", e)
+    case e :Exception => mgr.log.log(s"Error parsing package class: $name", e)
   }
 
   private def parseMode = parse(new Visitor() {

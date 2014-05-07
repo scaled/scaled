@@ -21,12 +21,6 @@ abstract class AbstractService {
          desc="Provides meta-services. Mainly logging and dependency injection.")
 trait MetaService {
 
-  /** Records a message to the log. */
-  def log (msg :String) :Unit
-
-  /** Records a message and exception stack trace to the log. */
-  def log (msg :String, exn :Throwable) :Unit
-
   /** Returns a `File` for a file/directory with name `name` in the Scaled metadata directory. */
   def metaFile (name :String) :File
 

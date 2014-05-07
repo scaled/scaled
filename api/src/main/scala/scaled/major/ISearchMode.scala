@@ -150,7 +150,7 @@ class ISearchMode (
   private def queueRefresh () {
     if (!_refreshPending) {
       _refreshPending = true
-      editor.defer {
+      env.exec.runOnUI {
         _refreshPending = false
         val sought = buffer.region(buffer.start, buffer.end)
         if (sought != curstate.sought) pushState(curstate.extend(sought))

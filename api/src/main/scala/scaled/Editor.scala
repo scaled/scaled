@@ -5,28 +5,22 @@
 package scaled
 
 import java.io.File
-import java.util.concurrent.Executor
 import reactual.{Future, Promise}
-import scaled.util.Logger
 
-/** Provides access to certain global functionality that doesn't fit nicely elsewhere. */
-trait Editor extends Executor with Logger {
+/** Provides access to data and services encapsulated by the editor. The editor is not quite the
+  * entire app, but rather a single window which contains a set of buffers and state geared toward
+  * working on one "thing". A user may wish to do everything in one editor, or they may have
+  * multiple editors open (perhaps one on each virtual workspace), each dedicated to a distinct
+  * task. As such, buffers are not shared between editors, but background services are, because
+  * those can be shared without impacting the user experience.
+  */
+trait Editor {
 
-  /** Terminates the editor.
-    * @param code the status code to report to the operating system.
-    */
-  def exit (code :Int) :Unit
+  /** Closes this editor. If this is the only open editor, the Scaled process will exit. */
+  def exit () :Unit
 
   /** Displays the supplied URL in the user's preferred web browser. */
   def showURL (url :String) :Unit
-
-  /** Invokes `op` on the next UI tick. */
-  def defer (op : => Unit) :Unit = defer(new Runnable() {
-    override def run () = op
-  })
-
-  /** Invokes `op` on the next UI tick. */
-  def defer (op :Runnable) :Unit
 
   /** Briefly displays a status message to the user in a popup.
     * The status message will also be appeneded to an editor-wide messages list. */
@@ -116,22 +110,4 @@ trait Editor extends Executor with Logger {
     * @return true if `buffer` exists and the request was initiated, false if no such buffer
     * exists. */
   def killBuffer (buffer :String) :Boolean
-
-  //
-  // Executor methods
-
-  /** Invokes `op` on the next UI tick. From [[Executor]]. */
-  def execute (command :Runnable) = defer(command)
-
-  //
-  // Logger methods
-
-  /** Records `msg` to the log. This will be appended to the `*messages*` buffer but will not
-    * be emitted as status to the user. This is mainly for debugging. */
-  def log (msg :String) :Unit
-
-  /** Records `msg` and the stack trace for `exn` to the log. These will be appended to the
-    * `*messages*` buffer but will not be emitted as status to the user. This is mainly for
-    * debugging. */
-  def log (msg :String, exn :Throwable) :Unit
 }

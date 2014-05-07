@@ -55,7 +55,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     private def queueRethink (row :Int*) {
       val takeAction = _rethinkLines.isEmpty
       _rethinkLines ++= row
-      if (takeAction) editor defer rethink
+      if (takeAction) env.exec runOnUI rethink
     }
 
     private def rethink () {

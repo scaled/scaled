@@ -428,7 +428,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       // TODO: d to diff this buffer against the file system version
     )
     def saveLoop (dirty :List[Buffer]) :Unit = dirty match {
-      case Nil => editor.exit(0)
+      case Nil => editor.exit()
       case buf :: tail =>
         val prompt = s"${buf.file.getAbsolutePath} is modified. Save?"
         editor.mini("readopt", Promise[String](), prompt, opts) onSuccess(_ match {

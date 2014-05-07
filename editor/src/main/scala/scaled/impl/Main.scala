@@ -3,23 +3,29 @@ package scaled.impl
 import com.google.common.collect.HashBiMap
 import java.io.File
 import java.util.concurrent.Executors
-import javafx.application.Application
+import javafx.application.{Application, Platform}
 import javafx.scene.Scene
 import javafx.stage.Stage
 import reactual.Signal
 import scala.collection.JavaConversions._
-import scaled.EditorConfig
-import scaled.util.Logger
+import scaled._
 
-class Main extends Application with Logger {
+class Main extends Application {
 
-  /** An executor service for great concurrency. */
-  val exec = Executors.newFixedThreadPool(4) // TODO: config
+  private val pool = Executors.newFixedThreadPool(4) // TODO: config
 
   /** A signal emitted when a message is appended to the log. Because logging is app-global, but
     * buffers are associated with a particular editor pane, we just have every editor pane create a
     * *messages* buffer which appends anything it hears from the global log to itself. */
   val log = Signal[String]()
+
+  val logger = new Logger {
+    override def log (msg :String) :Unit = Main.this.log.emit(msg)
+    override def log (msg :String, exn :Throwable) {
+      Main.this.log.emit(msg)
+      Main.this.log.emit(Utils.stackTraceToString(exn))
+    }
+  }
 
   // locate and create our metadata dir
   val homeDir = new File(System.getProperty("user.home"))
@@ -27,10 +33,15 @@ class Main extends Application with Logger {
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val watchMgr = new WatchManager(this)
+  val watchMgr = new WatchManager(logger)
   val pkgMgr = new pkg.PackageManager(this)
   val cfgMgr = new ConfigManager(this)
   val svcMgr = new ServiceManager(this)
+
+  val exec = new Executor {
+    override def runOnUI (op :Runnable) :Unit = Platform.runLater(op)
+    override def runInBackground (op :Runnable) :Unit = pool.execute(op)
+  }
 
   /** Opens `path` in the editor pane associated with `workspace`. If no such editor pane exists one
     * is created. */
@@ -44,18 +55,11 @@ class Main extends Application with Logger {
   }
 
   /** Closes `epane`. If that was the last open editor pane, terminates Scaled. */
-  def closeEditor (epane :EditorPane, ecode :Int) {
+  def closeEditor (epane :EditorPane) {
     epane.dispose()
     epane.stage.close()
     editors.inverse.remove(epane)
-    if (editors.isEmpty()) sys.exit(ecode) // TODO: cleanup?
-  }
-
-  override def log (msg :String) :Unit = log.emit(msg)
-  override def log (msg :String, exn :Throwable) {
-    log.emit(msg)
-    log.emit(Utils.stackTraceToString(exn))
-    // TODO: if in devel mode, record these to system.err?
+    if (editors.isEmpty()) sys.exit(0) // TODO: cleanup?
   }
 
   override def start (stage :Stage) {
