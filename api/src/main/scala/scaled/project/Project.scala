@@ -5,6 +5,7 @@
 package scaled.project
 
 import java.io.File
+import java.util.Date
 import reactual.{Future, Value, ValueV}
 import scala.annotation.tailrec
 import scaled._
@@ -98,8 +99,8 @@ abstract class Project {
       case None => editor.emitStatus("Compilation is not supported by this project.")
       case Some(comp) =>
         // create our compilation output buffer if necessary
-        val buf = editor.createBuffer(s"*$name compile*", "log" /*project-compile*/, true).buffer
-        buf.replace(buf.start, buf.end, Line.fromText("Compilation started at ${new Date()}"))
+        val buf = editor.createBuffer(s"*compile-$name*", "log" /*project-compile*/, true).buffer
+        buf.replace(buf.start, buf.end, Line.fromTextNL(s"Compilation started at ${new Date}..."))
         comp.compile(buf).onFailure(editor.emitError).onSuccess { msg =>
           // scan the results buffer for compiler errors
           val errs = Seq.newBuilder[Compiler.Error]
@@ -110,10 +111,11 @@ abstract class Project {
           loop(buf.start)
           _currentErr = -1
           _compileErrs = errs.result
+          buf.append(Line.fromTextNL(s"Compilation started at ${new Date}..."))
           // report feedback to the user
           editor.popStatus(msg)
         }
-        editor.emitStatus("Recompile initiated.")
+        editor.emitStatus("Recompile initiated...")
     }
   }
 
