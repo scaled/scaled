@@ -45,7 +45,6 @@
   <modules>
     <module>api</module>
     <module>editor</module>
-    <module>project-service</module>
   </modules>
 
   <!-- common depends for all modules -->
@@ -70,6 +69,7 @@
       <!-- useful extensions for "bootstrapping" (working on Scaled in Scaled) -->
       <id>bootstrap</id>
       <modules>
+        <module>project-service</module>
         <module>textmate-grammar</module>
         <module>maven-project</module>
         <module>java-mode</module>
