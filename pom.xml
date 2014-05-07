@@ -45,6 +45,7 @@
   <modules>
     <module>api</module>
     <module>editor</module>
+    <module>project-service</module>
   </modules>
 
   <!-- common depends for all modules -->
