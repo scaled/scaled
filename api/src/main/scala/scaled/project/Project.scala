@@ -6,6 +6,7 @@ package scaled.project
 
 import java.io.File
 import reactual.{Future, Value, ValueV}
+import scala.annotation.tailrec
 import scaled._
 import scaled.util.Error
 
@@ -61,22 +62,67 @@ abstract class Project {
     if (_refcount == 0) hibernate()
   }
 
-  /** Exposes the most recent compilation results to anyone who cares. */
-  def compileNotes :ValueV[Seq[Compiler.Note]] = _compileNotes
+  /** Advances the internal error pointer to the next error and visits that buffer in `editor`.
+    * If we are at the end of the list, the user is informed via feedback that we have reached the
+    * last error, and the internal counter is reset so that a subsequent request to visit the next
+    * error will visit the first error.
+    */
+  def visitNextError (editor :Editor) {
+    if (_compileErrs.isEmpty) editor.popStatus("No compilation errors.")
+    else {
+      _currentErr += 1
+      if (_currentErr < _compileErrs.length) visitError(editor, _compileErrs(_currentErr))
+      else {
+        _currentErr = -1
+        editor.emitStatus("At last error. Repeat command to start from first error.")
+      }
+    }
+  }
+
+  /** Regresses the internal error pointer to the previous error and visits that buffer in `editor`.
+    * If we are at the start of the list, the user is informed via feedback that we have reached the
+    * first error, and the internal counter is reset so that a subsequent request to visit the
+    * previous error will visit the last error.
+    */
+  def visitPrevError (editor :Editor) {
+    // TODO
+  }
 
   /** Initiates a recompilation of this project, if supported.
     * @return a future which will report a summary of the compilation, or a failure if compilation
     * is not supported by this project.
     */
-  def recompile () :Future[String] = {
+  def recompile (editor :Editor) {
     if (_compiler == null) _compiler = createCompiler()
     _compiler match {
-      case Some(comp) => comp.compile().onSuccess(_compileNotes.update).map(summarizeNotes)
-      case None       => Error.futureFeedback("Compilation is not supported by this project.")
+      case None => editor.emitStatus("Compilation is not supported by this project.")
+      case Some(comp) =>
+        // create our compilation output buffer if necessary
+        val buf = editor.createBuffer(s"*$name compile*", "log" /*project-compile*/, true).buffer
+        buf.replace(buf.start, buf.end, Line.fromText("Compilation started at ${new Date()}"))
+        comp.compile(buf).onFailure(editor.emitError).onSuccess { msg =>
+          // scan the results buffer for compiler errors
+          val errs = Seq.newBuilder[Compiler.Error]
+          @inline @tailrec def loop (loc :Loc) :Unit = comp.nextError(buf, loc) match {
+            case Some((err, next)) => errs += err ; loop(next)
+            case None => // done!
+          }
+          loop(buf.start)
+          _currentErr = -1
+          _compileErrs = errs.result
+          // report feedback to the user
+          editor.popStatus(msg)
+        }
+        editor.emitStatus("Recompile initiated.")
     }
   }
 
   override def toString = s"Project($root, $name, $id, $sourceURL)"
+
+  private def visitError (editor :Editor, err :Compiler.Error) {
+    editor.visitFile(new File(err.path)).point() = err.loc
+    editor.popStatus(err.descrip)
+  }
 
   /** When a project is released by all project modes, it goes back into hibernation. This method
     * should shut down any complex services maintained by the project. The default implementation
@@ -92,16 +138,13 @@ abstract class Project {
   /** If this mode supports a compiler, this should create and return a new compiler instance. */
   protected def createCompiler () :Option[Compiler] = None
 
-  protected def summarizeNotes (notes :Seq[Compiler.Note]) :String = {
-    val errors = notes.count(_.isInstanceOf[Compiler.Error])
-    val warnings = notes.count(_.isInstanceOf[Compiler.Warning])
-    s"Compilation completed with $warnings warning(s) and $errors error(s)."
-  }
-
   private[this] var _refcount = 0 // see reference/release
-  private[this] val _compileNotes = Value(Seq[Compiler.Note]())
+
   // a reference to our active compiler, if one is resolved; a compiler is created on demand
   // when a project mode references this project and requests it; the compiler remains active
   // until all project modes relinquish the project, at which point it's shutdown
   private[this] var _compiler :Option[Compiler] = null
+
+  private[this] var _compileErrs = Seq[Compiler.Error]()
+  private[this] var _currentErr = -1
 }

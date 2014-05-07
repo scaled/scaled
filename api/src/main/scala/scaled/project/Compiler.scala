@@ -4,7 +4,6 @@
 
 package scaled.project
 
-import java.io.File
 import reactual.Future
 import scaled._
 
@@ -14,8 +13,16 @@ import scaled._
 abstract class Compiler {
   import Compiler._
 
-  /** Initiates a compilation, returns a future that reports notes generated thereby. */
-  def compile () :Future[Seq[Note]]
+  /** Initiates a compilation, sends output to `buffer`, returns a future that provides a summary
+    * string to be reported to the user when the compile completes. */
+  def compile (buffer :Buffer) :Future[String]
+
+  /** Scans `buffer` from `start` to find the next error.
+    *
+    * @return a tuple containing an error, and the location at which to search for subsequent
+    * errors, or `None` if no next error was found.
+    */
+  def nextError (buffer :Buffer, start :Loc) :Option[(Error,Loc)]
 
   /** Called when this compiler is no longer needed. This should terminate any external processes
     * and release any resources retained by this instance. */
@@ -25,27 +32,10 @@ abstract class Compiler {
 /** Static [[Compiler]] stuffs. */
 object Compiler {
 
-  /** Models feedback from the compiler about some piece of code. */
-  abstract class Note {
-    /** The compilation unit to which the note applies. */
-    def file :File
-    /** The character offset into the file to which the note pertains. */
-    def offset :Int
-    /** The length of the region to which the note pertains. */
-    def length :Int
-    /** The message associated with the note. */
-    def message :String
-    /** The style class to apply to the noted region. */
-    def styleClass :String
-  }
-
-  /** Represents a compiler warning. */
-  case class Warning (file :File, offset :Int, length: Int, message :String) extends Note {
-    def styleClass = EditorConfig.warnStyle
-  }
-
-  /** Represents a compiler error. */
-  case class Error (file :File, offset :Int, length: Int, message :String) extends Note {
-    def styleClass = EditorConfig.errorStyle
-  }
+  /** Represents a compilation error extracted from a buffer.
+    * @param path the path to the compilation unit to which the error refers
+    * @param loc the location of the error in that compilation unit
+    * @param descrip the description of the error provided by the compiler
+    */
+  case class Error (path :String, loc :Loc, descrip :String)
 }
