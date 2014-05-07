@@ -33,6 +33,74 @@ abstract class Matcher {
   def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) :Loc
 }
 
+/** A specialized matcher that searches and matches regular expressions. */
+class RegexpMatcher (pattern :String) extends Matcher {
+
+  private val p = Pattern.compile(pattern)
+  private val m = p.matcher("")
+
+  // contains the last successful match result; in searchBackward we have to repeatedly apply our
+  // matcher looking for the last match in the region, so we store the last successful match here
+  // to avoid having to recompute it after we learn that it was the last match by failing a
+  // subsequent match
+  private var result :MatchResult = _
+
+  // java's Matcher wants to operate on CharSequence, but we have an array, so we create use this
+  // reusable facade to avoid creating garbage on every match (assuming java's Matcher doesn't
+  // create garbage itself; probably wishful thinking...)
+  private var current :Array[Char] = _
+  private val curseq = new CharSequence() {
+    def length = current.length
+    def charAt (ii :Int) = current(ii)
+    def subSequence (start :Int, end :Int) = new String(current, start, end-start)
+  }
+
+  /** Returns the text matched by the supplied regexp group.
+    * This is only valid after a successful match.*/
+  def group (number :Int) :String = result.group(number)
+
+  override def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
+    prep(haystack, begin, end)
+    if (!m.find) -1 else m.start
+  }
+
+  def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
+    prep(haystack, begin, end)
+    var start = begin
+    while (start <= from && m.find(start)) {
+      result = m.toMatchResult
+      start = m.end
+    }
+    if (start == begin) -1 else result.start
+  }
+
+  override def matches (haystack :Array[Char], hfirst :Int, hlast :Int) :Boolean = {
+    prep(haystack, hfirst, hlast)
+    m.lookingAt
+  }
+
+  override def matchLength = result.end - result.start
+
+  override def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) = {
+    val end = buffer.forward(at, matchLength)
+    val sb = new StringBuffer()
+    m.appendReplacement(sb, Line.toText(lines))
+    sb.delete(0, m.start) // sigh...
+    val repl = Line.fromText(sb.toString)
+    buffer.replace(at, end, repl)
+    at + repl
+  }
+
+  override def toString = pattern
+
+  private def prep (haystack :Array[Char], start :Int, end :Int) {
+    current = haystack
+    m.reset(curseq)
+    m.region(start, end)
+    result = m
+  }
+}
+
 object Matcher {
   import Chars._
 
@@ -64,67 +132,7 @@ object Matcher {
   }
 
   /** Returns a regep matcher on `pattern`. */
-  def regexp (pattern :String) :Matcher = new Matcher() {
-    private val p = Pattern.compile(pattern)
-    private val m = p.matcher("")
-
-    // contains the last successful match result; in searchBackward we have to repeatedly apply our
-    // matcher looking for the last match in the region, so we store the last successful match here
-    // to avoid having to recompute it after we learn that it was the last match by failing a
-    // subsequent match
-    private var result :MatchResult = _
-
-    // java's Matcher wants to operate on CharSequence, but we have an array, so we create use this
-    // reusable facade to avoid creating garbage on every match (assuming java's Matcher doesn't
-    // create garbage itself; probably wishful thinking...)
-    private var current :Array[Char] = _
-    private val curseq = new CharSequence() {
-      def length = current.length
-      def charAt (ii :Int) = current(ii)
-      def subSequence (start :Int, end :Int) = throw new UnsupportedOperationException()
-    }
-
-    def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
-      prep(haystack, begin, end)
-      if (!m.find) -1 else m.start
-    }
-
-    def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
-      prep(haystack, begin, end)
-      var start = begin
-      while (start <= from && m.find(start)) {
-        result = m.toMatchResult
-        start = m.end
-      }
-      if (start == begin) -1 else result.start
-    }
-
-    def matches (haystack :Array[Char], hfirst :Int, hlast :Int) :Boolean = {
-      prep(haystack, hfirst, hlast)
-      m.lookingAt
-    }
-
-    def matchLength = result.end - result.start
-
-    def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) = {
-      val end = buffer.forward(at, matchLength)
-      val sb = new StringBuffer()
-      m.appendReplacement(sb, Line.toText(lines))
-      sb.delete(0, m.start) // sigh...
-      val repl = Line.fromText(sb.toString)
-      buffer.replace(at, end, repl)
-      at + repl
-    }
-
-    override def toString = pattern
-
-    private def prep (haystack :Array[Char], start :Int, end :Int) {
-      current = haystack
-      m.reset(curseq)
-      m.region(start, end)
-      result = m
-    }
-  }
+  def regexp (pattern :String) :RegexpMatcher = new RegexpMatcher(pattern)
 
   /** Returns matchers for use in searching for `sought`. If `sought` contains all lower-case
     * characters, a case insensitive matchers are returned, otherwise exact case matchers are
