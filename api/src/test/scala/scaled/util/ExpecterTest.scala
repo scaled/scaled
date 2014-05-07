@@ -46,10 +46,10 @@ class ExpecterTest {
         fail(exn.toString)
       }
     }
-    ex.interact(Seq("hello"), (line, isErr) => {
+    ex.interact(Seq("hello")) { (line, isErr) =>
       assertEquals("hello", line)
       true
-    })
+    }
     ex.close()
     assertEquals(0, ex.waitFor())
     try exec.executeAll()
@@ -62,7 +62,7 @@ class ExpecterTest {
 
   @Test def testMultilineInteraction () {
     val exec = new AccumExec()
-    val ex = new Expecter(exec, "tee", "test.txt") {
+    val ex = new Expecter(exec, "cat") {
       override def onUnexpected (line :String, isErr :Boolean) {
         fail(s"Unexpected $line $isErr")
       }
@@ -70,13 +70,13 @@ class ExpecterTest {
         fail(exn.toString)
       }
     }
-    ex.interact(Seq("howdy", "world"), (line, isErr) => {
+    ex.interact(Seq("howdy", "world")) { (line, isErr) =>
       if ("howdy" == line) false
       else {
         if ("world" != line) fail("Unexpected $line $isErr")
         true
       }
-    })
+    }
     ex.close()
     assertEquals(0, ex.waitFor())
     exec.executeAll()

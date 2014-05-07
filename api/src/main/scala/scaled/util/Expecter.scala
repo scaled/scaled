@@ -35,7 +35,7 @@ abstract class Expecter (exec :Executor, command :String*) {
     * @return true if the interaction was started, false if it was not because another interaction
     * is still active.
     */
-  def interact (input :Seq[String], responder :(String, Boolean) => Boolean) :Boolean = {
+  def interact (input :Seq[String])(responder :(String, Boolean) => Boolean) :Boolean = {
     if (_responder != null) false
     else {
       _responder = responder
