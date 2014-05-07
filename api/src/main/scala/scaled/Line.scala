@@ -245,6 +245,9 @@ object Line {
     // TODO: remove tab hackery when we support tabs
     text.split(System.lineSeparator, -1).map(_.replace('\t', ' ')).map(new Line(_))
 
+  /** Calls [[fromText]] on `text` and tacks on a blank line. */
+  def fromTextNL (text :String) = fromText(text) :+ Empty
+
   /** Converts `lines` to a string which will contain line separators between lines. */
   def toText (lines :Seq[LineV]) :String = {
     val buf = new StringBuilder()
