@@ -111,9 +111,8 @@ Scaled extensions come in three main flavors:
   * modes: major and minor editing modes (ala Emacs), which provide editing smarts specific to a
     particular programming language or activity
 
-An example of all of these flavors working in harmony is the "project" package (which is a built-in
-package, but could easily be maintained outside the Scaled core if there was a good reason to do
-so). Project support comes in three parts:
+An example of all of these flavors working in harmony is the `project-service` package which
+provides a framework for grokking projects. Project support comes in three parts:
 
   * `ProjectService` is a service that a major mode can inject to gain access to "project services"
      (e.g. enumerate all files in the project, rebuild the project)
@@ -138,6 +137,7 @@ To make interesting things happen, check out the following extensions:
 
     cd scaled
     git clone https://github.com/scaled/textmate-grammar.git
+    git clone https://github.com/scaled/project-service.git
     git clone https://github.com/scaled/maven-project.git
     git clone https://github.com/scaled/java-mode.git
     git clone https://github.com/scaled/scala-mode.git
@@ -150,6 +150,7 @@ into the `devel` build. Once you have them checked out, your directory structure
   * `scaled/editor` - same as before
   * `scaled/devel` - same as before
   * `scaled/textmate-grammar` - a library for grokking TextMate grammars
+  * `scaled/project-service` - defines project-mode and project services
   * `scaled/maven-project` - extends project-mode with some Maven project smarts
   * `scaled/java-mode` - a (primitive) major mode for editing .java, and .properties files
   * `scaled/scala-mode` - a (less primitive) major mode for editing .scala files
