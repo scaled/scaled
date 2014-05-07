@@ -100,6 +100,7 @@ abstract class Project {
       case Some(comp) =>
         // create our compilation output buffer if necessary
         val buf = editor.createBuffer(s"*compile-$name*", "log" /*project-compile*/, true).buffer
+        val start = System.currentTimeMillis
         buf.replace(buf.start, buf.end, Line.fromTextNL(s"Compilation started at ${new Date}..."))
         comp.compile(buf).onFailure(editor.emitError).onSuccess { msg =>
           // scan the results buffer for compiler errors
@@ -111,7 +112,8 @@ abstract class Project {
           loop(buf.start)
           _currentErr = -1
           _compileErrs = errs.result
-          buf.append(Line.fromTextNL(s"Compilation started at ${new Date}..."))
+          val duration = (System.currentTimeMillis - start) / 1000
+          buf.append(Line.fromTextNL(s"Completed in $duration s, at ${new Date}."))
           // report feedback to the user
           editor.popStatus(msg)
         }
