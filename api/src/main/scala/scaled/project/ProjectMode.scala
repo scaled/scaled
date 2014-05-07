@@ -80,4 +80,9 @@ class ProjectMode (env :Env, psvc :ProjectService, major :EditingMode) extends M
   def visitPrevError () {
     project.visitPrevError(editor)
   }
+
+  @Fn("Displays the buffer that contains compiler output for this project.")
+  def showCompilerOutput () {
+    editor.visitBuffer(project.compileBufferName)
+  }
 }

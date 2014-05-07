@@ -13,9 +13,9 @@ import scaled._
 abstract class Compiler {
   import Compiler._
 
-  /** Initiates a compilation, sends output to `buffer`, returns a future that provides a summary
-    * string to be reported to the user when the compile completes. */
-  def compile (buffer :Buffer) :Future[String]
+  /** Initiates a compilation, sends output to `buffer`, returns a future that indicates compilation
+    * success or failure. */
+  def compile (buffer :Buffer) :Future[Boolean]
 
   /** Scans `buffer` from `start` to find the next error.
     *

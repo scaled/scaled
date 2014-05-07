@@ -89,6 +89,9 @@ abstract class Project {
     // TODO
   }
 
+  /** Returns the name of the buffer to which we record compiler output. */
+  def compileBufferName :String = s"*compile-$name*"
+
   /** Initiates a recompilation of this project, if supported.
     * @return a future which will report a summary of the compilation, or a failure if compilation
     * is not supported by this project.
@@ -99,10 +102,10 @@ abstract class Project {
       case None => editor.emitStatus("Compilation is not supported by this project.")
       case Some(comp) =>
         // create our compilation output buffer if necessary
-        val buf = editor.createBuffer(s"*compile-$name*", "log" /*project-compile*/, true).buffer
+        val buf = editor.createBuffer(compileBufferName, "log" /*project-compile*/, true).buffer
         val start = System.currentTimeMillis
         buf.replace(buf.start, buf.end, Line.fromTextNL(s"Compilation started at ${new Date}..."))
-        comp.compile(buf).onFailure(editor.emitError).onSuccess { msg =>
+        comp.compile(buf).onFailure(editor.emitError).onSuccess { success =>
           // scan the results buffer for compiler errors
           val errs = Seq.newBuilder[Compiler.Error]
           @inline @tailrec def loop (loc :Loc) :Unit = comp.nextError(buf, loc) match {
@@ -115,6 +118,8 @@ abstract class Project {
           val duration = (System.currentTimeMillis - start) / 1000
           buf.append(Line.fromTextNL(s"Completed in $duration s, at ${new Date}."))
           // report feedback to the user
+          val result = if (success) "succeeded" else "failed"
+          val msg = s"Compilation $result with ${_compileErrs.size} error(s)."
           editor.popStatus(msg)
         }
         editor.emitStatus("Recompile initiated...")
