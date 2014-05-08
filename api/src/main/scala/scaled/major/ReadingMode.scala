@@ -275,24 +275,34 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     view.point() = backwardWord(view.point())
   }
 
+  // track the current column; we'll use that to track our "desired column" in situations where
+  // we move vertically through lines that are not wide enough to accommodate our desired column
+  // and then back into lines that are
+  private[this] var desiredColumn = 0
+  view.point.onValue { p => desiredColumn = p.col }
+
   @Fn("Moves the point down one line.")
   def nextLine () {
     val old = view.point()
-    // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
-    // means not bounding the column, but instead coping with a current column that is beyond
-    // the end of the current line (will that be a pandora's box?)
-    view.point() = old.nextL
+    // attempt to move into our "desired column" in the next row; in most cases the desired column
+    // will be equal to the current column, but when moving from a long line, through some short
+    // ones and back into a long one, a longer desired column may be preserved
+    val oldDesiredColumn = desiredColumn
+    view.point() = Loc(old.row+1, oldDesiredColumn)
     if (old == view.point()) editor.emitStatus("End of buffer.") // TODO: with beep?
+    // if the line to which we moved was short, desiredColumn will have been overwritten with
+    // a too small value; so we restore it now
+    desiredColumn = oldDesiredColumn
   }
 
   @Fn("Moves the point up one line.")
   def previousLine () {
     val old = view.point()
-    // TODO: emacs preserves the column we "want" to be in, we should do that too; maybe that
-    // means not bounding the column, but instead coping with a current column that is beyond
-    // the end of the current line (will that be a pandora's box?)
-    view.point() = old.prevL
+    // see nextLine() for a description of what we're doing here with desiredColumn
+    val oldDesiredColumn = desiredColumn
+    view.point() = Loc(old.row-1, oldDesiredColumn)
     if (old == view.point()) editor.emitStatus("Beginning of buffer.") // TODO: with beep?
+    desiredColumn = oldDesiredColumn
   }
 
   // TODO: add config: paragraph-ignore-whitespace and treat non-empty lines which contain only
