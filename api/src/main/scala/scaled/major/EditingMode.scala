@@ -191,7 +191,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
   def indentForTabCommand () {
-    editor.emitStatus("TODO: tabs!")
+    // TODO: I suppose we'll eventually have to support real tabs... sigh
+    view.point() = buffer.insert(view.point(), Line.fromText("  "))
   }
 
   @Fn("""Swaps the character at the point with the character preceding it, and moves the point
