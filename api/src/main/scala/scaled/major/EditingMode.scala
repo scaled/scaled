@@ -144,6 +144,12 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     else editor.popStatus("Region already sorted.")
   }
 
+  /** Reverses the lines in the region `[start, end)`. */
+  def reverseLinesIn (start :Loc, end :Loc) {
+    val r = Region(start, buffer.backward(end, 1))
+    buffer.replace(r, buffer.region(r).reverse)
+  }
+
   //
   // CHARACTER EDITING FNS
 
@@ -266,6 +272,9 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Alphabetically sorts the lines in the current region.""")
   def sortLines () :Unit = withRegion(sortLinesIn)
+
+  @Fn("Reverses the order of lines in the current region.")
+  def reverseRegion () :Unit = withRegion(reverseLinesIn)
 
   //
   // KILLING AND YANKING FNS
