@@ -18,8 +18,8 @@ object EditingConfig extends Config.Defs {
           if `auto-fill` is true). Set to -1 to use the current window width as the fill column.""")
   val fillColumn = key(-1)
 
-  @Var("""If true, inserting a character beyond `fill-column` automatically breaks the line at the
-          previous space.""")
+  @Var("""If true, inserting a character at or beyond `fill-column` automatically breaks the line
+          at the previous space.""")
   val autoFill = key(false)
 }
 
@@ -169,15 +169,27 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     // TODO!
   }
 
-  /** Breaks the line that contains `p` on the first space character preceding `p`. Also updates
-    * the point to preserve its position in the newly wrapped text. */
-  def breakForAutofill (p :Loc) {
+  /** Returns true if we should auto-fill, false if not. The default implementation checks that
+    * auto-fill is enabled, and that the point is at or beyond the fill column.
+    * @param p the current point.
+    */
+  def shouldAutoFill (p :Loc) :Boolean = config(EditingConfig.autoFill) && p.col >= fillColumn
+
+  /** Computes the location at which we should break the line that contains `p` for auto-fill.
+    * The default implementation seeks backward from `p` to the first space.
+    * @return the location at which to break the line, or `Loc.None` to cancel the break.
+    */
+  def computeAutoBreak (p :Loc) :Loc =
     buffer.findBackward(Matcher.exact(" "), p, p.atCol(0)) match {
-      case Loc.None => // oh well, nothing doing
-      case sloc =>
-        buffer.split(sloc.nextC)
-        view.point() = Loc(p.row+1, p.col-sloc.col-1)
+      case Loc.None => Loc.None
+      case space => space.nextC // break *after* the space
     }
+
+  /** Auto-breaks a line at `at`. Also updates the point to preserve its position. */
+  def autoBreak (at :Loc) {
+    val p = view.point()
+    buffer.split(at)
+    view.point() = Loc(p.row+1, p.col-at.col)
   }
 
   //
@@ -187,9 +199,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def selfInsertCommand (typed :String) {
     // if auto-fill is activated and we're about to insert beyond the fill column, first break
     // the current line at the previous space
-    if (config(EditingConfig.autoFill) &&
-        view.point().col >= fillColumn) breakForAutofill(view.point())
-    // insert the typed character at the point and move the point to after the insert
+    val p = view.point()
+    if (shouldAutoFill(p)) {
+      val at = computeAutoBreak(p)
+      if (at != Loc.None) autoBreak(at)
+    }
+    // insert the typed character at the point and move the point to after the insert;
+    // note we re-read view.point() here because breakForAutofill() may have changed it
     view.point() = view.buffer.insert(view.point(), typed, Styles.None)
   }
 
