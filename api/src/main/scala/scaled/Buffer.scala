@@ -281,11 +281,13 @@ abstract class Buffer extends BufferV {
   /** That which handles undoing and redoing for this buffer. */
   def undoer :Undoer
 
-  /** Inserts the single character `c` into this buffer at `loc` with CSS style classes `styles`. */
-  def insert (loc :Loc, c :Char, style :Styles) :Unit
+  /** Inserts the single character `c` into this buffer at `loc` with CSS style classes `styles`.
+    * @return the buffer location just after the inserted character. */
+  def insert (loc :Loc, c :Char, style :Styles) :Loc
 
-  /** Inserts the raw string `s` into this buffer at `loc` with CSS style class `style`. */
-  def insert (loc :Loc, s :String, styles :Styles) {
+  /** Inserts the raw string `s` into this buffer at `loc` with CSS style class `style`.
+    * @return the buffer location just after the inserted string. */
+  def insert (loc :Loc, s :String, styles :Styles) :Loc = {
     if (s.length == 1) insert(loc, s.charAt(0), styles)
     else insert(loc, new Line(s, styles))
   }

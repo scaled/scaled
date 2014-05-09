@@ -175,7 +175,7 @@ class BufferImpl private (
       middle.toSeq
     }
 
-  override def insert (loc :Loc, c :Char, styles :Styles) {
+  override def insert (loc :Loc, c :Char, styles :Styles) = {
     _lines(loc.row).insert(loc, c, styles)
     noteInsert(loc, loc.nextC)
   }
