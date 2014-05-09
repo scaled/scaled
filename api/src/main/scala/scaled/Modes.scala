@@ -10,9 +10,10 @@ import scala.collection.mutable.ArrayBuffer
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
   *  - one it makes passing a bundle of standard depends on to a superclass constructor less
-  * onerous,
+  *    onerous,
   *  - and two it allows us to provide new standard dependencies without breaking the constructor
-  * signatures of every mode in the known universe. */
+  *    signatures of every mode in the known universe.
+  */
 abstract class Env {
 
   /** For debug logging. */
