@@ -52,12 +52,7 @@ class ExpecterTest {
     }
     ex.close()
     assertEquals(0, ex.waitFor())
-    try exec.executeAll()
-    catch {
-      case t :Throwable => ex.kill() ; throw t
-    }
-    finally {
-    }
+    exec.executeAll()
   }
 
   @Test def testMultilineInteraction () {
