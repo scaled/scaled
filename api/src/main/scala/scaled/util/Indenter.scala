@@ -29,7 +29,7 @@ abstract class Indenter (val config :Config, val buffer :BufferV) {
   protected def indentFrom (anchor :Int, steps :Int) :Int =
     anchor + steps * config(CodeConfig.indentWidth)
 
-  /** Issues an indentation debugging message. Uncomment below to debug your indenters. */
+  /** Issues an indentation debugging message. */
   protected def debug (msg :String) :Unit = if (config(CodeConfig.debugIndent)) println(msg)
 }
 

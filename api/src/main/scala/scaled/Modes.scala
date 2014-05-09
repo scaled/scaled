@@ -5,6 +5,7 @@
 package scaled
 
 import java.io.FileNotFoundException
+import reactual.Value
 import scala.collection.mutable.ArrayBuffer
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
@@ -29,8 +30,11 @@ abstract class Env {
   /** The dispatcher that is handling interactions. */
   val disp :Dispatcher
 
-  /** Resolves the config for `mode` using the supplied `defs`. This is an implementation detail that
-    * unfortunately has to live out in the open. Please to ignore. */
+  /** Displays mode information to the user. Extensible. */
+  val mline :ModeLine
+
+  /** Resolves the config for `mode` using the supplied `defs`. This is an implementation detail
+    * that unfortunately has to live out in the open. Please to ignore. */
   def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
 }
 
@@ -178,6 +182,9 @@ abstract class MajorMode (env :Env) extends Mode(env) {
   override def desc = if (info == null) "unknown" else info.desc
   override def tags = if (info == null) Array()   else info.tags
   private lazy val info = getClass.getAnnotation(classOf[Major])
+
+  // display our major mode name in the modeline
+  env.mline.addDatum(Value(s"[$name]"), "Active major mode")
 
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
     * for key presses that result in a "typed" character. Key presses that do not generate
