@@ -5,10 +5,8 @@
 package scaled
 
 import java.util.Arrays
-
-import scala.annotation.tailrec
-
 import reactual.SignalV
+import scala.annotation.tailrec
 
 /** Models a single line of text, which may or may not be part of a buffer.
   *
@@ -219,6 +217,8 @@ class Line (_cs :Array[Char], _ss :Array[Styles], protected val _offset :Int,
   def this (cs :Array[Char], styles :Styles) = this(cs, Array.fill(cs.length)(styles))
   def this (s :String, styles :Styles) = this(s.toCharArray, styles)
   def this (s :String) = this(s.toCharArray, Styles.None)
+  def this (cs :CharSequence, styles :Styles) = this(Line.toCharArray(cs), Styles.None)
+  def this (cs :CharSequence) = this(cs, Styles.None)
 
   require(_cs != null && _ss != null && _offset >= 0 && length >= 0,
           s"Invalid Line args ${_cs} ${_ss} ${_offset} $length")
@@ -257,5 +257,14 @@ object Line {
       ii += 1
     }
     buf.toString
+  }
+
+  /** Converts `cs` into an array of `Char`. */
+  def toCharArray (cs :CharSequence) :Array[Char] = {
+    val arr = new Array[Char](cs.length)
+    var ii = 0 ; while (ii < arr.length) {
+      arr(ii) = cs.charAt(ii) ; ii += 1
+    }
+    arr
   }
 }
