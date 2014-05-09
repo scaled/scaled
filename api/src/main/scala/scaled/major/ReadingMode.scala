@@ -30,7 +30,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   override def missedFn  :Option[String] = Some("unknown-command")
 
-  override def configDefs = EditingConfig :: super.configDefs
+  override def configDefs = ReadingConfig :: super.configDefs
   override def keymap = Seq(
 
     // mark manipulation commands
