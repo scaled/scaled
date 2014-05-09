@@ -4,6 +4,7 @@
 
 package scaled
 
+import java.io.FileNotFoundException
 import reactual.ValueV
 
 /** Provides editor configuration to modes. The global configuration and mode configuration will be
@@ -145,7 +146,10 @@ object Config {
     }
 
     // useful for loading resources in our configs
-    protected def stream (path :String) = getClass.getClassLoader.getResourceAsStream(path)
+    protected def stream (path :String) = getClass.getClassLoader.getResourceAsStream(path) match {
+      case null => throw new FileNotFoundException(path)
+      case strm => strm
+    }
   }
 }
 
