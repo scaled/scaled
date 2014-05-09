@@ -32,14 +32,14 @@ project from Github and have a directory structure that contains three submodule
   * `scaled/editor` - implementation details: the JavaFX internals, package management, etc.
   * `scaled/devel` - a meta-package that makes life easier when developing (see below)
 
-This is merely the core of the editor. Most functionality lives in extension packages, which you
-can read about below. Before we get into extensions, let's get the core editor built and running.
-This requires first checking out two libraries on which Scaled depends, and building/installing
-those locally. Before we do *that*, let's pick our build system poison.
+This is merely the core of the editor. Most functionality lives in extension packages, which you can
+read about below. Before we get into extensions, let's get the core editor built and running. This
+requires first checking out two libraries on which Scaled depends, and building/installing those
+locally. Before we do *that*, let's pick our build system poison.
 
-NOTE: all of this has to be done with Java 8. If you're not yet regularly building things using
-Java 8, you will need to do some jockeying to get Maven or SBT working therewith. Google is your
-friend here.
+NOTE: all of this has to be done with Java 8. If you're not yet regularly building things using Java
+8, you will need to do some jockeying to get Maven or SBT working therewith. Google is your friend
+here.
 
 ### Building with Maven
 
@@ -89,9 +89,9 @@ The `devel` submodule exists to make life easier when working on Scaled. This is
 
 In normal operation, the Scaled core editor loads installed packages into a tree of custom class
 loaders. A package can depend on other packages, or on plain old Maven or Ivy dependencies. This
-allows packages to be loaded and unloaded on demand, but confuses the crap out of useful
-development tools like JRebel. It also results in a massive proliferation of little projects, which
-can be annoying to build.
+allows packages to be loaded and unloaded on demand, but confuses the crap out of useful developmen
+tools like JRebel. It also results in a massive proliferation of little projects, which can be
+annoying to build.
 
 When running Scaled from the `devel` package, the build system aggregates the editor and whatever
 extension package dependencies you care about into a single project. This is all included in a
@@ -156,32 +156,31 @@ into the `devel` build. Once you have them checked out, your directory structure
   * `scaled/scala-mode` - a (less primitive) major mode for editing .scala files
   * `scaled/xml-mode` - a (primitive) major mode for editing XML files
 
-Now you can use the `bootstrap` Maven profile to automatically include these depends into the
-build:
+Now you can use the `bootstrap` Maven profile to automatically include these depends into the build:
 
     mvn test -Pdevel -Pbootstrap
 
-SBT is informed of profiles via a Java System property (`-Dprofiles="foo bar baz"`) so assuming
-your SBT script supports it (as the excellent [sbt-extras] does), invoke SBT thusly:
+SBT is informed of profiles via a Java System property (`-Dprofiles="foo bar baz"`) so assuming your
+SBT script supports it (as the excellent [sbt-extras] does), invoke SBT thusly:
 
     sbt -Dprofiles="devel bootstrap"
 
 ## Using Scaled
 
 With the above extensions installed, you can run Scaled and type `C-x C-f` (that means hold down
-control and press and release `x`, keep control held down and press and release `f`) and type
-`pTAB` into the box that pops up and it will load the `pom.xml` file.
+control and press and release `x`, keep control held down and press and release `f`) and type `pTAB`
+into the box that pops up and it will load the `pom.xml` file.
 
 You should see colorized XML in the buffer (if not something's not working). Assuming you do see
 colorized XML, then you'll also be in project mode which means that if you type `C-x C-f` again,
 that will have been rerouted by the project minor mode to load any file in the entire project (you
 can access the default `find-file` via `S-C-x S-C-f`).
 
-If you ran from Maven, the cwd will have been the top-level `scaled` directory and you'll be
-loading from the top-level project defined by the `scaled/pom.xml` in that directory, which means
-you'll see all the Scaled source if you try to load another file and use tab completion. If you ran
-from SBT, the cwd will have been the `scaled/devel` submodule directory and you'll be loading from
-the project defined by `scaled/devel/pom.xml` which contains only two files.
+If you ran from Maven, the cwd will have been the top-level `scaled` directory and you'll be loading
+from the top-level project defined by the `scaled/pom.xml` in that directory, which means you'll see
+all the Scaled source if you try to load another file and use tab completion. If you ran from SBT,
+the cwd will have been the `scaled/devel` submodule directory and you'll be loading from the project
+defined by `scaled/devel/pom.xml` which contains only two files.
 
 In that case you can use `S-C-x S-C-f` (or `M-x find-file-default`) to load the `scaled/pom.xml`
 file and trigger a switch to the parent project. Eventually `project-mode` and tab completion will
