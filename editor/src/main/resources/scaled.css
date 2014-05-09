@@ -1,4 +1,4 @@
-.root {
+.root, .tooltip {
   /** TODO: per-platform default stylesheets? or is there a way to fallback? */
   -fx-font-family: "Menlo";
   -fx-font-size: 12px;
@@ -15,13 +15,17 @@
   -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
 }
 
-.overpop {
+.overpop, .tooltip {
   -fx-text-fill: white;
   -fx-padding: 5px;
   -fx-background-color: #DBDBDB77;
   -fx-background-radius: 5;
   -fx-border-radius: 5;
   -fx-effect: dropshadow( one-pass-box , black , 8 , 0.0 , 4 , 4 );
+}
+
+.tooltip {
+  -fx-font-size: 14px;
 }
 
 .overpop .status {
