@@ -135,7 +135,7 @@ class BufferImpl private (
       temp.delete()
     }
 
-    _file() = file
+    _file.updateForce(file)
     _name() = file.getName
     _dirty() = false
   }

@@ -410,7 +410,8 @@ abstract class RBuffer extends Buffer {
   /** A reactive view of [[name]]. */
   def nameV :ValueV[String]
 
-  /** A reactive view of [[file]]. */
+  /** A reactive view of [[file]]. This value is forcibly updated when the buffer is saved (even if
+    * the file did not change). One can thus listen to this value to react to all buffer saves. */
   def fileV :ValueV[File]
 
   /** The current mark, if any. */
