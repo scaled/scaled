@@ -13,7 +13,14 @@ import scaled.util.Chars
 
 /** Configuration for [[EditingMode]]. */
 object EditingConfig extends Config.Defs {
-  // nada for now
+
+  @Var("""The column at which lines are wrapped (by `fill-` fns, and automatically during typing
+          if `auto-fill` is true). Set to -1 to use the current window width as the fill column.""")
+  val fillColumn = key(-1)
+
+  @Var("""If true, inserting a character beyond `fill-column` automatically breaks the line at the
+          previous space.""")
+  val autoFill = key(false)
 }
 
 /** A base class for all modes that support interactive text editing. This mode extends
@@ -22,7 +29,6 @@ object EditingConfig extends Config.Defs {
   */
 abstract class EditingMode (env :Env) extends ReadingMode(env) {
   import Chars._
-  import EditingConfig._
   import EditorConfig._
 
   override def defaultFn :Option[String] = Some("self-insert-command")
@@ -48,6 +54,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
     "C-M-l"   -> "sort-paragraph",
     // NONE   -> "sort-lines",
+    // NONE   -> "reverse-region",
+    "M-q"     -> "fill-paragraph",
 
     // killing and yanking commands
     "C-w"     -> "kill-region",
@@ -150,16 +158,39 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     buffer.replace(r, buffer.region(r).reverse)
   }
 
+  /** Returns the currently configured fill column. */
+  def fillColumn :Int = config(EditingConfig.fillColumn) match {
+    case -1 => view.width()-1
+    case cc => cc
+  }
+
+  /** Refills the lines in the region `[start, end)`, wrapping them at `fill-column`. */
+  def refillLinesIn (start :Loc, end :Loc) {
+    // TODO!
+  }
+
+  /** Breaks the line that contains `p` on the first space character preceding `p`. Also updates
+    * the point to preserve its position in the newly wrapped text. */
+  def breakForAutofill (p :Loc) {
+    buffer.findBackward(Matcher.exact(" "), p, p.atCol(0)) match {
+      case Loc.None => // oh well, nothing doing
+      case sloc =>
+        buffer.split(sloc.nextC)
+        view.point() = Loc(p.row+1, p.col-sloc.col-1)
+    }
+  }
+
   //
   // CHARACTER EDITING FNS
 
   @Fn("Inserts the character you typed.")
   def selfInsertCommand (typed :String) {
-    // insert the typed character at the point
-    val p = view.point()
-    view.buffer.insert(p, typed, Styles.None)
-    // move the point to the right by the appropriate amount
-    view.point() = p + (0, typed.length)
+    // if auto-fill is activated and we're about to insert beyond the fill column, first break
+    // the current line at the previous space
+    if (config(EditingConfig.autoFill) &&
+        view.point().col >= fillColumn) breakForAutofill(view.point())
+    // insert the typed character at the point and move the point to after the insert
+    view.point() = view.buffer.insert(view.point(), typed, Styles.None)
   }
 
   @Fn("Deletes the character immediately previous to the point.")
@@ -276,6 +307,11 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("Reverses the order of lines in the current region.")
   def reverseRegion () :Unit = withRegion(reverseLinesIn)
+
+  @Fn("""Fills the paragraph at or before the point. All lines in the paragraph will be
+         concatenated and then rewrapped into lines no longer than `fill-column` characters in
+         length.""")
+  def fillParagraph () :Unit = withParagraph(refillLinesIn)
 
   //
   // KILLING AND YANKING FNS
