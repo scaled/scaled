@@ -246,7 +246,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
     // TODO: move this to LineNumberMode? (and enable col number therein)
     val view = new BufferViewImpl(this, buf, width, height)
-    mline.addDatum(view.point map(p => s" L${p.row+1} "), "Current line number")
+    mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
     val disp = new DispatcherImpl(this, resolver, view, mline, mode, args)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
