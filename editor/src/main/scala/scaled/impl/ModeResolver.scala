@@ -21,12 +21,12 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
   def minorModes (tags :Array[String]) :Set[String] = Set()
 
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
-  def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLineImpl, disp :DispatcherImpl,
+  def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
                     args :List[Any]) :MajorMode =
     resolve(mode, view, mline, disp, args, requireMajor(mode))
 
   /** Resolves and instantiates the minor mode `mode` with the supplied environment. */
-  def resolveMinor (mode :String, view :BufferViewImpl, mline :ModeLineImpl, disp :DispatcherImpl,
+  def resolveMinor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
                     major :MajorMode, args :List[Any]) :MinorMode =
     resolve(mode, view, mline, disp, major :: args, requireMinor(mode))
 
@@ -43,7 +43,7 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
     else throw new IllegalArgumentException(s"$mode is not a ${mclass.getSimpleName}.")
   }
 
-  private def resolve[T] (mode :String, view :BufferViewImpl, mline :ModeLineImpl,
+  private def resolve[T] (mode :String, view :BufferViewImpl, mline :ModeLine,
                           disp :DispatcherImpl, args :List[Any], modeClass :Class[T]) :T = {
     val envargs = new EnvImpl(log, exec, editor, view, mline, disp) {
       def resolveConfig (mode :String, defs :List[Config.Defs]) =

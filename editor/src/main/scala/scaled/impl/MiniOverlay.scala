@@ -6,9 +6,9 @@ package scaled.impl
 
 import com.sun.javafx.tk.Toolkit
 import javafx.geometry.Insets
-import javafx.scene.control.Label
+import javafx.scene.control.{Label, Tooltip}
 import javafx.scene.layout.BorderPane
-import reactual.{Future, Promise}
+import reactual.{Future, Promise, ValueV}
 import scala.annotation.tailrec
 import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
@@ -63,8 +63,12 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
     val modeArgs = ui :: result :: args
-    // TODO: provide NOOP modeline instead of null?
-    val disp = new DispatcherImpl(editor, editor.resolver, view, null, s"mini-$mode", modeArgs)
+    // provide a NOOP modeline to minibuffer modes, they have no modes
+    val mline = new ModeLine() {
+      def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) =
+        new AutoCloseable() { def close () {} } // noop!
+    }
+    val disp = new DispatcherImpl(editor, editor.resolver, view, mline, s"mini-$mode", modeArgs)
     val area = new BufferArea(editor, view, disp) {
       override protected def wasResized (widthChars :Int, heightChars :Int) {
         // only persist width; height is unfortunately delivered bogus values due to JavaFX
@@ -88,7 +92,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
   } catch {
     case e :Exception =>
       result.fail(e)
-      editor.emitStatus(e.getMessage)
+      editor.emitError(e)
       result
   }
 
