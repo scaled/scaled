@@ -146,7 +146,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   // wire up the display of popups
   class PopWin extends VBox() {
     setManaged(false)
-    getStyleClass.add("popup")
+    getStyleClass.add("popwin")
     setPadding(new Insets(3))
 
     private[this] var _ax = 0d

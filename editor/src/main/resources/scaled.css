@@ -54,7 +54,7 @@
   -fx-stroke: white;
 }
 
-.popup {
+.popwin {
   -fx-border-color: #E3E3E3 #A5A5A5 #A5A5A5 #E3E3E3;
   -fx-background-color: #DBDBDB;
   -fx-background-radius: 5;
