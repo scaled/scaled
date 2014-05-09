@@ -69,11 +69,45 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     "}"       -> "electric-close-brace"
   )
 
-  /** Enumerates the open brackets that will be matched when tracking blocks. */
-  protected def openBrackets = "{(["
-  /** Enumerates the close brackets that will be matched when tracking blocks.
-    * These must match the order of [[openBrackets]] exactly. */
-  protected def closeBrackets = "})]"
+  // when editing code, we only auto-fill comments; auto-filling code is too hairy
+  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && inComment(p)
+
+  /** Returns true if `p` is "inside" a comment. The default implementation checks whether `p` is
+    * styled with `commentFace` or `docFace`, or if `p` is the end if its line, whether the
+    * character preceding `p` is thusly styled.
+    */
+  def inComment (p :Loc) :Boolean = {
+    val ss = stylesNear(p)
+    (ss contains commentStyle) || (ss contains docStyle)
+  }
+
+  /** Returns the styles for `p` unless `p` is at the end of its line, in which case the styles
+    * for the character preceding `p` are returned. If the line containing `p` is empty, empty
+    * styles are returned.
+    */
+  def stylesNear (p :Loc) :Styles = {
+    val llen = buffer.lineLength(p)
+    buffer.stylesAt(if (p.col < llen || llen == 0) p else p.atCol(llen-1))
+  }
+
+  // when we break for auto-fill, insert the appropriate comment prefix
+  override def autoBreak (at :Loc) {
+    val ss = stylesNear(at)
+    super.autoBreak(at)
+    (if (ss contains commentStyle) commentPrefix
+     else if (ss contains docStyle) docPrefix
+     else None) foreach { pre =>
+       val p = view.point()
+       buffer.insert(p.atCol(0), pre, Styles.None)
+       view.point() = p + (0, pre.length)
+       reindentAtPoint()
+     }
+  }
+
+  /** The string to prepend to an auto-broken comment line. */
+  def commentPrefix :Option[String] = None
+  /** The string to prepend to an auto-broken doc line. */
+  def docPrefix :Option[String] = None
 
   /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
   val curBlock = OptValue[Block]()
@@ -82,6 +116,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     override def classify (row :Int, col :Int) :Int = CodeMode.this.classify(Loc(row, col))
   }
 
+  /** Enumerates the open brackets that will be matched when tracking blocks. */
+  def openBrackets = "{(["
+  /** Enumerates the close brackets that will be matched when tracking blocks.
+    * These must match the order of [[openBrackets]] exactly. */
+  def closeBrackets = "})]"
+
   /** Returns an int identifying the syntax class for the character at `loc`. This is used by
     * [[blocker]] to avoid matching brackets in normal code with brackets in comments or strings.
     *
@@ -89,8 +129,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     * [[stringStyle]] and [[constantStyle]] as separate bracket classes. NOTE: zero should always
     * be returned for brackets affect actual code.
     */
-  protected def classify (loc :Loc) :Int = {
-    val styles = buffer.stylesAt(loc)
+  def classify (loc :Loc) :Int = {
+    val styles = stylesNear(loc)
     if (styles.contains(commentStyle)) 1
     else if (styles.contains(docStyle)) 2
     else if (styles.contains(stringStyle)) 3
@@ -116,7 +156,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** The list of indenters used to indent code for this mode. */
   val indenters :List[Indenter] = createIndenters()
-  protected def createIndenters () :List[Indenter]= Nil
+  def createIndenters () :List[Indenter]= Nil
 
   /** Computes the indentation for the line at `row`. */
   def computeIndent (row :Int) :Int = {
