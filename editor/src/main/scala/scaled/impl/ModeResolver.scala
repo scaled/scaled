@@ -8,8 +8,9 @@ import java.lang.reflect.Field
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 
-abstract class EnvImpl (val log :Logger, val exec :Executor, val editor :Editor,
-                        val view :RBufferView, val disp :Dispatcher) extends Env
+abstract class EnvImpl (
+  val log  :Logger,      val exec  :Executor, val editor :Editor,
+  val view :RBufferView, val mline :ModeLine, val disp   :Dispatcher) extends Env
 
 abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
 
@@ -20,14 +21,14 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
   def minorModes (tags :Array[String]) :Set[String] = Set()
 
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
-  def resolveMajor (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
+  def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLineImpl, disp :DispatcherImpl,
                     args :List[Any]) :MajorMode =
-    resolve(mode, view, disp, args, requireMajor(mode))
+    resolve(mode, view, mline, disp, args, requireMajor(mode))
 
   /** Resolves and instantiates the minor mode `mode` with the supplied environment. */
-  def resolveMinor (mode :String, view :BufferViewImpl, disp :DispatcherImpl, major :MajorMode,
-                    args :List[Any]) :MinorMode =
-    resolve(mode, view, disp, major :: args, requireMinor(mode))
+  def resolveMinor (mode :String, view :BufferViewImpl, mline :ModeLineImpl, disp :DispatcherImpl,
+                    major :MajorMode, args :List[Any]) :MinorMode =
+    resolve(mode, view, mline, disp, major :: args, requireMinor(mode))
 
   protected def locate (major :Boolean, mode :String) :Class[_]
   protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
@@ -42,9 +43,9 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
     else throw new IllegalArgumentException(s"$mode is not a ${mclass.getSimpleName}.")
   }
 
-  private def resolve[T] (mode :String, view :BufferViewImpl, disp :DispatcherImpl,
-                          args :List[Any], modeClass :Class[T]) :T = {
-    val envargs = new EnvImpl(log, exec, editor, view, disp) {
+  private def resolve[T] (mode :String, view :BufferViewImpl, mline :ModeLineImpl,
+                          disp :DispatcherImpl, args :List[Any], modeClass :Class[T]) :T = {
+    val envargs = new EnvImpl(log, exec, editor, view, mline, disp) {
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
         ModeResolver.this.resolveConfig(mode, defs)
     } :: args

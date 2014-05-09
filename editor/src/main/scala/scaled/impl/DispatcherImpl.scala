@@ -5,7 +5,7 @@
 package scaled.impl
 
 import javafx.scene.input.{KeyCode, KeyEvent}
-import reactual.{Signal, Value}
+import reactual.{Signal, Value, ValueV}
 import scaled._
 
 /** Handles the conversion of key presses into execution of the appropriate fns. This includes
@@ -17,7 +17,8 @@ import scaled._
   * Minor modes are added (and removed) dynamically, but a dispatcher's major mode never changes.
   */
 class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferViewImpl,
-                      majorMode :String, modeArgs :List[Any]) extends Dispatcher {
+                      mline :ModeLineImpl, majorMode :String, modeArgs :List[Any])
+    extends Dispatcher {
 
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
                                KeyCode.COMMAND, KeyCode.WINDOWS)
@@ -28,6 +29,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private var _prevFn :String = _
 
   private var _majorMeta :MajorModeMeta = _
+  private val _minors = Value[Seq[MinorMode]](Nil)
   private var _metas = List[ModeMeta]() // the stack of active modes (major last)
   private var _prefixes = Set[Seq[KeyPress]]() // union of cmd prefixes from active modes' keymaps
 
@@ -36,7 +38,12 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private var _escapeNext = false
 
   /** The major mode with which we interact. */
-  val major = Value[MajorMode](resolver.resolveMajor(majorMode, view, this, modeArgs))
+  val major = Value[MajorMode](resolver.resolveMajor(majorMode, view, mline, this, modeArgs))
+
+  /** The current configured set of minor modes. */
+  val minors :ValueV[Seq[MinorMode]] = _minors
+
+  // configure our major mode
   major onValueNotify { major =>
     val hadMajor = (_majorMeta != null)
     // all old modes need to be cleaned out, and applicable minor modes re-resolved
@@ -44,11 +51,11 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     // set up our new major mode
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
-    rebuildPrefixes()
     // automatically activate any minor modes that match our major mode's tags
     resolver.minorModes(major.tags) foreach { mode =>
-      addMode(false)(resolver.resolveMinor(mode, view, this, major, Nil))
+      addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
     }
+    modesChanged()
     // if we were replacing an existing major mode, give feedback to the user
     if (hadMajor) editor.popStatus("${major.name} activated.")
   }
@@ -139,7 +146,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
         removeMode(minor)
         editor.popStatus(s"$mode mode deactivated.")
       case _ =>
-        addMode(true)(resolver.resolveMinor(mode, view, this, major(), Nil))
+        addMode(true)(resolver.resolveMinor(mode, view, mline, this, major(), Nil))
     }
   }
 
@@ -158,10 +165,12 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     }
   }
 
-  private def addMode (feedback :Boolean)(mode :MinorMode) {
+  private def addMode (interactive :Boolean)(mode :MinorMode) {
     _metas = new ModeMeta(mode) :: _metas
-    rebuildPrefixes()
-    if (feedback) editor.popStatus(s"${mode.name} mode activated.")
+    if (interactive) {
+      modesChanged()
+      editor.popStatus(s"${mode.name} mode activated.")
+    }
   }
 
   private def removeMode (minor :MinorMode) {
@@ -170,12 +179,17 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
       if (mm.mode == minor) { mm.dispose(); true }
       else false
     }
-    rebuildPrefixes()
+    modesChanged()
     // if we actually removed this mode, dispose it
     if (ometas != _metas) minor.dispose()
   }
 
-  private def rebuildPrefixes () :Unit = _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+  private def modesChanged () {
+    // rebuild our command prefixes
+    _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
+    // rebuild and emit our list of active minor modes
+    _minors() = _metas.map(_.mode).collect { case mode :MinorMode => mode }
+  }
 
   private def findFn (fn :String) :Option[FnBinding] = _metas.flatMap(_.fns.binding(fn)).headOption
   private def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] =

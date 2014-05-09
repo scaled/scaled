@@ -235,8 +235,16 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private def newBuffer (buf :BufferImpl, mode :String, args :List[Any]) :OpenBuffer = {
     val config = app.cfgMgr.editorConfig
     val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+
+    // create the modeline and add some default data before anyone else sneaks in
+    val mline = new ModeLineImpl(this)
+    mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), "* indicates unsaved changes")
+    mline.addDatum(buf.nameV, "Name of the current buffer")
+
+    // TODO: move this to LineNumberMode? (and enable col number therein)
     val view = new BufferViewImpl(this, buf, width, height)
-    val disp = new DispatcherImpl(this, resolver, view, mode, args)
+    mline.addDatum(view.point map(p => s" L${p.row+1} "), "Current line number")
+    val disp = new DispatcherImpl(this, resolver, view, mline, mode, args)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has
@@ -245,7 +253,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     val content = new BorderPane()
     val area = new BufferArea(this, view, disp)
     content.setCenter(area)
-    content.setBottom(new ModeLine(this, view, disp))
+    content.setBottom(mline)
 
     val obuf = OpenBuffer(content, area, view)
     _buffers += obuf
