@@ -9,7 +9,7 @@ import reactual.{Future, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util.Chars
+import scaled.util.{Chars, Filler}
 
 /** Configuration for [[EditingMode]]. */
 object EditingConfig extends Config.Defs {
@@ -143,9 +143,16 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     */
   def downcase (from :Loc, to :Loc) :Loc = buffer.transform(from, to, Character.toLowerCase)
 
+  /** Turns start and end into a region, with the caveat that if end is the 0th col on last line
+    * of the region, the end is backed up to the last character of the previous line. This avoids
+    * including a trailing blank line in fns that operate on a region.
+    */
+  def trimRegion (start :Loc, end :Loc) :Region =
+    Region(start, if (end.col == 0) buffer.backward(end, 1) else end)
+
   /** Sorts the lines in the region `[start, end)`. */
   def sortLinesIn (start :Loc, end :Loc) {
-    val r = Region(start, buffer.backward(end, 1))
+    val r = trimRegion(start, end)
     val lines = buffer.region(r)
     val sorted = lines.sorted(LineV.ordering)
     if (lines != sorted) buffer.replace(r, sorted)
@@ -154,7 +161,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   /** Reverses the lines in the region `[start, end)`. */
   def reverseLinesIn (start :Loc, end :Loc) {
-    val r = Region(start, buffer.backward(end, 1))
+    val r = trimRegion(start, end)
     buffer.replace(r, buffer.region(r).reverse)
   }
 
@@ -166,7 +173,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   /** Refills the lines in the region `[start, end)`, wrapping them at `fill-column`. */
   def refillLinesIn (start :Loc, end :Loc) {
-    // TODO!
+    val r = trimRegion(start, end)
+    val orig = buffer.region(r)
+    val filler = new Filler(fillColumn)
+    orig foreach { filler.append }
+    val filled = filler.result
+    if (filled != orig) buffer.replace(r, filled)
+    else editor.popStatus("Region already filled.")
   }
 
   /** Returns true if we should auto-fill, false if not. The default implementation checks that
