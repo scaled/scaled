@@ -2,12 +2,12 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.util
+package scaled.code
 
 import reactual.ValueV
 import scala.annotation.tailrec
 import scaled._
-import scaled.major.CodeConfig
+import scaled.util.Chars
 
 /** Encapsulates a strategy for indenting a line of code. */
 abstract class Indenter (val config :Config, val buffer :BufferV) {

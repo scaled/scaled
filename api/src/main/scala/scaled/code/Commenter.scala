@@ -2,10 +2,10 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/scaled/scaled/blob/master/LICENSE
 
-package scaled.util
+package scaled.code
 
 import scaled._
-import scaled.major.CodeConfig
+import scaled.util.{Chars, Filler}
 
 /** A helper class for dealing with comments in source code: wrapping, filling, etc. */
 class Commenter (buffer :BufferV) {

@@ -2,13 +2,14 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.major
+package scaled.code
 
 import reactual.OptValue
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util._
+import scaled.major.EditingMode
+import scaled.util.Chars
 
 object CodeConfig extends Config.Defs {
 

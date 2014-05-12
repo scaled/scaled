@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.util
+package scaled.code
 
 import java.util.Arrays
 import reactual.OptValue
