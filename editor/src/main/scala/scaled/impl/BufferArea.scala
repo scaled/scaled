@@ -273,6 +273,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     override def getChildren = super.getChildren
 
     override def layoutChildren () {
+      val start = System.nanoTime()
+
       // position our lines at the proper y offset
       val leftPadding = snappedLeftInset
       val cs = lineNodes.getChildren
@@ -292,17 +294,22 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
       // position the cursor
       updateCursor(bview.point())
+
+      val elapsed = (System.nanoTime() - start)/1000
+      println(s"BufferArea layout $elapsed us")
     }
 
     def updateVizLines () {
       val top = bview.scrollTop()
       val bot = top + bview.height()
       val lines = bview.lines
+      var vals = 0
       var idx = lines.size-1 ; while (idx >= 0) {
-        lines(idx).setVisible(idx >= top && idx <= bot)
+        if (lines(idx).setVisible(idx >= top && idx <= bot)) vals += 1
         idx -= 1
       }
       contentNode.setLayoutY(-top*lineHeight)
+      if (vals > 0) println(s"BufferArea $vals validations.")
     }
   }
   private val contentNode = new ContentNode()
