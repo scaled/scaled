@@ -192,6 +192,44 @@ abstract class BufferV extends Region {
     if (stop < start) seek(start.row, start.col-1) else stop
   }
 
+  /** Scans forward from `start` while `pred` continues to match. Returns the last location at
+    * which `pred` matches. Returns `start` if we fail immediately. If `stop` is reached before
+    * finding a non-matching character, `stop` is returned. Note that end of line characters are
+    * included in the scan.
+    * @param pred a predicate that will be passed `(row, col, char)`.
+    */
+  def scanForWhile (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
+    val stopr = stop.row ; val stopc = stop.col
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = {
+      val line = this.line(row)
+      val last = if (row == stopr) stopc else line.length
+      var p = col ; while (p <= last && pred(row, p, line.charAt(p))) p += 1
+      if (p <= last) backward(Loc(row, p), 1)
+      else if (row == stopr) stop
+      else seek(row+1, 0)
+    }
+    if (start < stop) seek(start.row, start.col) else stop
+  }
+
+  /** Scans backward from `start` while `pred` continues to match. Returns the last location at
+    * which `pred` matches. Returns `start` if we failed immediately. If `stop` is reached before
+    * finding a non-matching character, `stop` is returned. Note that end of line characters are
+    * included in the scan.
+    * @param pred a predicate that will be passed `(row, col, char)`.
+    */
+  def scanBackWhile (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
+    val stopr = stop.row ; val stopc = stop.col
+    @inline @tailrec def seek (row :Int, col :Int) :Loc = {
+      val line = this.line(row)
+      val first = if (row == stopr) stopc else 0
+      var p = col ; while (p >= first && pred(row, p, line.charAt(p))) p -= 1
+      if (p >= first) forward(Loc(row, p), 1)
+      else if (row == stopr) stop
+      else seek(row-1, this.line(row-1).length)
+    }
+    if (stop < start) seek(start.row, start.col-1) else stop
+  }
+
   /** Scans forward from the `start`th lne of the buffer, seeking a line that matches `pred`.
     * @return the index of the first matching row. If the `stop`th line is reached without a match,
     * `stop` is returned.
