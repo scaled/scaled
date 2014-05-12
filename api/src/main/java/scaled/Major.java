@@ -55,11 +55,11 @@ public @interface Major {
     String[] tags () default {};
 
     /**
-     * Defines a set of regular expressions that match the names of files handled by this mode.
-     * This is used to automatically activate this mode when a file with a matching name is edited.
-     * These should not be overly general, lest a mode usurp other modes inadvertently. Most
-     * commonly, one will specify the suffix to match: {@code ".*\\.scala"}, {@code ".*\\.java"},
-     * but some modes may need to match exact file names: {@code "Makefile"}.
+     * Defines a set of regular expressions that match the names of files handled by this mode. This
+     * is used to automatically activate this mode when a file with a matching name is edited. These
+     * should not be overly general, lest a mode usurp other modes inadvertently. Most commonly, one
+     * will specify the suffix to match: {@code ".*\\.scala"}, {@code ".*\\.java"}, but some modes
+     * may need to match exact file names: {@code "Makefile"}.
      */
     String[] pats () default {};
 
