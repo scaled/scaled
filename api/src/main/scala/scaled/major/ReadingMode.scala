@@ -122,11 +122,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     val firstWordC = buffer.scanBackward(isWord, p)
     // we may have hit the beginning of the buffer looking for a word char; if so, cope
     if (firstWordC == buffer.start) buffer.start
-    else {
-      val nonWordC = buffer.scanBackward(isNotWord, firstWordC)
-      // we may have hit the beginning of the buffer looking for a non-word char; if so, cope
-      if (isWord(buffer.charAt(nonWordC))) nonWordC else buffer.forward(nonWordC, 1)
-    }
+    else buffer.scanBackWhile(isWord, firstWordC)
   }
 
   /** Invokes `fn` with the start and end of the current region. If the mark is not set, a status
@@ -145,30 +141,35 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     * invoked.
     */
   def withParagraph (fn :(Loc, Loc) => Unit) :Unit = {
-    def isNonEmpty (line :LineV) = line.length != 0
-    def isEmpty (line :LineV) = line.length == 0
-    def isEmptyAt (row :Int) = isEmpty(buffer.line(row))
+    def isNonDelim (line :LineV) = !isParagraphDelim(line)
+    def isDelim (line :LineV) = isParagraphDelim(line)
+    def isDelimAt (row :Int) = isDelim(buffer.line(row))
 
     val p = view.point()
-    // use the current line, if non-empty, or the first preceding non-empty line
-    val curPrev = buffer.scanRowBackward(isNonEmpty, p.row)
-    // curPrev may refer to an empty row if there were no non-empty rows before the point;
-    // in that case seek forward for a non-empty line
-    val anchor = if (!isEmptyAt(curPrev)) curPrev
-                 else buffer.scanRowForward(isNonEmpty, p.row)
-    // anchor may also be empty if there were no non-empty rows after the point
-    if (isEmptyAt(anchor)) editor.popStatus("Unable to find a paragraph.")
+    // use the current line, if non-delim, or the first preceding non-delim line
+    val curPrev = buffer.scanRowBackward(isNonDelim, p.row)
+    // curPrev may refer to a delim row if there were no non-delim rows before the point;
+    // in that case seek forward for a non-delim line
+    val anchor = if (!isDelimAt(curPrev)) curPrev
+                 else buffer.scanRowForward(isNonDelim, p.row)
+    // anchor may also be delim if there were no non-delim rows after the point
+    if (isDelimAt(anchor)) editor.popStatus("Unable to find a paragraph.")
     else {
-      // yay, we found a non-empty line, now determine the bounds of the paragraph
-      val start = buffer.scanRowBackward(isEmpty, anchor)
-      val end = buffer.scanRowForward(isEmpty, anchor)
+      // yay, we found a non-delim line, now determine the bounds of the paragraph
+      val start = buffer.scanRowBackward(isDelim, anchor)
+      val end = buffer.scanRowForward(isDelim, anchor)
       // translate our boundary lines into buffer locations
-      val sloc = if (isEmptyAt(start)) Loc(start+1, 0) else Loc(start, 0)
-      val eloc = if (isEmptyAt(end)) Loc(end, 0) else Loc(end, buffer.line(end).length)
+      val sloc = if (isDelimAt(start)) Loc(start+1, 0) else Loc(start, 0)
+      val eloc = if (isDelimAt(end)) Loc(end, 0) else Loc(end, buffer.line(end).length)
       // and finally invoke our fn
       fn(sloc, eloc)
     }
   }
+
+  /** Indicates that `line` delimits a paragraph. By default an empty line delimits a paragraph
+    * but modes may customize this.
+    */
+  def isParagraphDelim (line :LineV) = line.length == 0
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
