@@ -6,8 +6,9 @@ package scaled.major
 
 import reactual.OptValue
 import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util.{Block, Blocker, Chars, Indenter}
+import scaled.util._
 
 object CodeConfig extends Config.Defs {
 
@@ -69,45 +70,11 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     "}"       -> "electric-close-brace"
   )
 
-  // when editing code, we only auto-fill comments; auto-filling code is too hairy
-  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && inComment(p)
+  /** The list of indenters used to indent code for this mode. */
+  val indenters :List[Indenter]
 
-  /** Returns true if `p` is "inside" a comment. The default implementation checks whether `p` is
-    * styled with `commentFace` or `docFace`, or if `p` is the end if its line, whether the
-    * character preceding `p` is thusly styled.
-    */
-  def inComment (p :Loc) :Boolean = {
-    val ss = stylesNear(p)
-    (ss contains commentStyle) || (ss contains docStyle)
-  }
-
-  /** Returns the styles for `p` unless `p` is at the end of its line, in which case the styles
-    * for the character preceding `p` are returned. If the line containing `p` is empty, empty
-    * styles are returned.
-    */
-  def stylesNear (p :Loc) :Styles = {
-    val llen = buffer.lineLength(p)
-    buffer.stylesAt(if (p.col < llen || llen == 0) p else p.atCol(llen-1))
-  }
-
-  // when we break for auto-fill, insert the appropriate comment prefix
-  override def autoBreak (at :Loc) {
-    val ss = stylesNear(at)
-    super.autoBreak(at)
-    (if (ss contains commentStyle) commentPrefix
-     else if (ss contains docStyle) docPrefix
-     else None) foreach { pre =>
-       val p = view.point()
-       buffer.insert(p.atCol(0), pre, Styles.None)
-       view.point() = p + (0, pre.length)
-       reindentAtPoint()
-     }
-  }
-
-  /** The string to prepend to an auto-broken comment line. */
-  def commentPrefix :Option[String] = None
-  /** The string to prepend to an auto-broken doc line. */
-  def docPrefix :Option[String] = None
+  /** A helper class for dealing with comments. */
+  val commenter :Commenter
 
   /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
   val curBlock = OptValue[Block]()
@@ -130,7 +97,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     * be returned for brackets affect actual code.
     */
   def classify (loc :Loc) :Int = {
-    val styles = stylesNear(loc)
+    val styles = buffer.stylesNear(loc)
     if (styles.contains(commentStyle)) 1
     else if (styles.contains(docStyle)) 2
     else if (styles.contains(stringStyle)) 3
@@ -153,10 +120,6 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       else buffer.addStyle(blockErrorStyle, b.start, b.start.nextC)
     }
   }
-
-  /** The list of indenters used to indent code for this mode. */
-  val indenters :List[Indenter] = createIndenters()
-  def createIndenters () :List[Indenter]= Nil
 
   /** Computes the indentation for the line at `row`. */
   def computeIndent (row :Int) :Int = {
@@ -197,6 +160,39 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def reindentAtPoint () {
     reindent(view.point())
   }
+
+  // when editing code, we only auto-fill comments; auto-filling code is too hairy
+  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(p)
+
+  // in code mode, paragraphs are delimited by "blank" comment lines
+  override def isParagraphDelim (line :LineV) = commenter.commentStart(line) == line.length
+
+  // in code mode, refills only happen inside comments
+  override def fillParagraph () {
+    // make sure we're "looking at" a comment
+    val p = buffer.scanForward(isNotWhitespace, view.point())
+    if (commenter.inComment(p)) super.fillParagraph()
+    else editor.popStatus("Code modes only fill comments, not code.")
+  }
+  override def refillLinesIn (start :Loc, end :Loc) = {
+    val cend = trimEnd(end)
+    buffer.replace(start, cend, commenter.refillComments(fillColumn, start, cend))
+  }
+
+  // when we break for auto-fill, insert the appropriate comment prefix
+  override def autoBreak (at :Loc) {
+    val pre = commenter.prefixFor(at)
+    super.autoBreak(at)
+    if (pre != "") {
+      val p = view.point()
+      buffer.insert(p.atCol(0), pre, Styles.None)
+      view.point() = p + (0, pre.length)
+      reindentAtPoint()
+    }
+  }
+
+  //
+  // FNs
 
   @Fn("Inserts a newline, then indents according to the code mode's indentation rules.")
   def newlineAndIndent () {
