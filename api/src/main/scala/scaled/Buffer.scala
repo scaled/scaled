@@ -192,6 +192,26 @@ abstract class BufferV extends Region {
     if (stop < start) seek(start.row, start.col-1) else stop
   }
 
+  /** Scans forward from the `start`th lne of the buffer, seeking a line that matches `pred`.
+    * @return the index of the first matching row. If the `stop`th line is reached without a match,
+    * `stop` is returned.
+    */
+  def scanRowForward (pred :LineV => Boolean, start :Int, stop :Int = lines.size-1) :Int = {
+    @inline @tailrec def loop (row :Int) :Int =
+      if (row == stop) stop else if (pred(line(row))) row else loop(row+1)
+    loop(start)
+  }
+
+  /** Scans backward from the `start`th lne of the buffer, seeking a line that matches `pred`.
+    * @return the index of the first matching row. If the `stop`th line is reached without a match,
+    * `stop` is returned.
+    */
+  def scanRowBackward (pred :LineV => Boolean, start :Int, stop :Int = 0) :Int = {
+    @inline @tailrec def loop (row :Int) :Int =
+      if (row == stop) stop else if (pred(line(row))) row else loop(row-1)
+    loop(start)
+  }
+
   /** Searches forward from `start` for the first match of `m`, stopping before `stop` (`stop` is
     * not checked for a match).
     * @return the location of the match or `Loc.None`. */

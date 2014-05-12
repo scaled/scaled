@@ -145,30 +145,26 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     * invoked.
     */
   def withParagraph (fn :(Loc, Loc) => Unit) :Unit = {
-    def isEmpty (row :Int) = buffer.line(row).length == 0
-    def isNonEmpty (row :Int) = !isEmpty(row)
-    @tailrec def seek (row :Int, drow :Int, erow :Int, pred :(Int => Boolean)) :Int = {
-      if (row == erow) erow
-      else if (pred(row)) row
-      else seek(row+drow, drow, erow, pred)
-    }
+    def isNonEmpty (line :LineV) = line.length != 0
+    def isEmpty (line :LineV) = line.length == 0
+    def isEmptyAt (row :Int) = isEmpty(buffer.line(row))
 
     val p = view.point()
-    val lastLine = buffer.lines.size-1
     // use the current line, if non-empty, or the first preceding non-empty line
-    val curPrev = seek(p.row, -1, 0, isNonEmpty)
+    val curPrev = buffer.scanRowBackward(isNonEmpty, p.row)
     // curPrev may refer to an empty row if there were no non-empty rows before the point;
     // in that case seek forward for a non-empty line
-    val anchor = if (isEmpty(curPrev)) seek(p.row, 1, lastLine, isNonEmpty) else curPrev
+    val anchor = if (!isEmptyAt(curPrev)) curPrev
+                 else buffer.scanRowForward(isNonEmpty, p.row)
     // anchor may also be empty if there were no non-empty rows after the point
-    if (isEmpty(anchor)) editor.popStatus("Unable to find a paragraph.")
+    if (isEmptyAt(anchor)) editor.popStatus("Unable to find a paragraph.")
     else {
       // yay, we found a non-empty line, now determine the bounds of the paragraph
-      val start = seek(anchor, -1, 0, isEmpty)
-      val end = seek(anchor, 1, lastLine, isEmpty)
+      val start = buffer.scanRowBackward(isEmpty, anchor)
+      val end = buffer.scanRowForward(isEmpty, anchor)
       // translate our boundary lines into buffer locations
-      val sloc = if (isEmpty(start)) Loc(start+1, 0) else Loc(start, 0)
-      val eloc = if (isEmpty(end)) Loc(end, 0) else Loc(end, buffer.line(end).length)
+      val sloc = if (isEmptyAt(start)) Loc(start+1, 0) else Loc(start, 0)
+      val eloc = if (isEmptyAt(end)) Loc(end, 0) else Loc(end, buffer.line(end).length)
       // and finally invoke our fn
       fn(sloc, eloc)
     }
