@@ -72,10 +72,30 @@ abstract class BufferV extends Region {
   /** Returns a location for the specified character offset into the buffer. If `offset` is greater
     * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final
     * character. */
-  def loc (offset :Int) :Loc
+  def loc (offset :Int) :Loc = {
+    assert(offset >= 0)
+    val lls = lines
+    def seek (off :Int, idx :Int) :Loc = {
+      // if we've spilled past the end of our buffer, roll back to one character past the end of
+      // the last line in our buffer
+      if (idx >= lls.length) Loc(lls.length-1, lls.last.length)
+      else {
+        val len = lls(idx).length
+        // TODO: this assumes a single character line terminator, what about \r\n?
+        if (off > len) seek(off-len-1, idx+1)
+        else Loc(idx, off)
+      }
+    }
+    seek(offset, 0)
+  }
 
   /** Returns the character offset into the buffer of `loc`. */
-  def offset (loc :Loc) :Int
+  def offset (loc :Loc) :Int = {
+    val lineSep = System.lineSeparator // TODO: buffer should know its own line separator?
+    @tailrec def offset (row :Int, off :Int) :Int =
+      if (row < 0) off else offset(row-1, lines(row).length+lineSep.length+off)
+    offset(loc.row-1, 0) + loc.col
+  }
 
   /** A read-only view of the lines in this buffer. */
   def lines :Seq[LineV]
@@ -107,8 +127,26 @@ abstract class BufferV extends Region {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def stylesAt (loc :Loc) :Styles = line(loc.row).stylesAt(loc.col)
 
+  /** Returns `stylesAt(loc)` unless `loc` is at the end of its line, in which case the styles
+    * for the character preceding `loc` are returned. If the line containing `loc` is empty, empty
+    * styles are returned.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def stylesNear (loc :Loc) :Styles = {
+    val line = this.line(loc.row) ; val len = line.length
+    line.stylesAt(if (loc.col < len || len == 0) loc.col else len-1)
+  }
+
   /** Returns a copy of the data between `[start, until)`. $RNLNOTE */
-  def region (start :Loc, until :Loc) :Seq[Line]
+  def region (start :Loc, until :Loc) :Seq[Line] =
+    if (until < start) region(until, start)
+    else if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
+    else {
+      val lb = Seq.newBuilder[Line]
+      lb  += line(start).slice(start.col)
+      lb ++= lines.slice(start.row+1, until.row).map(_.slice(0))
+      lb  += lines(until.row).slice(0, until.col)
+      lb.result
+    }
 
   /** Returns a copy of the data in region `r`. $RNLNOTE */
   def region (r :Region) :Seq[Line] = region(r.start, r.end)

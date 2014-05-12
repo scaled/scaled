@@ -86,14 +86,14 @@ class BufferImpl private (
   // TODO: character encoding
   // TODO: line endings
 
-  private val _lines = initLines.map(new MutableLine(this, _))
-  private val _name = Value(initName)
-  private val _file = Value(initFile)
-  private val _mark = Value(None :Option[Loc])
-  private val _dirty = Value(false)
-  private val _edited = Signal[Edit]()
-  private val _lineStyled = Signal[Loc]()
-  private var _maxRow = longest(_lines, 0, _lines.length)
+  private[this] val _lines = initLines.map(new MutableLine(this, _))
+  private[this] val _name = Value(initName)
+  private[this] val _file = Value(initFile)
+  private[this] val _mark = Value(None :Option[Loc])
+  private[this] val _dirty = Value(false)
+  private[this] val _edited = Signal[Edit]()
+  private[this] val _lineStyled = Signal[Loc]()
+  private[this] var _maxRow = longest(_lines, 0, _lines.length)
 
   val undoStack = new UndoStack(this)
 
@@ -141,39 +141,6 @@ class BufferImpl private (
   }
 
   override def markClean () :Unit = _dirty() = false
-
-  override def loc (offset :Int) = {
-    assert(offset >= 0)
-    def seek (off :Int, idx :Int) :Loc = {
-      // if we've spilled past the end of our buffer, roll back to one character past the end of
-      // the last line in our buffer
-      if (idx >= _lines.length) Loc(_lines.length-1, _lines.last.length)
-      else {
-        val len = _lines(idx).length
-        // TODO: this assumes a single character line terminator, what about \r\n?
-        if (off > len) seek(off-len-1, idx+1)
-        else Loc(idx, off)
-      }
-    }
-    seek(offset, 0)
-  }
-
-  override def offset (loc :Loc) = {
-    @tailrec def offset (row :Int, off :Int) :Int =
-      if (row < 0) off else offset(row-1, lines(row).length+lineSep.length+off)
-    offset(loc.row-1, 0) + loc.col
-  }
-
-  override def region (start :Loc, until :Loc) =
-    if (until < start) region(until, start)
-    else if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
-    else {
-      val middle = lines.slice(start.row+1, until.row).map(_.slice(0))
-      val s = line(start)
-      s.slice(start.col) +=: middle
-      middle += _lines(until.row).slice(0, until.col)
-      middle.toSeq
-    }
 
   override def insert (loc :Loc, c :Char, styles :Styles) = {
     _lines(loc.row).insert(loc, c, styles)
@@ -336,8 +303,6 @@ class BufferImpl private (
     // println(s"Styles @$loc")
     _lineStyled.emit(loc)
   }
-
-  private val lineSep = "\n" // TODO
 
   override def toString () = s"[file=${file}, name=${name}, lines=${lines.size}]"
 }
