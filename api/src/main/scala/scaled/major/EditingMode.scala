@@ -147,8 +147,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * of the region, the end is backed up to the last character of the previous line. This avoids
     * including a trailing blank line in fns that operate on a region.
     */
-  def trimRegion (start :Loc, end :Loc) :Region =
-    Region(start, if (end.col == 0) buffer.backward(end, 1) else end)
+  def trimRegion (start :Loc, end :Loc) :Region = Region(start, trimEnd(end))
+
+  /** "Trims" the end of a region such that if end is the 0th col on last line of the region, the
+    * end is backed up to the last character of the previous line. This avoids including a trailing
+    * blank line in fns that operate on a region.
+    */
+  def trimEnd (end :Loc) :Loc = if (end.col == 0) buffer.backward(end, 1) else end
 
   /** Sorts the lines in the region `[start, end)`. */
   def sortLinesIn (start :Loc, end :Loc) {
