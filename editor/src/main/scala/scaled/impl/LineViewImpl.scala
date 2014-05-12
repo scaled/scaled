@@ -57,13 +57,17 @@ class LineViewImpl (_line :LineV) extends LineView {
 
   /** Updates this line's visibility. Lines outside the visible area of the buffer are marked
     * non-visible and defer applying line changes until they are once again visible. */
-  def setVisible (viz :Boolean) {
-    if (viz && !_valid) validate()
+  def setVisible (viz :Boolean) :Boolean = {
+    val validated = if (viz && !_valid) { validate() ; true }
+                    else false
     node.setVisible(viz)
+    validated
   }
 
+  /** Marks this line view as invalid, clearing its children. */
   def invalidate () :Unit = if (_valid) {
     _valid = false
+    node.getChildren.clear()
     if (node.isVisible) validate()
   }
 
@@ -99,7 +103,6 @@ class LineViewImpl (_line :LineV) extends LineView {
       end += 1
     }
 
-    node.getChildren.clear()
     if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
   }
 }
