@@ -163,6 +163,11 @@ class MutableLine (
     if (first != -1) buffer.noteLineStyled(loc.atCol(first))
   }
 
+  /** Sets the syntax of chars in `[loc,last)` to `syntax`. */
+  def setSyntax (syntax :Syntax, loc :Loc, last :Int = length) {
+    var p = loc.col ; while (p < last) { _syns(p) = syntax ; p += 1 }
+  }
+
   override def toString () = s"$asString/${_end}/${_chars.length}"
 
   //

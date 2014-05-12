@@ -467,6 +467,11 @@ abstract class Buffer extends BufferV {
   def removeStyle (style :String, start :Loc, until :Loc) = updateStyles(_ - style, start, until)
   /** Removes CSS style class `style` from the characters in region `r`. */
   def removeStyle (style :String, r :Region) :Unit = removeStyle(style, r.start, r.end)
+
+  /** Sets the syntax of the characters between `[start, until)` to `syntax`. */
+  def setSyntax (syntax :Syntax, start :Loc, until :Loc) :Unit
+  /** Sets the syntax of the characters in region `r` to `syntax`. */
+  def setSyntax (syntax :Syntax, r :Region) :Unit = setSyntax(syntax, r.start, r.end)
 }
 
 /** `Buffer` related types and utilities. */

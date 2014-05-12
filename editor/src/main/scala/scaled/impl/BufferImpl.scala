@@ -237,6 +237,13 @@ class BufferImpl private (
     else onRows(start, until)(_.updateStyles(fn, _, _))
   }
 
+  override def setSyntax (syntax :Syntax, start :Loc, until :Loc) {
+    if (until < start) setSyntax(syntax, until, start)
+    else if (until > end) setSyntax(syntax, start, end) // bound until into the buffer
+    else if (start.row == until.row) line(start).setSyntax(syntax, start, until.col)
+    else onRows(start, until)(_.setSyntax(syntax, _, _))
+  }
+
   //
   // impl details
 
