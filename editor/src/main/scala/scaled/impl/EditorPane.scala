@@ -117,7 +117,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     app.cfgMgr.configText(mode) match {
       case Some(lines) =>
         if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
-          view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(new Line(_)))
+          view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(Line.apply))
         }
       case None => // TODO
     }

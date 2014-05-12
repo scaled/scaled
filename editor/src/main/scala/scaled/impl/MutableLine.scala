@@ -22,8 +22,9 @@ object MutableLine {
   def apply (buffer :BufferImpl, line :LineV) = {
     val cs = new Array[Char](line.length)
     val ss = new Array[Styles](line.length)
-    line.sliceInto(0, line.length, cs, ss, 0)
-    new MutableLine(buffer, cs, ss)
+    val xs = new Array[Syntax](line.length)
+    line.sliceInto(0, line.length, cs, ss, xs, 0)
+    new MutableLine(buffer, cs, ss, xs)
   }
 }
 
@@ -42,20 +43,23 @@ object MutableLine {
   * @param initChars The initial characters in this line. Ownership of this array is taken by this
   * line instance and the array may subsequently be mutated thereby.
   */
-class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles]) extends LineV {
-  def this (buffer :BufferImpl, initCs :Array[Char]) =
-    this(buffer, initCs, Array.fill(initCs.length)(Styles.None))
+class MutableLine (
+  buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles], initXs :Array[Syntax]
+) extends LineV {
+  def this (buffer :BufferImpl, cs :Array[Char]) = this(
+    buffer, cs, Array.fill(cs.length)(Styles.None), Array.fill(cs.length)(Syntax.Default))
 
-  require(initCs != null && initSs != null)
+  require(initCs != null && initSs != null && initXs != null)
 
   protected var _chars = initCs
   protected var _styles = initSs
+  protected var _syns = initXs
   private[this] var _end = initCs.size
 
   override def length = _end
-  override def view (start :Int, until :Int) = new Line(_chars, _styles, start, until-start)
+  override def view (start :Int, until :Int) = new Line(_chars, _styles, _syns, start, until-start)
   override def slice (start :Int, until :Int) =
-    new Line(_chars.slice(start, until), _styles.slice(start, until))
+    new Line(_chars.slice(start, until), _styles.slice(start, until), _syns.slice(start, until))
   override protected def _offset = 0
 
   /** Writes this mutable line to the supplied writer. */
@@ -69,18 +73,19 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     MutableLine(buffer, delete(loc, _end-loc.col))
   }
 
-  /** Inserts `c` into this line at `loc` with styles `styles`. */
-  def insert (loc :Loc, c :Char, styles :Styles) {
+  /** Inserts `c` into this line at `loc` with styles `styles` and syntax `syntax`. */
+  def insert (loc :Loc, c :Char, styles :Styles, syntax :Syntax) {
     prepInsert(loc.col, 1)
     _chars(loc.col) = c
     _styles(loc.col) = styles
+    _syns(loc.col) = syntax
     _end += 1
   }
 
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
   def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = {
     prepInsert(loc.col, count)
-    line.sliceInto(offset, offset+count, _chars, _styles, loc.col)
+    line.sliceInto(offset, offset+count, _chars, _styles, _syns, loc.col)
     _end += count
     loc + (0, count)
   }
@@ -98,8 +103,9 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     val last = pos + length
     require(pos >= 0 && last <= _end, s"$pos >= 0 && $last <= ${_end}")
     val deleted = slice(pos, pos+length)
-    System.arraycopy(_chars, last, _chars, pos, _end-last)
+    System.arraycopy(_chars , last, _chars , pos, _end-last)
     System.arraycopy(_styles, last, _styles, pos, _end-last)
+    System.arraycopy(_syns  , last, _syns  , pos, _end-last)
     _end -= length
     deleted
   }
@@ -119,12 +125,13 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
     // if we have a net decrease, shift tail left to close gap
     else if (deltaLength < 0) {
       val toShift = _end-lastDeleted
-      System.arraycopy(_chars, lastDeleted, _chars, lastAdded, toShift)
+      System.arraycopy(_chars , lastDeleted, _chars , lastAdded, toShift)
       System.arraycopy(_styles, lastDeleted, _styles, lastAdded, toShift)
+      System.arraycopy(_syns  , lastDeleted, _syns  , lastAdded, toShift)
     }
     // otherwise, we've got a perfect match, no shifting needed
 
-    line.sliceInto(0, added, _chars, _styles, pos)
+    line.sliceInto(0, added, _chars, _styles, _syns, pos)
     _end += deltaLength
     replaced
   }
@@ -176,13 +183,18 @@ class MutableLine (buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles
       val nstyles = new Array[Styles](nchars.length)
       System.arraycopy(_styles, 0, nstyles, 0, pos)
       System.arraycopy(_styles, pos, nstyles, tailpos, taillen)
+      val nsyns = new Array[Syntax](nchars.length)
+      System.arraycopy(_syns, 0, nsyns, 0, pos)
+      System.arraycopy(_syns, pos, nsyns, tailpos, taillen)
       _chars = nchars
       _styles = nstyles
+      _syns = nsyns
     }
     // otherwise shift characters down, if necessary
     else if (pos < curend) {
-      System.arraycopy(_chars, pos, _chars, tailpos, taillen)
+      System.arraycopy(_chars , pos, _chars , tailpos, taillen)
       System.arraycopy(_styles, pos, _styles, tailpos, taillen)
+      System.arraycopy(_syns  , pos, _syns  , tailpos, taillen)
     }
   }
 }

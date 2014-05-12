@@ -30,6 +30,9 @@ abstract class LineV extends CharSequence {
   /** Returns the CSS style classes applied to the character at `pos`, if any. */
   def stylesAt (pos :Int) :Styles = if (pos < length) _styles(_offset+pos) else Styles.None
 
+  /** Returns the CSS style classes applied to the character at `pos`, if any. */
+  def syntaxAt (pos :Int) :Syntax = if (pos < length) _syns(_offset+pos) else Syntax.Default
+
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
   def bound (col :Int) :Int = math.max(0, math.min(length, col))
@@ -46,9 +49,11 @@ abstract class LineV extends CharSequence {
   def slice (start :Int, until :Int = length) :Line
 
   /** Copies `[start, until)` from this line into `cs`/`ss` at `offset`. */
-  def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[Styles], offset :Int) {
+  def sliceInto (start :Int, until :Int, cs :Array[Char], ss :Array[Styles], xs :Array[Syntax],
+                 offset :Int) {
     System.arraycopy(_chars, _offset+start, cs, offset, until-start)
     System.arraycopy(_styles, _offset+start, ss, offset, until-start)
+    System.arraycopy(_syns, _offset+start, xs, offset, until-start)
   }
 
   /** Returns the characters in `[start, until)` as a string. */
@@ -58,9 +63,10 @@ abstract class LineV extends CharSequence {
   def merge (other :LineV) :Line = {
     val cs = new Array[Char](length + other.length)
     val ss = new Array[Styles](cs.length)
-    sliceInto(0, length, cs, ss, 0)
-    other.sliceInto(0, other.length, cs, ss, length)
-    new Line(cs, ss)
+    val xs = new Array[Syntax](cs.length)
+    sliceInto(0, length, cs, ss, xs, 0)
+    other.sliceInto(0, other.length, cs, ss, xs, length)
+    new Line(cs, ss, xs)
   }
 
   /** Returns the index of the first occurrence of `ch` at pos `from` or later.
@@ -136,6 +142,17 @@ abstract class LineV extends CharSequence {
     }
   }
 
+  /** Returns true if the syntaxes of `xs` in `[offset, length)` are equal to the syntaxes in this
+    * line in `[start, length)`. */
+  def syntaxMatches (xs :Array[Syntax], offset :Int, length :Int, start :Int) :Boolean = {
+    if (start + length > this.length) false
+    else {
+      val txs = _syns ; val toffset = _offset + start
+      var ii = 0 ; while (ii < length && (xs(offset+ii) eq txs(toffset+ii))) ii += 1
+      ii == length
+    }
+  }
+
   /** Compares this line to `other` lexically and sensitive to case. */
   def compare (other :LineV) :Int = LineV.compare(
     _chars, _offset, length, other._chars, other._offset, other.length, LineV.CaseCmp)
@@ -150,8 +167,9 @@ abstract class LineV extends CharSequence {
   override def subSequence (start :Int, end :Int) = new String(_chars, _offset+start, end-start)
 
   override def equals (other :Any) = other match {
-    case ol :LineV =>
-      length == ol.length && compare(ol) == 0 && ol.styleMatches(_styles, _offset, length, 0)
+    case ol :LineV => (length == ol.length && compare(ol) == 0 &&
+                       ol.styleMatches(_styles, _offset, length, 0) &&
+                       ol.syntaxMatches(_syns, _offset, length, 0))
     case _ => false
   }
 
@@ -168,6 +186,10 @@ abstract class LineV extends CharSequence {
   /** Returns the `Styles` array that backs this line. The returned array will only be used to
     * implement read-only methods and will never be mutated. */
   protected def _styles :Array[Styles]
+
+  /** Returns the `Syntax` array that backs this line. The returned array will only be used to
+    * implement read-only methods and will never be mutated. */
+  protected def _syns :Array[Syntax]
 
   /** Returns the offset into [[_chars]] and [[_styles]] at which our data starts. */
   protected def _offset :Int
@@ -211,24 +233,22 @@ object LineV {
   * The constructor takes ownership of the supplied arrays. Do not mutate them after using them to
   * create a `Line`. Clone them first if you need to retain the ability to mutate the arrays.
   */
-class Line (_cs :Array[Char], _ss :Array[Styles], protected val _offset :Int,
-            val length :Int) extends LineV {
-  def this (cs :Array[Char], ss :Array[Styles]) = this(cs, ss, 0, cs.length)
-  def this (cs :Array[Char], styles :Styles) = this(cs, Array.fill(cs.length)(styles))
-  def this (s :String, styles :Styles) = this(s.toCharArray, styles)
-  def this (s :String) = this(s.toCharArray, Styles.None)
-  def this (cs :CharSequence, styles :Styles) = this(Line.toCharArray(cs), Styles.None)
-  def this (cs :CharSequence) = this(cs, Styles.None)
+class Line (_cs :Array[Char], _ss :Array[Styles], _xs :Array[Syntax],
+            protected val _offset :Int, val length :Int) extends LineV {
+  def this (cs :Array[Char], ss :Array[Styles], xs :Array[Syntax]) = this(cs, ss, xs, 0, cs.length)
 
-  require(_cs != null && _ss != null && _offset >= 0 && length >= 0,
-          s"Invalid Line args ${_cs} ${_ss} ${_offset} $length")
+  require(_cs != null && _ss != null && _xs != null &&
+          _cs.length == _ss.length && _cs.length == _xs.length &&
+          _offset >= 0 && length >= 0 && length <= (_cs.length - _offset),
+          s"Invalid Line args ${_cs} ${_ss} ${_xs} ${_offset} $length")
 
   override def view (start :Int, until :Int) =
     if (start == 0 && until == length) this else slice(start, until)
-  override def slice (start :Int, until :Int) = new Line(_cs, _ss, _offset+start, until-start)
+  override def slice (start :Int, until :Int) = new Line(_cs, _ss, _xs, _offset+start, until-start)
 
-  override protected def _chars = _cs
+  override protected def _chars  = _cs
   override protected def _styles = _ss
+  override protected def _syns   = _xs
 
   override def toString () = s"$asString [${_offset}:$length/${_cs.length}]"
 }
@@ -236,14 +256,51 @@ class Line (_cs :Array[Char], _ss :Array[Styles], protected val _offset :Int,
 /** `Line` related types and utilities. */
 object Line {
 
+  /** Used to build (immutable) lines with non-default syntax or styles. */
+  class Builder (private var _cs :Array[Char]) {
+    private var _ss = Array.fill(_cs.length)(Styles.None)
+    private var _xs = Array.fill(_cs.length)(Syntax.Default)
+
+    /** Applies `styles` to `[start,end)` of the being-built line. */
+    def withStyles (styles :Styles, start :Int, end :Int) :Builder = {
+      var ii = start ; while (ii < end) { _ss(ii) = styles ; ii += 1 }
+      this
+    }
+
+    /** Applies `syntax` to `[start,end)` of the being-built line. */
+    def withSyntax (syntax :Syntax, start :Int, end :Int) :Builder = {
+      var ii = start ; while (ii < end) { _xs(ii) = syntax ; ii += 1 }
+      this
+    }
+
+    /** Builds and returns the line. This builder will be rendered unusable after this call. */
+    def build () :Line = {
+      val l = new Line(_cs, _ss, _xs, 0, _cs.length)
+      _cs = null ; _ss = null ; _xs = null
+      l
+    }
+  }
+
   /** An empty line. */
-  final val Empty = new Line(Array[Char](), Array[Styles]())
+  final val Empty = apply("")
+
+  /** Creates a line with the contents of `cs` and default styles and syntaxs. */
+  def apply (cs :CharSequence) = builder(cs).build()
+
+  /** Creates a line with the contents of `s` and default styles and syntaxs. */
+  def apply (s :String) = builder(s).build()
+
+  /** Creates a line builder with `cs` as the line text. */
+  def builder (cs :CharSequence) = new Builder(toCharArray(cs))
+
+  /** Creates a line builder with `s` as the line text. */
+  def builder (s :String) = new Builder(s.toCharArray)
 
   /** Creates one or more lines from the supplied text. Newlines are assumed to be equal to
     * [[System.lineSeparator]]. */
   def fromText (text :String) :Seq[Line] =
     // TODO: remove tab hackery when we support tabs
-    text.split(System.lineSeparator, -1).map(_.replace('\t', ' ')).map(new Line(_))
+    text.split(System.lineSeparator, -1).map(_.replace('\t', ' ')).map(apply)
 
   /** Calls [[fromText]] on `text` and tacks on a blank line. */
   def fromTextNL (text :String) = fromText(text) :+ Empty

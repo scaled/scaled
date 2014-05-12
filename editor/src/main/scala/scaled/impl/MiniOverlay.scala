@@ -44,7 +44,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
       if (comps.isEmpty) setBottom(null)
       else {
         val fcomps = formatCompletions(comps)
-        cview.buffer.replace(cview.buffer.start, cview.buffer.end, fcomps.map(new Line(_)))
+        cview.buffer.replace(cview.buffer.start, cview.buffer.end, fcomps.map(Line.apply))
         cview.width() = fcomps.map(_.length).max
         cview.height() = fcomps.length
         setBottom(carea)

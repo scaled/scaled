@@ -17,17 +17,17 @@ class MutableLineTest {
   @Test def insertDeleteReplace () {
     val buf = TestData.buffer("test", "")
     val line = new MutableLine(buf, "Every good boy deserves fudge.".toCharArray)
-    line.insert(Loc(0, line.asString.indexOf("fudge")), new Line("tasty "))
+    line.insert(Loc(0, line.asString.indexOf("fudge")), Line("tasty "))
     assertEquals("Every good boy deserves tasty fudge.", line.asString)
     line.delete(Loc(0, line.length-1), 1)
     assertEquals("Every good boy deserves tasty fudge", line.asString)
-    line.insert(Loc(0, line.length), '!', Styles.None)
+    line.insert(Loc(0, line.length), '!', Styles.None, Syntax.Default)
     assertEquals("Every good boy deserves tasty fudge!", line.asString)
-    line.replace(Loc(0, line.asString.indexOf("tasty")), 5, new Line("lots of"))
+    line.replace(Loc(0, line.asString.indexOf("tasty")), 5, Line("lots of"))
     assertEquals("Every good boy deserves lots of fudge!", line.asString)
-    line.replace(Loc(0, line.asString.indexOf("lots of")), 7, new Line("some"))
+    line.replace(Loc(0, line.asString.indexOf("lots of")), 7, Line("some"))
     assertEquals("Every good boy deserves some fudge!", line.asString)
-    line.replace(Loc(0, line.asString.indexOf("deserves")), 8, new Line("requires"))
+    line.replace(Loc(0, line.asString.indexOf("deserves")), 8, Line("requires"))
     assertEquals("Every good boy requires some fudge!", line.asString)
     // TODO: boundary conditions?
   }

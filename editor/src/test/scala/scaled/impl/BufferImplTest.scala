@@ -50,7 +50,7 @@ class BufferImplTest {
     // TODO: ensure that the proper events are emitted?
     assertEquals("Every good", buffer.line(1).asString)
     assertEquals(" boy deserves fudge.", buffer.line(2).asString)
-    buffer.insert(buffer.lineEnd(sp), new Line(" smelling"))
+    buffer.insert(buffer.lineEnd(sp), Line(" smelling"))
     buffer.delete(buffer.lineEnd(sp), buffer.forward(buffer.lineEnd(sp), 1))
     assertEquals("Every good smelling boy deserves fudge.", buffer.line(1).asString)
   }
@@ -123,7 +123,7 @@ class BufferImplTest {
 
   @Test def testSingleLineSearch () {
     val buffer = testBuffer(testText)
-    val the = Seq(new Line("the"))
+    val the = Seq(Line("the"))
     // search for all the thes in the whole buffer
     val allThes = buffer.search(the, buffer.start, buffer.end)
     assertEquals(5, allThes.size)

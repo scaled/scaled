@@ -2,12 +2,11 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/scaled/scaled/blob/master/LICENSE
 
-package scaled.util
+package scaled.code
 
 import org.junit.Assert._
 import org.junit._
 import scaled._
-import scaled.major.CodeConfig
 
 class CommenterTest {
   import CodeConfig._
@@ -16,9 +15,7 @@ class CommenterTest {
 
   def toLine (styles :Styles)(tup :(String,Int)) = {
     val (tx, ci) = tup
-    val ss = Array.fill(tx.length)(Styles.None)
-    var ii = ci ; while (ii < ss.length) { ss(ii) = styles ; ii += 1 }
-    new Line(tx.toCharArray, ss)
+    Line.builder(tx).withStyles(styles, ci, tx.length).build()
   }
 
   val lineText = Seq(("//", 0),

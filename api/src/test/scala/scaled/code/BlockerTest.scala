@@ -2,12 +2,11 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.util
+package scaled.code
 
 import org.junit.Assert._
 import org.junit._
 import scaled._
-import scaled.impl.TestData
 
 class BlockerTest {
 
@@ -34,10 +33,10 @@ class BlockerTest {
     /*17*/ "    */",
     /*18*/ "   @Deprecated(\"Use peanuts\")",
     /*19*/ "   public void test (int count) {}",
-    /*20*/ "}").mkString("\n")
+    /*20*/ "}")
 
   @Test def testBlocker () {
-    val buf = TestData.buffer("Test.java", testJavaCode)
+    val buf = BufferTest.bufferV("Test.java", testJavaCode.map(Line.apply))
     val blocker = new Blocker(buf, "{([", "})]")
     // println(blocker)
     assertEquals(None, blocker(Loc(0, 0)))
@@ -50,6 +49,5 @@ class BlockerTest {
     assertEquals(Loc(12,15), blocker(Loc(12, 16)).get.start)
     assertEquals(Loc(12,15), blocker(Loc(12, 17)).get.start)
     assertEquals(Loc(6,18), blocker(Loc(13, 0)).get.start)
-    buf.insert(Loc(7, 0), "foo", Styles.None)
   }
 }

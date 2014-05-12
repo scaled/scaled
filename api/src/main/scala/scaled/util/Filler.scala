@@ -66,5 +66,5 @@ class Filler (width :Int) {
   }
 
   /** Converts the accumulated text to a seq of `Line`s. */
-  def result :Seq[Line] = accum.map(new Line(_))
+  def result :Seq[Line] = accum.map(Line.apply)
 }

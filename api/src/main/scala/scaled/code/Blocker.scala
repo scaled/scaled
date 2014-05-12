@@ -23,7 +23,7 @@ case class Block (start :Loc, end :Loc, isValid :Boolean) extends Region {
 
 /** Handles identifying code [[Block]]s.
   */
-class Blocker (buffer :RBuffer, openers :String, closers :String) {
+class Blocker (buffer :BufferV, openers :String, closers :String) {
 
   /** Returns the inner-most block that encloses `loc`. The block will be restricted to characters
     * that have the same syntax class as the character at `loc. See [[classify]]. */

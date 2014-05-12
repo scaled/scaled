@@ -10,9 +10,9 @@ import org.junit.Assert._
 class LineTest {
 
   @Test def testEquals () {
-    val l1 = new Line("The quick brown fox jumps over the lazy dog.")
-    val l2 = new Line("The quick brown fox jumps over the lazy dog.")
-    val l3 = new Line("The quick brown pig jumps over the lazy dog.")
+    val l1 = Line("The quick brown fox jumps over the lazy dog.")
+    val l2 = Line("The quick brown fox jumps over the lazy dog.")
+    val l3 = Line("The quick brown pig jumps over the lazy dog.")
 
     assertTrue(l1 == l2)
     assertFalse(l1 == l3)
@@ -24,29 +24,29 @@ class LineTest {
 
   @Test def testCompare () {
     // sort is lexical
-    val a = new Line("abc")
-    val x = new Line("xyz")
+    val a = Line("abc")
+    val x = Line("xyz")
     assertTrue((a compare x) < 0)
     assertTrue((x compare a) > 0)
 
     // upper case sorts before lower case
-    val l1 = new Line("Every good boy deserves fudge.")
-    val l2 = new Line("every good boy deserves fudge.")
+    val l1 = Line("Every good boy deserves fudge.")
+    val l2 = Line("every good boy deserves fudge.")
     assertTrue((l1 compare l2) < 0)
     assertTrue((l2 compare l1) > 0)
     assertEquals(0, l1 compareIgnoreCase l2)
     assertEquals(0, l2 compareIgnoreCase l1)
 
     // prefix sorts before longer line
-    val short = new Line("won")
-    val long = new Line("wonder")
+    val short = Line("won")
+    val long = Line("wonder")
     assertTrue((short compare long) < 0)
     assertTrue((long compare short) > 0)
   }
 
   @Test def testIndexOf () {
     //                 0123456789012345678901234567890123456789012
-    val l1 = new Line("The quick brown fox jumps over the lazy dog.")
+    val l1 = Line("The quick brown fox jumps over the lazy dog.")
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val idx = s.indexOf(needle, start)
       assertEquals(s"offset (from $start) of '$needle' in '$s'", idx,
@@ -71,7 +71,7 @@ class LineTest {
 
   @Test def testLastIndexOf () {
     //                 012345678901234567890123456789
-    val l1 = new Line("A man, a plan, a canal, Panama!")
+    val l1 = Line("A man, a plan, a canal, Panama!")
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val idx = s.lastIndexOf(needle, start)
       assertEquals(s"last offset (from $start) of '$needle' in '$s'", idx,
@@ -94,7 +94,7 @@ class LineTest {
   }
 
   @Test def testMatches () {
-    val l1 = new Line("The quick brown fox jumps over the lazy dog.")
+    val l1 = Line("The quick brown fox jumps over the lazy dog.")
     def test (line :Line, needle :String, start :Int) {
       val s = line.asString ; val matches = s.indexOf(needle, start) == start
       assertEquals(s"'$needle' matches (at $start) '$s'", matches,
@@ -119,13 +119,13 @@ class LineTest {
 
   @Test def testRegexpMatcher () {
     val t1 = "The quick brown fox jumps over the lazy dog."
-    val l1 = new Line(t1)
+    val l1 = Line(t1)
     assertEquals(t1.indexOf("quick"), l1.indexOf(Matcher.regexp("q.*k")))
     assertEquals(t1.indexOf("The"), l1.indexOf(Matcher.regexp("[Tt]he")))
     assertEquals(t1.lastIndexOf("the"), l1.lastIndexOf(Matcher.regexp("[Tt]he")))
 
     val t2 = "Em, tee, blah. Blah blah, teleblah."
-    val l2 = new Line(t2)
+    val l2 = Line(t2)
     assertTrue(l2.matches(Matcher.regexp("Em.*, blah.")))
     assertTrue(l2.matches(Matcher.regexp("Em.*, teleblah.")))
     assertFalse(l2.matches(Matcher.regexp("Em.*hello.*blah.")))

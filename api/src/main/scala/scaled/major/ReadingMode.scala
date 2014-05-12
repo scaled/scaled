@@ -520,7 +520,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       text += ""
     }
 
-    buf.replace(buf.start, buf.end, text.map(new Line(_)))
+    buf.replace(buf.start, buf.end, text.map(Line.apply))
     buf.markClean()
     editor.visitBuffer(buf.name)
   }

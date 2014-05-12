@@ -147,7 +147,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val indent = computeIndent(pos.row)
     // shift the line, if needed
     val delta = indent - origIndent
-    if (delta > 0) buffer.insert(pos.atCol(0), " " * delta, Styles.None)
+    if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
     else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
     // shift the point, if needed
     val p = view.point()
@@ -186,7 +186,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     super.autoBreak(at)
     if (pre != "") {
       val p = view.point()
-      buffer.insert(p.atCol(0), pre, Styles.None)
+      buffer.insert(p.atCol(0), Line(pre))
       view.point() = p + (0, pre.length)
       reindentAtPoint()
     }

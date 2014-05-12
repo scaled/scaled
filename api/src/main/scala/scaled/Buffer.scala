@@ -136,6 +136,19 @@ abstract class BufferV extends Region {
     line.stylesAt(if (loc.col < len || len == 0) loc.col else len-1)
   }
 
+  /** Returns the syntax tag of the character at `loc`.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def syntaxAt (loc :Loc) :Syntax = line(loc.row).syntaxAt(loc.col)
+
+  /** Returns `syntaxAt(loc)` unless `loc` is at the end of its line, in which case the syntax
+    * for the character preceding `loc` is returned. If the line containing `loc` is empty, the
+    * default syntax is returned.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def syntaxNear (loc :Loc) :Syntax = {
+    val line = this.line(loc.row) ; val len = line.length
+    line.syntaxAt(if (loc.col < len || len == 0) loc.col else len-1)
+  }
+
   /** Returns a copy of the data between `[start, until)`. $RNLNOTE */
   def region (start :Loc, until :Loc) :Seq[Line] =
     if (until < start) region(until, start)
@@ -377,16 +390,10 @@ abstract class Buffer extends BufferV {
   /** That which handles undoing and redoing for this buffer. */
   def undoer :Undoer
 
-  /** Inserts the single character `c` into this buffer at `loc` with CSS style classes `styles`.
+  /** Inserts the single character `c` into this buffer at `loc` with CSS style classes `styles`
+    * and tagged with syntax `syntax`.
     * @return the buffer location just after the inserted character. */
-  def insert (loc :Loc, c :Char, style :Styles) :Loc
-
-  /** Inserts the raw string `s` into this buffer at `loc` with CSS style class `style`.
-    * @return the buffer location just after the inserted string. */
-  def insert (loc :Loc, s :String, styles :Styles) :Loc = {
-    if (s.length == 1) insert(loc, s.charAt(0), styles)
-    else insert(loc, new Line(s, styles))
-  }
+  def insert (loc :Loc, c :Char, styles :Styles, syntax :Syntax) :Loc
 
   /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
     * into the line at `loc`, a new line will not be created. If you wish to create a new line,

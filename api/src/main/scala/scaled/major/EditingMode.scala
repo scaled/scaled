@@ -222,9 +222,11 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       val at = computeAutoBreak(p)
       if (at != Loc.None) autoBreak(at)
     }
-    // insert the typed character at the point and move the point to after the insert;
-    // note we re-read view.point() here because breakForAutofill() may have changed it
-    view.point() = view.buffer.insert(view.point(), typed, Styles.None)
+    // re-read view.point() here because breakForAutofill() may have changed it
+    val np = view.point()
+    // insert the typed character at the point and move the point to after the insert
+    view.point() = if (typed.length != 1) view.buffer.insert(np, Line(typed))
+                   else view.buffer.insert(np, typed.charAt(0), Styles.None, Syntax.Default)
   }
 
   @Fn("Deletes the character immediately previous to the point.")
@@ -300,7 +302,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     else {
       val swap = tp.prevC
       buffer.replace(swap, 2, new Line(Array(buffer charAt tp, buffer charAt swap),
-                                       Array(buffer stylesAt tp, buffer stylesAt swap)))
+                                       Array(buffer stylesAt tp, buffer stylesAt swap),
+                                       Array(buffer syntaxAt tp, buffer syntaxAt swap)))
       view.point() = tp.nextC
     }
   }

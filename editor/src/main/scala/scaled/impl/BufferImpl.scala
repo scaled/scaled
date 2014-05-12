@@ -142,8 +142,8 @@ class BufferImpl private (
 
   override def markClean () :Unit = _dirty() = false
 
-  override def insert (loc :Loc, c :Char, styles :Styles) = {
-    _lines(loc.row).insert(loc, c, styles)
+  override def insert (loc :Loc, c :Char, styles :Styles, syntax :Syntax) = {
+    _lines(loc.row).insert(loc, c, styles, syntax)
     noteInsert(loc, loc.nextC)
   }
   override def insert (loc :Loc, line :LineV) = {

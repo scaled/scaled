@@ -70,7 +70,7 @@ class Commenter (buffer :BufferV) {
     */
   def commentPre (commentPre :String, startCol :Int) :Line = {
     val spaces = " " * (startCol - commentPre.length - 1)
-    new Line(spaces + commentPrefix + " ") // TODO: infer number of trailing spaces?
+    Line(spaces + commentPrefix + " ") // TODO: infer number of trailing spaces?
   }
 
   /** Refills the comments region `[start, end)`. `start` may be a line which contains some
