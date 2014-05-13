@@ -66,12 +66,15 @@ class RegexpMatcher (pattern :String) extends Matcher {
 
   def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
     prep(haystack, begin, end)
-    var start = begin
-    while (start <= from && m.find(start)) {
-      result = m.toMatchResult
-      start = m.end
+    var last = -1 ; var next = begin
+    while (next <= from && m.find(next)) {
+      if (m.start < from) {
+        result = m.toMatchResult
+        last = m.start
+      }
+      next = m.end
     }
-    if (start == begin) -1 else result.start
+    last
   }
 
   override def matches (haystack :Array[Char], hfirst :Int, hlast :Int) :Boolean = {

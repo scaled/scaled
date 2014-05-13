@@ -132,5 +132,6 @@ class LineTest {
     assertEquals(9, l2.indexOf(Matcher.regexp("blah")))
     assertEquals(t2.lastIndexOf("blah"), l2.lastIndexOf(Matcher.regexp("blah")))
     assertEquals(t2.lastIndexOf("blah,"), l2.lastIndexOf(Matcher.regexp("\\bblah")))
+    assertEquals(t2.lastIndexOf("blah.", 14), l2.lastIndexOf(Matcher.regexp("\\bblah"), 14))
   }
 }

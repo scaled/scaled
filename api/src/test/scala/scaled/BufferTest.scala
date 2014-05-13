@@ -33,26 +33,34 @@ class BufferTest {
     val mp = Matcher.exact("peanut")
     assertEquals(Loc.None, buffer.findForward(mp, buffer.start))
 
-    val mm = Matcher.exact("match")
     val mloc = Loc(2, 15)
-    assertEquals(mloc, buffer.findForward(mm, buffer.start))
-    // make sure a search for "match" exactly on match does match
-    assertEquals(mloc, buffer.findForward(mm, mloc))
-    // make sure a search for "match" just after match doesn't match
-    assertEquals(Loc.None, buffer.findForward(mm, mloc.nextC))
+    def test (mm :Matcher) {
+      assertEquals(mloc, buffer.findForward(mm, buffer.start))
+      // make sure a search for "match" exactly on match does match
+      assertEquals(mloc, buffer.findForward(mm, mloc))
+      // make sure a search for "match" just after match doesn't match
+      assertEquals(Loc.None, buffer.findForward(mm, mloc.nextC))
+    }
+    test(Matcher.exact("match"))
+    test(Matcher.regexp("\\bmatch\\b"))
   }
 
   @Test def testFindBackward () {
     val mp = Matcher.exact("peanut")
     assertEquals(Loc.None, buffer.findBackward(mp, buffer.end))
 
-    val mm = Matcher.exact("match")
     val mloc = Loc(2, 15)
-    assertEquals(mloc, buffer.findBackward(mm, buffer.end))
-    // make sure a search for "match" exactly on match does not match (findBackward starts
-    // immediately prior to `start`)
-    assertEquals(Loc.None, buffer.findBackward(mm, mloc))
-    // make sure a search for "match" before match also doesn't match
-    assertEquals(Loc.None, buffer.findBackward(mm, mloc.prevC))
+    def test (mm :Matcher) {
+      assertEquals(s"findBackward($mm) matches", mloc, buffer.findBackward(mm, buffer.end))
+      // make sure a search for "match" exactly on match does not match (findBackward starts
+      // immediately prior to `start`)
+      assertEquals(s"findBackward($mm) at match doesn't match",
+                   Loc.None, buffer.findBackward(mm, mloc))
+      // make sure a search for "match" before match also doesn't match
+      assertEquals(s"findBackward($mm) at match,prevC doesn't match",
+                   Loc.None, buffer.findBackward(mm, mloc.prevC))
+    }
+    test(Matcher.exact("match"))
+    test(Matcher.regexp("\\bmatch\\b"))
   }
 }
