@@ -21,11 +21,13 @@ class Completion[T] (values :Iterable[T], format :T => String, sort :Boolean) {
       b += (comp -> value)
       c += comp
     }
-    (c.result, b.result)
+    // we need to turn our treeset into a seq immediately otherwise the sort ordering will be lost
+    // further down the line when it is filtered or grouped or whatnot
+    (c.result.toSeq, b.result)
   }
 
   /** Returns the completion display strings, in the order they should be displayed. */
-  def comps :Iterable[String] = _comps
+  def comps :Seq[String] = _comps
 
   /** Returns `Some` value associated with the completion `comp`, or `None`. */
   def apply (comp :String) :Option[T] = _map.get(comp)

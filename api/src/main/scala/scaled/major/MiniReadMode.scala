@@ -102,7 +102,7 @@ class MiniReadMode[T] (
       // this results in substantially smaller and more readable completions when we're completing
       // things like long file system paths
       val preLen = completer.pathSeparator map(sep => pre.lastIndexOf(sep)+1) getOrElse 0
-      miniui.showCompletions(comp.comps.map(_.substring(preLen)).toSeq)
+      miniui.showCompletions(comp.comps.map(_.substring(preLen)))
     }
   }
 
