@@ -32,22 +32,11 @@ abstract class Indenter (val config :Config, val buffer :BufferV) {
   /** Issues an indentation debugging message. */
   protected def debug (msg :String) :Unit = if (config(CodeConfig.debugIndent)) println(msg)
 
-  protected def findCodeForward (m :Matcher, start :Loc, end :Loc) :Loc =
-    buffer.findForward(m, start, end) match {
-      case Loc.None => Loc.None
-      // findForward starts looking at `loc` so we have to bump forward a character before making
-      // our recursive call
-      case loc => if (buffer.syntaxAt(loc).isCode) loc
-                  else findCodeForward(m, buffer.forward(loc, 1), end)
-    }
+  protected def findCodeForward (m :Matcher, start :Loc, stop :Loc = buffer.end) :Loc =
+    Indenter.findCodeForward(buffer, m, start, stop)
 
-  protected def findCodeBackward (m :Matcher, start :Loc, end :Loc) :Loc =
-    buffer.findBackward(m, start, end) match {
-      case Loc.None => Loc.None
-      // findBackward starts looking prior to `loc` not at `loc` so we don't need to adjust `loc`
-      // before making our recursive call
-      case loc => if (buffer.syntaxAt(loc).isCode) loc else findCodeBackward(m, loc, end)
-    }
+  protected def findCodeBackward (m :Matcher, start :Loc, stop :Loc = buffer.start) :Loc =
+    Indenter.findCodeBackward(buffer, m, start, stop)
 }
 
 object Indenter {
@@ -93,6 +82,25 @@ object Indenter {
     case -1 => false
     case ii => line.indexOf(isNotWhitespace, ii+m.matchLength) == -1
   }
+
+  /** Performs [[Buffer.findForward]] but skips over non-code matches. */
+  def findCodeForward (buffer :BufferV, m :Matcher, start :Loc, stop :Loc) :Loc =
+    buffer.findForward(m, start, stop) match {
+      case Loc.None => Loc.None
+      // findForward starts looking at `loc` so we have to bump forward a character before making
+      // our recursive call
+      case loc => if (buffer.syntaxAt(loc).isCode) loc
+                  else findCodeForward(buffer, m, buffer.forward(loc, 1), stop)
+    }
+
+  /** Performs [[Buffer.findBackward]] but skips over non-code matches. */
+  def findCodeBackward (buffer :BufferV, m :Matcher, start :Loc, stop :Loc) :Loc =
+    buffer.findBackward(m, start, stop) match {
+      case Loc.None => Loc.None
+      // findBackward starts looking prior to `loc` not at `loc` so we don't need to adjust `loc`
+      // before making our recursive call
+      case loc => if (buffer.syntaxAt(loc).isCode) loc else findCodeBackward(buffer, m, loc, stop)
+    }
 
   /** Returns the token (word) immediately preceding `pos` in `line`. If non-whitespace, non-word
     * characters precede `pos` or no word characters precede `pos`, `None` is returned.
