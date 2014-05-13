@@ -31,6 +31,23 @@ abstract class Indenter (val config :Config, val buffer :BufferV) {
 
   /** Issues an indentation debugging message. */
   protected def debug (msg :String) :Unit = if (config(CodeConfig.debugIndent)) println(msg)
+
+  protected def findCodeForward (m :Matcher, start :Loc, end :Loc) :Loc =
+    buffer.findForward(m, start, end) match {
+      case Loc.None => Loc.None
+      // findForward starts looking at `loc` so we have to bump forward a character before making
+      // our recursive call
+      case loc => if (buffer.syntaxAt(loc).isCode) loc
+                  else findCodeForward(m, buffer.forward(loc, 1), end)
+    }
+
+  protected def findCodeBackward (m :Matcher, start :Loc, end :Loc) :Loc =
+    buffer.findBackward(m, start, end) match {
+      case Loc.None => Loc.None
+      // findBackward starts looking prior to `loc` not at `loc` so we don't need to adjust `loc`
+      // before making our recursive call
+      case loc => if (buffer.syntaxAt(loc).isCode) loc else findCodeBackward(m, loc, end)
+    }
 }
 
 object Indenter {
@@ -319,7 +336,7 @@ object Indenter {
   abstract class AnchorAlign (cfg :Config, buf :BufferV) extends Indenter(cfg, buf) {
 
     protected def indentToAnchor (block :Block, pos :Loc, anchorM :Matcher) :Option[Int] =
-      buffer.findBackward(anchorM, pos, block.start) match {
+      findCodeBackward(anchorM, pos, block.start) match {
         case Loc.None => None
         case      loc => debug(s"Aligning to '$anchorM' @ $loc") ; Some(loc.col)
       }
