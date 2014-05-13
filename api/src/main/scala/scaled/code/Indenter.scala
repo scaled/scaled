@@ -197,7 +197,7 @@ object Indenter {
       if (pc.row != pos.row-1 || buffer.charAt(pc) != ')') None
       else {
         // find the open paren, and check that the token preceding it is in `tokens`
-        blocker.apply(pc.nextC, 0) flatMap { b =>
+        blocker.apply(pc.nextC, Syntax.Default) flatMap { b =>
           prevToken(buffer.line(b.start), b.start.col) flatMap { token =>
             if (!tokens(token)) None
             else {

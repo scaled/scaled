@@ -64,6 +64,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap ++ Seq(
+    "M-A-s"   -> "show-syntax",
     "ENTER"   -> "newline-and-indent",
     "S-ENTER" -> "newline-and-indent",
     "TAB"     -> "reindent",
@@ -80,31 +81,13 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
   val curBlock = OptValue[Block]()
   /** A helper that tracks blocks throughout the buffer. */
-  val blocker = new Blocker(buffer, openBrackets, closeBrackets) {
-    override def classify (row :Int, col :Int) :Int = CodeMode.this.classify(Loc(row, col))
-  }
+  val blocker = new Blocker(buffer, openBrackets, closeBrackets)
 
   /** Enumerates the open brackets that will be matched when tracking blocks. */
   def openBrackets = "{(["
   /** Enumerates the close brackets that will be matched when tracking blocks.
     * These must match the order of [[openBrackets]] exactly. */
   def closeBrackets = "})]"
-
-  /** Returns an int identifying the syntax class for the character at `loc`. This is used by
-    * [[blocker]] to avoid matching brackets in normal code with brackets in comments or strings.
-    *
-    * The default implementation treats characters styled with [[commentStyle]], [[docStyle]],
-    * [[stringStyle]] and [[constantStyle]] as separate bracket classes. NOTE: zero should always
-    * be returned for brackets affect actual code.
-    */
-  def classify (loc :Loc) :Int = {
-    val styles = buffer.stylesNear(loc)
-    if (styles.contains(commentStyle)) 1
-    else if (styles.contains(docStyle)) 2
-    else if (styles.contains(stringStyle)) 3
-    else if (styles.contains(constantStyle)) 4
-    else 0
-  }
 
   // as the point moves around, track the active block
   view.point onValue { p => curBlock() = blocker(p) }
@@ -128,7 +111,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val line = buffer.line(row)
     val wsp = line.indexOf(isNotWhitespace)
     val start = Loc(row, if (wsp == -1) 0 else wsp)
-    val block = blocker(start, 0) getOrElse Block(buffer.start, buffer.end, false)
+    val block = blocker(start, Syntax.Default) getOrElse Block(buffer.start, buffer.end, false)
     @tailrec @inline def loop (ins :List[Indenter]) :Int =
       if (ins.isEmpty) 0 else {
         val opt = ins.head(block, line, start)
@@ -194,6 +177,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   //
   // FNs
+
+  @Fn("Displays the syntax at the point.")
+  def showSyntax () {
+    val info = Seq(buffer.syntaxAt(view.point()).toString)
+    view.popup() = Popup(info, Popup.UpRight(view.point()))
+  }
 
   @Fn("Inserts a newline, then indents according to the code mode's indentation rules.")
   def newlineAndIndent () {
