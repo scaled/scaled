@@ -210,14 +210,14 @@ abstract class BufferV extends Region {
   /** Scans forward from `start` for a character that matches `pred`. If `start` matches, it will be
     * returned. If `stop` is reached before finding a match, `stop` is returned. Note that end of
     * line characters are included in the scan.
-    * @param pred a predicate that will be passed `(row, col, char)`.
+    * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
-  def scanForward (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
+  def scanForward (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
       val last = if (row == stopr) stopc else line.length
-      var p = col ; while (p <= last && !pred(row, p, line.charAt(p))) p += 1
+      var p = col ; while (p <= last && !pred(line.charAt(p), line.syntaxAt(p))) p += 1
       if (p <= last) Loc(row, p)
       else if (row == stopr) stop
       else seek(row+1, 0)
@@ -228,14 +228,14 @@ abstract class BufferV extends Region {
   /** Scans backward from the location immediately previous to `start` for a character that matches
     * `pred`. If `stop` is reached before finding a match, `stop` is returned. Note that end of
     * line characters are included in the scan.
-    * @param pred a predicate that will be passed `(row, col, char)`.
+    * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
-  def scanBackward (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
+  def scanBackward (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
       val first = if (row == stopr) stopc else 0
-      var p = col ; while (p >= first && !pred(row, p, line.charAt(p))) p -= 1
+      var p = col ; while (p >= first && !pred(line.charAt(p), line.syntaxAt(p))) p -= 1
       if (p >= first) Loc(row, p)
       else if (row == stopr) stop
       else seek(row-1, this.line(row-1).length)
@@ -247,14 +247,14 @@ abstract class BufferV extends Region {
     * which `pred` matches. Returns `start` if we fail immediately. If `stop` is reached before
     * finding a non-matching character, `stop` is returned. Note that end of line characters are
     * included in the scan.
-    * @param pred a predicate that will be passed `(row, col, char)`.
+    * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
-  def scanForWhile (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
+  def scanForWhile (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
       val last = if (row == stopr) stopc else line.length
-      var p = col ; while (p <= last && pred(row, p, line.charAt(p))) p += 1
+      var p = col ; while (p <= last && pred(line.charAt(p), line.syntaxAt(p))) p += 1
       if (p <= last) backward(Loc(row, p), 1)
       else if (row == stopr) stop
       else seek(row+1, 0)
@@ -266,14 +266,14 @@ abstract class BufferV extends Region {
     * which `pred` matches. Returns `start` if we failed immediately. If `stop` is reached before
     * finding a non-matching character, `stop` is returned. Note that end of line characters are
     * included in the scan.
-    * @param pred a predicate that will be passed `(row, col, char)`.
+    * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
-  def scanBackWhile (pred :(Int,Int,Char) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
+  def scanBackWhile (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = {
       val line = this.line(row)
       val first = if (row == stopr) stopc else 0
-      var p = col ; while (p >= first && pred(row, p, line.charAt(p))) p -= 1
+      var p = col ; while (p >= first && pred(line.charAt(p), line.syntaxAt(p))) p -= 1
       if (p >= first) forward(Loc(row, p), 1)
       else if (row == stopr) stop
       else seek(row-1, this.line(row-1).length)

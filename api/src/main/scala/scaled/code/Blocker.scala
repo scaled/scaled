@@ -58,20 +58,19 @@ class Blocker (buffer :BufferV, openers :String, closers :String) {
   }
 
   // scans backwards, looking for an unmatched opener
-  class Scanner (starts :String, ends :String) extends Function3[Int,Int,Char,Boolean] {
+  class Scanner (starts :String, ends :String) extends Function2[Char,Syntax,Boolean] {
     val counts = new Array[Int](starts.length)
     val zeros = counts.clone()
     private[this] var syntax = Syntax.Default
 
-    def apply (row :Int, col :Int, c :Char) :Boolean = {
-      def syntaxMatches = buffer.syntaxAt(Loc(row, col)) matches syntax
+    def apply (c :Char, cs :Syntax) :Boolean = {
       // if we see a block starter, tick up a counter for that bracket
       val sidx = starts.indexOf(c)
-      if (sidx >= 0 && syntaxMatches) counts(sidx) += 1
+      if (sidx >= 0 && (cs matches syntax)) counts(sidx) += 1
       else {
         // if we see a block ender, tick down the counter for that bracket
         val eidx = ends.indexOf(c)
-        if (eidx >= 0 && syntaxMatches) {
+        if (eidx >= 0 && (cs matches syntax)) {
           val cur = counts(eidx)
           // if we haven't seen a starter for this opener, it's what we're looking for
           if (cur == 0) return true

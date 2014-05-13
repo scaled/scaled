@@ -5,6 +5,7 @@
 package scaled.util
 
 import scala.annotation.switch
+import scaled.Syntax
 
 /** Provides functions for efficiently testing the nature of characters. Specifically, whether they
   * are whitespace, word or punctuation characters.
@@ -59,7 +60,7 @@ object Chars {
     override def toString = "isNotUpperCase"
   }
 
-  abstract class Pred extends Function1[Char,Boolean] with Function3[Int,Int,Char,Boolean] {
+  abstract class Pred extends Function1[Char,Boolean] with Function2[Char,Syntax,Boolean] {
     private[this] val masks = new Array[Long](4)
     private def computeMask (mm :Int) :Long = {
       var mask = 0L ; val off = mm*64 ; var ii = 0 ; while (ii < 64) {
@@ -75,7 +76,7 @@ object Chars {
       else slowApply(c)
     }
 
-    def apply (row :Int, col :Int, c :Char) :Boolean = {
+    def apply (c :Char, s :Syntax) :Boolean = {
       if (c < 256) (masks(c/64) & (1L << c%64)) != 0L
       else slowApply(c)
     }
