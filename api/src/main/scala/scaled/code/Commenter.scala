@@ -79,7 +79,6 @@ class Commenter (buffer :BufferV) {
     * @return the refilled comments region.
     */
   def refillComments (fillColumn :Int, start :Loc, end :Loc) :Seq[Line] = {
-    println(s"refillLinesIn($start, $end)")
     // the first line dictates the prefix width and fill width
     val firstLine = buffer.line(start)
     val firstCol = commentStart(firstLine)
