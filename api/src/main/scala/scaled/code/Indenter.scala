@@ -52,16 +52,18 @@ object Indenter {
   def readIndentSkipArglist (buffer :BufferV, pos :Loc) :Int = {
     // scans forward to look for ( or ); if we see a ) first, then we're in an arglist
     def inArgList (start :Loc, end :Loc) =
-      buffer.charAt(buffer.scanForward((_,_,c) => c == ')' || c == '(', start, end)) == ')'
+      buffer.charAt(buffer.scanForward(isOpenOrCloseParen, start, end)) == ')'
     // scans backward to find the ( which opens our arglist; doesn't handle nesting or scala style
     // multiple arglists...
-    def findArgListStart (from :Loc) =
-      buffer.scanBackward((_,_,c) => c == '(', from)
+    def findArgListStart (from :Loc) = buffer.scanBackward(isOpenParen, from)
     val nonWSIdx = buffer.line(pos).indexOf(isNotWhitespace)
     val firstNonWS = pos.atCol(if (nonWSIdx == -1) 0 else nonWSIdx)
     val start = if (inArgList(firstNonWS, pos)) findArgListStart(firstNonWS) else firstNonWS
     readIndent(buffer, start)
   }
+
+  val isOpenOrCloseParen = (_ :Int, _ :Int, c :Char) => c == '(' || c == ')'
+  val isOpenParen        = (_ :Int, _ :Int, c :Char) => c == '('
 
   /** Returns true if `m` matches the first non-whitespace characters of `line`. */
   def startsWith (line :LineV, m :Matcher) :Boolean = line.indexOf(isNotWhitespace) match {
