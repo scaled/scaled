@@ -146,7 +146,11 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
       }
       stage.setTitle(s"Scaled - ${buf.name}")
       _active = buf
+
+      val start = System.nanoTime() // TEMP: perf debugging
       getChildren.add(_active.content)
+      val elapsed = (System.nanoTime() - start)/1000
+      if (elapsed > 500) println(s"EditorPane add BufferArea $elapsed us")
     }
   }
 

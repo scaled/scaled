@@ -303,7 +303,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       updateCursor(bview.point())
 
       val elapsed = (System.nanoTime() - start)/1000
-      println(s"BufferArea layout $elapsed us")
+      if (elapsed > 500) println(s"BufferArea layout $elapsed us")
     }
 
     def updateVizLines () {
