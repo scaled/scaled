@@ -140,7 +140,10 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private def setBuffer (buf :OpenBuffer) {
     if (_active == buf) _active.content.toFront()
     else {
-      if (_active != null) getChildren.remove(_active.content)
+      if (_active != null) {
+        getChildren.remove(_active.content)
+        _active.area.hibernate()
+      }
       stage.setTitle(s"Scaled - ${buf.name}")
       _active = buf
       getChildren.add(_active.content)

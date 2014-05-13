@@ -79,6 +79,13 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
   /** Returns the number of characters that we can fit in the specified pixel height. */
   def heightInChars (height :Double) :Int = (height / lineHeight).toInt
 
+  /** Tells this buffer area that it's going into the background. This frees up some resources that
+    * are easy enough to recreate if/when the buffer area is made active again. */
+  def hibernate () {
+    // invalidate all non-visible lines (this will clear out their internal UI elements)
+    onLines { (line, isViz) => if (!isViz) line.invalidate() }
+  }
+
   private var charWidth  = 0d
   private var lineHeight = 0d
 
@@ -301,15 +308,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
     def updateVizLines () {
       val top = bview.scrollTop()
-      val bot = top + bview.height()
-      val lines = bview.lines
-      var vals = 0
-      var idx = lines.size-1 ; while (idx >= 0) {
-        if (lines(idx).setVisible(idx >= top && idx <= bot)) vals += 1
-        idx -= 1
-      }
+      onLines(_.setVisible(_))
       contentNode.setLayoutY(-top*lineHeight)
-      if (vals > 0) println(s"BufferArea $vals validations.")
     }
   }
   private val contentNode = new ContentNode()
@@ -383,6 +383,16 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     // break that loop and separately handle current versus preferred size in BufferView
     bview.width() = widthChars
     bview.height() = heightChars
+  }
+
+  private def onLines (fn :(LineViewImpl,Boolean) => Unit) {
+    val top = bview.scrollTop()
+    val bot = top + bview.height()
+    val lines = bview.lines
+    var idx = lines.size-1 ; while (idx >= 0) {
+      fn(lines(idx), idx >= top && idx <= bot)
+      idx -= 1
+    }
   }
 
   override def getCssMetaData = BufferArea.getClassCssMetaData
