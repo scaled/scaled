@@ -18,6 +18,10 @@ abstract class Syntax {
 
   /** Returns true if this syntax represents a char, string or integer literal. */
   def isLiteral :Boolean
+
+  /** Returns true if this syntax matches the properties of `other`. */
+  def matches (other :Syntax) :Boolean =
+    (isComment == other.isComment) && (isLiteral == other.isLiteral)
 }
 
 /** Various standard syntax singletons. */
@@ -27,36 +31,42 @@ object Syntax {
   val Default = new Syntax {
     def isComment = false
     def isLiteral = false
+    override def toString = "Default"
   }
 
   /** A singleton [[Syntax]] instance for tagging line comments. */
   val LineComment = new Syntax {
     def isComment = true
     def isLiteral = false
+    override def toString = "LineComment"
   }
 
   /** A singleton [[Syntax]] instance for tagging block comments. */
   val BlockComment = new Syntax {
     def isComment = true
     def isLiteral = false
+    override def toString = "BlockComment"
   }
 
   /** A singleton [[Syntax]] instance for tagging doc comments. */
   val DocComment = new Syntax {
     def isComment = true
     def isLiteral = false
+    override def toString = "DocComment"
   }
 
   /** A singleton [[Syntax]] instance for tagging string literals. */
   val StringLiteral = new Syntax {
     def isComment = false
     def isLiteral = true
+    override def toString = "StringLiteral"
   }
 
   /** A singleton [[Syntax]] instance for tagging character literals. */
   val CharLiteral = new Syntax {
     def isComment = false
     def isLiteral = true
+    override def toString = "CharLiteral"
   }
 
   /** A singleton [[Syntax]] instance for tagging non-string, non-char literals (like integer or
@@ -64,5 +74,6 @@ object Syntax {
   val OtherLiteral = new Syntax {
     def isComment = false
     def isLiteral = true
+    override def toString = "OtherLiteral"
   }
 }
