@@ -62,8 +62,8 @@ object Indenter {
     readIndent(buffer, start)
   }
 
-  val isOpenOrCloseParen = (_ :Int, _ :Int, c :Char) => c == '(' || c == ')'
-  val isOpenParen        = (_ :Int, _ :Int, c :Char) => c == '('
+  val isOpenOrCloseParen = (c :Char, s :Syntax) => (c == '(' || c == ')') && s.isCode
+  val isOpenParen        = (c :Char, s :Syntax) => (c == '('            ) && s.isCode
 
   /** Returns true if `m` matches the first non-whitespace characters of `line`. */
   def startsWith (line :LineV, m :Matcher) :Boolean = line.indexOf(isNotWhitespace) match {

@@ -19,6 +19,9 @@ abstract class Syntax {
   /** Returns true if this syntax represents a char, string or integer literal. */
   def isLiteral :Boolean
 
+  /** Returns true if this syntax is code (i.e. not a comment and not a literal). */
+  def isCode :Boolean = !isComment && !isLiteral
+
   /** Returns true if this syntax matches the properties of `other`. */
   def matches (other :Syntax) :Boolean =
     (isComment == other.isComment) && (isLiteral == other.isLiteral)
