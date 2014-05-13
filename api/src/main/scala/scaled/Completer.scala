@@ -145,13 +145,20 @@ object Completer {
   }
 
   /** Returns a completer on buffer name. */
-  def buffer (editor :Editor) :Completer[String] = from(editor.buffers.map(_.name), false)
+  def buffer (editor :Editor) :Completer[String] = buffer(editor, Set())
 
-  /** Returns a completer on buffer name.
+  /** Returns a completer on buffer name. This behaves specially in that the empty completion omits
+    * transient buffers (buffers named `*foo*`).
     * @param except a set of buffer names to exclude from completion.
     */
-  def buffer (editor :Editor, except :Set[String]) :Completer[String] =
-    from(editor.buffers collect { case (buf) if (!except(buf.name)) => buf.name }, false)
+  def buffer (editor :Editor, except :Set[String]) :Completer[String] = new Completer[String] {
+    def complete (prefix :String) = {
+      val buffers = editor.buffers collect { case (buf) if (!except(buf.name)) => buf.name }
+      if (prefix == "") stringCompletion(buffers.filterNot(_ startsWith "*"))
+      else stringCompletion(buffers.filter(startsWithI(prefix)))
+    }
+    override protected def fromString (value :String) = Some(value)
+  }
 
   /** Replaces newlines with whitespace. This should be called on any string that will be used
     * as a completion key which may potentially contain newlines. File names are the primary
