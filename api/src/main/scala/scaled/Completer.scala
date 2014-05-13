@@ -174,15 +174,15 @@ object Completer {
     override def pathSeparator = Some(File.separator)
     override protected def fromString (value :String) = Some(new File(value))
 
-    private def ignore (file :File) :Boolean = file.getName.startsWith(".")
+    private val notDotFile = (n :String) => !(n startsWith ".")
 
     private def expand (dir :File, prefix :String) = {
       val edir = massage(dir)
-      val files = if (edir.exists) edir.listFiles.filterNot(ignore) else Array[File]()
-      val matches = files.filter(f => startsWithI(prefix)(defang(f.getName)))
-      val file = new File(edir, prefix)
-      sortedCompletion(if (file.exists && file.isDirectory && matches.length > 1) file.listFiles
-                       else matches, formatFile)
+      val files = if (edir.exists) edir.listFiles else Array[File]()
+      // if our prefix is empty, filter out dot files by default; the user can see the dot files by
+      // typing `.TAB`, in which case we'll have a non-empty prefix and will complete normally
+      val filter = if (prefix == "") notDotFile else startsWithI(prefix)(_)
+      sortedCompletion(files.filter(f => filter(defang(f.getName))), formatFile)
     }
 
     private def massage (dir :File) = {
