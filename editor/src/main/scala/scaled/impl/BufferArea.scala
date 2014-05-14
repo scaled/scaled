@@ -27,13 +27,7 @@ import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scaled._
 
-// TODO
-//
-// - support passing in start and end anchors and only displaying the part of the buffer between
-// those anchors (actually make this an attribute of the BufferView)
-
-/** Brings everything together into one all singing, all dancing text editing extravaganza.
-  */
+/** Brings everything together into one all singing, all dancing, text editing extravaganza. */
 class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     extends Region {
 
