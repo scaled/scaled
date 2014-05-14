@@ -29,3 +29,16 @@ trait ModeLine {
     * a fully realized tooltip (which can contain an arbitrary scene graph). */
   def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) :AutoCloseable
 }
+
+object ModeLine {
+
+  /** A modeline that ignores the caller. Used in situations where a mode has no associated mode
+    * linee (like minibuffer modes) or when testing.
+    */
+  val Noop = new ModeLine() {
+    override def addDatum (value :ValueV[String], tooltip :String) = NoopCloseable
+    override def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) = NoopCloseable
+  }
+
+  private val NoopCloseable = new AutoCloseable() { def close () {} }
+}
