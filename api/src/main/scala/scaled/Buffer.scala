@@ -210,6 +210,7 @@ abstract class BufferV extends Region {
   /** Scans forward from `start` for a character that matches `pred`. If `start` matches, it will be
     * returned. If `stop` is reached before finding a match, `stop` is returned. Note that end of
     * line characters are included in the scan.
+    *
     * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
   def scanForward (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
@@ -228,6 +229,7 @@ abstract class BufferV extends Region {
   /** Scans backward from the location immediately previous to `start` for a character that matches
     * `pred`. If `stop` is reached before finding a match, `stop` is returned. Note that end of
     * line characters are included in the scan.
+    *
     * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
   def scanBackward (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
@@ -247,6 +249,7 @@ abstract class BufferV extends Region {
     * which `pred` matches. Returns `start` if we fail immediately. If `stop` is reached before
     * finding a non-matching character, `stop` is returned. Note that end of line characters are
     * included in the scan.
+    *
     * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
   def scanForWhile (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.end) :Loc = {
@@ -262,10 +265,11 @@ abstract class BufferV extends Region {
     if (start < stop) seek(start.row, start.col) else stop
   }
 
-  /** Scans backward from `start` while `pred` continues to match. Returns the last location at
-    * which `pred` matches. Returns `start` if we failed immediately. If `stop` is reached before
-    * finding a non-matching character, `stop` is returned. Note that end of line characters are
-    * included in the scan.
+  /** Scans backward from the location immediately previous to `start` while `pred` continues to
+    * match. Returns the last location at which `pred` matches. Returns `start` if we failed
+    * immediately. If `stop` is reached before finding a non-matching character, `stop` is returned.
+    * Note that end of line characters are included in the scan.
+    *
     * @param pred a predicate that will be passed the character and syntax at each buffer position.
     */
   def scanBackWhile (pred :(Char,Syntax) => Boolean, start :Loc, stop :Loc = this.start) :Loc = {
@@ -282,6 +286,7 @@ abstract class BufferV extends Region {
   }
 
   /** Scans forward from the `start`th lne of the buffer, seeking a line that matches `pred`.
+    *
     * @return the index of the first matching row. If the `stop`th line is reached without a match,
     * `stop` is returned.
     */
@@ -292,6 +297,7 @@ abstract class BufferV extends Region {
   }
 
   /** Scans backward from the `start`th lne of the buffer, seeking a line that matches `pred`.
+    *
     * @return the index of the first matching row. If the `stop`th line is reached without a match,
     * `stop` is returned.
     */
@@ -303,7 +309,9 @@ abstract class BufferV extends Region {
 
   /** Searches forward from `start` for the first match of `m`, stopping before `stop` (`stop` is
     * not checked for a match).
-    * @return the location of the match or `Loc.None`. */
+    *
+    * @return the location of the match or `Loc.None`.
+    */
   def findForward (m :Matcher, start :Loc, stop :Loc = this.end) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).indexOf(m, col) match {
@@ -315,7 +323,9 @@ abstract class BufferV extends Region {
 
   /** Searches backward from the location immediately previous to `start` for the first match of
     * `m`, stopping when `stop` is reached (`stop` is checked for a match).
-    * @return the location of the match or `Loc.None`. */
+    *
+    * @return the location of the match or `Loc.None`.
+    */
   def findBackward (m :Matcher, start :Loc, stop :Loc = this.start) :Loc = {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).lastIndexOf(m, col) match {
