@@ -126,9 +126,14 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   getStyleClass.add("editor")
 
-  private case class OpenBuffer (content :BorderPane, area :BufferArea, view :BufferViewImpl) {
+  private case class OpenBuffer (
+    content :BorderPane, area :BufferArea, view :BufferViewImpl, disp :DispatcherImpl
+  ) {
     def buffer = view.buffer
-    def name = view.buffer.name
+    def name = buffer.name
+    def dispose () {
+      disp.dispose()
+    }
     override def toString = name
   }
   private val _buffers = ArrayBuffer[OpenBuffer]()
@@ -264,7 +269,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     content.setCenter(area)
     content.setBottom(mline)
 
-    val obuf = OpenBuffer(content, area, view)
+    val obuf = OpenBuffer(content, area, view, disp)
     _buffers += obuf
     obuf
   }
@@ -276,6 +281,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private def killBuffer (obuf :OpenBuffer) {
     // TODO: run buffer kill hooks to determine if it should be killed
     _buffers -= obuf
+    obuf.dispose()
 
     // if our last buffer is killed, create a new scratch buffer
     if (_buffers.isEmpty) newScratch()
