@@ -5,22 +5,17 @@
 package scaled.impl
 
 import java.io.InputStreamReader
+import java.io.{Reader, BufferedReader, BufferedWriter, File, FileReader, FileWriter, StringReader}
 import java.util.zip.ZipFile
+import reactual.{Signal, SignalV, Value, ValueV}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
-
-import java.io.{Reader, BufferedReader, BufferedWriter, File, FileReader, FileWriter, StringReader}
-import reactual.{Signal, SignalV, Value, ValueV}
-
 import scaled._
 
 // TODO
 //
-// - Buffer.Loc which demarks a point in a buffer; allow converting to/from buffer char_offset, and
-// to/from line_no+char_offset
-//
 // - Buffer.Anchor which demarks a point in a buffer which is automatically adjusted as the buffer
-// is edited (and likely reports to listeners when it's location changes)
+// is edited (and likely reports to listeners when its location changes)
 
 /** [BufferImpl] related types and utilities. */
 object BufferImpl {
