@@ -8,7 +8,7 @@ import scaled._
 import scaled.util.{Chars, Filler}
 
 /** A helper class for dealing with comments in source code: wrapping, filling, etc. */
-class Commenter (buffer :BufferV) {
+class Commenter {
   import CodeConfig._
   import Chars._
 
@@ -41,9 +41,6 @@ class Commenter (buffer :BufferV) {
     * automatically inserting comment delimiters. */
   def padding :String = " "
 
-  /** Returns the text to be prepended to a comment about to be auto-wrapped at `at`. */
-  def prefixFor (at :Loc) :String = prefixFor(buffer.syntaxNear(at))
-
   /** Returns the auto-fill comment prefix for the specified syntax. */
   def prefixFor (syntax :Syntax) :String = {
     import Syntax._
@@ -56,7 +53,7 @@ class Commenter (buffer :BufferV) {
   }
 
   /** Returns true if `p` is "inside" a comment. */
-  def inComment (p :Loc) :Boolean = buffer.syntaxNear(p).isComment
+  def inComment (buffer :BufferV, p :Loc) :Boolean = buffer.syntaxNear(p).isComment
 
   /** Returns the column of start of the comment on `line`. If `line` does not contain comments,
     * `line.length` is returned. */
@@ -97,7 +94,7 @@ class Commenter (buffer :BufferV) {
     * preceding the start of their comments.
     * @return the refilled comments region.
     */
-  def refilled (fillColumn :Int, start :Loc, end :Loc) :Seq[Line] = {
+  def refilled (buffer :BufferV, fillColumn :Int, start :Loc, end :Loc) :Seq[Line] = {
     // the first line dictates the prefix width and fill width
     val firstLine = buffer.line(start)
     val firstCol = commentStart(firstLine)
@@ -130,7 +127,7 @@ class Commenter (buffer :BufferV) {
 
   /** Returns the region `[start, end)` commented out. The default implementation prefixes each line
     * by the line comment prefix, indented "appropriately". */
-  def lineCommented (start :Loc, end :Loc) :Seq[Line] = {
+  def lineCommented (buffer :BufferV, start :Loc, end :Loc) :Seq[Line] = {
     val lin = buffer.region(start, end)
     val spaces = " " * lin.filter(_.length > 0).map(Indenter.readIndent).min
     val prefix = Line(spaces + linePrefix + padding)

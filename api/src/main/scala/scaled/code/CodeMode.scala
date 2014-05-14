@@ -152,7 +152,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
-  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(p)
+  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(buffer, p)
 
   // in code mode, paragraphs are delimited by "blank" comment lines
   override def isParagraphDelim (line :LineV) = commenter.commentStart(line) == line.length
@@ -161,17 +161,17 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def fillParagraph () {
     // make sure we're "looking at" a comment
     val p = buffer.scanForward(isNotWhitespace, view.point())
-    if (commenter.inComment(p)) super.fillParagraph()
+    if (commenter.inComment(buffer, p)) super.fillParagraph()
     else editor.popStatus("Code modes only fill comments, not code.")
   }
   override def refillLinesIn (start :Loc, end :Loc) = {
     val cend = trimEnd(end)
-    buffer.replace(start, cend, commenter.refilled(fillColumn, start, cend))
+    buffer.replace(start, cend, commenter.refilled(buffer, fillColumn, start, cend))
   }
 
   // when we break for auto-fill, insert the appropriate comment prefix
   override def autoBreak (at :Loc) {
-    val pre = commenter.prefixFor(at)
+    val pre = commenter.prefixFor(buffer.syntaxNear(at))
     super.autoBreak(at)
     if (pre != "") {
       val p = view.point()
@@ -236,7 +236,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def commentRegion () {
     withRegion { (start, end) =>
       if (start.col == 0 && end.col == 0 && commenter.linePrefix != "") {
-        buffer.replace(start, end, commenter.lineCommented(start, end))
+        buffer.replace(start, end, commenter.lineCommented(buffer, start, end))
       }
       else if (commenter.blockOpen != "") {
         view.point() = commenter.blockComment(buffer, start, end)
