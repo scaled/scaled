@@ -55,8 +55,15 @@ class Commenter {
   /** Returns true if `p` is "inside" a comment. */
   def inComment (buffer :BufferV, p :Loc) :Boolean = buffer.syntaxNear(p).isComment
 
-  /** Returns the column of start of the comment on `line`. If `line` does not contain comments,
-    * `line.length` is returned. */
+  /** Returns true if the first non-whitespace chars in `line` are comments. */
+  def isCommentLine (line :LineV) :Boolean = line.indexOf(isNotWhitespace, 0) match {
+    case -1 => false
+    case ii => line.syntaxAt(ii).isComment
+  }
+
+  /** Returns the column of start of the comment text on `line`. This skips over the comment
+    * delimiter and any whitespace beyond it. If `line` does not contain comments, `line.length` is
+    * returned. */
   def commentStart (line :LineV) :Int = {
     val llen = line.length ; var c = 0
     // first skip over non-comments at the start of the line
