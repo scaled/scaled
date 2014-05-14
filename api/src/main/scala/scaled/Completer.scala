@@ -103,23 +103,6 @@ abstract class Completer[T] {
 
   /** Returns a sorted completion over some strings. */
   protected def stringCompletion (ss :Iterable[String]) = sortedCompletion(ss, identity[String])
-
-  /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */
-  protected def startsWithI (prefix :String)(full :String) :Boolean = {
-    @inline @tailrec def loop (ii :Int) :Boolean = {
-      if (ii == prefix.length) true
-      else {
-        val ra = full.charAt(ii) ; val rb = prefix.charAt(ii)
-        if (ra == rb) loop(ii+1)
-        else {
-          val la = Character.toLowerCase(ra) ; val lb = Character.toLowerCase(rb)
-          if (la == lb) loop(ii+1)
-          else false
-        }
-      }
-    }
-    if (prefix.length > full.length) false else loop(0)
-  }
 }
 
 /** Some useful completion functions. */
@@ -162,10 +145,34 @@ object Completer {
         if (name == "") defbuf else Some(editor.createBuffer(name, true).buffer)
     }
 
+  /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */
+  def startsWithI (prefix :String)(full :String) :Boolean = {
+    @inline @tailrec def loop (ii :Int) :Boolean = {
+      if (ii == prefix.length) true
+      else {
+        val ra = full.charAt(ii) ; val rb = prefix.charAt(ii)
+        if (ra == rb) loop(ii+1)
+        else {
+          val la = Character.toLowerCase(ra) ; val lb = Character.toLowerCase(rb)
+          if (la == lb) loop(ii+1)
+          else false
+        }
+      }
+    }
+    if (prefix.length > full.length) false else loop(0)
+  }
+
   /** Replaces newlines with whitespace. This should be called on any string that will be used
     * as a completion key which may potentially contain newlines. File names are the primary
     * culprit here. */
   def defang (name :String) = name.replace('\n', ' ').replace('\r', ' ')
+
+  /** Returns a prefix matching filter for file names. This [[defangs]] the file name and does a
+    * normal case-insensitive prefix match, except that when `prefix` is empty, dot files are
+    * omitted. */
+  def fileFilter (prefix :String) :(File => Boolean) =
+    if (prefix == "") { f => !(defang(f.getName) startsWith ".") }
+    else              { f => startsWithI(prefix)(defang(f.getName)) }
 
   /** A completer on file system files. */
   val file :Completer[File] = new Completer[File] {
@@ -176,15 +183,10 @@ object Completer {
     override def pathSeparator = Some(File.separator)
     override protected def fromString (value :String) = Some(new File(value))
 
-    private val notDotFile = (n :String) => !(n startsWith ".")
-
     private def expand (dir :File, prefix :String) = {
       val edir = massage(dir)
       val files = if (edir.exists) edir.listFiles else Array[File]()
-      // if our prefix is empty, filter out dot files by default; the user can see the dot files by
-      // typing `.TAB`, in which case we'll have a non-empty prefix and will complete normally
-      val filter = if (prefix == "") notDotFile else startsWithI(prefix)(_)
-      sortedCompletion(files.filter(f => filter(defang(f.getName))), formatFile)
+      sortedCompletion(files.filter(fileFilter(prefix)), formatFile)
     }
 
     private def massage (dir :File) = {
