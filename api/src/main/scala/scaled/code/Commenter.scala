@@ -15,30 +15,42 @@ class Commenter (buffer :BufferV) {
   /** The string to prepend to an auto-filled line comment. */
   def linePrefix :String = ""
   /** A matcher on [[linePrefix]]. */
-  val linePrefixM = prefixMatcher(linePrefix)
+  val linePrefixM = optMatcher(linePrefix)
 
-  /** The string to prepend to an auto-filled block comment. */
+  /** The string that opens a block comment. In C-like languages, this is slash *. */
+  def blockOpen :String = ""
+  /** A matcher on [[blockOpen]]. */
+  val blockOpenM = optMatcher(blockOpen)
+
+  /** The string that closes a block comment. In C-like languages, this is * slash. */
+  def blockClose :String = ""
+  /** A matcher on [[blockClose]]. */
+  val blockCloseM = optMatcher(blockClose)
+
+  /** The string to prepend to an auto-filled block comment. In C-like languages, this is *. */
   def blockPrefix :String = ""
-  /** A matcher on [[linePrefix]]. */
-  val blockPrefixM = prefixMatcher(blockPrefix)
+  /** A matcher on [[blockPrefix]]. */
+  val blockPrefixM = optMatcher(blockPrefix)
 
-  /** The string to prepend to an auto-filled doc line. */
+  /** The string to prepend to an auto-filled doc line. In Java-like languages, this is *. */
   def docPrefix :String = ""
   /** A matcher on [[docPrefix]]. */
-  val docPrefixM = prefixMatcher(docPrefix)
+  val docPrefixM = optMatcher(docPrefix)
+
+  /** Returns the padding to be intervened between a comment delimiter and the code when
+    * automatically inserting comment delimiters. */
+  def padding :String = " "
 
   /** Returns the text to be prepended to a comment about to be auto-wrapped at `at`. */
   def prefixFor (at :Loc) :String = prefixFor(buffer.syntaxNear(at))
 
   /** Returns the auto-fill comment prefix for the specified syntax. */
   def prefixFor (syntax :Syntax) :String = {
-    // TODO: have the caller tell us how many spaces they want, then count the number of spaces
-    // after the comment prefix on the filled line and duplicate that instead of assuming one space
     import Syntax._
     syntax match {
-      case  LineComment => linePrefix + " "
-      case BlockComment => blockPrefix + " "
-      case   DocComment => docPrefix + " "
+      case  LineComment => linePrefix + padding
+      case BlockComment => blockPrefix + padding
+      case   DocComment => docPrefix + padding
       case            _ => ""
     }
   }
@@ -76,8 +88,8 @@ class Commenter (buffer :BufferV) {
     * appropriate number of spaces with `commentPre` and a single trailing space.
     */
   def commentPre (commentPre :String, startCol :Int) :Line = {
-    val spaces = " " * (startCol - commentPre.length - 1)
-    Line(spaces + linePrefix + " ") // TODO: infer number of trailing spaces?
+    val spaces = " " * (startCol - commentPre.length - padding.length)
+    Line(spaces + linePrefix + padding)
   }
 
   /** Refills the comments region `[start, end)`. `start` may be a line which contains some
@@ -85,7 +97,7 @@ class Commenter (buffer :BufferV) {
     * preceding the start of their comments.
     * @return the refilled comments region.
     */
-  def refillComments (fillColumn :Int, start :Loc, end :Loc) :Seq[Line] = {
+  def refilled (fillColumn :Int, start :Loc, end :Loc) :Seq[Line] = {
     // the first line dictates the prefix width and fill width
     val firstLine = buffer.line(start)
     val firstCol = commentStart(firstLine)
@@ -116,7 +128,65 @@ class Commenter (buffer :BufferV) {
     pres zip filled map { case (pre, line) => pre merge line }
   }
 
-  // returns a non-matching matcher if prefix is unspecified; an exact matcher otherwise
-  private def prefixMatcher (prefix :String) =
-    Matcher.exact(if (prefix == "") "NOTUSED" else prefix)
+  /** Returns the region `[start, end)` commented out. The default implementation prefixes each line
+    * by the line comment prefix, indented "appropriately". */
+  def lineCommented (start :Loc, end :Loc) :Seq[Line] = {
+    val lin = buffer.region(start, end)
+    val spaces = " " * lin.filter(_.length > 0).map(Indenter.readIndent).min
+    val prefix = Line(spaces + linePrefix + padding)
+    val lout = Seq.newBuilder[Line]
+    lin foreach { l =>
+      lout += (if (l.length > 0) prefix.merge(l) else l)
+    }
+    lout.result
+  }
+
+  /** Inserts block comments around the region `[start,end)` in `buffer`.
+    * @return the location after the last inserted comment. */
+  def blockComment (buffer :Buffer, start :Loc, end :Loc) :Loc = {
+    val cend = buffer.insert(end, Line(padding + blockClose))
+    val inserted = buffer.insert(start, Line(blockOpen + padding)).col - start.col
+    cend + (0, if (start.row == end.row) inserted else 0)
+  }
+
+  /** Trims block comments from the ends of the region `[start,end)` in `buffer`.
+    * @return true if block comment delimiters were found and removed, false otherwise. */
+  def unBlockComment (buffer :Buffer, start :Loc, end :Loc) :Boolean = {
+    val bend = buffer.backward(end, blockClose.length)
+    if (!buffer.line(start).matches(blockOpenM, start.col) ||
+        !buffer.line(bend).matches(blockCloseM, bend.col)) false
+    else {
+      // include any whitespace preceding the block end delimiter
+      val destart = buffer.line(bend).lastIndexOf(isNotWhitespace, bend.col-1)+1
+      buffer.delete(bend.atCol(destart), end)
+      // include any whitespace following the block open delimiter
+      val send = start.col + blockOpen.length
+      val dsend = buffer.line(start).indexOf(isNotWhitespace, send) match {
+        case -1 => start + (0, send)
+        case ii => start.atCol(ii)
+      }
+      buffer.delete(start, dsend)
+      true
+    }
+  }
+
+  /** Trims line comments from the starts of every line in `[start,end)` in `buffer`. */
+  def unLineComment (buffer :Buffer, start :Loc, end :Loc) {
+    var loc = start ; while (loc < end) {
+      val line = buffer.line(loc)
+      val from = loc.col ; val to = if (loc.row == end.row) end.col else line.length
+      val cs = line.indexOf(linePrefixM, from) ; val ce = cs + linePrefix.length
+      if (cs != -1 && ce <= to) {
+        // delete up to `padding.length` spaces following the line comment delimiter
+        val mm = math.min(to, ce + padding.length)
+        var de = ce ; while (de < mm && isWhitespace(line.charAt(de))) de += 1
+        buffer.delete(loc.atCol(cs), loc.atCol(de))
+      }
+      loc = loc.nextStart
+    }
+  }
+
+  // returns a non-matching matcher if text is empty; an exact matcher otherwise
+  private def optMatcher (text :String) =
+    Matcher.exact(if (text == "") "NOTUSED" else text)
 }

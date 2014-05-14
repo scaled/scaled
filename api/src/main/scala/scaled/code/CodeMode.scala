@@ -64,12 +64,16 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap ++ Seq(
-    "M-A-s"   -> "show-syntax",
     "ENTER"   -> "newline-and-indent",
     "S-ENTER" -> "newline-and-indent",
     "TAB"     -> "reindent",
-    "C-M-\\"  -> "indent-region",
-    "}"       -> "electric-close-brace"
+    "}"       -> "electric-close-brace",
+
+    "C-M-\\"      -> "indent-region",
+    "C-c C-c"     -> "comment-region",
+    "C-u C-c C-c" -> "uncomment-region", // TODO: prefix args?
+
+    "M-A-s"       -> "show-syntax"
   )
 
   /** The list of indenters used to indent code for this mode. */
@@ -128,15 +132,17 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def reindent (pos :Loc) {
     val origIndent = Indenter.readIndent(buffer, pos)
     val indent = computeIndent(pos.row)
+    // note the point before we adjust the line; if we shorten the line so much that the point is
+    // left dangling off the end, the point will be auto-adjusted which will screw up our math
+    val p = view.point()
     // shift the line, if needed
     val delta = indent - origIndent
     if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
     else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
     // shift the point, if needed
-    val p = view.point()
     if (p.row == pos.row) {
-      if (p.col < origIndent) view.point() = Loc(p.row, indent)
-      else view.point() = p + (0, delta)
+      view.point() = if (p.col < origIndent) Loc(p.row, indent)
+                     else p + (0, delta)
     }
   }
 
@@ -160,7 +166,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
   override def refillLinesIn (start :Loc, end :Loc) = {
     val cend = trimEnd(end)
-    buffer.replace(start, cend, commenter.refillComments(fillColumn, start, cend))
+    buffer.replace(start, cend, commenter.refilled(fillColumn, start, cend))
   }
 
   // when we break for auto-fill, insert the appropriate comment prefix
@@ -220,6 +226,32 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       var pos = start ; while (pos < end) {
         if (buffer.line(pos).length > 0) reindent(pos)
         pos = pos.nextL
+      }
+    }
+  }
+
+  @Fn("""Comments out the active region. If the start and end of the region are in column zero,
+         and line comments are supported by the mode, line comments are used, otherwise the region
+         is wrapped in a block comment.""")
+  def commentRegion () {
+    withRegion { (start, end) =>
+      if (start.col == 0 && end.col == 0 && commenter.linePrefix != "") {
+        buffer.replace(start, end, commenter.lineCommented(start, end))
+      }
+      else if (commenter.blockOpen != "") {
+        view.point() = commenter.blockComment(buffer, start, end)
+      }
+      else editor.popStatus("This code mode does not define block comment delimiters.")
+    }
+  }
+
+  @Fn("""Removes comments from the active region, assuming they were uniformly applied. If the
+         region starts and ends with the block comment delimiters, they will be removed. Otherwise
+         the line comment delimiters will be sought and removed from the start of each line.""")
+  def uncommentRegion () {
+    withRegion { (start, end) =>
+      if (!commenter.unBlockComment(buffer, start, end)) {
+        commenter.unLineComment(buffer, start, end)
       }
     }
   }
