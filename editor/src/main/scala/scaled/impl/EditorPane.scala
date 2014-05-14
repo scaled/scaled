@@ -32,6 +32,8 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   /** Called when this editor pane is going away. Cleans up. */
   def dispose () {
+    _buffers foreach { _.dispose() }
+    _buffers.clear()
     _logcon.close()
   }
 
@@ -71,31 +73,6 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   override def buffers = _buffers.map(_.buffer)
 
-  override def visitBuffer (buffer :Buffer) = {
-    _focus() = requireBuffer(buffer)
-    _focus().view
-  }
-
-  override def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = {
-    val ob = _buffers.find(_.name == buffer) match {
-      case None     => newBuffer(createEmptyBuffer(buffer), minfo)
-      case Some(ob) => if (reuse) ob
-                       else newBuffer(createEmptyBuffer(freshName(buffer)), minfo)
-    }
-    ob.view
-  }
-
-  override def killBuffer (buffer :Buffer) = killBuffer(requireBuffer(buffer))
-
-  // used internally to open files passed on the command line or via remote cmd
-  def visitPath (path :String) {
-    val f = new File(path)
-    visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), path))
-    stage.toFront() // move our window to front if it's not there already
-    stage.requestFocus() // and request window manager focus
-  }
-
-  // if another buffer exists that is visiting this file, just open it
   override def visitFile (file :File) = {
     _focus() = _buffers.find(_.buffer.file == file) getOrElse {
       if (file.exists) newBuffer(BufferImpl.fromFile(file))
@@ -107,10 +84,12 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     }
     _focus().view
   }
-
+  override def visitBuffer (buffer :Buffer) = {
+    _focus() = requireBuffer(buffer)
+    _focus().view
+  }
   override def visitConfig (mode :String) = {
-    val file = app.cfgMgr.configFile(mode)
-    val view = visitFile(file)
+    val view = visitFile(app.cfgMgr.configFile(mode))
     app.cfgMgr.configText(mode) match {
       case Some(lines) =>
         if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
@@ -119,6 +98,24 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
       case None => // TODO
     }
     view
+  }
+
+  override def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = {
+    val ob = _buffers.find(_.name == buffer) match {
+      case None     => newBuffer(createEmptyBuffer(buffer), minfo)
+      case Some(ob) => if (reuse) ob
+                       else newBuffer(createEmptyBuffer(freshName(buffer)), minfo)
+    }
+    ob.view
+  }
+  override def killBuffer (buffer :Buffer) = killBuffer(requireBuffer(buffer))
+
+  // used internally to open files passed on the command line or via remote cmd
+  def visitPath (path :String) {
+    val f = new File(path)
+    visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), path))
+    stage.toFront() // move our window to front if it's not there already
+    stage.requestFocus() // and request window manager focus
   }
 
   //
