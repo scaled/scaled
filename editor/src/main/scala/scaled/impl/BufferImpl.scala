@@ -291,6 +291,8 @@ class BufferImpl private (
     if (_maxRow >= start.row) _maxRow += (end.row - start.row)
     val editMaxRow = longest(_lines, start.row, end.row+1)
     if (lines(editMaxRow).length > maxLineLength) _maxRow = editMaxRow
+    // if the insert preceded the mark, adjust it
+    if (_mark.get.isDefined) mark = Loc.adjustForInsert(_mark.get.get, start, end)
     // TODO: if the insertion is in the max row, it might have split the max row into two non-max
     // rows, in which case we have to rescan the whole buffer; sigh...
     emit(new Insert(start, end, this))
@@ -301,6 +303,8 @@ class BufferImpl private (
     if (_maxRow > edit.end.row) _maxRow -= (edit.end.row - edit.start.row)
     // otherwise if our old max row was in the deleted region, rescan buffer for new longest
     else if (_maxRow >= start.row) _maxRow = longest(_lines, 0, _lines.length)
+    // if the delete preceded the mark, adjust it
+    if (_mark.get.isDefined) mark = Loc.adjustForDelete(_mark.get.get, start, end)
     emit(edit)
   }
   private def noteTransform (start :Loc, orig :Seq[Line]) =

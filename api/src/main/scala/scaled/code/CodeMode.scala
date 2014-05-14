@@ -130,20 +130,14 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     * retain its relative position in the line.
     */
   def reindent (pos :Loc) {
-    val origIndent = Indenter.readIndent(buffer, pos)
     val indent = computeIndent(pos.row)
-    // note the point before we adjust the line; if we shorten the line so much that the point is
-    // left dangling off the end, the point will be auto-adjusted which will screw up our math
-    val p = view.point()
     // shift the line, if needed
-    val delta = indent - origIndent
+    val delta = indent - Indenter.readIndent(buffer, pos)
     if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
     else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
-    // shift the point, if needed
-    if (p.row == pos.row) {
-      view.point() = if (p.col < origIndent) Loc(p.row, indent)
-                     else p + (0, delta)
-    }
+    // if the point is now in the whitespace preceding the indent, move it to line-start
+    val p = view.point()
+    if (p.row == pos.row && p.col < indent) view.point() = Loc(p.row, indent)
   }
 
   /** Reindents the line at the point. */
@@ -174,9 +168,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val pre = commenter.prefixFor(buffer.syntaxNear(at))
     super.autoBreak(at)
     if (pre != "") {
-      val p = view.point()
-      buffer.insert(p.atCol(0), Line(pre))
-      view.point() = p + (0, pre.length)
+      buffer.insert(view.point().atCol(0), Line(pre))
       reindentAtPoint()
     }
   }
@@ -239,7 +231,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
         buffer.replace(start, end, commenter.lineCommented(buffer, start, end))
       }
       else if (commenter.blockOpen != "") {
-        view.point() = commenter.blockComment(buffer, start, end)
+        commenter.blockComment(buffer, start, end)
       }
       else editor.popStatus("This code mode does not define block comment delimiters.")
     }

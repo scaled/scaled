@@ -41,8 +41,12 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
         _lines.insert(row, newlns :_*)
         _changed.emit(BufferView.Change(row, added.length, this))
       }
+      // now update the point based on the insert
+      point() = Loc.adjustForInsert(point(), start, end)
 
     case Buffer.Delete(start, end, deleted) =>
+      // update the point based on the delete before deleting the lines
+      point() = Loc.adjustForDelete(point(), start, end)
       // the first line changed, the rest are gone
       _lines(start.row).invalidate()
       if (end.row > start.row) {

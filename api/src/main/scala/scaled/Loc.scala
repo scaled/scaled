@@ -86,4 +86,17 @@ object Loc {
 
   /** Creates a location with the specified row and column. */
   def apply (row :Int, col :Int) = new Loc((row.toLong << 32) + col)
+
+  /** Adjusts `loc` based on an insert that may have preceded it. */
+  def adjustForInsert (loc :Loc, start :Loc, end :Loc) :Loc =
+    if (start > loc) loc
+    else if (start.row == loc.row) Loc(end.row, end.col + loc.col-start.col)
+    else Loc(loc.row + end.row-start.row, loc.col)
+
+  /** Adjusts `loc` based on a delete that may have preceded it. */
+  def adjustForDelete (loc :Loc, start :Loc, end :Loc) :Loc =
+    if (start > loc) loc
+    else if (end > loc) start // deletion surrounded our loc
+    else if (end.row == loc.row) Loc(start.row, start.col + loc.col-end.col)
+    else Loc(loc.row + start.row-end.row, loc.col)
 }

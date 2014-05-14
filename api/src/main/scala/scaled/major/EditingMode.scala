@@ -205,9 +205,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   /** Auto-breaks a line at `at`. Also updates the point to preserve its position. */
   def autoBreak (at :Loc) {
-    val p = view.point()
-    buffer.split(at)
-    view.point() = Loc(p.row+1, p.col-at.col)
+    buffer.split(view.point())
   }
 
   //
@@ -224,9 +222,9 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     }
     // re-read view.point() here because breakForAutofill() may have changed it
     val np = view.point()
-    // insert the typed character at the point and move the point to after the insert
-    view.point() = if (typed.length != 1) view.buffer.insert(np, Line(typed))
-                   else view.buffer.insert(np, typed.charAt(0), Styles.None, Syntax.Default)
+    // insert the typed character at the point
+    if (typed.length != 1) view.buffer.insert(np, Line(typed))
+    else view.buffer.insert(np, typed.charAt(0), Styles.None, Syntax.Default)
   }
 
   @Fn("Deletes the character immediately previous to the point.")
@@ -235,9 +233,6 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     val prev = buffer.backward(vp, 1)
     if (prev == vp) editor.emitStatus("Beginning of buffer.")
     else buffer.delete(prev, vp)
-    // move the point back one space (TODO: should this be necessary?; I get the idea that buffer
-    // deletions prior to the point in Emacs just cause the point to move)
-    view.point() = prev
   }
 
   @Fn("Deletes the character at the point.")
@@ -251,15 +246,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   @Fn("""Inserts a newline at the point.
          Characters after the point on the current line wil be moved to a new line.""")
   def newline () {
-    val p = view.point()
-    buffer.split(p)
-    view.point() = p.nextStart
+    buffer.split(view.point())
   }
 
   @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
   def indentForTabCommand () {
     // TODO: I suppose we'll eventually have to support real tabs... sigh
-    view.point() = buffer.insert(view.point(), Line.fromText("  "))
+    buffer.insert(view.point(), Line.fromText("  "))
   }
 
   @Fn("""Swaps the character at the point with the character preceding it, and moves the point
@@ -391,7 +384,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Kills characters backward until encountering the beginning of a word.""")
   def backwardKillWord () {
-    view.point() = kill(backwardWord(view.point()), view.point())
+    kill(backwardWord(view.point()), view.point())
   }
 
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
@@ -401,7 +394,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       case None => editor.popStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point()
-        view.point() = buffer.insert(view.point(), region)
+        buffer.insert(view.point(), region)
     }
   }
 
