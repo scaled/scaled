@@ -40,10 +40,11 @@ object TestData {
     def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     def buffers = Seq()
     def openBuffer (buffer :String) = null
-    def createBuffer (buffer :String, mode :String, reuse :Boolean) = null
+    def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = null
     def visitFile (file :File) = null
     def visitConfig (name :String) = null
-    def killBuffer (buffer :String) = false
+    def visitBuffer (buffer :Buffer) = null
+    def killBuffer (buffer :Buffer) {}
   }
 
   val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
@@ -65,6 +66,7 @@ object TestData {
     val editor = TestData.editor
     val view = view_
     val disp = null
+    val mline = ModeLine.Noop
     def resolveConfig (mode :String, defs :List[Config.Defs]) = modeConfig(mode, defs)
   }
 

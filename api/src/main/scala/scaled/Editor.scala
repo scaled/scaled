@@ -92,25 +92,25 @@ trait Editor {
     * @return the view for the visiting buffer. */
   def visitConfig (mode :String) :BufferView
 
-  /** Makes the buffer with the specified name the active buffer. If no buffer exists with that
-    * name, a new empty buffer will be created with that name. */
-  def visitBuffer (buffer :String) :BufferView
+  /** Makes the specified buffer the active buffer.
+    * @throws IllegalArgumentException if this buffer is not associated with any known buffer view.
+    * @return the view for the buffer. */
+  def visitBuffer (buffer :Buffer) :BufferView
 
-  /** Creates a new buffer with the specified name, in the specified major mode. NOTE: the buffer
-    * will not be visited (made the active buffer). Follow this call with a call to [[visitBuffer]]
-    * if that is desired.
+  /** Creates a new buffer with the specified name. NOTE: the buffer will not be visited (made the
+    * active buffer). Follow this call with a call to [[visitBuffer]] if that is desired.
     *
     * @param reuse if true and a buffer named `buffer` exists, it will be returned directly
     * (as is, so be careful you're not getting an unexpected buffer in this case). Otherwise
     * in the event of name collision, a fresh buffer name will be generated from `buffer` by
     * appending <N> to the name with increasing values of N until an unused name is obtained.
-    * @param args additional arguments made available to `mode` for injection.
+    * @param mode specifies the desired mode for the buffer and any custom injection arguments.
+    * The mode will be auto-detected if `Infer` is supplied.
+    * @return the view for the buffer.
     */
-  def createBuffer (buffer :String, mode :String, reuse :Boolean, args :List[Any] = Nil) :BufferView
+  def createBuffer (buffer :String, reuse :Boolean, mode :ModeInfo = ModeInfo.Infer) :BufferView
 
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
-    * to buffer kill hooks which can abort the kill.
-    * @return true if `buffer` exists and the request was initiated, false if no such buffer
-    * exists. */
-  def killBuffer (buffer :String) :Boolean
+    * to buffer kill hooks which can abort the kill. */
+  def killBuffer (buffer :Buffer) :Unit
 }

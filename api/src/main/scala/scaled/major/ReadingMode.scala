@@ -382,23 +382,20 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
   def switchToBuffer () {
-    val fstb = editor.buffers.head.name
-    val defb = editor.buffers.drop(1).headOption.map(_.name) getOrElse fstb
-    val defp = if (defb == "") "" else s" (default $defb)"
-    val comp = Completer.buffer(editor, Set(fstb))
-    editor.miniRead(s"Switch to buffer$defp:", "", config(bufferHistory), comp) onSuccess { read =>
-      editor.visitBuffer(if (read == "") defb else read)
-    }
+    val fstb = editor.buffers.head
+    val defb = editor.buffers.drop(1).headOption getOrElse fstb
+    val defp = s" (default ${defb.name})"
+    val comp = Completer.buffer(editor, Some(defb), Set(fstb))
+    editor.miniRead(s"Switch to buffer$defp:", "", config(bufferHistory),
+                    comp) onSuccess editor.visitBuffer
   }
 
   @Fn("""Reads a buffer name from the minibuffer and kills (closes) it.""")
   def killBuffer () {
-    val current = editor.buffers.head.name
-    val prompt = s"Kill buffer (default $current):"
-    editor.miniRead(prompt, "", config(bufferHistory), Completer.buffer(editor)) onSuccess { read =>
-      val buffer = if (read == "") current else read
-      if (!editor.killBuffer(buffer)) editor.popStatus(s"No buffer named: $buffer")
-    }
+    val current = editor.buffers.head
+    val prompt = s"Kill buffer (default ${current.name}):"
+    val comp = Completer.buffer(editor, Some(current))
+    editor.miniRead(prompt, "", config(bufferHistory), comp) onSuccess editor.killBuffer
 
     // TODO: document our process when we have one:
 
@@ -484,7 +481,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
     val major = disp.modes.last
-    val buf = editor.createBuffer(s"*${major.name}-mode*", "help", true).buffer
+    val buf = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil)).buffer
     val keysByMode = disp.triggers.groupBy(_._1)
     val text = new ArrayBuffer[String]()
 
@@ -522,7 +519,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
     buf.replace(buf.start, buf.end, text.map(Line.apply))
     buf.markClean()
-    editor.visitBuffer(buf.name)
+    editor.visitBuffer(buf)
   }
 
   //

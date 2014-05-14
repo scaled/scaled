@@ -71,24 +71,21 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   override def buffers = _buffers.map(_.buffer)
 
-  override def visitBuffer (buffer :String) = {
-    _focus() = _buffers.find(_.name == buffer) getOrElse(newBuffer(createEmptyBuffer(buffer)))
+  override def visitBuffer (buffer :Buffer) = {
+    _focus() = requireBuffer(buffer)
     _focus().view
   }
 
-  override def createBuffer (buffer :String, mode :String, reuse :Boolean, args :List[Any]) = {
+  override def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = {
     val ob = _buffers.find(_.name == buffer) match {
-      case None     => newBuffer(createEmptyBuffer(buffer), mode, args)
+      case None     => newBuffer(createEmptyBuffer(buffer), minfo)
       case Some(ob) => if (reuse) ob
-                       else newBuffer(createEmptyBuffer(freshName(buffer)), mode, args)
+                       else newBuffer(createEmptyBuffer(freshName(buffer)), minfo)
     }
     ob.view
   }
 
-  override def killBuffer (buffer :String) = _buffers.find(_.name == buffer) match {
-    case Some(ob) => killBuffer(ob) ; true
-    case None     => false
-  }
+  override def killBuffer (buffer :Buffer) = killBuffer(requireBuffer(buffer))
 
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :String) {
@@ -218,7 +215,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private final val MessagesName = "*messages*"
   private def newMessages () = {
     _pendingMessages = Nil
-    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), "log", Nil)
+    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), ModeInfo("log", Nil))
     _pendingMessages foreach { msg =>
       mbuf.view.point() = mbuf.buffer.append(Line.fromText(msg + System.lineSeparator))
     }
@@ -240,11 +237,13 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private final val ScratchName = "*scratch*"
   private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName))
 
-  private def newBuffer (buf :BufferImpl) :OpenBuffer =
-    newBuffer(buf, app.pkgMgr.detectMode(buf), Nil)
-  private def newBuffer (buf :BufferImpl, mode :String, args :List[Any]) :OpenBuffer = {
+  private def newBuffer (buf :BufferImpl, minfo :ModeInfo = ModeInfo.Infer) :OpenBuffer = {
     val config = app.cfgMgr.editorConfig
     val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+
+    // determine the mode and injection args
+    val (mode, args) = if (minfo == ModeInfo.Infer) (app.pkgMgr.detectMode(buf), Nil)
+                       else (minfo.name, minfo.args)
 
     // create the modeline and add some default data before anyone else sneaks in
     val mline = new ModeLineImpl(this)
@@ -268,6 +267,10 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     val obuf = OpenBuffer(content, area, view)
     _buffers += obuf
     obuf
+  }
+
+  private def requireBuffer (buffer :Buffer) = _buffers.find(_.buffer == buffer) getOrElse {
+    throw new IllegalArgumentException(s"Invalid buffer $buffer")
   }
 
   private def killBuffer (obuf :OpenBuffer) {
