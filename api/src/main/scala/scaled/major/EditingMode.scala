@@ -191,7 +191,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * auto-fill is enabled, and that the point is at or beyond the fill column.
     * @param p the current point.
     */
-  def shouldAutoFill (p :Loc) :Boolean = config(EditingConfig.autoFill) && p.col >= fillColumn
+  def shouldAutoFill (p :Loc) :Boolean = config(EditingConfig.autoFill) && (p.col >= fillColumn)
 
   /** Computes the location at which we should break the line that contains `p` for auto-fill.
     * The default implementation seeks backward from `p` to the first space.
@@ -203,9 +203,9 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       case space => space.nextC // break *after* the space
     }
 
-  /** Auto-breaks a line at `at`. Also updates the point to preserve its position. */
+  /** Auto-breaks a line at `at`. */
   def autoBreak (at :Loc) {
-    buffer.split(view.point())
+    buffer.split(at)
   }
 
   //
