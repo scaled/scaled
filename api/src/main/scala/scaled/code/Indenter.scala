@@ -64,6 +64,8 @@ object Indenter {
     def findArgListStart (from :Loc) = buffer.scanBackward(isOpenParen, from)
     val nonWSIdx = buffer.line(pos).indexOf(isNotWhitespace)
     val firstNonWS = pos.atCol(if (nonWSIdx == -1) 0 else nonWSIdx)
+    // TODO: this doesn't handle `if (foo() && \n bar()) {`
+    // it scans forward from bar and sees an open paren and bails
     val start = if (inArgList(firstNonWS, pos)) findArgListStart(firstNonWS) else firstNonWS
     readIndent(buffer, start)
   }
