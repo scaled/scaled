@@ -148,9 +148,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
   override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(buffer, p)
 
-  // in code mode, paragraphs are delimited by blank lines or "blank" comment lines
-  override def isParagraphDelim (line :LineV) = super.isParagraphDelim(line) || (
-    commenter.isCommentLine(line) && commenter.commentStart(line) == line.length)
+  // comment paragraphs are delimited by "blank" comment lines
+  override def isParagraphDelim (syn :Syntax, line :LineV) =
+    if (syn.isComment) commenter.commentStart(line) == line.length
+    else super.isParagraphDelim(syn, line)
 
   // in code mode, refills only happen inside comments
   override def fillParagraph () {

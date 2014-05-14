@@ -141,11 +141,19 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     * invoked.
     */
   def withParagraph (fn :(Loc, Loc) => Unit) :Unit = {
-    def isNonDelim (line :LineV) = !isParagraphDelim(line)
-    def isDelim (line :LineV) = isParagraphDelim(line)
-    def isDelimAt (row :Int) = isDelim(buffer.line(row))
-
+    // use the syntax of the first non-whitespace char on the line at the point to determine our
+    // "mode" when identifying paragraph boundaries
     val p = view.point()
+    val syn = buffer.line(p).indexOf(isNotWhitespace) match {
+      case -1 => Syntax.Default
+      case ii => buffer.line(p).syntaxAt(ii)
+    }
+
+    // cons up some predicates
+    val isNonDelim = (line :LineV) => !isParagraphDelim(syn, line)
+    val isDelim = (line :LineV) => isParagraphDelim(syn, line)
+    val isDelimAt = (row :Int) => isDelim(buffer.line(row))
+
     // use the current line, if non-delim, or the first preceding non-delim line
     val curPrev = buffer.scanRowBackward(isNonDelim, p.row)
     // curPrev may refer to a delim row if there were no non-delim rows before the point;
@@ -166,10 +174,9 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     }
   }
 
-  /** Indicates that `line` delimits a paragraph. By default an empty line delimits a paragraph
-    * but modes may customize this.
-    */
-  def isParagraphDelim (line :LineV) = line.length == 0
+  /** Indicates that `line` delimits a paragraph for the specified syntax. By default an empty line
+    * delimits a paragraph for all syntaxes but modes may customize this. */
+  def isParagraphDelim (syntax :Syntax, line :LineV) = line.length == 0
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
