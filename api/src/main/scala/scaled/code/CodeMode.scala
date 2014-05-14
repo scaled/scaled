@@ -50,9 +50,9 @@ object CodeConfig extends Config.Defs {
   val functionStyle = "codeFunctionFace"
 
   /** The CSS style applied to the current block delimiters. */
-  val blockDelimStyle = "codeBlockDelimFace"
+  val blockDelimStyle = "blockDelimFace"
   /** The CSS style applied to the current block delimiters when mismatched. */
-  val blockErrorStyle = "codeBlockErrorFace"
+  val blockErrorStyle = "blockErrorFace"
 }
 
 /** A base class for major modes which edit program code.

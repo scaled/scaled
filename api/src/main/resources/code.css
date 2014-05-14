@@ -47,11 +47,11 @@
   -fx-fill: #309797;
 }
 
-.codeBlockDelimFace {
+.blockDelimFace {
   -fx-underline: true;
 }
 
-.codeBlockErrorFace {
+.blockErrorFace {
   -fx-fill: Red;
 }
 
