@@ -11,6 +11,7 @@ import java.util.HashMap
 import reactual.Value
 import scala.collection.mutable.ArrayBuffer
 import scaled._
+import scaled.util.Properties
 
 class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl]) extends Config {
 
@@ -44,8 +45,15 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     buf
   }
 
-  // TODO: route this into *Messages* buffer or something
-  protected def warn (msg :String) = println(msg)
+  /** Returns an init put function used to populate this instance from a file. */
+  def init (log :Logger) :(String, String) => Unit = (key, value) => _vars.get(key) match {
+    case None => log.log(s"$name config contains unknown/stale setting '$key: $value'.")
+    case Some(cvar) => try {
+      resolve(cvar.key)() = cvar.key.converter.read(value)
+    } catch {
+      case e :Exception => log.log(s"$name config contains invalid setting: '$key: $value': $e")
+    }
+  }
 
   private def resolve[T] (key :Config.Key[T]) :Value[T] = lookup(key) match {
     case null =>
@@ -61,34 +69,6 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
 
   private def lookup[T] (key :Config.Key[T]) = _vals.get(key).asInstanceOf[Value[T]]
 
-  private def put (key :String, value :String) :Unit = _vars.get(key) match {
-    case None => warn(s"$name config contains unknown/stale setting '$key: $value'.")
-    case Some(cvar) => try {
-      resolve(cvar.key)() = cvar.key.converter.read(value)
-    } catch {
-      case e :Exception => warn(s"$name config contains invalid setting: '$key: $value': $e")
-    }
-  }
-
   private[this] val _vars = Map[String,Config.Var[_]]() ++ defs.flatMap(_.vars).map(v => v.name -> v)
   private[this] val _vals = new HashMap[Config.Key[_],Value[_]]()
-}
-
-object ConfigImpl {
-  import scala.collection.convert.WrapAsScala._
-
-  /** Reads the config information from `file` and updates `into` with the configuration read from
-    * the file. */
-  def readInto (file :File, into :ConfigImpl) :Unit =
-    readInto(file.getName, Files.readAllLines(file.toPath), into)
-
-  /** Parses the config information in `text` and updates `into` with the parsed values. */
-  def readInto (name :String, lines :Seq[String], into :ConfigImpl) {
-    def isComment (l :String) = (l startsWith "#") || (l.length == 0)
-    lines map(_.trim) filterNot(isComment) foreach { _ split(":", 2) match {
-      case Array(key, value) => into.put(key.trim, value.trim)
-      // TODO: require errFn so that we can report this bogosity somewhere sensible
-      case other => println(s"$name contains invalid config line:\n${other.toSeq}")
-    }}
-  }
 }

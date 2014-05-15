@@ -7,6 +7,7 @@ package scaled.impl
 import org.junit.Assert._
 import org.junit._
 import scaled._
+import scaled.util.Properties
 
 class ConfigImplTest {
 
@@ -19,12 +20,12 @@ class ConfigImplTest {
     val killRingSize = key(40)
   }
 
-  @Test def testReadInto () {
+  @Test def testReadInit () {
     val impl = new ConfigImpl("editor", TestConfig :: Nil, None)
     val props = Seq("# Scaled editor config",
                     "", "# View width", "view-width: 15",
                     "", "# View height", "view-height: 25")
-    ConfigImpl.readInto("test", props, impl)
+    Properties.read(TestData.log, "test", props)(impl.init(TestData.log))
     assertEquals(15, impl(TestConfig.viewWidth))
     assertEquals(25, impl(TestConfig.viewHeight))
   }

@@ -7,9 +7,10 @@ package scaled.impl
 import java.io.File
 import scala.collection.mutable.{Map => MMap}
 import scaled._
+import scaled.util.Properties
 
 /** Handles the machinery underlying the [[Config]] configuration system. */
-class ConfigManager (metaSvc :MetaService, watchSvc :WatchService) {
+class ConfigManager (log :Logger, metaSvc :MetaService, watchSvc :WatchService) {
 
   final val EditorName = "editor"
 
@@ -55,7 +56,7 @@ class ConfigManager (metaSvc :MetaService, watchSvc :WatchService) {
 
   private def readFileInto (mode :String, cfg: ConfigImpl) :ConfigImpl = {
     val file = configFile(mode)
-    if (file.exists()) ConfigImpl.readInto(file, cfg)
+    if (file.exists()) Properties.read(log, file)(cfg.init(log))
     cfg
   }
 }
