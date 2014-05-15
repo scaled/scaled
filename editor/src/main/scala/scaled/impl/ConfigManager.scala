@@ -9,7 +9,7 @@ import scala.collection.mutable.{Map => MMap}
 import scaled._
 
 /** Handles the machinery underlying the [[Config]] configuration system. */
-class ConfigManager (app :Main) {
+class ConfigManager (metaSvc :MetaService, watchSvc :WatchService) {
 
   final val EditorName = "editor"
 
@@ -30,13 +30,13 @@ class ConfigManager (app :Main) {
     else _configs.get(mode).map(_.toProperties)
 
   private final val FileSuff = ".properties"
-  private val _configDir = Filer.requireDir(new File(app.metaDir, "Config"))
+  private val _configDir = Filer.requireDir(metaSvc.metaFile("Config"))
   private val _configs = MMap[String,ConfigImpl]()
   private val _editor = loadConfig(EditorName, EditorConfig :: Nil)
 
   // listen for changes to files in our config directory and reload configs therefor; note: we
   // never unregister this watch so we don't need to keep the handle around
-  app.watchMgr.watchDir(_configDir, new Watcher() {
+  watchSvc.watchDir(_configDir, new Watcher() {
     override def onCreate (dir :File, name :String) = checkReload(name)
     override def onModify (dir :File, name :String) = checkReload(name)
     protected def checkReload (name :String) {

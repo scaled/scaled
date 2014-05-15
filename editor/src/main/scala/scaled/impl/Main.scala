@@ -33,10 +33,9 @@ class Main extends Application {
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val watchMgr = new WatchManager(logger)
   val pkgMgr = new pkg.PackageManager(this)
-  val cfgMgr = new ConfigManager(this)
   val svcMgr = new ServiceManager(this)
+  val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 
   val exec = new Executor {
     override def runOnUI (op :Runnable) :Unit = Platform.runLater(op)

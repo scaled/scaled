@@ -9,32 +9,10 @@ import java.io.File
 import java.nio.file.{FileSystems, WatchKey, WatchEvent}
 import java.util.concurrent.ConcurrentHashMap
 import scala.annotation.tailrec
-import scaled.Logger
-
-/** Used to cancel file and directory watches when they're no longer needed. */
-trait Watch {
-
-  /** Cancels the watch that returned this handle. */
-  def cancel ()
-}
-
-/** A callback interface that is notified when watch events occur. */
-abstract class Watcher {
-
-  /** Notification that a file or directory named `child` was created in `dir`. */
-  def onCreate (dir :File, child :String) {}
-
-  /** Notification that a file or directory named `child` was deleted in `dir`. */
-  def onDelete (dir :File, child :String) {}
-
-  /** Notification that a file or directory named `child` was modified in `dir`. */
-  def onModify (dir :File, child :String) {}
-}
-
-// TODO: turn this into an injectable service?
+import scaled._
 
 /** Handles watching the filesystem for changes. */
-class WatchManager (log :Logger) {
+class WatchManager (log :Logger) extends WatchService {
   import java.nio.file.StandardWatchEventKinds._
 
   private val _service = FileSystems.getDefault.newWatchService()
@@ -55,7 +33,7 @@ class WatchManager (log :Logger) {
         case _ => log.log(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
       })
     }
-    def cancel () {
+    def close () {
       key.cancel()
       _watches.remove(key)
     }
@@ -90,7 +68,7 @@ class WatchManager (log :Logger) {
     if (watcher != null) {
       key.pollEvents() foreach watcher.dispatch
       // if we can't reset the key (the dir went away or something), clear it out
-      if (!key.reset()) watcher.cancel()
+      if (!key.reset()) watcher.close()
     }
   } catch {
     case ie :InterruptedException => // loop!
