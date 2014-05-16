@@ -12,7 +12,7 @@ import scala.annotation.tailrec
 import scaled._
 
 /** Handles watching the filesystem for changes. */
-class WatchManager (log :Logger) extends WatchService {
+class WatchManager (log :Logger) extends AbstractService with WatchService {
   import java.nio.file.StandardWatchEventKinds._
 
   private val _service = FileSystems.getDefault.newWatchService()
@@ -38,6 +38,10 @@ class WatchManager (log :Logger) extends WatchService {
       _watches.remove(key)
     }
   }
+
+  // TODO...
+  override def didStartup () {}
+  override def willShutdown () {}
 
   /** Registers a watch on `file`. `watcher` will be invoked (on the main JavaFX thread) when `file`
     * is modified or deleted. */
