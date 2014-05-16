@@ -45,6 +45,9 @@
   <modules>
     <module>api</module>
     <module>editor</module>
+    <module>modes</module>
+    <module>libs</module>
+    <module>services</module>
   </modules>
 
   <!-- common depends for all modules -->
@@ -63,26 +66,6 @@
       <id>devel</id>
       <modules>
         <module>devel</module>
-      </modules>
-    </profile>
-    <profile>
-      <!-- useful extensions for "bootstrapping" (working on Scaled in Scaled) -->
-      <id>bootstrap</id>
-      <modules>
-        <module>project-service</module>
-        <module>textmate-grammar</module>
-        <module>maven-project</module>
-        <module>java-mode</module>
-        <module>scala-mode</module>
-        <module>xml-mode</module>
-      </modules>
-    </profile>
-    <profile>
-      <!-- mdb's extra stuff -->
-      <id>mdb</id>
-      <modules>
-        <module>todo-mode</module>
-        <module>codex-mode</module>
       </modules>
     </profile>
   </profiles>
