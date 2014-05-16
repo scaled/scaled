@@ -52,6 +52,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
         super.getResource(path)
       }
       override protected def findClass (name :String) :Class[_] = {
+        // println(s"Seeking $name in ${info.name}")
         var loaders = dependLoaders // first try finding the class in our dependencies
         while (!loaders.isEmpty) {
           try return loaders.head.loadClass(name)
@@ -59,7 +60,11 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
             case cnfe :ClassNotFoundException => loaders = loaders.tail
           }
         }
-        super.findClass(name) // then fall back to looking locally
+        try super.findClass(name) // then fall back to looking locally
+        catch {
+          case cnfe :ClassNotFoundException => // provide a more useful error message
+            throw new ClassNotFoundException(s"${info.name} missing dependency: $name")
+        }
       }
     }
   private lazy val dependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
