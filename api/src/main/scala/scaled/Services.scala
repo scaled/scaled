@@ -24,6 +24,17 @@ trait MetaService {
   /** Returns a `File` for a file/directory with name `name` in the Scaled metadata directory. */
   def metaFile (name :String) :File
 
+  /** Returns a logger for reporting errors / non-UX feedback. */
+  def log :Logger
+
+  /** Returns an executor for doing things on different threads. */
+  def exec :Executor
+
+  /** Resolves and returns the Scaled service identified by `clazz`. `clazz` is a [[Service]]
+    * annotated class, which will be created and initialized if it has not yet been so.
+    * @throws InstantiationException if there is an error creating the service.  */
+  def service[T] (clazz :Class[T]) :T
+
   /** Creates an instance of `clazz` via Scaled's dependency injection mechanism. `clazz` must have
     * a single public constructor.
     *

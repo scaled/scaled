@@ -49,7 +49,7 @@ object TestData {
 
   val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
 
-  val injector = new ServiceInjector()
+  val injector = new ServiceInjector(log)
   val resolver = new ModeResolver(log, exec, editor) {
     override protected def locate (major :Boolean, mode :String) = classOf[TextMode]
     override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =

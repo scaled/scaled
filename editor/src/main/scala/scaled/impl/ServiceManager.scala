@@ -10,9 +10,7 @@ import com.google.common.cache.{CacheBuilder, CacheLoader}
 
 // this is factored out so that we can do basic service injection in tests without having
 // the whole package manager enchilada up and running
-class ServiceInjector extends AbstractService {
-
-  def log (msg :String) = println(msg)
+class ServiceInjector (log :Logger) extends AbstractService {
 
   def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
     // println(s"Creating instance of ${clazz.getName}")
@@ -34,7 +32,7 @@ class ServiceInjector extends AbstractService {
       remargs.find(p.isInstance) match {
         case Some(arg) => remargs = minus(remargs, arg) ; arg
         case None      => resolveService(p) getOrElse {
-          log(s"Unable to satisfy dependency [type=$p, remargs=$remargs]") ; null
+          log.log(s"Unable to satisfy dependency [type=$p, remargs=$remargs]") ; null
         }
       }
     }
@@ -52,7 +50,7 @@ class ServiceInjector extends AbstractService {
   protected def resolveService (sclass :Class[_]) :Option[AbstractService] = None
 }
 
-class ServiceManager (app :Main) extends ServiceInjector with MetaService {
+class ServiceManager (app :Main) extends ServiceInjector(app.logger) with MetaService {
 
   private var services = CacheBuilder.newBuilder.build(
     new CacheLoader[Class[_],AbstractService]() {
@@ -68,10 +66,13 @@ class ServiceManager (app :Main) extends ServiceInjector with MetaService {
   private var pluginMgr = new PluginManager(app)
   services.put(pluginMgr.getClass, pluginMgr)
 
-  override def log (msg :String) = app.logger.log(msg)
+  override def log = app.logger
+  override def exec = app.exec
   override def metaFile (name :String) = new File(app.metaDir, name)
-
-  override protected def stockArgs :List[AnyRef] = List(app.exec, app.logger)
+  override def service[T] (clazz :Class[T]) :T = resolveService(clazz) match {
+    case None => throw new InstantiationException(s"Unknown service $clazz")
+    case Some(svc) => svc.asInstanceOf[T]
+  }
 
   override def resolveService (sclass :Class[_]) :Option[AbstractService] = {
     if (!sclass.getName.endsWith("Service")) None
@@ -80,4 +81,6 @@ class ServiceManager (app :Main) extends ServiceInjector with MetaService {
     }
   }
   // TODO: when to unload resolved services?
+
+  override protected def stockArgs :List[AnyRef] = List(log, exec)
 }
