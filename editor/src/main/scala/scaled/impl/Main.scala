@@ -9,6 +9,7 @@ import javafx.stage.Stage
 import reactual.Signal
 import scala.collection.JavaConversions._
 import scaled._
+import scaled.util.Error
 
 class Main extends Application {
 
@@ -23,7 +24,7 @@ class Main extends Application {
     override def log (msg :String) :Unit = Main.this.log.emit(msg)
     override def log (msg :String, exn :Throwable) {
       Main.this.log.emit(msg)
-      Main.this.log.emit(Utils.stackTraceToString(exn))
+      Main.this.log.emit(Error.stackTraceToString(exn))
     }
   }
 

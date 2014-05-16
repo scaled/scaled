@@ -30,11 +30,5 @@ object Utils {
     layout.getBounds.getHeight
   }
 
-  def stackTraceToString (exn :Throwable) :String = {
-    val trace = new StringWriter()
-    exn.printStackTrace(new PrintWriter(trace))
-    trace.toString
-  }
-
   private val layout = Toolkit.getToolkit.getTextLayoutFactory.createLayout()
 }
