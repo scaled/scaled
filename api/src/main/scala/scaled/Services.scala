@@ -5,6 +5,7 @@
 package scaled
 
 import java.io.File
+import scala.reflect.ClassTag
 
 /** Scaled services must extend this class so that they can be notified of lifecycle events. */
 abstract class AbstractService {
@@ -34,6 +35,11 @@ trait MetaService {
     * annotated class, which will be created and initialized if it has not yet been so.
     * @throws InstantiationException if there is an error creating the service.  */
   def service[T] (clazz :Class[T]) :T
+
+  /** Resolves and returns the Scaled service identified by `clazz`. `clazz` is a [[Service]]
+    * annotated class, which will be created and initialized if it has not yet been so.
+    * @throws InstantiationException if there is an error creating the service.  */
+  def service[T] (implicit tag :ClassTag[T]) :T = service(tag.runtimeClass.asInstanceOf[Class[T]])
 
   /** Creates an instance of `clazz` via Scaled's dependency injection mechanism. `clazz` must have
     * a single public constructor.
