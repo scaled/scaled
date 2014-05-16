@@ -4,9 +4,6 @@
 
 package scaled.util
 
-import reactual.Connection
-import scala.collection.mutable.ArrayBuffer
-
 /** Encapsulates a reactive behavior and simplifies the process of wiring up a bunch of reactions
   * when the behavior is enabled and clearing those reactions when the behavior is disabled.
   */
@@ -15,15 +12,14 @@ abstract class Behavior extends AutoCloseable {
   /** Activate or deactivates this behavior, as appropriate. */
   def setActive (active :Boolean) {
     if (!active) {
-      if (!_conns.isEmpty) {
-        _conns foreach { _.close() }
-        _conns.clear()
+      if (!_toClose.isEmpty) {
+        _toClose.close()
         didDeactivate()
-        assert(_conns.isEmpty, "New connections added in didDeactivate()!?")
+        assert(_toClose.isEmpty, "New connections added in didDeactivate()!?")
       }
-    } else if (_conns.isEmpty) {
+    } else if (_toClose.isEmpty) {
       activate()
-      assert(!_conns.isEmpty, "Behaviors must note at least one connection in activate().")
+      assert(!_toClose.isEmpty, "Behaviors must note at least one connection in activate().")
     }
   }
 
@@ -37,11 +33,11 @@ abstract class Behavior extends AutoCloseable {
   /** Called after this behavior has been deactivated. */
   protected def didDeactivate () {}
 
-  /** Notes a reactive connection. The connection will be closed on the next call to
+  /** Notes a closeable resource. The closeable will be closed on the next call to
     * [[setActive]]`(false)`. This should only be called from [[activate]]. */
-  protected def note (conn :Connection) {
-    _conns += conn
+  protected def note (ac :AutoCloseable) {
+    _toClose += ac
   }
 
-  private val _conns = ArrayBuffer[Connection]()
+  private val _toClose = new CloseList()
 }

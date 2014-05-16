@@ -6,7 +6,7 @@ package scaled
 
 import java.io.FileNotFoundException
 import reactual.Value
-import scala.collection.mutable.ArrayBuffer
+import scaled.util.CloseList
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
   *  - one it makes passing a bundle of standard depends on to a superclass constructor less
@@ -138,14 +138,12 @@ abstract class Mode (env :Env) {
     */
   def keymap :Seq[(String, String)]
 
-  /** Cleans up any external resources managed by this mode. This is called when the mode is disabled
-    * or the buffer containing the mode is going away. */
+  /** Cleans up any external resources managed by this mode. This is called when the mode is
+    * disabled or the buffer containing the mode is going away. */
   def dispose () {
-    _toClose foreach { c =>
-      try c.close()
-      catch {
-        case e :Exception => editor.emitError(e)
-      }
+    try _toClose.close()
+    catch {
+      case e :Exception => editor.emitError(e)
     }
   }
 
@@ -161,8 +159,8 @@ abstract class Mode (env :Env) {
     */
   protected def note (close :AutoCloseable) :Unit = _toClose += close
 
-  /** Removes `close` from the to-close-on-dispose list. This is unnecessary if the closeable
-    * is idempotent as the extra `close()` call will be ignored. But if repeated `close()` causes
+  /** Removes `close` from the to-close-on-dispose list. This is unnecessary if the closeable is
+    * idempotent as the extra `close()` call will be ignored. But if repeated `close()` causes
     * trouble, then this enables manual management.
     */
   protected def unnote (close :AutoCloseable) :Unit = _toClose -= close
@@ -175,7 +173,7 @@ abstract class Mode (env :Env) {
     case rsrc => rsrc.toExternalForm
   }
 
-  private[this] val _toClose = ArrayBuffer[AutoCloseable]()
+  private[this] val _toClose = new CloseList()
 }
 
 /** Provides the foundation for a major editing mode. A major editing mode customizes the behavior
