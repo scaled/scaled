@@ -33,5 +33,5 @@ abstract class CloseBox[C >: Null <: AutoCloseable] extends AutoCloseable {
   protected def create () :C
 
   /** Called when our contents have been created. */
-  protected def didCreate () :Unit
+  protected def didCreate () {}
 }
