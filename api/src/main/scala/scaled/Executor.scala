@@ -21,7 +21,7 @@ trait Executor {
   def runInBackground (op :Runnable) :Unit
 
   /** A Scala-friendly [[runOnUI(Runnable)]]. */
-  def runOnUI (op : => Unit) :Unit = runOnUI(new Runnable() {
+  def runOnUI[U] (op : => U) :Unit = runOnUI(new Runnable() {
     override def run () = op
   })
 

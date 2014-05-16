@@ -4,7 +4,6 @@
 
 package scaled.util
 
-import java.io.{BufferedReader, File, InputStreamReader, OutputStreamWriter, PrintWriter}
 import scaled._
 
 /** Manages an interaction with a separate process, via its stdin, stdout and stderr.
@@ -15,15 +14,9 @@ import scaled._
   * interaction begins.
   *
   * @param exec the executor via which callbacks are invoked on the UI thread.
-  * @param command the command to invoke and arguments passed thereto.
+  * @param config the subprocess configuration.
   */
-abstract class Expecter (exec :Executor, command :String*) {
-
-  /** Sends a line of text to the subprocess's stdin. A newline is automatically appended. */
-  def send (line :String) {
-    out.println(line)
-    out.flush()
-  }
+abstract class Expecter (exec :Executor, config :SubProcess.Config) extends SubProcess(config) {
 
   /** Initiates an interaction with the subprocess. An interaction consists of sending one or more
     * lines of text to the subprocess and then piping subprocess output to a supplied responder
@@ -45,87 +38,33 @@ abstract class Expecter (exec :Executor, command :String*) {
     }
   }
 
-  /** Closes this expecter's output stream. This may trigger termination for your subprocess if it
-    * expects that sort of thing.
-    */
-  def close () {
-    process.getOutputStream.close()
-  }
-
-  /** Terminates the subprocess forcibly. */
-  def kill () {
-    process.destroyForcibly()
-  }
-
-  /** Waits for the process to complete and returns its exit code. */
-  def waitFor () :Int = {
-    process.waitFor()
-  }
-
   /** Called when output is received from the subprocess, but we have no configured responder. */
   def onUnexpected (line :String, isErr :Boolean) :Unit
 
-  /** Called if communication with the process fails. */
-  def onFailure (exn :Exception) :Unit
-
-  override def toString = s"Expecter(${command.mkString(" ")})"
-
-  /** Returns the cwd to use when invoking the process. Override to customize. */
-  protected def cwd :File = new File(System.getProperty("user.dir"))
-
-  /** An array of environment variables to be supplied to the new process. These are of the
-    * form `name=value`. Defaults to none. Override to customize. */
-  protected def env :Array[String] = Array[String]()
-
-  private val process = Runtime.getRuntime.exec(command.toArray, env, cwd)
-
-  // if the process fails to start, an exception will be thrown before these threads are started;
-  // otherwise they'll run until the process's streams are closed
-  new Thread("Expecter: stdin") {
-    setDaemon(true)
-    override def run () = read(in, false)
-  }.start()
-  new Thread("Expecter: stderr") {
-    setDaemon(true)
-    override def run () = read(err, true)
-  }.start()
-
-  private lazy val out = new PrintWriter(new OutputStreamWriter(process.getOutputStream, "UTF-8"))
-  private lazy val in = new BufferedReader(new InputStreamReader(process.getInputStream, "UTF-8"))
-  private lazy val err = new BufferedReader(new InputStreamReader(process.getErrorStream, "UTF-8"))
+  override protected def onOutput (text :String, isErr :Boolean) {
+    exec.runOnUI {
+      if (_responder == null) onUnexpected(text, isErr)
+      else if (_responder(text, isErr)) _responder = null
+    }
+  }
 
   private var _responder :(String, Boolean) => Boolean = _
-
-  private def assertProcess :Unit =
-    if (process == null) throw new IllegalStateException("Process failed to start")
-
-  private def read (reader :BufferedReader, isErr :Boolean) :Unit = try {
-    while (true) {
-      val line = reader.readLine
-      if (line == null) return
-      exec.runOnUI(handleInput(line, isErr))
-    }
-  } catch {
-    case e :Exception => exec.runOnUI(onFailure(e))
-  }
-
-  private def handleInput (line :String, isErr :Boolean) {
-    if (_responder == null) onUnexpected(line, isErr)
-    else if (_responder(line, isErr)) _responder = null
-  }
 }
 
 object Expecter {
 
   /** Returns an expecter that logs unexpected output to `log`, prefixed with `ident`. */
   def withLogger (exec :Executor, log :Logger, prefix :String, command :String*) :Expecter =
-    new Expecter(exec, command :_*) {
-      def onUnexpected (line :String, isErr :Boolean) {
+    new Expecter(exec, SubProcess.Config(command.toArray)) {
+      private def msg (msg :String, isErr :Boolean) = {
         val kind = if (isErr) "stderr" else "stdout"
-        log.log(s"$prefix: [$kind] $line")
+        s"$prefix: [$kind] $msg"
       }
-      def onFailure (err :Exception) {
-        log.log(s"$prefix: expect failure", err)
+      override def onUnexpected (line :String, isErr :Boolean) {
+        log.log(msg(line, isErr))
+      }
+      override protected def onFailure (exn :Exception, isErr :Boolean) {
+        exec.runOnUI { log.log(msg("expect failure", isErr), exn) }
       }
     }
 }

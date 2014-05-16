@@ -4,6 +4,7 @@
 
 package scaled.util
 
+import java.io.{PrintWriter, StringWriter}
 import reactual.Future
 import scaled.Editor
 
@@ -21,4 +22,11 @@ object Error {
 
   /** Creates a [[Future]] which will fail with a the feedback message `msg`. */
   def futureFeedback[T] (msg :String) :Future[T] = Future.failure(feedback(msg))
+
+  /** Converts `exn`'s stack trace into a string. */
+  def stackTraceToString (exn :Throwable) :String = {
+    val trace = new StringWriter()
+    exn.printStackTrace(new PrintWriter(trace))
+    trace.toString
+  }
 }
