@@ -69,8 +69,8 @@ trait Editor {
                    completer :Completer[R]) :Future[R] =
     mini("read", Promise[R](), prompt, Line.fromText(defval), history, completer)
 
-  /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield true
-    * for 'y', false for 'n', and which will fail if input was canceled.
+  /** Prompts the user to enter 'y' or 'n' via the minibuffer. Returns a future which will yield
+    * true for 'y', false for 'n', and which will fail if input was canceled.
     *
     * @param prompt the text to display when requesting input. The string ` (y or n)` will be
     * automatically appended.
