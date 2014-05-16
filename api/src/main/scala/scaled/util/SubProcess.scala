@@ -12,7 +12,7 @@ import scaled._
   * myriad configuration methods. The process is started immediately upon instantiation of this
   * instance.
   */
-abstract class SubProcess (config :SubProcess.Config) {
+abstract class SubProcess (config :SubProcess.Config) extends AutoCloseable {
   import SubProcess._
 
   /** Sends a line of text to the subprocess's stdin. A newline is automatically appended. This must
