@@ -203,5 +203,5 @@ class PackageManager (app :Main) {
   // TODO: install package phase where we download and install a package, install its dependencies
   // and ensure that everything is compiled and ready to run
 
-  private def warn (msg :String) = println(msg) // TODO
+  private def warn (msg :String) = app.logger.log(msg)
 }
