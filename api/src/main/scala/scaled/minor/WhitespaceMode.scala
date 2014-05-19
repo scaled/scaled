@@ -18,6 +18,10 @@ object WhitespaceConfig extends Config.Defs {
   @Var("If true, trailing whitespace will be trimmed from a line when a newline is inserted.")
   val trimTrailingWhitespace = key(true)
 
+  @Var("""If true and the buffer lacks a trailing newline, a newline will be appended to the buffer
+          before it is saved.""")
+  val requireTrailingNewline = key(true)
+
   /** The CSS style applied to trailing whitespace characters. */
   val trailingStyle = "whitespaceTrailingFace"
 }
@@ -30,7 +34,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   import WhitespaceConfig._
   import Chars._
 
-  val twHighlighter = new Behavior() {
+  addBehavior(showTrailingWhitespace, new Behavior() {
     private val _rethinkLines = MSet[Int]()
 
     override protected def activate () {
@@ -78,11 +82,9 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
       if (first > 0) buffer.removeStyle(trailingStyle, Loc(ii, 0), floc)
       if (first < last) buffer.addStyle(trailingStyle, floc, Loc(ii, last))
     }
-  }
-  note(twHighlighter)
-  note(config.value(showTrailingWhitespace) onValueNotify twHighlighter.setActive)
+  })
 
-  val twTrimmer = new Behavior() {
+  addBehavior(trimTrailingWhitespace, new Behavior() {
     private val _trimLines = MSet[Int]()
 
     override protected def activate () {
@@ -100,9 +102,15 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
         _trimLines.clear()
       })
     }
-  }
-  note(twTrimmer)
-  note(config.value(WhitespaceConfig.trimTrailingWhitespace) onValueNotify twTrimmer.setActive)
+  })
+
+  addBehavior(requireTrailingNewline, new Behavior() {
+    override protected def activate () {
+      note(buffer.willSave onValue { buf =>
+        if (buf.lines.last.length > 0) buf.split(buf.end)
+      })
+    }
+  })
 
   override def keymap = Seq() // TODO
   override def configDefs = WhitespaceConfig :: super.configDefs
