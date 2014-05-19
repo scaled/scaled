@@ -56,7 +56,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     // TODO: color the status label red or something
     emitStatus(err.getMessage match {
       case null => err.toString
-      case msg => msg
+      case msg  => msg
     }, false)
     if (!err.isInstanceOf[Error.FeedbackException]) recordMessage(Error.stackTraceToString(err))
   }

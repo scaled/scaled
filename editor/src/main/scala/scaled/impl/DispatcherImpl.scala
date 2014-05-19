@@ -53,7 +53,12 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     _metas = List(_majorMeta)
     // automatically activate any minor modes that match our major mode's tags
     resolver.minorModes(major.tags) foreach { mode =>
-      addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
+      try addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
+      catch {
+        case e :Exception =>
+          editor.emitError(e)
+          editor.emitStatus(s"Failed to resolve minor mode '$mode'. See *messages* for details.")
+      }
     }
     modesChanged()
     // if we were replacing an existing major mode, give feedback to the user
