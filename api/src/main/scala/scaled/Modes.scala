@@ -6,7 +6,7 @@ package scaled
 
 import java.io.FileNotFoundException
 import reactual.Value
-import scaled.util.CloseList
+import scaled.util.{Behavior, CloseList}
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
   *  - one it makes passing a bundle of standard depends on to a superclass constructor less
@@ -152,6 +152,15 @@ abstract class Mode (env :Env) {
   @inline protected final def view = env.view
   @inline protected final def buffer = env.view.buffer
   @inline protected final def disp = env.disp
+
+  /** Binds `behavior` to the specified boolean configuration key. When `key` is true, the behavior
+    * will be activated, when it is false it will be deactivated.
+    */
+  protected def addBehavior (key :Config.Key[Boolean], behavior :Behavior) {
+    // bind behavior's activation to the specified config key
+    note(config.value(key) onValueNotify behavior.setActive)
+    note(behavior) // deactivate the behavior (if active) when we're disposed
+  }
 
   /** Adds `close` to a list to be closed when this mode is disposed. This is useful for noting
     * Reactual connections that must be closed when a mode is disconnected, or [[Behavior]]s that
