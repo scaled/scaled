@@ -488,7 +488,8 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
     val major = disp.modes.last
-    val buf = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil)).buffer
+    val view = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil))
+    val buf = view.buffer
     val keysByMode = disp.triggers.groupBy(_._1)
     val text = new ArrayBuffer[String]()
 
@@ -526,6 +527,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
     buf.replace(buf.start, buf.end, text.map(Line.apply))
     buf.markClean()
+    view.point() = Loc.Zero
     editor.visitBuffer(buf)
   }
 
