@@ -540,6 +540,9 @@ abstract class RBuffer extends Buffer {
   /** A reactive view of [[dirty]]. */
   def dirtyV :ValueV[Boolean]
 
+  /** A signal that is emitted when this buffer is about to be saved. */
+  def willSave :SignalV[Buffer]
+
   /** A signal emitted when this buffer is edited. */
   def edited :SignalV[Buffer.Edit]
 

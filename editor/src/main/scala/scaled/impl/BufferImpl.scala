@@ -86,6 +86,7 @@ class BufferImpl private (
   private[this] val _file = Value(initFile)
   private[this] val _mark = Value(None :Option[Loc])
   private[this] val _dirty = Value(false)
+  private[this] val _willSave = Signal[Buffer]()
   private[this] val _edited = Signal[Edit]()
   private[this] val _lineStyled = Signal[Loc]()
   private[this] var _maxRow = longest(_lines, 0, _lines.length)
@@ -107,10 +108,14 @@ class BufferImpl private (
   override def maxLineLength = lines(_maxRow).length
   // refine return type to ease life for internal friends
   override def dirtyV :Value[Boolean] = _dirty
+  override def willSave = _willSave
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
 
   override def saveTo (file :File) {
+    // call will-save hooks
+    _willSave.emit(this)
+
     // TODO: file encoding?
     val temp = new File(file.getParentFile, file.getName() + "~")
     val out = new BufferedWriter(new FileWriter(temp))
