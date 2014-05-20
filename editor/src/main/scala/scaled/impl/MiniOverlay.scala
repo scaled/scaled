@@ -37,13 +37,25 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
     }
   }
 
+  // limit completions display to 100 entries; scanning hundreds of completions is not useful, just
+  // type more characters and you'll get closer to what you want
+  private val PreComps = 95
+  private val PostComps = 5
+  private val MaxComps = PreComps + PostComps
+
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
     override def getPrompt = plabel.getText
     override def showCompletions (comps :Seq[String]) {
       if (comps.isEmpty) setBottom(null)
       else {
-        val fcomps = formatCompletions(comps)
+        val fcomps = formatCompletions(if (comps.length <= MaxComps) comps else {
+          val b = Seq.newBuilder[String]
+          b ++= comps.take(PreComps)
+          b += s"...(${comps.length-MaxComps} omitted)..."
+          b ++= comps.takeRight(PostComps)
+          b.result
+        })
         cview.buffer.replace(cview.buffer.start, cview.buffer.end, fcomps.map(Line.apply))
         cview.point() = Loc(0, 0)
         cview.width() = fcomps.map(_.length).max
