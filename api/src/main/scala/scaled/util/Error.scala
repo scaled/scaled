@@ -17,6 +17,9 @@ object Error {
     */
   class FeedbackException (msg :String) extends Exception(msg)
 
+  /** Returns true if `t` is a feedback exception. */
+  def isFeedback (t :Throwable) :Boolean = t.isInstanceOf[Error.FeedbackException]
+
   /** Creates an exception to report the supplied error message. */
   def feedback (msg :String) = new FeedbackException(msg)
 
