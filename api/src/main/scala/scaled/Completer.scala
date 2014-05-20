@@ -11,40 +11,22 @@ import scala.annotation.tailrec
 import scala.collection.immutable.TreeSet
 
 /** Represents a computed completion. */
-class Completion[T] (viter :Iterator[T], format :T => String, sort :Boolean) {
-  def this (values :Iterable[T], format :T => String, sort :Boolean) =
-    this(values.iterator, format, sort)
-
-  private[this] val (_comps, _map) = {
-    val b = Map.newBuilder[String,T]
-    val c = if (sort) TreeSet.newBuilder[String] else Seq.newBuilder[String]
-    while (viter.hasNext) {
-      val value = viter.next
-      val comp = format(value)
-      b += (comp -> value)
-      c += comp
-    }
-    // we need to turn our treeset into a seq immediately otherwise the sort ordering will be lost
-    // further down the line when it is filtered or grouped or whatnot
-    (c.result.toSeq, b.result)
-  }
+abstract class Completion[T] {
 
   /** Returns the completion display strings, in the order they should be displayed. */
-  def comps :Seq[String] = _comps
+  def comps :Seq[String]
 
   /** Returns `Some` value associated with the completion `comp`, or `None`. */
-  def apply (comp :String) :Option[T] = _map.get(comp)
+  def apply (comp :String) :Option[T]
 
   /** Returns the default value to use when committed with a non-matching value. */
-  def defval :Option[T] = comps.headOption.map(_map)
+  def defval :Option[T]
 
   /** Gives the completion a chance to "massage" the currently displayed prefix. By default the
     * prefix is replaced with the longest shared prefix of all the completions. In normal
-    * circumstnaces this is useful, but if a completer is doing special stuff, it might not be.
+    * circumstances this is useful, but if a completer is doing special stuff, it might not be.
     */
   def massageCurrent (cur :String) :String = comps reduce sharedPrefix
-
-  override def toString = _map.toString
 
   /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
     * only when both strings have the character in uppercase, lowercase otherwise. */
@@ -64,6 +46,54 @@ class Completion[T] (viter :Iterator[T], format :T => String, sort :Boolean) {
     }
     loop(0)
     buf.toString
+  }
+}
+
+/** Factory methods for standard completions. */
+object Completion {
+
+  /** Creates a completion over `values`, formatting them with `format`.
+    * @param sort if true the values will be sorted lexically, if false they will be displayed in
+    * iteration order.
+    */
+  def apply[T] (values :Iterable[T], format :T => String, sort :Boolean) :Completion[T] =
+    apply(values.iterator, format, sort)
+
+  /** Creates a completion over `values`, formatting them with `format`.
+    * @param sort if true the values will be sorted lexically, if false they will be displayed in
+    * iteration order.
+    */
+  def apply[T] (viter :Iterator[T], format :T => String, sort :Boolean) :Completion[T] = {
+    val cb = if (sort) TreeSet.newBuilder[String] else Seq.newBuilder[String]
+    val mb = Map.newBuilder[String,T]
+    while (viter.hasNext) {
+      val value = viter.next
+      val comp = format(value)
+      cb += comp
+      mb += (comp -> value)
+    }
+    // we need to turn our treeset into a seq immediately otherwise the sort ordering will be lost
+    // further down the line when it is filtered or grouped or whatnot
+    val cs = cb.result.toSeq
+    val map = mb.result
+    new Completion[T] {
+      def comps = cs
+      def apply (comp :String) = map.get(comp)
+      def defval = comps.headOption.map(map)
+      override def toString = map.toString
+    }
+  }
+
+  /** Creates an intermediate completion over `cs`. None of the completions will resolve to a value,
+    * but they presumably resolve to strings which will be further completed to valid completions.
+    * The main use for this is to complete intermediate directories in a completer that only
+    * completes files, but which must needs complete directories along the way.
+    */
+  def intermediate[T] (cs :Seq[String]) :Completion[T] = new Completion[T] {
+    def comps :Seq[String] = cs
+    def apply (comp :String) = None
+    def defval = None
+    override def toString = cs.toString
   }
 }
 
@@ -98,11 +128,11 @@ abstract class Completer[T] {
 
   /** Returns a completion over `values` in iteration order. */
   protected def completion[T] (values :Iterable[T], format :T => String) =
-    new Completion[T](values, format, false)
+    Completion(values, format, false)
 
   /** Returns a completion over `values` in lexical order (of the formatted completions). */
   protected def sortedCompletion[T] (values :Iterable[T], format :T => String) =
-    new Completion[T](values, format, true)
+    Completion(values, format, true)
 
   /** Returns a sorted completion over some strings. */
   protected def stringCompletion (ss :Iterable[String]) = sortedCompletion(ss, identity[String])
@@ -194,7 +224,7 @@ object Completer {
       import scala.collection.convert.WrapAsScala._
       val edir = massage(dir)
       val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
-      try new Completion(files.iterator.filter(fileFilter(prefix)).map(Store.apply), format, true)
+      try Completion(files.iterator.filter(fileFilter(prefix)).map(Store.apply), format, true)
       finally files.close()
     }
 
