@@ -4,7 +4,6 @@
 
 package scaled.impl
 
-import java.io.{File, StringReader}
 import org.junit.Assert._
 import org.junit._
 import scaled._
@@ -17,7 +16,7 @@ object BufferImplTest {
   val ABC = "The quick brown fox jumped over the lazy dog."
   val testText = s"$WHO\n$NOW\n$EGBDF\n$ABC\n"
 
-  def testBuffer (text :String) = BufferImpl("test", new File(""), new StringReader(text))
+  def testBuffer (text :String) = BufferImpl(new TextStore("test", "", text))
 }
 
 class BufferImplTest {

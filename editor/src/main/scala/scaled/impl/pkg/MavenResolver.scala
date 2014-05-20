@@ -4,7 +4,6 @@
 
 package scaled.impl.pkg
 
-import java.io.File
 import java.net.{URL, URLClassLoader}
 import pomutil.{Dependency, DependResolver, POM}
 import scaled.Logger
@@ -18,9 +17,9 @@ class MavenResolver (log :Logger) {
   def resolveDepend (depend :Depend) :Option[ClassLoader] = {
     val pdep = Dependency(depend.groupId, depend.artifactId, depend.version, depend.kind)
     pdep.localPOM match {
-      case None => log.log(s"Unable to resolve POM for $pdep") ; None
+      case None        => log.log(s"Unable to resolve POM for $pdep") ; None
       case Some(pfile) => POM.fromFile(pfile) match {
-        case None => log.log(s"Unable to load POM from $pfile") ; None
+        case None      => log.log(s"Unable to load POM from $pfile") ; None
         case Some(pom) =>
           val res = new DependResolver(pom) {
             // ignore non-compile depends; dependencies loaded here are always at least one step
@@ -43,6 +42,4 @@ class MavenResolver (log :Logger) {
     }}
     new URLClassLoader(urls.result)
   }
-
-  private def file (root :File, subs :String*) = (root /: subs)(new File(_, _))
 }

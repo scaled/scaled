@@ -4,7 +4,7 @@
 
 package scaled
 
-import java.io.File
+import java.nio.file.Path
 
 /** Used to cancel file and directory watches when they're no longer needed. */
 trait Watch extends AutoCloseable {
@@ -17,13 +17,13 @@ trait Watch extends AutoCloseable {
 abstract class Watcher {
 
   /** Notification that a file or directory named `child` was created in `dir`. */
-  def onCreate (dir :File, child :String) {}
+  def onCreate (dir :Path, child :String) {}
 
   /** Notification that a file or directory named `child` was deleted in `dir`. */
-  def onDelete (dir :File, child :String) {}
+  def onDelete (dir :Path, child :String) {}
 
   /** Notification that a file or directory named `child` was modified in `dir`. */
-  def onModify (dir :File, child :String) {}
+  def onModify (dir :Path, child :String) {}
 }
 
 /** Provides notifications when files or directories are modified. */
@@ -34,10 +34,10 @@ trait WatchService {
   /** Registers a watch on `file`. `watcher` will be invoked (on the main JavaFX thread) when `file`
     * is modified or deleted.
     * @return a handle that can be used to terminate the watch. */
-  def watchFile (file :File, watcher :File => Unit) :Watch
+  def watchFile (file :Path, watcher :Path => Unit) :Watch
 
   /** Registers a watch on `dir`. `watcher` will be invoked (on the main JavaFX thread) when any
     * files are created, modified or deleted in `dir`.
     * @return a handle that can be used to terminate the watch. */
-  def watchDir (dir :File, watcher :Watcher) :Watch
+  def watchDir (dir :Path, watcher :Watcher) :Watch
 }

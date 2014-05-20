@@ -4,14 +4,10 @@
 
 package scaled.impl
 
-import java.io.File
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
 import java.util.HashMap
 import reactual.Value
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util.Properties
 
 class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl]) extends Config {
 

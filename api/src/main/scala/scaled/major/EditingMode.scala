@@ -4,7 +4,6 @@
 
 package scaled.major
 
-import java.io.File
 import reactual.{Future, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -517,7 +516,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
       // what else does emacs do?
       buffer.save()
-      editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
+      editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.store.parent}")
     }
   }
 
@@ -525,24 +524,23 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          file. If you specify just a directory, the buffer will be saved to its current filename
          in the specified directory.""")
   def writeFile () {
-    val bufwd = buffer.dir.getAbsolutePath + File.separator
-    editor.miniRead("Write file:", bufwd, config(fileHistory), Completer.file) onSuccess { lfile =>
-      val file = lfile.getCanonicalFile
+    val bufwd = buffer.store.parent
+    editor.miniRead("Write file:", bufwd, config(fileHistory), Completer.file) onSuccess { store =>
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
-      (if (!editor.buffers.exists(_.file == file)) Future.success(true)
-      else editor.miniReadYN(s"A buffer is visiting '$lfile'; proceed?")) onSuccess {
+      (if (!editor.buffers.exists(_.store == store)) Future.success(true)
+       else editor.miniReadYN(s"A buffer is visiting '${store.name}'; proceed?")) onSuccess {
         case false => editor.popStatus("Canceled.")
         case true =>
           // require confirmation if the target file already exists
-          (if (!file.exists) Future.success(true)
-          else editor.miniReadYN(s"File '$lfile' exists; overwrite?")) onSuccess {
-            case false => editor.popStatus("Canceled.")
-            case true =>
-              buffer.saveTo(file)
-              editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.dir.getAbsolutePath}")
-          }
-      }
+          (if (!store.exists) Future.success(true)
+           else editor.miniReadYN(s"File '$store' exists; overwrite?")) onSuccess {
+             case false => editor.popStatus("Canceled.")
+             case true =>
+               buffer.saveTo(store)
+               editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${store.parent}")
+           }
+       }
     }
   }
 }

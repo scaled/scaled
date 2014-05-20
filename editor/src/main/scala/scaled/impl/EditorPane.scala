@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import java.io.{File, StringReader}
+import java.nio.file.{Files, Paths}
 import javafx.application.{Application, Platform}
 import javafx.beans.binding.Bindings
 import javafx.geometry.{HPos, VPos}
@@ -73,14 +73,10 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   override def buffers = _buffers.map(_.buffer)
 
-  override def visitFile (file :File) = {
-    _focus() = _buffers.find(_.buffer.file == file) getOrElse {
-      if (file.exists) newBuffer(BufferImpl.fromFile(file))
-      else if (Filer.isArchiveEntry(file)) newBuffer(BufferImpl.fromArchiveEntry(file.getPath))
-      else {
-        emitStatus("(New file)")
-        newBuffer(BufferImpl.empty(file.getName, file))
-      }
+  override def visitFile (store :Store) = {
+    _focus() = _buffers.find(_.buffer.store == store) getOrElse {
+      if (!store.exists) emitStatus("(New file)")
+      newBuffer(BufferImpl(store))
     }
     _focus().view
   }
@@ -89,7 +85,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     _focus().view
   }
   override def visitConfig (mode :String) = {
-    val view = visitFile(app.cfgMgr.configFile(mode))
+    val view = visitFile(Store(app.cfgMgr.configFile(mode)))
     app.cfgMgr.configText(mode) match {
       case Some(lines) =>
         if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
@@ -112,8 +108,8 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
 
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :String) {
-    val f = new File(path)
-    visitFile(if (f.exists || f.isAbsolute) f else new File(cwd(), path))
+    val p = Paths.get(path)
+    visitFile(Store(if (Files.exists(p) || p.isAbsolute) p else cwd.resolve(path)))
     stage.toFront() // move our window to front if it's not there already
     stage.requestFocus() // and request window manager focus
   }
@@ -203,8 +199,11 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   }
 
   private def createEmptyBuffer (name :String) = {
-    val file = _buffers.headOption map(_.buffer.dir) getOrElse(cwd())
-    BufferImpl.empty(name, file)
+    val parent = _buffers.headOption match {
+      case None     => cwd
+      case Some(ob) => Paths.get(ob.buffer.store.parent)
+    }
+    BufferImpl(Store(parent.resolve(name)))
   }
 
   private def freshName (name :String, n :Int = 1) :String = {

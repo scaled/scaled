@@ -23,12 +23,9 @@ class ExpecterTest {
 
   @Test def testUnexpected () {
     val exec = new AccumExec()
-    val ex = new Expecter(exec, "echo", "foo") {
+    val ex = new Expecter(exec, SubProcess.Config(Array("echo", "foo"))) {
       override def onUnexpected (line :String, isErr :Boolean) {
         assertEquals("foo", line)
-      }
-      override def onFailure (exn :Exception) {
-        fail(exn.toString)
       }
     }
     val rv = ex.waitFor()
@@ -38,12 +35,9 @@ class ExpecterTest {
 
   @Test def testOneLineInteraction () {
     val exec = new AccumExec()
-    val ex = new Expecter(exec, "cat") {
+    val ex = new Expecter(exec, SubProcess.Config(Array("cat"))) {
       override def onUnexpected (line :String, isErr :Boolean) {
         fail(s"Unexpected $line $isErr")
-      }
-      override def onFailure (exn :Exception) {
-        fail(exn.toString)
       }
     }
     ex.interact(Seq("hello")) { (line, isErr) =>
@@ -57,12 +51,9 @@ class ExpecterTest {
 
   @Test def testMultilineInteraction () {
     val exec = new AccumExec()
-    val ex = new Expecter(exec, "cat") {
+    val ex = new Expecter(exec, SubProcess.Config(Array("cat"))) {
       override def onUnexpected (line :String, isErr :Boolean) {
         fail(s"Unexpected $line $isErr")
-      }
-      override def onFailure (exn :Exception) {
-        fail(exn.toString)
       }
     }
     ex.interact(Seq("howdy", "world")) { (line, isErr) =>

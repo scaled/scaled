@@ -5,7 +5,6 @@
 package scaled.impl.pkg
 
 import com.google.common.collect.HashMultimap
-import java.io.File
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
 import java.util.jar.JarFile
@@ -41,7 +40,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     // if this is a special built-in package, use our normal class loader, otherwise we end up
     // doubly defining all of our built-in classes which confuses tools like JRebel
     if (info.builtIn) getClass.getClassLoader
-    else new URLClassLoader(Array(info.classesDir.toURI.toURL)) {
+    else new URLClassLoader(Array(info.classesDir.toUri.toURL)) {
       override def getResource (path :String) :URL = {
         var loaders = dependLoaders // first try finding the resource in our dependencies
         while (!loaders.isEmpty) {
@@ -74,14 +73,14 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     info.name, majors.keySet, minors.keySet, services, info.depends)
 
   // our root may be a directory or a jar file, in either case we scan it for class files
-  if (info.root.isDirectory) {
-    Filer.descendFiles(info.root) { f =>
-      val name = f.getName ; val fn = apply(name)
-      if (fn != null) fn(name, new ClassReader(Files.readAllBytes(f.toPath)))
+  if (Files.isDirectory(info.root)) {
+    Filer.descendFiles(info.root) { p =>
+      val name = p.getFileName.toString ; val fn = apply(name)
+      if (fn != null) fn(name, new ClassReader(Files.readAllBytes(p)))
     }
   }
-  else if (info.root.getName endsWith ".jar") {
-    val jfile = new JarFile(info.root)
+  else if (info.root.getFileName.toString endsWith ".jar") {
+    val jfile = new JarFile(info.root.toFile)
     val enum = jfile.entries()
     while (enum.hasMoreElements()) {
       val jentry = enum.nextElement() ; val fn = apply(jentry.getName)

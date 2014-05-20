@@ -4,7 +4,6 @@
 
 package scaled
 
-import java.io.File
 import reactual.{SignalV, ValueV}
 import scala.annotation.tailrec
 
@@ -38,15 +37,13 @@ trait Anchor {
   */
 abstract class BufferV extends Region {
 
-  /** The name of this buffer. Tends to be the name of the file from which it was read, but may
-    * differ if two buffers exist with the same file name. */
+  /** The name of this buffer. Tends to be the name of the store from which it was read, but may
+    * differ if two buffers exist with the same name or if the buffer is viewing something that did
+    * not come from a store. */
   def name :String
 
-  /** The file being edited by this buffer. */
-  def file :File
-
-  /** The directory that contains the file being edited by this buffer. */
-  def dir :File = if (file.isDirectory) file else file.getParentFile
+  /** The store being edited by this buffer. */
+  def store :Store
 
   /** The current mark, if any. */
   def mark :Option[Loc]
@@ -59,7 +56,7 @@ abstract class BufferV extends Region {
     * needing to be saved. If it was loaded from a file or written to a file at any point, it
     * will report needing to be saved if it is dirty.
     */
-  def needsSave :Boolean = dirty && file.isFile
+  def needsSave :Boolean = dirty && store.exists
 
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
     * exists for symmetry with [[end]]. */
@@ -378,14 +375,14 @@ abstract class BufferV extends Region {
   */
 abstract class Buffer extends BufferV {
 
-  /** Saves this buffer to its current file. If the buffer is not dirty, NOOPs. */
+  /** Saves this buffer to its current store. If the buffer is not dirty, NOOPs. */
   def save () {
     // the caller should check dirty and provide feedback, but let's nip funny biz in the bud
-    if (dirty) saveTo(file)
+    if (dirty) saveTo(store)
   }
 
-  /** Saves this buffer to `file`, updating [[file]] and [[name]] appropriately. */
-  def saveTo (file :File) :Unit
+  /** Saves this buffer to `store`, updating [[store]] and [[name]] appropriately. */
+  def saveTo (store :Store) :Unit
 
   /** Marks this buffer as clean. In general one should not use this method, as a buffer will
     * automatically be marked clean on being saved. However, some buffers are special and don't
@@ -530,9 +527,9 @@ abstract class RBuffer extends Buffer {
   /** A reactive view of [[name]]. */
   def nameV :ValueV[String]
 
-  /** A reactive view of [[file]]. This value is forcibly updated when the buffer is saved (even if
+  /** A reactive view of [[store]]. This value is forcibly updated when the buffer is saved (even if
     * the file did not change). One can thus listen to this value to react to all buffer saves. */
-  def fileV :ValueV[File]
+  def storeV :ValueV[Store]
 
   /** The current mark, if any. */
   def markV :ValueV[Option[Loc]]
@@ -555,7 +552,7 @@ abstract class RBuffer extends Buffer {
 
   // implement some Buffer methods in terms of our reactive values
   override def name = nameV()
-  override def file = fileV()
+  override def store = storeV()
   override def mark = markV()
   override def dirty = dirtyV()
 }

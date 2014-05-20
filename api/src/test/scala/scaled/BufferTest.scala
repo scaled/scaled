@@ -4,7 +4,6 @@
 
 package scaled
 
-import java.io.File
 import org.junit._
 import org.junit.Assert._
 
@@ -13,7 +12,7 @@ object BufferTest {
   /** Creates a read-only buffer view for testing. */
   def bufferV (_name :String, _lines :Seq[LineV]) :BufferV = new BufferV() {
     def name = _name
-    def file = new File(name)
+    val store = new TextStore(name, "", "")
     def mark = None
     def dirty = false
     def lines = _lines

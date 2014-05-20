@@ -45,7 +45,7 @@ object MutableLine {
   */
 class MutableLine (
   buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles], initXs :Array[Syntax]
-) extends LineV {
+) extends LineV with Store.Writable {
   def this (buffer :BufferImpl, cs :Array[Char]) = this(
     buffer, cs, Array.fill(cs.length)(Styles.None), Array.fill(cs.length)(Syntax.Default))
 
@@ -62,8 +62,7 @@ class MutableLine (
     new Line(_chars.slice(start, until), _styles.slice(start, until), _syns.slice(start, until))
   override protected def _offset = 0
 
-  /** Writes this mutable line to the supplied writer. */
-  def write (out :Writer) = out.write(_chars, 0, _end)
+  override def write (out :Writer) = out.write(_chars, 0, _end)
 
   /** Splits this line at `loc`. Deletes the data from `loc.col` onward from this line.
     * @return a new line which contains the data from `loc.col` onward. */

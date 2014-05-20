@@ -5,16 +5,19 @@
 package scaled
 
 import java.io.File
+import java.nio.file.{FileSystems, Files, Path, Paths}
+import java.util.stream.Stream
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeSet
 
 /** Represents a computed completion. */
-class Completion[T] (values :Iterable[T], format :T => String, sort :Boolean) {
+class Completion[T] (viter :Iterator[T], format :T => String, sort :Boolean) {
+  def this (values :Iterable[T], format :T => String, sort :Boolean) =
+    this(values.iterator, format, sort)
 
   private[this] val (_comps, _map) = {
     val b = Map.newBuilder[String,T]
     val c = if (sort) TreeSet.newBuilder[String] else Seq.newBuilder[String]
-    val viter = values.iterator
     while (viter.hasNext) {
       val value = viter.next
       val comp = format(value)
@@ -170,33 +173,42 @@ object Completer {
   /** Returns a prefix matching filter for file names. This [[defangs]] the file name and does a
     * normal case-insensitive prefix match, except that when `prefix` is empty, dot files are
     * omitted. */
-  def fileFilter (prefix :String) :(File => Boolean) =
-    if (prefix == "") { f => !(defang(f.getName) startsWith ".") }
-    else              { f => startsWithI(prefix)(defang(f.getName)) }
+  def fileFilter (prefix :String) :(Path => Boolean) =
+    if (prefix == "") { p => !(defang(p.getFileName.toString) startsWith ".") }
+    else              { p => startsWithI(prefix)(defang(p.getFileName.toString)) }
 
   /** A completer on file system files. */
-  val file :Completer[File] = new Completer[File] {
-    def complete (path :String) = path lastIndexOf File.separatorChar match {
-      case -1  => expand(File.listRoots.head /*TODO*/, path)
-      case idx => expand(new File(path.substring(0, idx+1)), path.substring(idx+1))
+  val file :Completer[Store] = new Completer[Store] {
+    def complete (path :String) = {
+      val p = Paths.get(path)
+      if (path endsWith File.separator) expand(p, "")
+      else p.getParent match {
+        case null => expand(rootPath /*TODO*/, path)
+        case prnt => expand(prnt, p.getFileName.toString)
+      }
     }
     override def pathSeparator = Some(File.separator)
-    override protected def fromString (value :String) = Some(new File(value))
+    override protected def fromString (value :String) = Some(Store(value))
 
-    private def expand (dir :File, prefix :String) = {
+    private def expand (dir :Path, prefix :String) = {
+      import scala.collection.convert.WrapAsScala._
       val edir = massage(dir)
-      val files = if (edir.exists) edir.listFiles else Array[File]()
-      sortedCompletion(files.filter(fileFilter(prefix)), formatFile)
+      val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
+      try new Completion(files.iterator.filter(fileFilter(prefix)).map(Store.apply), format, true)
+      finally files.close()
     }
 
-    private def massage (dir :File) = {
-      if (dir.getName == "~") new File(System.getProperty("user.home"))
-      else dir // TODO: map // to root of file system?
+    private def massage (dir :Path) = {
+      if (dir.getFileName.toString == "~") Paths.get(System.getProperty("user.home"))
+      else dir // TODO: map '//' to root of file system?
     }
 
-    private val formatFile = (file :File) => {
-      val path = defang(file.getAbsolutePath)
-      if (file.isDirectory) path + File.separator else path
+    private def rootPath = FileSystems.getDefault.getRootDirectories.iterator.next
+    private val format = (store :Store) => store match {
+      case FileStore(fpath) =>
+        val path = defang(fpath.toString)
+        if (Files.isDirectory(fpath)) path + File.separator else path
+      case store => store.toString
     }
   }
 }

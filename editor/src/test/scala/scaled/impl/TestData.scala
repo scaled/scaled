@@ -4,10 +4,7 @@
 
 package scaled.impl
 
-import java.io.{File, StringReader}
-
 import reactual.{Future, Promise}
-
 import scaled._
 import scaled.major.TextMode
 
@@ -41,7 +38,7 @@ object TestData {
     def buffers = Seq()
     def openBuffer (buffer :String) = null
     def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = null
-    def visitFile (file :File) = null
+    def visitFile (file :Store) = null
     def visitConfig (name :String) = null
     def visitBuffer (buffer :Buffer) = null
     def killBuffer (buffer :Buffer) {}
@@ -71,6 +68,5 @@ object TestData {
   }
 
   /** Creates a test buffer. For testing! */
-  def buffer (name :String, text :String) =
-    BufferImpl(name, new File(name), new StringReader(text))
+  def buffer (name :String, text :String) = BufferImpl(new TextStore(name, "", text))
 }

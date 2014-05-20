@@ -4,7 +4,7 @@
 
 package scaled
 
-import java.io.File
+import java.nio.file.Path
 import scala.reflect.ClassTag
 
 /** Scaled services must extend this class so that they can be notified of lifecycle events. */
@@ -22,8 +22,8 @@ abstract class AbstractService {
          desc="Provides meta-services. Mainly logging and dependency injection.")
 trait MetaService {
 
-  /** Returns a `File` for a file/directory with name `name` in the Scaled metadata directory. */
-  def metaFile (name :String) :File
+  /** Returns a `Path` for a file/directory with name `name` in the Scaled metadata directory. */
+  def metaFile (name :String) :Path
 
   /** Returns a logger for reporting errors / non-UX feedback. */
   def log :Logger

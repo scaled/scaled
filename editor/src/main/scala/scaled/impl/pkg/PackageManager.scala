@@ -5,8 +5,8 @@
 package scaled.impl.pkg
 
 import com.google.common.collect.HashMultimap
-import java.io.File
 import java.net.URLClassLoader
+import java.nio.file.{Files, Path, Paths}
 import java.util.regex.Pattern
 import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
@@ -124,24 +124,24 @@ class PackageManager (app :Main) {
   // resolve our "built-in" package(s), which we locate via the classloader
   getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
     if (url.getProtocol == "file") {
-      val file = new File(url.getPath)
-      val isJar = file.getName endsWith ".jar"
+      val file = Paths.get(url.getPath) ; val fileName = file.getFileName.toString
+      val isJar = fileName endsWith ".jar"
       // if this is a directory of classes, we're running in development mode; search this
       // directory for a package.scaled file which indicates that it provides a built-in package
       if (!isJar) addBuiltin(file)
       // if we see a scaled-editor*.jar then we're running in pre-packaged mode; extract the
       // built-in package metadata from our jar file
-      else if (isJar && (file.getName startsWith "scaled-editor")) {
+      else if (isJar && (fileName startsWith "scaled-editor")) {
         val pkg = getClass.getClassLoader.getResourceAsStream("package.scaled")
         if (pkg == null) log.log(s"Expected to find package.scaled on classpath, but didn't!")
-        else addPackage(PackageInfo(file, Source.fromInputStream(pkg), None))
+        else addPackage(PackageInfo(file, pkg, None))
       }
     }
   }
 
   // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
   // cache the results of our scans and load that instead)
-  private val pkgsDir = Filer.requireDir(new File(app.metaDir, "Packages"))
+  private val pkgsDir = Filer.requireDir(app.metaDir.resolve("Packages"))
 
   // if we have more than one built-in package then we're running in dev mode, which means we do
   // package management a bit differently: we don't use custom classloaders (this enables JRebel to
@@ -150,8 +150,8 @@ class PackageManager (app :Main) {
   if (pkgs.size == 1) {
     val mainDep = Some(pkgs.head._2.info.srcurl)
     Filer.descendDirs(pkgsDir) { dir =>
-      val pkgFile = new File(dir, "package.scaled")
-      if (!pkgFile.exists) true // descend into subdirs
+      val pkgFile = dir.resolve("package.scaled")
+      if (!Files.exists(pkgFile)) true // descend into subdirs
       else {
         addPackage(PackageInfo(pkgFile, mainDep))
         false // stop descending
@@ -163,10 +163,10 @@ class PackageManager (app :Main) {
   }
 
   // scans up from `dir` looking for 'package.scaled' file; then adds package from there
-  private def addBuiltin (dir :File) {
+  private def addBuiltin (dir :Path) {
     if (dir != null) {
-      val pfile = new File(dir, "package.scaled")
-      if (!pfile.exists) addBuiltin(dir.getParentFile)
+      val pfile = dir.resolve("package.scaled")
+      if (!Files.exists(pfile)) addBuiltin(dir.getParent)
       else addPackage(PackageInfo(pfile, None))
     }
   }

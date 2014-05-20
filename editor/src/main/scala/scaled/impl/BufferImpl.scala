@@ -4,9 +4,7 @@
 
 package scaled.impl
 
-import java.io.InputStreamReader
-import java.io.{Reader, BufferedReader, BufferedWriter, File, FileReader, FileWriter, StringReader}
-import java.util.zip.ZipFile
+import java.nio.file.Paths
 import reactual.{Signal, SignalV, Value, ValueV}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -20,70 +18,33 @@ import scaled._
 /** [BufferImpl] related types and utilities. */
 object BufferImpl {
 
-  /** Reads the contents of `reader` info a buffer. Note that the caller is responsible for closing
-    * the reader if necessary. */
-  def apply (name :String, file :File, reader :Reader) :BufferImpl = {
-    val buffed = new BufferedReader(reader)
+  /** Reads the contents of `store` info a buffer. */
+  def apply (store :Store) :BufferImpl = {
     val lines = ArrayBuffer[Array[Char]]()
-    var line :String = buffed.readLine()
-    while (line != null) {
-      // TODO: remove tab hackery when we support tabs
-      lines += line.replace('\t', ' ').toCharArray
-      line = buffed.readLine()
-    }
+    // TODO: remove tab hackery when we support tabs
+    store.read(ln => lines += ln.replace('\t', ' ').toCharArray)
     // TEMP: tack a blank line on the end to simulate a trailing line sep
     lines += MutableLine.NoChars
-    new BufferImpl(name, file, lines)
-  }
-
-  /** Reads the contents of `file` into a buffer. */
-  def fromFile (file :File) :BufferImpl = {
-    val cfile = file.getCanonicalFile
-    // TODO: use a CharSetDecoder and ByteBuffer + CharBuffer to read things ourselves, and track
-    // where and what the line separators are, and whether there's a trailing line sep
-    val reader = new FileReader(file)
-    try {
-      apply(cfile.getName, cfile, reader)
-    } finally {
-      reader.close
-    }
-  }
-
-  /** Reads the archive entry specified by `path` into a buffer. */
-  def fromArchiveEntry (path :String) :BufferImpl = {
-    val Array(apath, epath) = path.split("!", 2)
-    val zfile = new ZipFile(apath)
-    zfile.getEntry(epath) match {
-      case null  => empty(epath, new File(path))
-      case entry =>
-        val efile = new File(epath)
-        apply(efile.getName, efile, new InputStreamReader(zfile.getInputStream(entry), "UTF-8"))
-    }
+    new BufferImpl(store, lines)
   }
 
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
-  def scratch (name :String) :BufferImpl = apply(name, cwd(), new StringReader(""))
-
-  /** Returns an empty buffer with the specified `name` and `file`. The file is expected not to
-    * exist. */
-  def empty (name :String, file :File) :BufferImpl = apply(name, file, new StringReader(""))
+  def scratch (name :String) :BufferImpl = apply(Store(cwd.resolve(Paths.get(name))))
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()
 }
 
 /** Implements [Buffer] and [RBuffer]. This is where all the excitement happens. */
-class BufferImpl private (
-  initName :String, initFile :File, initLines :ArrayBuffer[Array[Char]]
-) extends RBuffer {
+class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]]) extends RBuffer {
   import Buffer._
 
   // TODO: character encoding
   // TODO: line endings
 
   private[this] val _lines = initLines.map(new MutableLine(this, _))
-  private[this] val _name = Value(initName)
-  private[this] val _file = Value(initFile)
+  private[this] val _name = Value(initStore.name)
+  private[this] val _store = Value(initStore)
   private[this] val _mark = Value(None :Option[Loc])
   private[this] val _dirty = Value(false)
   private[this] val _willSave = Signal[Buffer]()
@@ -97,7 +58,7 @@ class BufferImpl private (
   // from Buffer and RBuffer API
 
   override def nameV = _name
-  override def fileV = _file
+  override def storeV = _store
   override def markV = _mark
   override def mark_= (loc :Loc) = _mark() = Some(bound(loc))
   override def clearMark () = _mark() = None
@@ -112,31 +73,12 @@ class BufferImpl private (
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
 
-  override def saveTo (file :File) {
+  override def saveTo (store :Store) {
     // call will-save hooks
     _willSave.emit(this)
-
-    // TODO: file encoding?
-    val temp = new File(file.getParentFile, file.getName() + "~")
-    val out = new BufferedWriter(new FileWriter(temp))
-    try {
-      def write (idx :Int) {
-        if (idx < lines.length) {
-          val l = lines(idx)
-          if (idx > 0) out.newLine() // TODO: use newlines we detected when reading the file
-          l.write(out)
-          write(idx+1)
-        }
-      }
-      write(0)
-      out.close()
-      temp.renameTo(file)
-    } finally {
-      temp.delete()
-    }
-
-    _file.updateForce(file)
-    _name() = file.getName
+    store.write(lines)
+    _store.updateForce(store)
+    _name() = store.name
     _dirty() = false
   }
 
@@ -315,5 +257,5 @@ class BufferImpl private (
     _lineStyled.emit(loc)
   }
 
-  override def toString () = s"[file=${file}, name=${name}, lines=${lines.size}]"
+  override def toString () = s"[name=$name, store=$store, lines=${lines.size}]"
 }

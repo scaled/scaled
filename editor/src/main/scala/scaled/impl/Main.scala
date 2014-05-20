@@ -1,7 +1,7 @@
 package scaled.impl
 
 import com.google.common.collect.HashBiMap
-import java.io.File
+import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
 import javafx.application.{Application, Platform}
 import javafx.scene.Scene
@@ -29,7 +29,7 @@ class Main extends Application {
   }
 
   // locate and create our metadata dir
-  val homeDir = new File(System.getProperty("user.home"))
+  val homeDir = Paths.get(System.getProperty("user.home"))
   val metaDir = Filer.requireDir(locateMetaDir)
   val editors = HashBiMap.create[String,EditorPane]()
 
@@ -110,8 +110,8 @@ class Main extends Application {
   }
 
   // TODO: platform specific app dirs
-  private def locateMetaDir :File =
-    (homeDir /: Seq("Library", "Application Support", "Scaled"))(new File(_, _))
+  private def locateMetaDir :Path = homeDir.resolve(
+    Paths.get("Library", "Application Support", "Scaled"))
 }
 
 object Main {

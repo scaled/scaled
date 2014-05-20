@@ -4,7 +4,6 @@
 
 package scaled
 
-import java.io.File
 import reactual.{Future, Promise}
 
 /** Provides access to data and services encapsulated by the editor. The editor is not quite the
@@ -85,7 +84,7 @@ trait Editor {
   /** Opens `file` into a new buffer. If another buffer is already visiting `file` that buffer is
     * made active instead.
     * @return the view for the visiting buffer. */
-  def visitFile (file :File) :BufferView
+  def visitFile (file :Store) :BufferView
 
   /** Opens the config file for `mode` into a new buffer. If another buffer is already visiting said
     * file, that buffer is made active instead.

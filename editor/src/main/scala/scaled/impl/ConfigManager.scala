@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import java.io.File
+import java.nio.file.{Files, Path}
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Properties
@@ -22,7 +22,7 @@ class ConfigManager (log :Logger, metaSvc :MetaService, watchSvc :WatchService) 
     _configs.getOrElseUpdate(mode, loadConfig(mode, defs))
 
   /** Returns the file that contians mode's configuration. */
-  def configFile (mode :String) :File = new File(_configDir, mode + FileSuff)
+  def configFile (mode :String) :Path = _configDir.resolve(mode + FileSuff)
 
   /** Returns the current configuration for `mode` as properties text, suitable for jamming into its
     * config file. */
@@ -38,8 +38,8 @@ class ConfigManager (log :Logger, metaSvc :MetaService, watchSvc :WatchService) 
   // listen for changes to files in our config directory and reload configs therefor; note: we
   // never unregister this watch so we don't need to keep the handle around
   watchSvc.watchDir(_configDir, new Watcher() {
-    override def onCreate (dir :File, name :String) = checkReload(name)
-    override def onModify (dir :File, name :String) = checkReload(name)
+    override def onCreate (dir :Path, name :String) = checkReload(name)
+    override def onModify (dir :Path, name :String) = checkReload(name)
     protected def checkReload (name :String) {
       if (name endsWith FileSuff) {
         val mode = name dropRight FileSuff.length
@@ -56,7 +56,7 @@ class ConfigManager (log :Logger, metaSvc :MetaService, watchSvc :WatchService) 
 
   private def readFileInto (mode :String, cfg: ConfigImpl) :ConfigImpl = {
     val file = configFile(mode)
-    if (file.exists()) Properties.read(log, file)(cfg.init(log))
+    if (Files.exists(file)) Properties.read(log, file)(cfg.init(log))
     cfg
   }
 }

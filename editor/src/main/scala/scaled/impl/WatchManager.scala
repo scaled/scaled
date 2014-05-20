@@ -5,8 +5,7 @@
 package scaled.impl
 
 import com.sun.nio.file.SensitivityWatchEventModifier
-import java.io.File
-import java.nio.file.{FileSystems, WatchKey, WatchEvent}
+import java.nio.file.{FileSystems, Path, WatchKey, WatchEvent}
 import java.util.concurrent.ConcurrentHashMap
 import scala.annotation.tailrec
 import scaled._
@@ -23,7 +22,7 @@ class WatchManager (log :Logger) extends AbstractService with WatchService {
   _watcher.setDaemon(true)
   _watcher.start()
 
-  private case class WatchImpl (key :WatchKey, dir :File, watcher :Watcher) extends Watch {
+  private case class WatchImpl (key :WatchKey, dir :Path, watcher :Watcher) extends Watch {
     def dispatch (ev :WatchEvent[_]) = {
       val kind = ev.kind ; val name = ev.context.toString
       onMainThread(kind match {
@@ -45,20 +44,20 @@ class WatchManager (log :Logger) extends AbstractService with WatchService {
 
   /** Registers a watch on `file`. `watcher` will be invoked (on the main JavaFX thread) when `file`
     * is modified or deleted. */
-  def watchFile (file :File, watcher :File => Unit) :Watch = {
-    val name = file.getName
-    watchDir(file.getParentFile, new Watcher() {
-      override def onModify (dir :File, child :String) = if (child == name) watcher(file)
-      override def onDelete (dir :File, child :String) = if (child == name) watcher(file)
+  def watchFile (file :Path, watcher :Path => Unit) :Watch = {
+    val name = file.getFileName.toString
+    watchDir(file.getParent, new Watcher() {
+      override def onModify (dir :Path, child :String) = if (child == name) watcher(file)
+      override def onDelete (dir :Path, child :String) = if (child == name) watcher(file)
     })
   }
 
   /** Registers a watch on `dir`. `watcher` will be invoked (on the main JavaFX thread) when any
     * files are created, modified or deleted in `dir`. */
-  def watchDir (dir :File, watcher :Watcher) :Watch = {
+  def watchDir (dir :Path, watcher :Watcher) :Watch = {
     val kinds = Array(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY).
       asInstanceOf[Array[WatchEvent.Kind[_]]] // oh Scala, you devil
-    val key = dir.toPath.register(_service, kinds, SensitivityWatchEventModifier.HIGH)
+    val key = dir.register(_service, kinds, SensitivityWatchEventModifier.HIGH)
     val impl = WatchImpl(key, dir, watcher)
     _watches.put(key, impl)
     impl

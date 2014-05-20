@@ -4,8 +4,7 @@
 
 package scaled.util
 
-import java.io.File
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 import scaled.Logger
 
 /** Utilities for dealing with `.properties` files, which Scaled mainly uses for configuration. */
@@ -15,8 +14,8 @@ object Properties {
   /** Reads the contents of properties file `file` and calls `accum` with each key/value pair, as
     * they are encountered. Any invalid entries are reported to `log`.
     */
-  def read (log :Logger, file :File)(accum :(String, String) => Unit) {
-    read(log, file.getName, Files.readAllLines(file.toPath))(accum)
+  def read (log :Logger, file :Path)(accum :(String, String) => Unit) {
+    read(log, file.getFileName.toString, Files.readAllLines(file))(accum)
   }
 
   /** Parses the properties data in `lines` and calls `accum` with each key/value pair, as they are

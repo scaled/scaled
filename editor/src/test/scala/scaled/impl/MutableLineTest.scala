@@ -4,12 +4,8 @@
 
 package scaled.impl
 
-import java.io.{File, StringReader}
-import java.util.Arrays
-
-import org.junit._
 import org.junit.Assert._
-
+import org.junit._
 import scaled._
 
 class MutableLineTest {
@@ -33,7 +29,7 @@ class MutableLineTest {
   }
 
   @Test def slicing () {
-    val buf = BufferImpl("test", new File(""), new StringReader(""))
+    val buf = TestData.buffer("test", "")
     val line = new MutableLine(buf, "Every good boy deserves fudge.".toCharArray)
     assertEquals("good", line.slice(6, 6+4).asString)
     // TODO: boundary conditions?

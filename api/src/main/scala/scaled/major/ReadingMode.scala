@@ -4,7 +4,6 @@
 
 package scaled.major
 
-import java.io.File
 import reactual.{Future, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -415,12 +414,8 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Reads a filename from the minibuffer and visits it in a buffer.""")
   def findFile () {
-    val bufwd = buffer.dir.getAbsolutePath + File.separator
-    editor.miniRead("Find file:", bufwd, config(fileHistory), Completer.file) onSuccess { file =>
-      if (file.isDirectory) editor.popStatus(
-        "Scaled does not support editing directories. Use Emacs.")
-      else editor.visitFile(file)
-    }
+    editor.miniRead("Find file:", buffer.store.parent, config(fileHistory),
+                    Completer.file) onSuccess editor.visitFile
   }
 
   //
@@ -441,7 +436,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     def saveLoop (dirty :List[Buffer]) :Unit = dirty match {
       case Nil => editor.exit()
       case buf :: tail =>
-        val prompt = s"${buf.file.getAbsolutePath} is modified. Save?"
+        val prompt = s"${buf.store} is modified. Save?"
         editor.mini("readopt", Promise[String](), prompt, opts) onSuccess(_ match {
           case "y" => buf.save() ; saveLoop(tail)
           case "n" => saveLoop(tail)
