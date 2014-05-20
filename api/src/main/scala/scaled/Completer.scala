@@ -20,7 +20,7 @@ abstract class Completion[T] {
   def apply (comp :String) :Option[T]
 
   /** Returns the default value to use when committed with a non-matching value. */
-  def defval :Option[T]
+  def defval :Option[T] = comps.headOption.flatMap(apply)
 
   /** Gives the completion a chance to "massage" the currently displayed prefix. By default the
     * prefix is replaced with the longest shared prefix of all the completions. In normal
@@ -74,14 +74,25 @@ object Completion {
     }
     // we need to turn our treeset into a seq immediately otherwise the sort ordering will be lost
     // further down the line when it is filtered or grouped or whatnot
-    val cs = cb.result.toSeq
-    val map = mb.result
-    new Completion[T] {
-      def comps = cs
-      def apply (comp :String) = map.get(comp)
-      def defval = comps.headOption.map(map)
-      override def toString = map.toString
-    }
+    apply(cb.result.toSeq, mb.result)
+  }
+
+  /** Creates a completion with `cs` and `map`.
+    *
+    * In general one will want to generate `cs` from an original set of objects and create the
+    * mapping at the same time. However, in some cases, one may want to include completion
+    * candidates which don't themselves map to completable objets, but instead trigger further
+    * expansion of the completion process. This is used when completing files to allow intermediate
+    * directories to be completed (which then triggers the completion of their contents), without
+    * allowing the directories themselves to be chosen.
+    *
+    * @param cs the list of completion strings.
+    * @param map a map from completion string back to completed object.
+    */
+  def apply[T] (cs :Seq[String], map :Map[String,T]) :Completion[T] = new Completion[T] {
+    def comps = cs
+    def apply (comp :String) = map.get(comp)
+    override def toString = map.toString
   }
 
   /** Creates an intermediate completion over `cs`. None of the completions will resolve to a value,
@@ -92,7 +103,6 @@ object Completion {
   def intermediate[T] (cs :Seq[String]) :Completion[T] = new Completion[T] {
     def comps :Seq[String] = cs
     def apply (comp :String) = None
-    def defval = None
     override def toString = cs.toString
   }
 }
@@ -218,14 +228,22 @@ object Completer {
       }
     }
     override def pathSeparator = Some(File.separator)
-    override protected def fromString (value :String) = Some(Store(value))
+    override protected def fromString (value :String) = {
+      val path = Paths.get(value)
+      if (Files.exists(path) && Files.isDirectory(path)) None else Some(Store(path))
+    }
 
     private def expand (dir :Path, prefix :String) = {
       import scala.collection.convert.WrapAsScala._
       val edir = massage(dir)
       val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
-      try Completion(files.iterator.filter(fileFilter(prefix)).map(Store.apply), format, true)
-      finally files.close()
+      val matches = try Seq() ++ files.iterator.filter(fileFilter(prefix))
+                    finally files.close()
+      new Completion[Store] {
+        val comps = matches.map(format).sorted
+        def apply (comp :String) = fromString(comp)
+        override def defval = None // using first completion here would be weird
+      }
     }
 
     private def massage (dir :Path) = {
@@ -234,11 +252,9 @@ object Completer {
     }
 
     private def rootPath = FileSystems.getDefault.getRootDirectories.iterator.next
-    private val format = (store :Store) => store match {
-      case FileStore(fpath) =>
-        val path = defang(fpath.toString)
-        if (Files.isDirectory(fpath)) path + File.separator else path
-      case store => store.toString
+    private val format = (file :Path) => {
+      val path = defang(file.toString)
+      if (Files.isDirectory(file)) path + File.separator else path
     }
   }
 }
