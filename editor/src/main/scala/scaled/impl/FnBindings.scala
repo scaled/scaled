@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import java.lang.reflect.{InvocationTargetException, Method}
+import java.lang.reflect.Method
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 
@@ -28,13 +28,9 @@ case class FnBinding (mode :Mode, meth :Method, wantsTyped :Boolean) {
     * event because no fn binding was found for the key pressed event that preceded it, or null if
     * the fn binding is being invoked as a result of a key pressed event.
     */
-  def invoke (typed :String) = try {
-    if (wantsTyped) meth.invoke(mode, typed) else meth.invoke(mode)
-  } catch {
-    case e :InvocationTargetException => // TODO: better error reporting
-      System.err.println(s"FnBinding choked [mode=${mode.name}, name=$name]")
-      e.getCause.printStackTrace(System.err)
-  }
+  def invoke (typed :String) = if (wantsTyped) meth.invoke(mode, typed) else meth.invoke(mode)
+
+  override def toString = s"[mode=${mode.name}, name=$name]"
 }
 
 /** [[FnBindings]] helper methods. */

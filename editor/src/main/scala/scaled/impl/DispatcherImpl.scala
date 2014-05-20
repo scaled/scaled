@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import java.lang.reflect.InvocationTargetException
 import javafx.scene.input.{KeyCode, KeyEvent}
 import reactual.{Signal, Value, ValueV}
 import scaled._
@@ -211,8 +212,10 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     view.buffer.undoStack.delimitAction(view.point())
     _willInvoke.emit(fn.name)
 
-    // TODO: pass view to fn for (internal) error reporting?
-    fn.invoke(typed)
+    try fn.invoke(typed)
+    catch {
+      case e :InvocationTargetException => editor.emitError(e.getCause)
+    }
 
     // finish up after invoking our fn
     _didInvoke.emit(fn.name)
