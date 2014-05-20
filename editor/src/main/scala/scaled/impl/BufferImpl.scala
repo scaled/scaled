@@ -233,11 +233,15 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
     // shift max row, then check inserted lines for new longest line
     if (_maxRow >= start.row) _maxRow += (end.row - start.row)
     val editMaxRow = longest(_lines, start.row, end.row+1)
-    if (lines(editMaxRow).length > maxLineLength) _maxRow = editMaxRow
-    // if the insert preceded the mark, adjust it
-    if (_mark.get.isDefined) mark = Loc.adjustForInsert(_mark.get.get, start, end)
     // TODO: if the insertion is in the max row, it might have split the max row into two non-max
     // rows, in which case we have to rescan the whole buffer; sigh...
+    if (lines(editMaxRow).length > maxLineLength) _maxRow = editMaxRow
+    // if the insert preceded the mark, adjust it; note that the mark behaves differently than the
+    // point in that an insert *at* the mark does not shift the mark, whereas an insert at the point
+    // does shift the point
+    if (_mark.get.isDefined && _mark.get.get > start) {
+      mark = Loc.adjustForInsert(_mark.get.get, start, end)
+    }
     emit(new Insert(start, end, this))
   }
   private def noteDelete (start :Loc, deleted :Seq[Line]) = {
