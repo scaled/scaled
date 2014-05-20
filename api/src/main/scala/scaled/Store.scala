@@ -18,6 +18,10 @@ abstract class Store {
   /** The name of this store. */
   def name :String
 
+  /** Returns the path to the file represented by this store, if appropriate. Stores that do not
+    * represent a file-system file will return `None`. */
+  def file :Option[Path] = None
+
   /** The path to the parent of this store. If the path represents a directory, it will include a
     * trailing path separator. */
   def parent :String
@@ -78,6 +82,7 @@ object Store {
 class FileStore private (val path :Path) extends Store {
 
   override def name = path.getFileName.toString
+  override def file = Some(path)
   override def parent = path.getParent.toString+File.separator
   override def exists = Files.exists(path)
   override def readOnly = !Files.isWritable(path)
