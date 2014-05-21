@@ -92,9 +92,10 @@ class BufferBuilder {
     add(text, Styles(TextConfig.sectionStyle))
   }
 
-  /** Adds `key = value` with `key` styled in [[TextConfig.prefixStyle]]. */
-  def addKeyValue (key :String, value :String) = add(Line.builder(s"$key = $value").withStyles(
-    Styles(TextConfig.prefixStyle), 0, key.length).build())
+  /** Adds `keysepvalue` with `key` styled in [[TextConfig.prefixStyle]]. */
+  def addKeyValue (key :String, sep :String, value :String) =
+    add(Line.builder(s"$key$sep$value").withStyles(Styles(TextConfig.prefixStyle), 0, key.length).
+        build())
 
   private def styledLine (text :String, styles :Styles) = {
     if (styles eq Styles.None) Line(text)
