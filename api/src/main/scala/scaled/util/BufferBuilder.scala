@@ -92,10 +92,12 @@ class BufferBuilder {
     add(text, Styles(TextConfig.sectionStyle))
   }
 
-  /** Adds `keysepvalue` with `key` styled in [[TextConfig.prefixStyle]]. */
-  def addKeyValue (key :String, sep :String, value :String) =
-    add(Line.builder(s"$key$sep$value").withStyles(Styles(TextConfig.prefixStyle), 0, key.length).
-        build())
+  /** Adds `keyvalue` with `key` styled in [[TextConfig.prefixStyle]]. The caller is expected to
+    * include the separator in `key` if they want it styled as part of the prefix (i.e. key is
+    * `Foo:`) or part of `value` if they don't want it styled as part of the prefix (i.e. value is
+    * ` = bar`). */
+  def addKeyValue (key :String, value :String) = add(Line.builder(s"$key$value").withStyles(
+    Styles(TextConfig.prefixStyle), 0, key.length).build())
 
   private def styledLine (text :String, styles :Styles) = {
     if (styles eq Styles.None) Line(text)

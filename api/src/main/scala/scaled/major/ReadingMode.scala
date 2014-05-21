@@ -504,8 +504,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       if (!vbs.isEmpty) {
         bb.addSubHeader("Config vars")
         vbs.map(vb => (vb.v.name, vb.current, vb.v.descrip)).sorted foreach {
-          case (n, c, d) =>
-            bb.addKeyValue("%5s".format(n), " = ", c).addPreFilled(fillColumn-2, "  ", d)
+          case (n, c, d) => bb.addKeyValue(n, s" = $c").addPreFilled(fillColumn-2, "  ", d)
         }
       }
     }
