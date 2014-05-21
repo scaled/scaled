@@ -36,10 +36,17 @@ class BufferBuilder {
   def add (text :String, styles :Styles = Styles.None) :this.type = add(styledLine(text, styles))
 
   /** Appends `text` to the buffer, filling it at `fillWidth`. */
-  def addFilled (fillWidth :Int, text :String, styles :Styles = Styles.None) :this.type = {
-    // now fill the resulting compacted text to the fill column
+  def addFilled (fillWidth :Int, text :String, styles :Styles = Styles.None) :this.type =
+    addPreFilled(fillWidth, "", text, styles)
+
+  /** Appends `text` to the buffer, filling it at `fillWidth` and prefixing every line with
+    * `prefix`.
+    */
+  def addPreFilled (fillWidth :Int, prefix :String, text :String,
+                    styles :Styles = Styles.None) :this.type = {
     val filler = new Filler(fillWidth)
     filler.append(styledLine(Filler.flatten(text), styles))
+    if (prefix.length > 0) filler.filled.foreach { f => f.insert(0, prefix) }
     add(filler.toLines)
   }
 
