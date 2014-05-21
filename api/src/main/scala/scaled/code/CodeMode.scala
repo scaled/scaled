@@ -69,6 +69,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     "TAB"     -> "reindent",
     "}"       -> "electric-close-brace",
 
+    "S-C-," -> "previous-bracket",
+    "S-C-." -> "next-bracket",
+    "S-C-/" -> "bounce-bracket",
+
     "C-M-\\"      -> "indent-region",
     "C-c C-c"     -> "comment-region",
     "C-u C-c C-c" -> "uncomment-region", // TODO: prefix args?
@@ -211,6 +215,61 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       reindent(view.point())
       view.point() = view.point().prevL
       reindentAtPoint()
+    }
+  }
+
+  @Fn("""Moves the point onto the open bracket (paren, brace, etc.) of the enclosing block. This
+         places the point into the block that encloses the current block, so a repeated invocation
+         of this fn will move the point to the next outermost block start, and so forth until no
+         enclosing block can be found.""")
+  def previousBracket () {
+    curBlock.getOption match {
+      case None    => editor.popStatus("No enclosing block can be found.")
+      case Some(b) => view.point() = b.start
+    }
+  }
+
+  @Fn("""Moves the point just after the close bracket (parent, brace, etc.) of the enclosing block.
+         If the point is already there, the point is moved just after the next-nearest enclosing
+         block's close bracket.""")
+  def nextBracket () {
+    curBlock.getOption match {
+      case None    => editor.popStatus("No enclosing block can be found.")
+      case Some(b) => if (view.point() != b.end.nextC) view.point() = b.end.nextC
+                      else blocker(buffer.forward(b.end, 2)) match {
+                        case None => editor.popStatus("No enclosing block can be found.")
+                        case Some(b) => view.point() = b.end.nextC
+                      }
+    }
+  }
+
+  @Fn("""Moves the point just after the open bracket (paren, brace, etc.) of the enclosing block.
+         If the point is already there, the point is moved just after the block's close bracket.
+         If the point is not at either end of the block when this fn is first invoked, the mark
+         will be set to the current point (inside the block).
+
+         If this fn is invoked with the point just after the block's close bracket, and the mark
+         is inside the block, the point will be moved to the mark. This allows one to cycle from
+         a point inside the block, to the block start, to the block end, and back to the starting
+         point inside the block.""")
+  def bounceBracket () {
+    curBlock.getOption match {
+      case None => editor.popStatus("No enclosing block can be found.")
+      case Some(b) =>
+        val p = view.point()
+        // if we're at the start of the block, move to the end of the block
+        if (p == b.start.nextC) view.point() = b.end.nextC
+        // if we're at the end of the block, move either to the mark (if it's set and inside the
+        // block), or to the start of the block
+        else if (p == b.end.nextC) view.point() = buffer.mark match {
+          case Some(m) => if (b.contains(m)) m else b.start.nextC
+          case None => b.start.nextC
+        }
+        else {
+          // otherwise we're somewhere inside the block, so set the mark and move to block start
+          buffer.mark = p
+          view.point() = b.start.nextC
+        }
     }
   }
 
