@@ -512,11 +512,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
     val major = disp.modes.last
     val view = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil))
-    val buf = view.buffer
-    buf.replace(buf.start, buf.end, bb.lines)
-    buf.markClean()
-    view.point() = Loc.Zero
-    editor.visitBuffer(buf)
+    editor.visitBuffer(bb.applyTo(view))
   }
 
   //

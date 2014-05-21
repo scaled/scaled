@@ -21,6 +21,19 @@ class BufferBuilder {
   /** Returns the lines accumulated to this builder. */
   def lines :Seq[LineV] = _lines
 
+  /** Replaces the contents of `view`s buffer with the contents of this builder. The view's point
+    * is moved to the start of the buffer and the buffer is marked clean.
+    * @return the buffer to which the builder was applied, for easy chaining to a call to
+    * [[Editor.visitBuffer]].
+    */
+  def applyTo (view :BufferView) :Buffer = {
+    val buf = view.buffer
+    buf.replace(buf.start, buf.end, lines)
+    buf.markClean()
+    view.point() = Loc.Zero
+    buf
+  }
+
   /** Appends `line` to the buffer. */
   def add (line :LineV) :this.type = {
     _lines += line
