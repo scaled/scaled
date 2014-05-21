@@ -20,7 +20,7 @@ class Filler (width :Int) {
   private val accum = ArrayBuffer(new StringBuilder())
 
   /** Appends `line` to this filler. */
-  def append (line :LineV) {
+  def append (line :CharSequence) {
     @inline @tailrec def loop (into :StringBuilder, start  :Int) {
       // last break will indicate where we need to rebreak if we overflow
       var lastBreak = start
@@ -65,8 +65,11 @@ class Filler (width :Int) {
     loop(accum.last, 0)
   }
 
+  /** The current set of filled lines. */
+  def filled :Seq[StringBuilder] = accum
+
   /** Converts the accumulated text to a seq of `Line`s. */
-  def result :Seq[Line] = accum.map(Line.apply)
+  def toLines :Seq[Line] = accum.map(Line.apply)
 }
 
 /** [[Filler]] helpers. */

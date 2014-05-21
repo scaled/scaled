@@ -27,6 +27,11 @@ class BufferBuilder {
     this
   }
 
+  def add (lines :Seq[LineV]) :this.type = {
+    _lines ++= lines
+    this
+  }
+
   /** Appends a single line of `text` to the buffer, styled by `styles`. */
   def add (text :String, styles :Styles = Styles.None) :this.type = add(styledLine(text, styles))
 
@@ -35,8 +40,7 @@ class BufferBuilder {
     // now fill the resulting compacted text to the fill column
     val filler = new Filler(fillWidth)
     filler.append(styledLine(Filler.flatten(text), styles))
-    _lines ++= filler.result
-    this
+    add(filler.toLines)
   }
 
   /** Appends a blank line to this buffer. */

@@ -179,8 +179,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     val r = trimRegion(start, end)
     val orig = buffer.region(r)
     val filler = new Filler(fillColumn)
-    orig foreach { filler.append }
-    val filled = filler.result
+    orig foreach(filler.append)
+    val filled = filler.toLines
     if (filled != orig) buffer.replace(r, filled)
     else editor.popStatus("Region already filled.")
   }

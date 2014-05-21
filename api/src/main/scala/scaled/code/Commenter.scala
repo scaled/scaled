@@ -91,9 +91,9 @@ class Commenter {
   /** Generates a comment prefix given the supplied desired comment start column. This combines the
     * appropriate number of spaces with `commentPre` and a single trailing space.
     */
-  def commentPre (commentPre :String, startCol :Int) :Line = {
+  def commentPre (commentPre :String, startCol :Int) :String = {
     val spaces = " " * (startCol - commentPre.length - padding.length)
-    Line(spaces + linePrefix + padding)
+    spaces + linePrefix + padding
   }
 
   /** Refills the comments region `[start, end)`. `start` may be a line which contains some
@@ -110,7 +110,7 @@ class Commenter {
     val repeatPre = {
       // if we have more than one row in our comment block, just use the second line's prefix as our
       // repeat prefix because it's most likely to be correct
-      if (end.row > start.row) buffer.line(start.nextStart).view(0, firstPre.length)
+      if (end.row > start.row) buffer.line(start.nextStart).sliceString(0, firstPre.length)
       // otherwise create a prefix using the auto-fill prefix for the comment type at firstCol
       else commentPre(prefixFor(firstLine.syntaxAt(firstCol)), firstPre.length)
     }
@@ -125,11 +125,13 @@ class Commenter {
       loc = loc.nextStart
     }
 
-    // now prepend the appropriate prefix back onto each filled line and replace the original
-    // buffer region with our new wrapped results
-    val filled = filler.result
-    var pres = Seq(firstPre) ++ Seq.fill(filled.length-1)(repeatPre)
-    pres zip filled map { case (pre, line) => pre merge line }
+    // now prepend the appropriate prefix back onto each filled line and create lines
+    val result = Seq.newBuilder[Line]
+    val filled = filler.filled
+    result += firstPre merge Line(filled.head)
+    // subsequent lines get the repeatPre
+    filled.drop(1) foreach { f => result += Line(f.insert(0, repeatPre)) }
+    result.result
   }
 
   /** Returns the region `[start, end)` commented out. The default implementation prefixes each line
