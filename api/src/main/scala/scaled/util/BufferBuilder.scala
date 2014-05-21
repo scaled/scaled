@@ -1,0 +1,96 @@
+//
+// Scaled - a scalable editor extensible via JVM languages
+// http://github.com/scaled/scaled/blob/master/LICENSE
+
+package scaled.util
+
+import scala.collection.mutable.ArrayBuffer
+import scaled._
+import scaled.major.TextConfig
+
+/** A helper class for programmatically populating a buffer. This makes it easy to create a styled
+  * buffer with headers, text wrapped to a particular width, text in multiple columns, etc. It's
+  * used by `describe-mode` and is useful for similar "generate a buffer describing something"
+  * tasks.
+  */
+class BufferBuilder (fillWidth :Int) {
+  import TextConfig._
+
+  private val _lines = ArrayBuffer[LineV]()
+
+  /** Returns the lines accumulated to this builder. */
+  def lines :Seq[LineV] = _lines
+
+  /** Appends `line` to the buffer. */
+  def add (line :LineV) :this.type = {
+    _lines += line
+    this
+  }
+
+  /** Appends a single line of `text` to the buffer, styled by `styles`. */
+  def add (text :String, styles :Styles = Styles.None) :this.type = add(styledLine(text, styles))
+
+  /** Appends `text` to the buffer, filling it at `fillWidth`. */
+  def addFilled (text :String, styles :Styles = Styles.None) :this.type = {
+    // remove newlines and consolidate consecutive spaces into a single space
+    val sb = new StringBuilder(text.length)
+    var wasSpace = false
+    val ll = text.length ; var ii = 0 ; while (ii < ll) {
+      val c = text.charAt(ii)
+      val wc = if (Character.isWhitespace(c)) ' ' else c
+      val isSpace = (wc == ' ')
+      if (!isSpace || !wasSpace) sb.append(wc)
+      wasSpace = isSpace
+      ii += 1
+    }
+
+    // now fill the resulting compacted text to the fill column
+    val filler = new Filler(fillWidth)
+    filler.append(styledLine(sb.toString, styles))
+    _lines ++= filler.result
+    this
+  }
+
+  /** Appends a blank line to this buffer. */
+  def addBlank () = add(Line.Empty)
+
+  /** Adds a header to the accumulating buffer. The text will be styled with
+    * [[TextConfig.headerStyle]] and followed by a line of `===`s. */
+  def addHeader (text :String) = {
+    add(text, Styles(TextConfig.headerStyle))
+    add(toDashes(text, '='), Styles(TextConfig.headerStyle))
+  }
+
+  /** Adds a subheader to the accumulating buffer. The text will be styled with
+    * [[TextConfig.subHeaderStyle]] and followed by a line of `---`s. */
+  def addSubHeader (text :String) = {
+    add(text, Styles(TextConfig.subHeaderStyle))
+    add(toDashes(text, '-'), Styles(TextConfig.subHeaderStyle))
+  }
+
+  /** Adds a section header to the accumulating buffer. The text will be styled with
+    * [[TextConfig.sectionStyle]]. */
+  def addSection (text :String) = add(text, Styles(TextConfig.sectionStyle))
+
+  /** Adds `key = value` with `key` styled in [[TextConfig.prefixStyle]]. */
+  def addKeyValue (key :String, value :String) = add(Line.builder(s"$key = $value").withStyles(
+    Styles(TextConfig.prefixStyle), 0, key.length).build())
+
+  private def styledLine (text :String, styles :Styles) = {
+    if (styles eq Styles.None) Line(text)
+    else {
+      val lb = Line.builder(text)
+      lb.withStyles(styles, 0, text.length)
+      lb.build()
+    }
+  }
+
+  private def toDashes (text :String, dash :Char) = {
+    val sb = new StringBuilder()
+    val ll = text.length ; var ii = 0 ; while (ii < ll) {
+      sb.append(if (Character.isWhitespace(text.charAt(ii))) ' ' else dash)
+      ii += 1
+    }
+    sb.toString
+  }
+}

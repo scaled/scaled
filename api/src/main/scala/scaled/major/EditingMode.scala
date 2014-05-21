@@ -169,9 +169,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     buffer.replace(r, buffer.region(r).reverse)
   }
 
-  /** Returns the currently configured fill column. */
-  def fillColumn :Int = config(EditingConfig.fillColumn) match {
-    case -1 => view.width()-1
+  override def fillColumn :Int = config(EditingConfig.fillColumn) match {
+    case -1 => super.fillColumn
     case cc => cc
   }
 

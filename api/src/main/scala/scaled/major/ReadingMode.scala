@@ -8,7 +8,7 @@ import reactual.{Future, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util.Chars
+import scaled.util.{BufferBuilder, Chars}
 
 /** Configuration for [[ReadingMode]]. */
 object ReadingConfig extends Config.Defs {
@@ -188,6 +188,10 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       }
     }
   }
+
+  /** Returns the fill column. By default this is based on the width of the view, but all editing
+    * modes specialize this and allow the user to customize the value. */
+  def fillColumn :Int = view.width()-1
 
   //
   // KILLING AND YANKING FNS
@@ -486,41 +490,33 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     val view = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil))
     val buf = view.buffer
     val keysByMode = disp.triggers.groupBy(_._1)
-    val text = new ArrayBuffer[String]()
 
-    // TODO: wrap at the current width
-    def format (text :String) = text.replaceAll("\n", "").replaceAll(" +", " ").trim
+    val bb = new BufferBuilder(fillColumn)
 
     disp.modes foreach { m =>
-      val title = s"${m.name}-mode:"
-      text += title
-      text += "=" * title.length
-      text += format(m.desc)
-      text += s"(tags: ${m.tags.mkString(" ")})"
+      bb.addHeader(s"${m.name}-mode:")
+      bb.addFilled(m.desc)
+      bb.add(s"(tags: ${m.tags.mkString(" ")})")
 
       keysByMode.get(m.name) map { keys =>
-        text += ""
-        text += "Key sequence    Binding"
-        text += "------------    -------"
+        bb.addBlank().addSubHeader("Key sequence    Binding")
         keys.sorted foreach {
-          case (m, t, fn) => text += "%-15s %s".format(t, fn)
+          case (m, t, fn) => bb.add("%-15s %s".format(t, fn))
         }
       }
 
       val vbs = m.varBindings
       if (!vbs.isEmpty) {
-        text += ""
-        text += "Config vars"
-        text += "-----------"
+        bb.addBlank().addSubHeader("Config vars")
         vbs.map(vb => (vb.v.name, vb.current, vb.v.descrip)).sorted foreach {
-          case (n, c, d) => text += "%5s = %s".format(n, c) ; text += s"  $d"
+          case (n, c, d) => bb.addKeyValue("%5s".format(n), c).add(s"  $d")
         }
       }
 
-      text += ""
+      bb.addBlank()
     }
 
-    buf.replace(buf.start, buf.end, text.map(Line.apply))
+    buf.replace(buf.start, buf.end, bb.lines)
     buf.markClean()
     view.point() = Loc.Zero
     editor.visitBuffer(buf)
