@@ -112,7 +112,7 @@ class BufferBuilder (fillWidth :Int) {
 
   /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
     * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
-  def addKeysValues (kvs :Seq[(String,String)]) = {
+  def addKeysValues (kvs :(String,String)*) = {
     val padWidth = kvs.map(_._1).map(_.length).max
     def pad (key :String) = key + (" " * math.max(0, padWidth-key.length))
     kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
