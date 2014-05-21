@@ -262,13 +262,13 @@ object Line {
     private var _xs = Array.fill(_cs.length)(Syntax.Default)
 
     /** Applies `styles` to `[start,end)` of the being-built line. */
-    def withStyles (styles :Styles, start :Int, end :Int) :Builder = {
+    def withStyles (styles :Styles, start :Int = 0, end :Int = _cs.length) :Builder = {
       var ii = start ; while (ii < end) { _ss(ii) = styles ; ii += 1 }
       this
     }
 
     /** Applies `syntax` to `[start,end)` of the being-built line. */
-    def withSyntax (syntax :Syntax, start :Int, end :Int) :Builder = {
+    def withSyntax (syntax :Syntax, start :Int = 0, end :Int = _cs.length) :Builder = {
       var ii = start ; while (ii < end) { _xs(ii) = syntax ; ii += 1 }
       this
     }
