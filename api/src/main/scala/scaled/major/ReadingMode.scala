@@ -487,10 +487,10 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
     val keysByMode = disp.triggers.groupBy(_._1)
-    val bb = new BufferBuilder()
+    val bb = new BufferBuilder(fillColumn)
     disp.modes foreach { m =>
       bb.addHeader(s"${m.name}-mode:")
-      bb.addFilled(fillColumn, m.desc)
+      bb.addFilled(m.desc)
       bb.add(s"(tags: ${m.tags.mkString(" ")})")
 
       keysByMode.get(m.name) map { keys =>
@@ -504,7 +504,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       if (!vbs.isEmpty) {
         bb.addSubHeader("Config vars")
         vbs.map(vb => (vb.v.name, vb.current, vb.v.descrip)).sorted foreach {
-          case (n, c, d) => bb.addKeyValue(n, s" = $c").addPreFilled(fillColumn-2, "  ", d)
+          case (n, c, d) => bb.addKeyValue(s"$n = ", c).addPreFilled("  ", d)
         }
       }
     }

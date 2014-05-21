@@ -13,9 +13,10 @@ import scaled.major.TextConfig
   * used by `describe-mode` and is useful for similar "generate a buffer describing something"
   * tasks.
   */
-class BufferBuilder {
+class BufferBuilder (fillWidth :Int) {
   import TextConfig._
 
+  private final val MinFillWidth = 40
   private val _lines = ArrayBuffer[LineV]()
 
   /** Returns the lines accumulated to this builder. */
@@ -48,28 +49,26 @@ class BufferBuilder {
   /** Appends a single line of `text` to the buffer, styled by `styles`. */
   def add (text :String, styles :Styles = Styles.None) :this.type = add(styledLine(text, styles))
 
-  /** Appends `text` to the buffer, filling it at `fillWidth`. */
-  def addFilled (fillWidth :Int, text :String, styles :Styles = Styles.None) :this.type =
-    addPreFilled(fillWidth, "", text, styles)
+  /** Appends `text` to the buffer, filling it at this builder's fill width. */
+  def addFilled (text :String, styles :Styles = Styles.None) :this.type =
+    addPreFilled("", text, styles)
 
-  /** Appends `text` to the buffer, filling it at `fillWidth` and prefixing every line with
-    * `prefix`.
-    */
-  def addPreFilled (fillWidth :Int, prefix :String, text :String,
-                    styles :Styles = Styles.None) :this.type = {
-    val filler = new Filler(fillWidth)
-    filler.append(styledLine(Filler.flatten(text), styles))
+  /** Appends `text` to the buffer, prefixing every line with `prefix`, and filling it at this
+    * builder's fill width (minus the width of the prefix). */
+  def addPreFilled (prefix :String, text :String, styles :Styles = Styles.None) :this.type = {
+    val filler = new Filler(math.max(fillWidth-prefix.length, MinFillWidth))
+    filler.append(Filler.flatten(text))
     if (prefix.length > 0) filler.filled.foreach { f => f.insert(0, prefix) }
-    add(filler.toLines)
+    add(filler.filled.map(f => styledLine(f, styles)))
   }
 
   /** Appends a blank line to this buffer. */
-  def addBlank () = add(Line.Empty)
+  def addBlank () :this.type  = add(Line.Empty)
 
   /** Adds a header to the accumulating buffer. If the preceding line is not blank, a blank line
     * will be inserted before the header. The header text will be styled with
     * [[TextConfig.headerStyle]] and followed by a line of `===`s. */
-  def addHeader (text :String) = {
+  def addHeader (text :String) :this.type  = {
     if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
     add(text, Styles(TextConfig.headerStyle))
     add(toDashes(text, '='), Styles(TextConfig.headerStyle))
@@ -78,7 +77,7 @@ class BufferBuilder {
   /** Adds a subheader to the accumulating buffer. If the preceding line is not blank, a blank line
     * will be inserted before the subheader. The text will be styled with
     * [[TextConfig.subHeaderStyle]] and followed by a line of `---`s. */
-  def addSubHeader (text :String) = {
+  def addSubHeader (text :String) :this.type  = {
     if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
     add(text, Styles(TextConfig.subHeaderStyle))
     add(toDashes(text, '-'), Styles(TextConfig.subHeaderStyle))
@@ -87,25 +86,41 @@ class BufferBuilder {
   /** Adds a section header to the accumulating buffer. If the preceding line is not blank, a blank
     * line will be inserted before the section header. The text will be styled with
     * [[TextConfig.sectionStyle]]. */
-  def addSection (text :String) = {
+  def addSection (text :String) :this.type  = {
     if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
     add(text, Styles(TextConfig.sectionStyle))
   }
 
   /** Adds `keyvalue` with `key` styled in [[TextConfig.prefixStyle]]. The caller is expected to
-    * include the separator in `key` if they want it styled as part of the prefix (i.e. key is
-    * `Foo:`) or part of `value` if they don't want it styled as part of the prefix (i.e. value is
-    * ` = bar`). */
-  def addKeyValue (key :String, value :String) = add(Line.builder(s"$key$value").withStyles(
-    Styles(TextConfig.prefixStyle), 0, key.length).build())
-
-  private def styledLine (text :String, styles :Styles) = {
-    if (styles eq Styles.None) Line(text)
+    * include the separator and whitespace in `key` (i.e. `foo: ` or `bar = `). `value` will be
+    * wrapped to the builder's fill width minus the width of the key (wrapped lines will be prefixed
+    * with `key.length` spaces). */
+  def addKeyValue (key :String, value :String) :this.type = {
+    def simple (value :CharSequence) = Line.builder("$key$value").withStyles(
+      Styles(TextConfig.prefixStyle), 0, key.length).build()
+    val valueFill = math.max(fillWidth-key.length, MinFillWidth)
+    if (value.length <= valueFill) add(simple(value))
     else {
-      val lb = Line.builder(text)
-      lb.withStyles(styles, 0, text.length)
-      lb.build()
+      val filler = new Filler(valueFill)
+      filler.append(Filler.flatten(value))
+      add(simple(filler.filled.head))
+      val prefix = toDashes(key, ' ')
+      filler.filled.drop(1).foreach(f => add(Line(prefix + f)))
+      this
     }
+  }
+
+  /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
+    * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
+  def addKeysValues (kvs :Seq[(String,String)]) = {
+    val padWidth = kvs.map(_._1).map(_.length).max
+    def pad (key :String) = key + (" " * math.max(0, padWidth-key.length))
+    kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
+  }
+
+  private def styledLine (text :CharSequence, styles :Styles) = {
+    if (styles eq Styles.None) Line(text)
+    else Line.builder(text).withStyles(styles).build()
   }
 
   private def toDashes (text :String, dash :Char) = {
