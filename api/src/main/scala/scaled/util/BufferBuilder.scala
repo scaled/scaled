@@ -96,7 +96,7 @@ class BufferBuilder (fillWidth :Int) {
     * wrapped to the builder's fill width minus the width of the key (wrapped lines will be prefixed
     * with `key.length` spaces). */
   def addKeyValue (key :String, value :String) :this.type = {
-    def simple (value :CharSequence) = Line.builder("$key$value").withStyles(
+    def simple (value :CharSequence) = Line.builder(s"$key$value").withStyles(
       Styles(TextConfig.prefixStyle), 0, key.length).build()
     val valueFill = math.max(fillWidth-key.length, MinFillWidth)
     if (value.length <= valueFill) add(simple(value))
