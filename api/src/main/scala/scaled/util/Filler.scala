@@ -68,3 +68,24 @@ class Filler (width :Int) {
   /** Converts the accumulated text to a seq of `Line`s. */
   def result :Seq[Line] = accum.map(Line.apply)
 }
+
+/** [[Filler]] helpers. */
+object Filler {
+
+  /** Flattens `text` by replacing line separators with spaces and consolidates consecutive spaces
+    * to single spaces. This is useful in preparing "ragged" text for filling.
+    */
+  def flatten (text :String) :String = {
+    val sb = new StringBuilder(text.length)
+    var wasSpace = false
+    val ll = text.length ; var ii = 0 ; while (ii < ll) {
+      val c = text.charAt(ii)
+      val wc = if (Character.isWhitespace(c)) ' ' else c
+      val isSpace = (wc == ' ')
+      if (!isSpace || !wasSpace) sb.append(wc)
+      wasSpace = isSpace
+      ii += 1
+    }
+    sb.toString
+  }
+}

@@ -486,20 +486,15 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
-    val major = disp.modes.last
-    val view = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil))
-    val buf = view.buffer
     val keysByMode = disp.triggers.groupBy(_._1)
-
-    val bb = new BufferBuilder(fillColumn)
-
+    val bb = new BufferBuilder()
     disp.modes foreach { m =>
       bb.addHeader(s"${m.name}-mode:")
-      bb.addFilled(m.desc)
+      bb.addFilled(fillColumn, m.desc)
       bb.add(s"(tags: ${m.tags.mkString(" ")})")
 
       keysByMode.get(m.name) map { keys =>
-        bb.addBlank().addSubHeader("Key sequence    Binding")
+        bb.addSubHeader("Key sequence    Binding")
         keys.sorted foreach {
           case (m, t, fn) => bb.add("%-15s %s".format(t, fn))
         }
@@ -507,15 +502,17 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
       val vbs = m.varBindings
       if (!vbs.isEmpty) {
-        bb.addBlank().addSubHeader("Config vars")
+        bb.addSubHeader("Config vars")
         vbs.map(vb => (vb.v.name, vb.current, vb.v.descrip)).sorted foreach {
           case (n, c, d) => bb.addKeyValue("%5s".format(n), c).add(s"  $d")
         }
       }
-
-      bb.addBlank()
     }
+    bb.addBlank()
 
+    val major = disp.modes.last
+    val view = editor.createBuffer(s"*${major.name}-mode*", true, ModeInfo("help", Nil))
+    val buf = view.buffer
     buf.replace(buf.start, buf.end, bb.lines)
     buf.markClean()
     view.point() = Loc.Zero

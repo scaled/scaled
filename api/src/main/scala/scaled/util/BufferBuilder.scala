@@ -13,7 +13,7 @@ import scaled.major.TextConfig
   * used by `describe-mode` and is useful for similar "generate a buffer describing something"
   * tasks.
   */
-class BufferBuilder (fillWidth :Int) {
+class BufferBuilder {
   import TextConfig._
 
   private val _lines = ArrayBuffer[LineV]()
@@ -31,22 +31,10 @@ class BufferBuilder (fillWidth :Int) {
   def add (text :String, styles :Styles = Styles.None) :this.type = add(styledLine(text, styles))
 
   /** Appends `text` to the buffer, filling it at `fillWidth`. */
-  def addFilled (text :String, styles :Styles = Styles.None) :this.type = {
-    // remove newlines and consolidate consecutive spaces into a single space
-    val sb = new StringBuilder(text.length)
-    var wasSpace = false
-    val ll = text.length ; var ii = 0 ; while (ii < ll) {
-      val c = text.charAt(ii)
-      val wc = if (Character.isWhitespace(c)) ' ' else c
-      val isSpace = (wc == ' ')
-      if (!isSpace || !wasSpace) sb.append(wc)
-      wasSpace = isSpace
-      ii += 1
-    }
-
+  def addFilled (fillWidth :Int, text :String, styles :Styles = Styles.None) :this.type = {
     // now fill the resulting compacted text to the fill column
     val filler = new Filler(fillWidth)
-    filler.append(styledLine(sb.toString, styles))
+    filler.append(styledLine(Filler.flatten(text), styles))
     _lines ++= filler.result
     this
   }
@@ -54,23 +42,31 @@ class BufferBuilder (fillWidth :Int) {
   /** Appends a blank line to this buffer. */
   def addBlank () = add(Line.Empty)
 
-  /** Adds a header to the accumulating buffer. The text will be styled with
+  /** Adds a header to the accumulating buffer. If the preceding line is not blank, a blank line
+    * will be inserted before the header. The header text will be styled with
     * [[TextConfig.headerStyle]] and followed by a line of `===`s. */
   def addHeader (text :String) = {
+    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
     add(text, Styles(TextConfig.headerStyle))
     add(toDashes(text, '='), Styles(TextConfig.headerStyle))
   }
 
-  /** Adds a subheader to the accumulating buffer. The text will be styled with
+  /** Adds a subheader to the accumulating buffer. If the preceding line is not blank, a blank line
+    * will be inserted before the subheader. The text will be styled with
     * [[TextConfig.subHeaderStyle]] and followed by a line of `---`s. */
   def addSubHeader (text :String) = {
+    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
     add(text, Styles(TextConfig.subHeaderStyle))
     add(toDashes(text, '-'), Styles(TextConfig.subHeaderStyle))
   }
 
-  /** Adds a section header to the accumulating buffer. The text will be styled with
+  /** Adds a section header to the accumulating buffer. If the preceding line is not blank, a blank
+    * line will be inserted before the section header. The text will be styled with
     * [[TextConfig.sectionStyle]]. */
-  def addSection (text :String) = add(text, Styles(TextConfig.sectionStyle))
+  def addSection (text :String) = {
+    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
+    add(text, Styles(TextConfig.sectionStyle))
+  }
 
   /** Adds `key = value` with `key` styled in [[TextConfig.prefixStyle]]. */
   def addKeyValue (key :String, value :String) = add(Line.builder(s"$key = $value").withStyles(
