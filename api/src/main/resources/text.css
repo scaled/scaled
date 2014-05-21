@@ -18,3 +18,7 @@
 .textListFace {
   -fx-fill: #339999;
 }
+
+.textPrefixFace {
+  -fx-fill: #F2E294;
+}

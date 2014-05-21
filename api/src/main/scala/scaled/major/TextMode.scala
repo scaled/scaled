@@ -16,6 +16,8 @@ object TextConfig extends Config.Defs {
   val sectionStyle = "textSectionFace"
   /** The CSS style applied to `list` lines. */
   val listStyle = "textListFace"
+  /** The CSS style applied to highlighted prefixes. */
+  val prefixStyle = "textPrefixFace"
 }
 
 @Major(name="text", tags=Array("text"), desc="""
