@@ -138,11 +138,12 @@ class Commenter {
     * by the line comment prefix, indented "appropriately". */
   def lineCommented (buffer :BufferV, start :Loc, end :Loc) :Seq[Line] = {
     val lin = buffer.region(start, end)
-    val spaces = " " * lin.filter(_.length > 0).map(Indenter.readIndent).min
+    val minIndent = lin.filter(_.length > 0).map(Indenter.readIndent).min
+    val spaces = " " * minIndent
     val prefix = Line(spaces + linePrefix + padding)
     val lout = Seq.newBuilder[Line]
     lin foreach { l =>
-      lout += (if (l.length > 0) prefix.merge(l) else l)
+      lout += (if (l.length > 0) prefix.merge(l.view(minIndent)) else l)
     }
     lout.result
   }
