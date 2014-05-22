@@ -26,7 +26,7 @@ class Filler (width :Int) {
       var lastBreak = start
       // if we're appending to a non-empty line, we want a space before the next append
       var wantSpace = (into.length > 0)
-      // println(s"loop('$into' $start ${line.length} $wantSpace)")
+      // println(s"loop('$into' st=$start ll=${line.length} ws=$wantSpace)")
       // now append characters from line until we hit EOL or hit width
       var ii = start ; while (into.length < width && ii < line.length) {
         val c = line.charAt(ii)
@@ -49,10 +49,13 @@ class Filler (width :Int) {
       var skipped = 0 ; while (ii < line.length && line.charAt(ii) == ' ') {
         skipped += 1 ; ii += 1
       }
-      // println(s"looped('$into' $ii $skipped $lastBreak)")
+      // println(s"looped('$into'/${into.length} ii=$ii sk=$skipped lb=$lastBreak)")
 
-      // if we haven't yet hit EOL, determine whether we overran, lop off the excess, and loop
-      if (ii < line.length) {
+      // if we haven't yet hit EOL, determine whether we overran, lop off the excess, and loop; we
+      // also rebreak if we have overflowed into by an extra character; it's possible that we have
+      // room for one character but we go to append a character and see that we need a space, so we
+      // append two, overflowing 'into', which we need to catch here
+      if (ii < line.length || into.length > width) {
         val trim = ii-lastBreak
         // if we ended on a space, or we're trimming nothing or everything, skip trimming
         val next = if (skipped > 0 || trim == 0 || trim >= into.length) ii
