@@ -15,7 +15,7 @@ import reactual.{Future, Promise, Value}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scaled._
 import scaled.major.TextMode
-import scaled.util.Error
+import scaled.util.Errors
 
 /** The editor pane groups together the various UI components that are needed to edit a single
   * buffer. This includes the code area, status line and minibuffer area. It also manages the
@@ -58,7 +58,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
       case null => err.toString
       case msg  => msg
     }, false)
-    if (!Error.isFeedback(err)) recordMessage(Error.stackTraceToString(err))
+    if (!Errors.isFeedback(err)) recordMessage(Errors.stackTraceToString(err))
   }
   override def clearStatus () = {
     _statusPopup.clear()

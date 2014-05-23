@@ -49,7 +49,7 @@ abstract class SubProcess (config :SubProcess.Config) extends AutoCloseable {
   /** Called when a failure is encountered by the stdout/stderr reader threads. The default
     * implementation formats the exception stack trace and passes it to [[onOutput]]. */
   protected def onFailure (exn :Exception, isErr :Boolean) {
-    onOutput(Error.stackTraceToString(exn), isErr)
+    onOutput(Errors.stackTraceToString(exn), isErr)
   }
 
   private def read (reader :BufferedReader, isErr :Boolean) :Unit = try {
@@ -109,6 +109,6 @@ object SubProcess {
       }
     }
   } catch {
-    case e :Throwable => buffer.append(Line.fromTextNL(Error.stackTraceToString(e))) ; throw e
+    case e :Throwable => buffer.append(Line.fromTextNL(Errors.stackTraceToString(e))) ; throw e
   }
 }

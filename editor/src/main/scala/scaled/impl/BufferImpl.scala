@@ -9,7 +9,7 @@ import reactual.{Signal, SignalV, Value, ValueV}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util.Error
+import scaled.util.Errors
 
 // TODO
 //
@@ -75,7 +75,7 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
 
   override def saveTo (store :Store) {
-    if (store.readOnly) throw Error.feedback(s"Cannot save to read-only file: $store")
+    if (store.readOnly) throw Errors.feedback(s"Cannot save to read-only file: $store")
     _willSave.emit(this)
     store.write(lines)
     _store.updateForce(store)

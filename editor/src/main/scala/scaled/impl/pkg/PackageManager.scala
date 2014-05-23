@@ -12,7 +12,7 @@ import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scala.io.Source
 import scaled.impl._
-import scaled.util.Error
+import scaled.util.Errors
 
 class PackageManager (app :Main) {
   import scala.collection.convert.WrapAsScala._
@@ -33,7 +33,7 @@ class PackageManager (app :Main) {
   def mode (major :Boolean, name :String) :Class[_] =
     modeMap(major).get(name).map(_.apply(name)) match {
       case Some(mode) => mode
-      case None       => throw Error.feedback(s"Unknown mode: $name")
+      case None       => throw Errors.feedback(s"Unknown mode: $name")
     }
 
   /** Resolves the implementation class for the service with fq classname `name`. */

@@ -9,7 +9,7 @@ import reactual.Future
 import scaled.Editor
 
 /** Error reporting utilities. */
-object Error {
+object Errors {
 
   /** An exception reported to provide error feedback rather than indicate catastrophic failure.
     * [[Editor.emitError]] will report such exceptions to the user but not dump their stack trace
@@ -18,7 +18,7 @@ object Error {
   class FeedbackException (msg :String) extends Exception(msg)
 
   /** Returns true if `t` is a feedback exception. */
-  def isFeedback (t :Throwable) :Boolean = t.isInstanceOf[Error.FeedbackException]
+  def isFeedback (t :Throwable) :Boolean = t.isInstanceOf[FeedbackException]
 
   /** Creates an exception to report the supplied error message. */
   def feedback (msg :String) = new FeedbackException(msg)

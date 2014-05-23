@@ -12,7 +12,7 @@ import reactual.{Future, Promise, ValueV}
 import scala.annotation.tailrec
 import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
-import scaled.util.Error
+import scaled.util.Errors
 
 abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
@@ -71,7 +71,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
 
   /** Displays a minibuffer with the specified mode. */
   def read[R] (mode :String, result :Promise[R], args :List[Any]) :Future[R] = try {
-    if (getCenter != null) throw Error.feedback(
+    if (getCenter != null) throw Errors.feedback(
       "Command attempted to use minibuffer while in minibuffer")
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
