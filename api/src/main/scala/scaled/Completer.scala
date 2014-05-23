@@ -166,7 +166,7 @@ object Completer {
 
   /** Returns a completer over `things` using `nameFn` to obtain each thing's name. */
   def from[T] (things :Iterable[T])(nameFn :T => String) = new Completer[T]() {
-    def complete (prefix :String) = completion(
+    def complete (prefix :String) = sortedCompletion(
       things.filter(t => startsWithI(prefix)(nameFn(t))), nameFn)
   }
 
