@@ -515,6 +515,12 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     editor.visitBuffer(bb.applyTo(view))
   }
 
+  @Fn("Displays the styles at the point.")
+  def showStyles () {
+    val info = Seq(buffer.stylesAt(view.point()).toString)
+    view.popup() = Popup(info, Popup.UpRight(view.point()))
+  }
+
   //
   // META FNS
 
