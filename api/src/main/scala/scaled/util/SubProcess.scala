@@ -7,6 +7,33 @@ package scaled.util
 import java.io.{BufferedReader, File, InputStreamReader, OutputStreamWriter, PrintWriter}
 import scaled._
 
+/** Factory methods &c for [[SubProcess]. */
+object SubProcess {
+
+  /** Configures a to-be-created subprocess. */
+  case class Config (
+    /** The command and arguments to be executed. */
+    cmd :Array[String],
+    /** The environment in which to invoke the command. Defaults to empty. */
+    env :Map[String,String] = Map(),
+    /** The current working directory for the process. Defaults to Scaled's cwd. */
+    cwd :File = new File(System.getProperty("user.dir"))
+  )
+
+  /** Starts a subprocess with the specified configuration. Output will be directed to `buffer`. If
+    * the subprocess fails to start, the starting exception will be captured, recorded to `buffer`
+    * and then rethrown. */
+  def apply (config :Config, editor :Editor, exec :Executor, buffer :Buffer) :SubProcess = try {
+    new SubProcess(config) {
+      protected def onOutput (text :String, isErr :Boolean) {
+        exec.runOnUI(buffer.append(Line.fromTextNL(text)))
+      }
+    }
+  } catch {
+    case e :Throwable => buffer.append(Line.fromTextNL(Errors.stackTraceToString(e))) ; throw e
+  }
+}
+
 /** Manages a sub-process. Routes output into a Scaled buffer and supports sending input to the
   * process if desired. This class is designed to be extended and configured by overriding the
   * myriad configuration methods. The process is started immediately upon instantiation of this
@@ -83,32 +110,5 @@ abstract class SubProcess (config :SubProcess.Config) extends AutoCloseable {
       setDaemon(true)
       override def run () = read(err, true)
     }.start()
-  }
-}
-
-/** Factory methods &c for [[SubProcess]. */
-object SubProcess {
-
-  /** Configures a to-be-created subprocess. */
-  case class Config (
-    /** The command and arguments to be executed. */
-    cmd :Array[String],
-    /** The environment in which to invoke the command. Defaults to empty. */
-    env :Map[String,String] = Map(),
-    /** The current working directory for the process. Defaults to Scaled's cwd. */
-    cwd :File = new File(System.getProperty("user.dir"))
-  )
-
-  /** Starts a subprocess with the specified configuration. Output will be directed to `buffer`. If
-    * the subprocess fails to start, the starting exception will be captured, recorded to `buffer`
-    * and then rethrown. */
-  def apply (config :Config, editor :Editor, exec :Executor, buffer :Buffer) :SubProcess = try {
-    new SubProcess(config) {
-      protected def onOutput (text :String, isErr :Boolean) {
-        exec.runOnUI(buffer.append(Line.fromTextNL(text)))
-      }
-    }
-  } catch {
-    case e :Throwable => buffer.append(Line.fromTextNL(Errors.stackTraceToString(e))) ; throw e
   }
 }

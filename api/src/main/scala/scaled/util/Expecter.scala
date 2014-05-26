@@ -23,7 +23,7 @@ abstract class Expecter (exec :Executor, config :SubProcess.Config) extends SubP
     * until the responder indicates that the interaction is complete.
     *
     * @param responder a function that takes (line, isStdErr) and returns true if the interaction
-    * is complete, false otherwise.
+    * is complete, false otherwise. This will be called on the UI thread.
     *
     * @return true if the interaction was started, false if it was not because another interaction
     * is still active.

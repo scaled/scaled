@@ -182,7 +182,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     orig foreach(filler.append)
     val filled = filler.toLines
     if (filled != orig) buffer.replace(r, filled)
-    else editor.popStatus("Region already filled.")
+    else editor.emitStatus("Region already filled.")
   }
 
   /** Returns true if we should auto-fill, false if not. The default implementation checks that
