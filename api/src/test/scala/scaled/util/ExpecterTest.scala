@@ -13,8 +13,10 @@ class ExpecterTest {
 
   class AccumExec extends Executor {
     private val rs = ArrayBuffer[Runnable]()
-    def runOnUI (r :Runnable) :Unit = rs += r
-    def runInBackground (r :Runnable) :Unit = rs += r
+    val uiExec = new java.util.concurrent.Executor() {
+      override def execute (op :Runnable) :Unit = rs += op
+    }
+    val bgExec = uiExec
     def executeAll () = {
       rs foreach { _.run() }
       rs.clear()

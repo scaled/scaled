@@ -39,8 +39,10 @@ class Main extends Application {
   val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 
   val exec = new Executor {
-    override def runOnUI (op :Runnable) :Unit = Platform.runLater(op)
-    override def runInBackground (op :Runnable) :Unit = pool.execute(op)
+    override val uiExec = new java.util.concurrent.Executor {
+      override def execute (op :Runnable) = Platform.runLater(op)
+    }
+    override val bgExec = pool
   }
 
   /** Opens `path` in the editor pane associated with `workspace`. If no such editor pane exists one

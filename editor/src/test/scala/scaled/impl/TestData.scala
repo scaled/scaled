@@ -20,8 +20,10 @@ object TestData {
   }
 
   val exec = new Executor {
-    def runOnUI (op :Runnable) = op.run()
-    def runInBackground (op :Runnable) = op.run()
+    val uiExec = new java.util.concurrent.Executor() {
+      override def execute (op :Runnable) = op.run()
+    }
+    val bgExec = uiExec
   }
 
   val editor = new Editor {
