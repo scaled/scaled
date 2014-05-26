@@ -19,7 +19,9 @@
       <id>bootstrap</id>
       <modules>
         <module>textmate-grammar</module>
+        <module>prococol</module>
         <module>scala-compiler</module>
+        <module>junit-runner</module>
       </modules>
     </profile>
   </profiles>
