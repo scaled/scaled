@@ -519,6 +519,19 @@ object Buffer {
   object Transform {
     def unapply (edit :Transform) = Some((edit.start, edit.end, edit.original))
   }
+
+  /** Creates a read-only buffer view. Mainly useful for testing. */
+  def apply (name :String, text :String) :BufferV = apply(name, Line.fromText(text))
+
+  /** Creates a read-only buffer view. Mainly useful for testing. */
+  def apply (_name :String, _lines :Seq[LineV]) :BufferV = new BufferV() {
+    def name = _name
+    val store = new TextStore(name, "", "")
+    def mark = None
+    def dirty = false
+    def lines = _lines
+    val maxLineLength = _lines.map(_.length).max
+  }
 }
 
 /** The reactive version of [Buffer]. */

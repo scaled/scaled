@@ -7,26 +7,12 @@ package scaled
 import org.junit._
 import org.junit.Assert._
 
-object BufferTest {
-
-  /** Creates a read-only buffer view for testing. */
-  def bufferV (_name :String, _lines :Seq[LineV]) :BufferV = new BufferV() {
-    def name = _name
-    val store = new TextStore(name, "", "")
-    def mark = None
-    def dirty = false
-    def lines = _lines
-    val maxLineLength = _lines.map(_.length).max
-  }
-}
-
 class BufferTest {
-  import BufferTest._
 
   val text = Seq("This is some text. Text is very interesting.",
                  "In this case we want to be sure the find fns work",
                  "and also don't match erroneously.")
-  val buffer = bufferV("test", text.map(Line.apply))
+  val buffer = Buffer("test", text.map(Line.apply))
 
   @Test def testFindForward () {
     val mp = Matcher.exact("peanut")

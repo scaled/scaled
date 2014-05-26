@@ -36,7 +36,7 @@ class BlockerTest {
     /*20*/ "}")
 
   @Test def testBlocker () {
-    val buf = BufferTest.bufferV("Test.java", testJavaCode.map(Line.apply))
+    val buf = Buffer("Test.java", testJavaCode.map(Line.apply))
     val blocker = new Blocker(buf, "{([", "})]")
     // println(blocker)
     assertEquals(None, blocker(Loc(0, 0)))

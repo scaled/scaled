@@ -22,7 +22,7 @@ class CommenterTest {
                      ("foo(); // and this one has code in front of it", 7))
 
   @Test def testCommentStart () {
-    val buf = BufferTest.bufferV("lines", lineText map toLine(Syntax.LineComment))
+    val buf = Buffer("lines", lineText map toLine(Syntax.LineComment))
     val cm = new Commenter() {
       override def linePrefix = "//"
       override def docPrefix = "*"
@@ -38,7 +38,7 @@ class CommenterTest {
                      ("// to necessitate multiple lines for a refill", 0))
 
   @Test def testRefill () {
-    val buf = BufferTest.bufferV("lines", fillText map toLine(Syntax.LineComment))
+    val buf = Buffer("lines", fillText map toLine(Syntax.LineComment))
     val cm = new Commenter() {
       override def linePrefix = "//"
       override def docPrefix = "*"
@@ -54,7 +54,7 @@ class CommenterTest {
                         ("//  to necessitate multiple lines for a refill", 0))
 
   @Test def testRefillMatchesWhitespace () {
-    val buf = BufferTest.bufferV("lines", extraSpaces map toLine(Syntax.LineComment))
+    val buf = Buffer("lines", extraSpaces map toLine(Syntax.LineComment))
     val cm = new Commenter() {
       override def linePrefix = "//"
       override def docPrefix = "*"
