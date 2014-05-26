@@ -11,5 +11,12 @@ import scaled._
        are not.""")
 class LogMode (env :Env) extends ReadingMode(env) {
 
-  // TODO: things?
+  override def keymap = super.keymap ++ Seq(
+    "M-k" -> "clear-log"
+  )
+
+  @Fn("Clears the contents of this log buffer.")
+  def clearLog () {
+    buffer.delete(buffer.start, buffer.end)
+  }
 }
