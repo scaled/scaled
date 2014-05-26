@@ -76,11 +76,18 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
 
   override def saveTo (store :Store) {
     if (store.readOnly) throw Errors.feedback(s"Cannot save to read-only file: $store")
-    _willSave.emit(this)
+    // run our on-save hooks, but don't let them abort the save if they choke
+    val exn = try {
+      _willSave.emit(this) ; null
+    } catch {
+      case e :Exception => e
+    }
     store.write(lines)
     _store.updateForce(store)
     _name() = store.name
     _dirty() = false
+    // rethrow any on-save hook failure
+    if (exn != null) throw exn
   }
 
   override def markClean () :Unit = _dirty() = false
