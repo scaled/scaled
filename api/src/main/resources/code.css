@@ -47,6 +47,11 @@
   -fx-fill: #309797;
 }
 
+.codeInvalidFace {
+  -fx-fill: DarkOrange;
+  -fx-font-weight: bold;
+}
+
 .blockDelimFace {
   -fx-underline: true;
 }
