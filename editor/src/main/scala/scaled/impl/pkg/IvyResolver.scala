@@ -31,5 +31,7 @@ class IvyResolver {
     else None
   }
 
-  private def loader (file :Path) :URLClassLoader = new URLClassLoader(Array(file.toUri.toURL))
+  private def loader (file :Path) :URLClassLoader = new URLClassLoader(Array(file.toUri.toURL)) {
+    override def toString = s"IvyLoader($file)"
+  }
 }

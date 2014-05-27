@@ -40,6 +40,8 @@ class MavenResolver (log :Logger) {
       case Some(jar) => urls += jar.toURI.toURL
       case None      => log.log(s"Missing local artifact for $dep")
     }}
-    new URLClassLoader(urls.result)
+    new URLClassLoader(urls.result) {
+      override def toString = s"MvnLoader(${deps.map(_.id).toString})"
+    }
   }
 }

@@ -65,6 +65,7 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
             throw new ClassNotFoundException(s"${info.name} missing dependency: $name")
         }
       }
+      override def toString = s"PkgLoader(${info.root})"
     }
   private lazy val dependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
 
