@@ -5,7 +5,7 @@
 package scaled.impl
 
 import java.nio.file.Paths
-import reactual.{Signal, SignalV, Value, ValueV}
+import reactual.{ReactionException, Signal, SignalV, Value, ValueV}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
@@ -83,9 +83,13 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
       case e :Exception => e
     }
     store.write(lines)
-    _store.updateForce(store)
     _name() = store.name
     _dirty() = false
+    // now run our post-save hooks, and if they also fail, then tack any on-save hooks thereon
+    try _store.updateForce(store)
+    catch {
+      case re :ReactionException => if (exn != null) re.addSuppressed(exn) ; throw re
+    }
     // rethrow any on-save hook failure
     if (exn != null) throw exn
   }
