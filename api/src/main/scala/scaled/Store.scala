@@ -85,7 +85,7 @@ class FileStore private (val path :Path) extends Store {
   override def file = Some(path)
   override def parent = path.getParent.toString+File.separator
   override def exists = Files.exists(path)
-  override def readOnly = !Files.isWritable(path)
+  override def readOnly = exists && !Files.isWritable(path)
 
   override def read (fn :String => Unit) :Unit = Store.read(
     fn, if (exists) new FileReader(path.toFile) else new StringReader(""))
@@ -93,7 +93,7 @@ class FileStore private (val path :Path) extends Store {
   override def write (lines :Iterable[Store.Writable]) {
     // TODO: file encoding?
     val temp = path.resolveSibling(name + "~")
-    val perms = Files.getPosixFilePermissions(path)
+    val perms = if (exists) Files.getPosixFilePermissions(path) else null
     val out = new BufferedWriter(new FileWriter(temp.toFile))
     try {
       val iter = lines.iterator ; while (iter.hasNext) {
@@ -102,7 +102,7 @@ class FileStore private (val path :Path) extends Store {
       }
       out.close()
       Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING)
-      if (!perms.isEmpty) Files.setPosixFilePermissions(path, perms)
+      if (perms != null && !perms.isEmpty) Files.setPosixFilePermissions(path, perms)
 
     } finally {
       Files.deleteIfExists(temp) // if something goes wrong, delete our temp file
