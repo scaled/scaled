@@ -515,7 +515,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
       // what else does emacs do?
       buffer.save()
-      editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${buffer.store.parent}")
+      editor.emitStatus(s"Wrote: ${buffer.name}")
     }
   }
 
