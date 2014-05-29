@@ -64,6 +64,9 @@ abstract class BufferView {
     if (p.row < ntop) point() = p.atRow(ntop)
     else if (p.row >= ntop + h) point() = p.atRow(ntop + h - 1)
   }
+
+  /** Displays `popup` in this buffer. */
+  def showPopup (popup :Popup) :Unit
 }
 
 /** `BufferView` related types and utilities. */
@@ -109,4 +112,6 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
 
   /** The popup being displayed by this buffer, if any. */
   val popup :OptValue[Popup] = OptValue()
+
+  override def showPopup (popup :Popup) = this.popup() = popup
 }
