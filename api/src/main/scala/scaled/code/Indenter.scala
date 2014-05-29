@@ -43,10 +43,7 @@ object Indenter {
   import Chars._
 
   /** Returns the number of whitespace chars at the start of `line`. */
-  def readIndent (line :LineV) :Int = line.indexOf(isNotWhitespace, 0) match {
-    case -1 => line.length
-    case  n => n
-  }
+  def readIndent (line :LineV) :Int = line.firstNonWS
 
   /** Returns the number of whitespace chars at the start of the line at `pos`. */
   def readIndent (buffer :BufferV, pos :Loc) :Int = readIndent(buffer.line(pos))
@@ -62,8 +59,7 @@ object Indenter {
     // scans backward to find the ( which opens our arglist; doesn't handle nesting or scala style
     // multiple arglists...
     def findArgListStart (from :Loc) = buffer.scanBackward(isOpenParen, from)
-    val nonWSIdx = buffer.line(pos).indexOf(isNotWhitespace)
-    val firstNonWS = pos.atCol(if (nonWSIdx == -1) 0 else nonWSIdx)
+    val firstNonWS = pos.atCol(buffer.line(pos).firstNonWS)
     // TODO: this doesn't handle `if (foo() && \n bar()) {`
     // it scans forward from bar and sees an open paren and bails
     val start = if (inArgList(firstNonWS, pos)) findArgListStart(firstNonWS) else firstNonWS
@@ -74,10 +70,7 @@ object Indenter {
   val isOpenParen        = (c :Char, s :Syntax) => (c == '('            ) && s.isCode
 
   /** Returns true if `m` matches the first non-whitespace characters of `line`. */
-  def startsWith (line :LineV, m :Matcher) :Boolean = line.indexOf(isNotWhitespace) match {
-    case -1 => false
-    case ii => line.matches(m, ii)
-  }
+  def startsWith (line :LineV, m :Matcher) :Boolean = line.matches(m, line.firstNonWS)
 
   /** Returns true if `m` matches the last non-whitespace characters of `line`. */
   def endsWith (line :LineV, m :Matcher) :Boolean = line.lastIndexOf(m) match {

@@ -16,6 +16,7 @@ import scala.annotation.tailrec
   * [[LineV]] as it may change after you relinquish control of the editor thread.
   */
 abstract class LineV extends CharSequence {
+  import scaled.util.Chars._
 
   /** The length (in characters) of this line. */
   def length :Int
@@ -123,6 +124,13 @@ abstract class LineV extends CharSequence {
   def lastIndexOf (m :Matcher, from :Int = length-1) :Int = {
     val offset = _offset ; val n = m.searchBackward(_chars, offset, offset+length, offset+from)
     if (n == -1) n else n - offset
+  }
+
+  /** Returns the index of the first non-whitespace character on this line, or [[length]] if
+    * no-non-whitespace character could be found. */
+  def firstNonWS :Int = indexOf(isNotWhitespace, 0) match {
+    case -1 => length
+    case ii => ii
   }
 
   /** Returns true if `m` matches this line starting at `start`. NOTE: this is merely a (potentially)
