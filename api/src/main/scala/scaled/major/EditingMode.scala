@@ -176,6 +176,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   /** Refills the lines in the region `[start, end)`, wrapping them at `fill-column`. */
   def refillLinesIn (start :Loc, end :Loc) {
+    println(s"Refilling $start $end")
     val r = trimRegion(start, end)
     val orig = buffer.region(r)
     val filler = new Filler(fillColumn)

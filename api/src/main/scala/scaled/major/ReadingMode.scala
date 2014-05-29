@@ -8,7 +8,7 @@ import reactual.{Future, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.util.{BufferBuilder, Chars}
+import scaled.util.{BufferBuilder, Chars, Paragrapher}
 
 /** Configuration for [[ReadingMode]]. */
 object ReadingConfig extends Config.Defs {
@@ -132,6 +132,9 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     case Some(mp) => val p = view.point() ; if (mp < p) fn(mp, p) else fn(p, mp)
   }
 
+  /** Creates a paragrapher for the specified syntax. */
+  def mkParagrapher (syntax :Syntax) = new Paragrapher(syntax, buffer)
+
   /** Invokes `fn` with the start and end of the paragraph under the point. A paragraph is a
     * series of lines delimited on both ends by blank lines or an end of the buffer. If the point
     * is on a blank line, the previous paragraph will be sought. If no previous paragraph can be
@@ -147,35 +150,11 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       case -1 => Syntax.Default
       case ii => buffer.line(p).syntaxAt(ii)
     }
-
-    // cons up some predicates
-    val isNonDelim = (line :LineV) => !isParagraphDelim(syn, line)
-    val isDelim = (line :LineV) => isParagraphDelim(syn, line)
-    val isDelimAt = (row :Int) => isDelim(buffer.line(row))
-
-    // use the current line, if non-delim, or the first preceding non-delim line
-    val curPrev = buffer.scanRowBackward(isNonDelim, p.row)
-    // curPrev may refer to a delim row if there were no non-delim rows before the point;
-    // in that case seek forward for a non-delim line
-    val anchor = if (!isDelimAt(curPrev)) curPrev
-                 else buffer.scanRowForward(isNonDelim, p.row)
-    // anchor may also be delim if there were no non-delim rows after the point
-    if (isDelimAt(anchor)) editor.popStatus("Unable to find a paragraph.")
-    else {
-      // yay, we found a non-delim line, now determine the bounds of the paragraph
-      val start = buffer.scanRowBackward(isDelim, anchor)
-      val end = buffer.scanRowForward(isDelim, anchor)
-      // translate our boundary lines into buffer locations
-      val sloc = if (isDelimAt(start)) Loc(start+1, 0) else Loc(start, 0)
-      val eloc = if (isDelimAt(end)) Loc(end, 0) else Loc(end, buffer.line(end).length)
-      // and finally invoke our fn
-      fn(sloc, eloc)
+    mkParagrapher(syn).paragraphAt(p) match {
+      case None => editor.popStatus("Unable to find a paragraph.")
+      case Some(r) => fn(r.start, r.end)
     }
   }
-
-  /** Indicates that `line` delimits a paragraph for the specified syntax. By default an empty line
-    * delimits a paragraph for all syntaxes but modes may customize this. */
-  def isParagraphDelim (syntax :Syntax, line :LineV) = line.length == 0
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {

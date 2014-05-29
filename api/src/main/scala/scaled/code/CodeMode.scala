@@ -119,8 +119,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def computeIndent (row :Int) :Int = {
     // find the position of the first non-whitespace character on the line
     val line = buffer.line(row)
-    val wsp = line.indexOf(isNotWhitespace)
-    val start = Loc(row, if (wsp == -1) 0 else wsp)
+    val start = Loc(row, line.firstNonWS)
     val block = blocker(start, Syntax.Default) getOrElse Block(buffer.start, buffer.end, false)
     @tailrec @inline def loop (ins :List[Indenter]) :Int =
       if (ins.isEmpty) 0 else {
@@ -154,16 +153,19 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
   override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(buffer, p)
 
-  // comment paragraphs are delimited by "blank" comment lines
-  override def isParagraphDelim (syn :Syntax, line :LineV) =
-    if (syn.isComment) commenter.commentStart(line) == line.length
-    else super.isParagraphDelim(syn, line)
+  override def mkParagrapher (syn :Syntax) =
+    if (syn.isComment) commenter.mkParagrapher(syn, buffer)
+    else super.mkParagrapher(syn)
 
   // in code mode, refills only happen inside comments
   override def fillParagraph () {
-    // make sure we're "looking at" a comment
-    val p = buffer.scanForward(isNotWhitespace, view.point())
-    if (commenter.inComment(buffer, p)) super.fillParagraph()
+    // make sure we're "looking at" a comment on this line
+    val p = view.point()
+    val wp = buffer.line(p).indexOf(isNotWhitespace, p.col) match {
+      case -1 => p
+      case ii => p.atCol(ii)
+    }
+    if (commenter.inComment(buffer, wp)) super.fillParagraph()
     else editor.popStatus("Code modes only fill comments, not code.")
   }
   override def refillLinesIn (start :Loc, end :Loc) = {

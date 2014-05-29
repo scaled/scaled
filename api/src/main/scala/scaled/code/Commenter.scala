@@ -5,7 +5,7 @@
 package scaled.code
 
 import scaled._
-import scaled.util.{Chars, Filler}
+import scaled.util.{Chars, Filler, Paragrapher}
 
 /** A helper class for dealing with comments in source code: wrapping, filling, etc. */
 class Commenter {
@@ -41,7 +41,8 @@ class Commenter {
     * automatically inserting comment delimiters. */
   def padding :String = " "
 
-  /** Returns the auto-fill comment prefix for the specified syntax. */
+  /** Returns the auto-fill comment prefix for the specified syntax. This includes trailing
+    * whitespace padding. */
   def prefixFor (syntax :Syntax) :String = {
     import Syntax._
     syntax match {
@@ -56,10 +57,18 @@ class Commenter {
   def inComment (buffer :BufferV, p :Loc) :Boolean = buffer.syntaxNear(p).isComment
 
   /** Returns true if the first non-whitespace chars in `line` are comments. */
-  def isCommentLine (line :LineV) :Boolean = line.indexOf(isNotWhitespace, 0) match {
-    case -1 => false
-    case ii => line.syntaxAt(ii).isComment
+  def isCommentLine (line :LineV) :Boolean = line.syntaxAt(line.firstNonWS).isComment
+
+  /** Used to identify paragraphs in comments. */
+  class CommentParagrapher (syn :Syntax, buf :Buffer) extends Paragrapher(syn, buf) {
+    override def isDelim (row :Int) = {
+      val l = line(row)
+      commentStart(l) == l.length
+    }
   }
+
+  /** Returns a paragrapher that identifies comment paragraphs. */
+  def mkParagrapher (syn :Syntax, buf :Buffer) :Paragrapher = new CommentParagrapher(syn, buf)
 
   /** Returns the column of start of the comment text on `line`. This skips over the comment
     * delimiter and any whitespace beyond it. If `line` does not contain comments, `line.length` is
@@ -89,11 +98,12 @@ class Commenter {
   }
 
   /** Generates a comment prefix given the supplied desired comment start column. This combines the
-    * appropriate number of spaces with `commentPre` and a single trailing space.
+    * appropriate number of spaces with `commentPre` (which should already include trailing
+    * whitespace).
     */
   def commentPre (commentPre :String, startCol :Int) :String = {
-    val spaces = " " * (startCol - commentPre.length - padding.length)
-    spaces + linePrefix + padding
+    val spaces = " " * (startCol - commentPre.length)
+    spaces + commentPre
   }
 
   /** Refills the comments region `[start, end)`. `start` may be a line which contains some
