@@ -194,8 +194,24 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
         })
         else {
           super.layoutChildren()
-          setLayoutX(_pos.vx(_ax, pw, getPadding.getLeft, getPadding.getRight))
-          setLayoutY(_pos.vy(_ay, ph, lineHeight))
+          val lx = _pos.vx(_ax, pw, getPadding.getLeft, getPadding.getRight)
+          val ly = _pos.vy(_ay, ph, lineHeight)
+
+          // our view bounds are a little tricky; the width/height is obtained from the width and
+          // height of the main view; the x/y offset are from content node because we move the
+          // content node's origin around when the buffer scrolls, not the main view
+          val vbounds = BufferArea.this.getLayoutBounds
+          val vx = contentNode.getLayoutX ; val vy = contentNode.getLayoutY
+          val vw = vbounds.getWidth ; val vh = vbounds.getHeight
+
+          // adjust the position if the popup is pushed off the screen
+          val bounds = getLayoutBounds
+          val lr = lx + bounds.getWidth + vx ; val lb = ly + bounds.getHeight + vy
+          val dx = if (lx < -vx) -vx-lx else if (lr > vw) vw-lr else 0
+          val dy = if (ly < -vy) -vy-ly else if (lb > vh) vh-lb else 0
+
+          setLayoutX(lx+dx)
+          setLayoutY(ly+dy)
           setVisible(true)
         }
       }
