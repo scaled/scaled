@@ -82,6 +82,13 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     "M-A-s"       -> "show-syntax"
   )
 
+  /** A context provided to our indenters. */
+  val indentCtx = new Indenter.Context {
+    def buffer = CodeMode.this.buffer
+    def debug = config(CodeConfig.debugIndent)
+    def indentWidth = config(CodeConfig.indentWidth)
+  }
+
   /** The list of indenters used to indent code for this mode. */
   val indenters :List[Indenter]
 
