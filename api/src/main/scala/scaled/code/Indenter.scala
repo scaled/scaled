@@ -52,7 +52,10 @@ object Indenter {
   }
 
   /** Returns the number of whitespace chars at the start of `line`. */
-  def readIndent (line :LineV) :Int = line.firstNonWS
+  def readIndent (line :LineV) :Int =
+    // TODO: this will eventually have to handle tabs; we'll probably just scan the line oursevles
+    // ticking up our counter 1 for each space and tab-width for each tab
+    line.firstNonWS
 
   /** Returns the number of whitespace chars at the start of the line at `pos`. */
   def readIndent (buffer :BufferV, pos :Loc) :Int = readIndent(buffer.line(pos))
@@ -120,6 +123,40 @@ object Indenter {
       val nonWhite = line.indexOf(isNotWhitespace, endIdx+1)
       if (nonWhite != -1 && nonWhite < pos) None
       else Some(line.sliceString(line.lastIndexOf(isNotWord, endIdx)+1, endIdx+1))
+  }
+
+  /** Uses a heuristic to attempt to detect the number of spaces per indent in `buffer`. This
+    * generates a histogram of indent sizes for the first 64 lines, then checks whether they're all
+    * multiples of 8, 7, 6, 5, 4, 3, or 2. 1 will never be auto-detected.
+    * @return the detected indent, or 0 if we were unable to confidently identify an indent.
+    */
+  def detectIndent (buffer :BufferV) :Int = {
+    val counts = new Array[Int](25) // count all indents up to and including 24
+    val maxRow = math.min(buffer.lines.size, 64) // scan at most the first 64 lines
+    // TODO: what about files with giant copyright blurbs at the top?...
+    var row = 0 ; while (row < maxRow) {
+      val indent = readIndent(buffer.line(row))
+      if (indent < counts.length) counts(indent) += 1
+      row += 1
+    }
+    // counts up the number of indents matching the candidate size
+    // if any non-matching indents are found, zero is returned
+    def matches (size :Int) :Int = {
+      // skip indent=0 when counting matching indents
+      var ii = 1 ; var total = 0 ; while (ii < counts.length) {
+        val count = counts(ii)
+        if (count > 0 && ii % size != 0) return 0
+        total += count
+        ii += 1
+      }
+      total
+    }
+    val MinMatches = 4
+    var size = 8 ; while (size > 1) {
+      if (matches(size) > MinMatches) return size
+      size -= 1
+    }
+    0 // alas, we can't tell
   }
 
   /** Indents based on the innermost block that contains pos.
