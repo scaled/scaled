@@ -51,6 +51,49 @@ object Indenter {
     def indentWidth :Int
   }
 
+  /** Models a heuristic for detecting indentation level in a buffer. The buffer is scanned line by
+    * line, with each line potentially contributing some confidence to, refining, or invalidating a
+    * hypothesis. If a confidence threshold is exceeded, the hypotheis is used.
+    *
+    * @param thresh the threshold at which we declare a hypothesis to be good enough.
+    */
+  abstract class Detecter (thresh :Int) {
+
+    /** Returns a confidence conferred by `line`. Return a positive value if `line`'s indent is
+      * likely to represent a valid indentation. Return zero otherwise.
+      * @param start the first non-whitespace column of `line`.
+      */
+    def consider (line :LineV, start :Int) :Int
+
+    /** Detects the indentation of buffer.
+      * @return the detected indentation (in spaces) or 0 if indentation could not be detected.
+      */
+    def detectIndent (buffer :BufferV) :Int = {
+      var conf = 0
+      var indent = 0
+      val rows = buffer.lines.size ; var row = 0 ; while (row < rows && conf < thresh) {
+        val line = buffer.line(row)
+        val start = line.firstNonWS
+        if (start > 0) {
+          val lconf = consider(line, start)
+          if (lconf > 0) {
+            val lindent = readIndent(line)
+            // if we don't yet have a hypothesis, or if our hypothesis is a multiple of this line's
+            // indent (e.g. it's 4 and our hypo is 8), make this line's indent our hypothesis
+            if (indent == 0 || indent % lindent == 0) indent = lindent
+            // if this indent is not a multiple of our hypothesis, abandon ship ; TODO: we could be
+            // less drastic about this and lower our confidence or allow more than one inconssitent
+            // line before aborting, but we'll just be conservative for now
+            else if (lindent % indent != 0) return 0
+            conf += lconf
+          }
+        }
+        row += 1
+      }
+      if (conf >= thresh) indent else 0
+    }
+  }
+
   /** Returns the number of whitespace chars at the start of `line`. */
   def readIndent (line :LineV) :Int =
     // TODO: this will eventually have to handle tabs; we'll probably just scan the line oursevles
@@ -123,40 +166,6 @@ object Indenter {
       val nonWhite = line.indexOf(isNotWhitespace, endIdx+1)
       if (nonWhite != -1 && nonWhite < pos) None
       else Some(line.sliceString(line.lastIndexOf(isNotWord, endIdx)+1, endIdx+1))
-  }
-
-  /** Uses a heuristic to attempt to detect the number of spaces per indent in `buffer`. This
-    * generates a histogram of indent sizes for the first 64 lines, then checks whether they're all
-    * multiples of 8, 7, 6, 5, 4, 3, or 2. 1 will never be auto-detected.
-    * @return the detected indent, or 0 if we were unable to confidently identify an indent.
-    */
-  def detectIndent (buffer :BufferV) :Int = {
-    val counts = new Array[Int](25) // count all indents up to and including 24
-    val maxRow = math.min(buffer.lines.size, 64) // scan at most the first 64 lines
-    // TODO: what about files with giant copyright blurbs at the top?...
-    var row = 0 ; while (row < maxRow) {
-      val indent = readIndent(buffer.line(row))
-      if (indent < counts.length) counts(indent) += 1
-      row += 1
-    }
-    // counts up the number of indents matching the candidate size
-    // if any non-matching indents are found, zero is returned
-    def matches (size :Int) :Int = {
-      // skip indent=0 when counting matching indents
-      var ii = 1 ; var total = 0 ; while (ii < counts.length) {
-        val count = counts(ii)
-        if (count > 0 && ii % size != 0) return 0
-        total += count
-        ii += 1
-      }
-      total
-    }
-    val MinMatches = 4
-    var size = 8 ; while (size > 1) {
-      if (matches(size) > MinMatches) return size
-      size -= 1
-    }
-    0 // alas, we can't tell
   }
 
   /** Indents based on the innermost block that contains pos.

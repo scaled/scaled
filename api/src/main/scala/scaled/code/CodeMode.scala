@@ -88,7 +88,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     def debug = config(CodeConfig.debugIndent)
     def indentWidth = if (config(CodeConfig.autoDetectIndent) && detectedIndent > 0) detectedIndent
                       else config(CodeConfig.indentWidth)
-    private lazy val detectedIndent = Indenter.detectIndent(buffer)
+    private lazy val detectedIndent = CodeMode.this.detectIndent
   }
 
   /** The list of indenters used to indent code for this mode. */
@@ -158,6 +158,13 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def reindentAtPoint () {
     reindent(view.point())
   }
+
+  /** Requests that the indent-level of the buffer be auto-detected. Modes can implement this with
+    * [[Indenter.Detecter]] in combination with their own language specific understanding. `0` (the
+    * default) indicates that we should use the configured indentation value (i.e. auto-detection is
+    * not supported or that a reliable indentation value could not be detected).
+    */
+  def detectIndent :Int = 0
 
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
   override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(buffer, p)
