@@ -74,12 +74,12 @@ class PackageManager (app :Main) {
 
   /** Resolves the specified package dependency, returning a classloader that can be used to load
     * classes from that dependency. Dependencies URLs are of the form:
-    *  # git:https://github.com/scaled/foo-service.git
-    *  # git:https://code.google.com/p/scaled-bar-service/
-    *  # hg:https://code.google.com/p/scaled-baz-service/
-    *  # svn:https://scaled-pants-service.googlecode.com/svn/trunk
-    *  # mvn:com.google.guava:guava:16.0.1:jar
-    *  # ivy:com.google.guava:guava:16.0.1:jar
+    *  - git:https://github.com/scaled/foo-service.git
+    *  - git:https://code.google.com/p/scaled-bar-service/
+    *  - hg:https://code.google.com/p/scaled-baz-service/
+    *  - svn:https://scaled-pants-service.googlecode.com/svn/trunk
+    *  - mvn:com.google.guava:guava:16.0.1:jar
+    *  - ivy:com.google.guava:guava:16.0.1:jar
     *
     * Dependencies in the form of a DVCS URL will have been checked out into `pkgsDir` and built.
     * This happens during package installation, _not_ during this dependency resolution process.
@@ -104,8 +104,8 @@ class PackageManager (app :Main) {
     }
   }
 
-  /** A mapping from `srcurl` to package. `srcurl` is the unique global identifier for a package, and
-    * is what is used to express inter-package dependencies. */
+  /** A mapping from `srcurl` to package. `srcurl` is the unique global identifier for a package,
+    * and is what is used to express inter-package dependencies. */
   private val pkgs = MMap[String,Package]()
 
   private val mvn = new MavenResolver(log)

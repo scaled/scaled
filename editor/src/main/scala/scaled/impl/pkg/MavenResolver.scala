@@ -5,43 +5,67 @@
 package scaled.impl.pkg
 
 import java.net.{URL, URLClassLoader}
+import java.nio.file.Paths
 import pomutil.{Dependency, DependResolver, POM}
+import scala.collection.mutable.{Map => MMap}
 import scaled.Logger
 
 /** Handles dependencies from the local Maven repository. */
 class MavenResolver (log :Logger) {
 
+  private val loaders = MMap[Dependency,PackageLoader]()
+
   /** Resolves the supplied Maven dependency (and its transitive dependencies) and returns a
     * classloader which can deliver classes therefrom.
     */
-  def resolveDepend (depend :Depend) :Option[ClassLoader] = {
-    val pdep = Dependency(depend.groupId, depend.artifactId, depend.version, depend.kind)
-    pdep.localPOM match {
-      case None        => log.log(s"Unable to resolve POM for $pdep") ; None
-      case Some(pfile) => POM.fromFile(pfile) match {
-        case None      => log.log(s"Unable to load POM from $pfile") ; None
-        case Some(pom) =>
-          val res = new DependResolver(pom) {
-            // ignore non-compile depends; dependencies loaded here are always at least one step
-            // away from the "root" depend, and hence should follow the standard Maven policy of
-            // excluding all non-compile depends
+  def resolveDepend (depend :Depend) :Option[ClassLoader] =
+    resolve(Dependency(depend.groupId, depend.artifactId, depend.version, depend.kind))
+
+  private def resolve (dep :Dependency) :Option[ClassLoader] = synchronized {
+    val loader = loaders.get(dep)
+    if (loader.isDefined) loader
+    else {
+      val depdeps = dep.localPOM match {
+        case None        => log.log(s"Unable to resolve POM for $dep") ; Seq()
+        case Some(pfile) => POM.fromFile(pfile) match {
+          case None      => log.log(s"Unable to load POM from $pfile") ; Seq()
+          case Some(pom) => new DependResolver(pom) {
+            // strictly speaking we should only propagate compile/runtime here, but we need system
+            // depends because we have stuff that uses tools.jar which for better or worse is
+            // generally expressed as a system depend in Maven; maybe I'll eventually make a fake
+            // JVM tools project and handle it specially...
             override def rootDepends (forTest :Boolean) =
               if (forTest) super.rootDepends(forTest)
-              else pom.depends filter(_.scope == "compile")
-          }
-          Some(loader(depend, pdep +: res.resolve(false)))
+              else pom.depends filter(d => DepScopes(d.scope))
+          }.resolve(false)
+        }
       }
+      val loader = new PackageLoader(dep.id, toURL(dep)) {
+        // TODO: there are issues with this approach: we transitively resolve all depends, but each
+        // dependent classloader then resolves its own depends; this means that a situation like:
+        //
+        // A -> B, C1
+        // B -> C2
+        //
+        // results in A asking B for some class in Cn, but B then recursively checks its own
+        // dependencies, finding the class in C2, when we really want A to see C1's classes; the
+        // proper solution to this is going to be complicated; we will need to cache classloaders
+        // for fully resolved dependency sets, such that if A depends on B with C2 overridden to C1,
+        // and D depends on B with C2 overridden to C3, we maintain two different class loaders for
+        // B; TODO!
+        protected def resolveDependLoaders = depdeps.flatMap(resolve).toList
+      }
+      // println(s"Created Maven loader for $dep (${toURL(dep)})")
+      loaders.put(dep, loader)
+      Some(loader)
     }
   }
 
-  private def loader (orig :Depend, deps :Seq[Dependency]) :URLClassLoader = {
-    val urls = Array.newBuilder[URL]
-    deps foreach { dep => dep.localArtifact match {
-      case Some(jar) => urls += jar.toURI.toURL
-      case None      => log.log(s"Missing local artifact for $dep")
-    }}
-    new URLClassLoader(urls.result) {
-      override def toString = s"MvnLoader(${deps.map(_.id).toString})"
-    }
-  }
+  private val DepScopes = Set("compile", "system", "runtime")
+
+  private def toURL (dep :Dependency) :URL = (dep.systemPath match {
+    case Some(sp) => Paths.get(sp)
+    case None     => (m2repo /: (dep.repositoryPath :+ dep.artifactName))(_ resolve _)
+  }).toUri.toURL
+  private val m2repo = Paths.get(System.getProperty("user.home"), ".m2", "repository")
 }

@@ -5,7 +5,6 @@
 package scaled.impl.pkg
 
 import com.google.common.collect.HashMultimap
-import java.net.{URL, URLClassLoader}
 import java.nio.file.Files
 import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
@@ -40,34 +39,9 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
     // if this is a special built-in package, use our normal class loader, otherwise we end up
     // doubly defining all of our built-in classes which confuses tools like JRebel
     if (info.builtIn) getClass.getClassLoader
-    else new URLClassLoader(Array(info.classesDir.toUri.toURL)) {
-      override def getResource (path :String) :URL = {
-        var loaders = dependLoaders // first try finding the resource in our dependencies
-        while (!loaders.isEmpty) {
-          val r = loaders.head.getResource(path)
-          if (r != null) return r
-          loaders = loaders.tail
-        }
-        super.getResource(path)
-      }
-      override protected def findClass (name :String) :Class[_] = {
-        // println(s"Seeking $name in ${info.name}")
-        var loaders = dependLoaders // first try finding the class in our dependencies
-        while (!loaders.isEmpty) {
-          try return loaders.head.loadClass(name)
-          catch {
-            case cnfe :ClassNotFoundException => loaders = loaders.tail
-          }
-        }
-        try super.findClass(name) // then fall back to looking locally
-        catch {
-          case cnfe :ClassNotFoundException => // provide a more useful error message
-            throw new ClassNotFoundException(s"${info.name} missing dependency: $name")
-        }
-      }
-      override def toString = s"PkgLoader(${info.root})"
+    else new PackageLoader(info.name, info.classesDir.toUri.toURL) {
+      override protected def resolveDependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
     }
-  private lazy val dependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
