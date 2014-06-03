@@ -39,5 +39,5 @@ abstract class Behavior extends AutoCloseable {
     _toClose += ac
   }
 
-  private val _toClose = new CloseList()
+  private val _toClose = Close.bag()
 }

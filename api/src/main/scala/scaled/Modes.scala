@@ -6,7 +6,7 @@ package scaled
 
 import java.io.FileNotFoundException
 import reactual.Value
-import scaled.util.{Behavior, CloseList}
+import scaled.util.{Behavior, Close}
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
   *  - one it makes passing a bundle of standard depends on to a superclass constructor less
@@ -182,7 +182,7 @@ abstract class Mode (env :Env) {
     case rsrc => rsrc.toExternalForm
   }
 
-  private[this] val _toClose = new CloseList()
+  private[this] val _toClose = Close.bag()
 }
 
 /** Provides the foundation for a major editing mode. A major editing mode customizes the behavior
