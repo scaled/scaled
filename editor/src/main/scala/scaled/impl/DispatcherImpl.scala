@@ -86,11 +86,11 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
           else {
             // tack this key onto our currently accumulating trigger
             _trigger :+= key
-            // if it matches a known command prefix, then wait for the rest of the command to come in
+            // if it matches a known command prefix, wait for the rest of the command to come in
             if (_prefixes(_trigger)) deferDisplayPrefix(_trigger)
             // otherwise resolve the fn bound to this trigger (if any)
             else resolve(_trigger, _metas) match {
-              case Some(fn) => invoke(fn, _trigger.last.text)
+              case Some(fn) => invoke("pressed", fn, _trigger.last.text)
               // if we don't find one, wait until the associated key typed event comes in
               case None     => _dispatchTyped = true
             }
@@ -109,10 +109,10 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
                                    meta=kev.isMetaDown).metafy(_escapeNext)
             _trigger = _trigger.dropRight(1) :+ key
           }
-          val defFn = if (_trigger.size > 1 || _trigger.last.isModified) None
+          val defFn = if (_trigger.size > 1 || !_trigger.last.isPrintable) None
                       else _majorMeta.defaultFn
           resolve(_trigger, _metas) orElse defFn match {
-            case Some(fn) => invoke(fn, _trigger.last.text)
+            case Some(fn) => invoke("typed", fn, _trigger.last.text)
             case None     => invokeMissed()
           }
         }
@@ -157,14 +157,14 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   }
 
   override def invoke (fn :String) = findFn(fn) match {
-    case Some(fn) => invoke(fn, "") ; true
+    case Some(fn) => invoke("invoke", fn, "") ; true
     case None => false
   }
 
   override def press (trigger :String) {
     KeyPress.toKeyPresses(err => editor.popStatus(s"Invalid trigger: $err"), trigger) match {
       case Some(kps) => resolve(kps, _metas) match {
-        case Some(fn) => invoke(fn, kps.last.text)
+        case Some(fn) => invoke("press", fn, kps.last.text)
         case None     => invokeMissed(trigger)
       }
       case None => editor.popStatus(s"Unable to simulate press of $trigger")
@@ -205,7 +205,9 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
       if (fnopt.isDefined) fnopt else resolve(trigger, modes.tail)
     }
 
-  private def invoke (fn :FnBinding, typed :String) {
+  private def invoke (from :String, fn :FnBinding, typed :String) {
+    // println(s"invoking ($from) $fn on '$typed' (${typed.map(_.toInt)})")
+
     // prepare to invoke our fn
     _curFn = fn.name
     editor.clearStatus()
@@ -227,7 +229,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
 
   private def invokeMissed () :Unit = invokeMissed(_trigger.mkString(" "))
   private def invokeMissed (trigger :String) :Unit = _majorMeta.missedFn match {
-    case Some(fn) => invoke(fn, trigger)
+    case Some(fn) => invoke("missed", fn, trigger)
     case None     => _prevFn = null ; didInvokeFn()
   }
 
