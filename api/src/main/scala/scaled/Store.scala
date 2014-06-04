@@ -32,8 +32,25 @@ abstract class Store {
   /** Returns true if this store cannot be written, false otherwise. */
   def readOnly :Boolean
 
-  /** Reads the contents of this store, applying `fn` to each line in the store. */
-  def read (fn :String => Unit) :Unit
+  /** Reads the contents of this store line by line, applying `fn` to each line in the store. */
+  def readLines (fn :String => Unit) {
+    read({ r =>
+      val buffed = new BufferedReader(r)
+      var line :String = buffed.readLine()
+      while (line != null) {
+        fn(line)
+        line = buffed.readLine()
+      }
+    })
+  }
+
+  /** Passes the contents of this store as a `Reader` to `fn`. The `Reader` is automatically closed
+    * when `fn` returns. */
+  def read (fn :Reader => Unit) {
+    val r = reader
+    try fn(r)
+    finally r.close()
+  }
 
   /** Writes `lines` to this store. */
   def write (lines :Iterable[Store.Writable]) :Unit =
@@ -42,6 +59,9 @@ abstract class Store {
   // re-abstract these methods to be sure we don't forget to implement them
   override def equals (other :Any) :Boolean
   override def hashCode :Int
+
+  /** Returns a `Reader` for this store's contents. */
+  protected def reader :Reader
 }
 
 object Store {
@@ -61,20 +81,6 @@ object Store {
   /** Creates a store for `path`. */
   def apply (path :Path) :Store = FileStore(path)
 
-  /** Reads the contents of `reader`, passing each line to `fn`. Closes `reader` when done. */
-  def read (fn :String => Unit, reader :Reader) {
-    try {
-      val buffed = new BufferedReader(reader)
-      var line :String = buffed.readLine()
-      while (line != null) {
-        fn(line)
-        line = buffed.readLine()
-      }
-    } finally {
-      reader.close()
-    }
-  }
-
   def realPath (path :Path) = if (Files.exists(path)) path.toRealPath() else path
 }
 
@@ -87,8 +93,7 @@ class FileStore private (val path :Path) extends Store {
   override def exists = Files.exists(path)
   override def readOnly = exists && !Files.isWritable(path)
 
-  override def read (fn :String => Unit) :Unit = Store.read(
-    fn, if (exists) new FileReader(path.toFile) else new StringReader(""))
+  override def reader = if (exists) new FileReader(path.toFile) else new StringReader("")
 
   override def write (lines :Iterable[Store.Writable]) {
     // TODO: file encoding?
@@ -134,10 +139,10 @@ class ZipEntryStore private (val zipFile :Path, val entry :String) extends Store
   override def parent = zipFile.toString
   override def exists = zentry != null
   override def readOnly = true
-  override def read (fn :String => Unit) :Unit = Store.read(fn, zentry match {
+  override def reader = zentry match {
     case null  => new StringReader("")
     case entry => new InputStreamReader(zfile.getInputStream(entry), "UTF-8")
-  })
+  }
 
   override def equals (other :Any) = other match {
     case os :ZipEntryStore => zipFile == os.zipFile && entry == os.entry
@@ -156,7 +161,7 @@ class TextStore (val name :String, val parent :String, val text :String) extends
 
   override def exists = false
   override def readOnly = true
-  override def read (fn :String => Unit) :Unit = Store.read(fn, new StringReader(text))
+  override def reader = new StringReader(text)
 
   override def equals (other :Any) = other match {
     case os :TextStore => name == os.name && parent == os.parent && text == os.text

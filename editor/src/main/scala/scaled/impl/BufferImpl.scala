@@ -23,7 +23,7 @@ object BufferImpl {
   def apply (store :Store) :BufferImpl = {
     val lines = ArrayBuffer[Array[Char]]()
     // TODO: remove tab hackery when we support tabs
-    store.read(ln => lines += ln.replace('\t', ' ').toCharArray)
+    store.readLines(ln => lines += ln.replace('\t', ' ').toCharArray)
     // TEMP: tack a blank line on the end to simulate a trailing line sep
     lines += MutableLine.NoChars
     new BufferImpl(store, lines)
