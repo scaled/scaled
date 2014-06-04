@@ -78,6 +78,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     "M-S-."  -> "end-of-buffer",
 
     "M-g"    -> "goto-line",
+    "M-S-g"  -> "goto-offset",
 
     // view commands (scrolling, etc.)
     "S-UP"   -> "scroll-up", // TODO: extend-mark-backward-line
@@ -343,6 +344,21 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       }
       if (!buffer.mark.isDefined) buffer.mark = view.point()
       view.point() = Loc(line-1, 0)
+      recenter()
+    }
+  }
+
+  @Fn("""Reads character offset from minibuffer and goes to that offset. Also centers the view on
+         the requested line. If the mark is inactive, it will be set to the point prior to moving
+         to the new line. """)
+  def gotoOffset () {
+    val hist = config(gotoLineHistory)
+    editor.miniRead("Goto offset:", "", hist, Completer.none) onSuccess { offStr =>
+      val offset = try { offStr.toInt } catch {
+        case e :Throwable => 0 // this is what emacs does, seems fine to me
+      }
+      if (!buffer.mark.isDefined) buffer.mark = view.point()
+      view.point() = buffer.loc(offset)
       recenter()
     }
   }
