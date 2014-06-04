@@ -114,6 +114,12 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     stage.requestFocus() // and request window manager focus
   }
 
+  /** Returns the width and height (in characters) to assign to new buffers. */
+  def bufferSize :(Int, Int) = {
+    val config = app.cfgMgr.editorConfig
+    (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+  }
+
   //
   // implementation details
 
@@ -239,8 +245,7 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName))
 
   private def newBuffer (buf :BufferImpl, minfo :ModeInfo = ModeInfo.Infer) :OpenBuffer = {
-    val config = app.cfgMgr.editorConfig
-    val (width, height) = (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+    val (width, height) = bufferSize
 
     // determine the mode and injection args
     val (mode, args) = if (minfo == ModeInfo.Infer) (app.pkgMgr.detectMode(buf), Nil)

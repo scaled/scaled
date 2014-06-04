@@ -49,7 +49,7 @@ class Main extends Application {
     * is created. */
   def openInWorkspace (path :String, workspace :String) {
     val epane = editors.get(workspace) match {
-      case null => createEditor(new Stage(), workspace)
+      case null => createEditor(new Stage(), workspace, NoGeom)
       case epane => epane
     }
     println(s"Opening $workspace / $path")
@@ -64,8 +64,12 @@ class Main extends Application {
     if (editors.isEmpty()) sys.exit(0) // TODO: cleanup?
   }
 
+  case class Geom (size :Option[(Int,Int)], pos :Option[(Int,Int)])
+  val NoGeom = Geom(None, None)
+
   override def start (stage :Stage) {
-    val epane = createEditor(stage, System.getProperty("scaled.workspace", "default"))
+    val geom = Option(System.getProperty("geometry")).map(parseGeometry).getOrElse(NoGeom)
+    val epane = createEditor(stage, System.getProperty("scaled.workspace", "default"), geom)
     // open a pane/tab for each file passed on the command line
     getParameters.getRaw foreach epane.visitPath
 
@@ -76,17 +80,30 @@ class Main extends Application {
     tweakQuitMenuItem()
   }
 
-  private def createEditor (stage :Stage, workspace :String) :EditorPane = {
-    val epane = new EditorPane(this, stage)
+  private def parseGeometry (geom :String) :Geom = geom.split("[x+]") match {
+    case Array(w, h, x, y) => Geom(Some(w.toInt -> h.toInt), Some(x.toInt -> y.toInt))
+    case Array(w, h)       => Geom(Some(w.toInt -> h.toInt), None)
+    case _                 => Geom(None, None)
+  }
+
+  private def createEditor (stage :Stage, workspace :String, geom :Geom) :EditorPane = {
+    val epane = new EditorPane(this, stage) {
+      override def bufferSize = geom.size getOrElse super.bufferSize
+    }
     val scene = new Scene(epane)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
+    stage.setScene(scene)
+
+    // set our stage position based on the values specified in editor config
     cfgMgr.editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
       if (x >= 0) stage.setX(x)
     }
     cfgMgr.editorConfig.value(EditorConfig.viewTop) onValueNotify { y =>
       if (y >= 0) stage.setY(y)
     }
-    stage.setScene(scene)
+    // if geometry was specified on the command line, override the value from prefs
+    geom.pos.foreach { pos => stage.setX(pos._1) ; stage.setY(pos._2) }
+
     stage.show()
     editors.put(workspace, epane)
     epane
