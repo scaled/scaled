@@ -246,9 +246,10 @@ object Completer {
       }
     }
 
-    private def massage (dir :Path) = {
-      if (dir.getFileName.toString == "~") Paths.get(System.getProperty("user.home"))
-      else dir // TODO: map '//' to root of file system?
+    private def massage (dir :Path) = dir.getFileName match {
+      case null => dir
+      case name if (name.toString == "~") => Paths.get(System.getProperty("user.home"))
+      case _ => dir // TODO: map '//' to root of file system?
     }
 
     private def rootPath = FileSystems.getDefault.getRootDirectories.iterator.next
