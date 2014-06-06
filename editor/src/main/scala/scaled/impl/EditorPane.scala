@@ -41,7 +41,11 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
   // Editor interface methods
 
   override def exit () = app.closeEditor(this)
-  override def showURL (url :String) = app.getHostServices.showDocument(url)
+  override def showURL (url :String) = {
+    // getHostSevices.showDocument is very crashy on Mac OS X right now, so avoid it
+    if (System.getProperty("os.name") != "Mac OS X") app.getHostServices.showDocument(url)
+    else Runtime.getRuntime.exec(Array("open", url))
+  }
 
   override def popStatus (msg :String, subtext :String) {
     _statusPopup.showStatus(msg, subtext)
