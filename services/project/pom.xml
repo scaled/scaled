@@ -18,5 +18,6 @@
     <module>java</module>
     <module>scala</module>
     <module>maven</module>
+    <module>sbt</module>
   </modules>
 </project>
