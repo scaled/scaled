@@ -1,0 +1,8 @@
+   name: scaled-api
+version: 1.0
+descrip: The API against which Scaled extensions are written.
+ weburl: https://github.com/scaled/scaled-api/
+ srcurl: git:https://github.com/scaled/scaled-api.git
+license: New BSD
+ srcdir: src/main/scala
+ bindir: target/classes
