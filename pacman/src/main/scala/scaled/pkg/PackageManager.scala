@@ -12,10 +12,8 @@ import java.util.regex.Pattern
 import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scala.io.Source
-import scaled.Logger
-import scaled.util.Errors
 
-class PackageManager (metaDir :Path, val log :Logger) {
+class PackageManager (metaDir :Path) {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
@@ -28,11 +26,8 @@ class PackageManager (metaDir :Path, val log :Logger) {
   def packages :Iterable[Package] = pkgs.values
 
   /** Resolves the class for the mode named `name`. */
-  def mode (major :Boolean, name :String) :Class[_] =
-    modeMap(major).get(name).map(_.apply(name)) match {
-      case Some(mode) => mode
-      case None       => throw Errors.feedback(s"Unknown mode: $name")
-    }
+  def mode (major :Boolean, name :String) :Option[Class[_]] =
+    modeMap(major).get(name).map(_.apply(name))
 
   /** Resolves the implementation class for the service with fq classname `name`. */
   def service (name :String) :Option[Class[_]] = serviceMap.get(name).map(_.apply(name))
@@ -103,11 +98,17 @@ class PackageManager (metaDir :Path, val log :Logger) {
     }
   }
 
+  /** Emits a warning message. By default these go to stderr. */
+  def warn (msg :String) :Unit = System.err.println(msg)
+
+  /** Emits a warning message. By default these go to stderr. */
+  def warn (msg :String, t :Throwable) :Unit = { warn(msg) ; t.printStackTrace(System.err) }
+
   /** A mapping from `srcurl` to package. `srcurl` is the unique global identifier for a package,
     * and is what is used to express inter-package dependencies. */
   private val pkgs = MMap[String,Package]()
 
-  private val mvn = new MavenResolver(log)
+  private val mvn = new MavenResolver(this)
   private val ivy = new IvyResolver()
 
   private type Finder = String => Class[_]
@@ -132,7 +133,7 @@ class PackageManager (metaDir :Path, val log :Logger) {
       // built-in package metadata from our jar file
       else if (isJar && (fileName startsWith "scaled-editor")) {
         val pkg = getClass.getClassLoader.getResourceAsStream("package.scaled")
-        if (pkg == null) log.log(s"Expected to find package.scaled on classpath, but didn't!")
+        if (pkg == null) warn(s"Expected to find package.scaled on classpath, but didn't!")
         else addPackage(PackageInfo(file, pkg, None))
       }
     }
@@ -166,8 +167,8 @@ class PackageManager (metaDir :Path, val log :Logger) {
       }
     })
   } else {
-    log.log("*** Package manager running in development mode.")
-    log.log("*** Only packages visible via the development classpath will be loaded.")
+    warn("*** Package manager running in development mode.")
+    warn("*** Only packages visible via the development classpath will be loaded.")
   }
 
   // scans up from `dir` looking for 'package.scaled' file; then adds package from there
@@ -181,7 +182,7 @@ class PackageManager (metaDir :Path, val log :Logger) {
 
   private def addPackage (info :PackageInfo) {
     // log any errors noted when resolving this package info
-    info.errors foreach log.log
+    info.errors foreach warn
 
     // create our package and map it by srcurl
     val pkg = new Package(this, info)
@@ -210,6 +211,4 @@ class PackageManager (metaDir :Path, val log :Logger) {
 
   // TODO: install package phase where we download and install a package, install its dependencies
   // and ensure that everything is compiled and ready to run
-
-  private def warn (msg :String) = log.log(msg)
 }

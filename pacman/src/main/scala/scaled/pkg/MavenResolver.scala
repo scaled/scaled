@@ -8,10 +8,9 @@ import java.net.{URL, URLClassLoader}
 import java.nio.file.Paths
 import pomutil.{Dependency, DependResolver, POM}
 import scala.collection.mutable.{Map => MMap}
-import scaled.Logger
 
 /** Handles dependencies from the local Maven repository. */
-class MavenResolver (log :Logger) {
+class MavenResolver (mgr :PackageManager) {
 
   private val loaders = MMap[Dependency,PackageLoader]()
 
@@ -26,9 +25,9 @@ class MavenResolver (log :Logger) {
     if (loader.isDefined) loader
     else {
       val depdeps = dep.localPOM match {
-        case None        => log.log(s"Unable to resolve POM for $dep") ; Seq()
+        case None        => mgr.warn(s"Unable to resolve POM for $dep") ; Seq()
         case Some(pfile) => POM.fromFile(pfile) match {
-          case None      => log.log(s"Unable to load POM from $pfile") ; Seq()
+          case None      => mgr.warn(s"Unable to load POM from $pfile") ; Seq()
           case Some(pom) => new DependResolver(pom) {
             // strictly speaking we should only propagate compile/runtime here, but we need system
             // depends because we have stuff that uses tools.jar which for better or worse is

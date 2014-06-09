@@ -35,7 +35,10 @@ class Main extends Application {
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val pkgMgr = new PackageManager(metaDir, logger)
+  val pkgMgr = new PackageManager(metaDir) {
+    override def warn (msg :String) = logger.log(msg)
+    override def warn (msg :String, t :Throwable) = logger.log(msg, t)
+  }
   val svcMgr = new ServiceManager(this)
   val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 

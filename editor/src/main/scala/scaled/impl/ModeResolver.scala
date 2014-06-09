@@ -7,6 +7,7 @@ package scaled.impl
 import java.lang.reflect.Field
 import scala.collection.mutable.{Map => MMap}
 import scaled._
+import scaled.util.Errors
 
 abstract class EnvImpl (
   val log  :Logger,      val exec  :Executor, val editor :Editor,
@@ -60,7 +61,10 @@ class AppModeResolver (app :Main, editor :Editor)
   override def minorModes (tags :Array[String]) = app.pkgMgr.minorModes(tags)
 
   override protected def locate (major :Boolean, mode :String) =
-    app.pkgMgr.mode(major, mode)
+    app.pkgMgr.mode(major, mode) match {
+      case Some(mode) => mode
+      case None       => throw Errors.feedback(s"Unknown mode: $mode")
+    }
   override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
     app.cfgMgr.resolveConfig(mode, defs)
   override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
