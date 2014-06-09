@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/scaled/scaled/blob/master/LICENSE
 
-package scaled.pkg
+package scaled.pacman
 
 import java.io.PrintStream
 

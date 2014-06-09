@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/scaled/scaled/blob/master/LICENSE
 
-package scaled.pkg
+package scaled.pacman
 
 /** The main command line entry point for the Scaled Package Manager. */
 object Main {
@@ -26,6 +26,7 @@ where <command> is one of:
     // we'll introduce proper arg parsing later; for now KISS
     args match {
       case Array("install", pkgURL) =>
+        out.println("TODO!")
 
       case Array("list") =>
         out.println("Installed packages:")
@@ -43,6 +44,11 @@ where <command> is one of:
         }
 
       case Array("run", pkgName, className, args @ _*) =>
+        pacman.packages.find(_.info.name == pkgName) match {
+          case None => out.println(s"Unknown package: $pkgName")
+          case Some(pkg) =>
+        }
+
       case _ =>
         System.err.println(usage)
         System.exit(255)
@@ -59,22 +65,22 @@ where <command> is one of:
                       "License:" -> pkg.info.license,
                       "Src Dir:" -> pkg.info.srcdir,
                       "Bin Dir:" -> pkg.info.bindir), "", 1)
-    def print0 (header :String, info :Iterable[(String,String)]) {
-      if (info.iterator.hasNext) {
-        out.println("")
-        out.println(header)
-        out.printCols(info, "")
-      }
-    }
-    def print1 (header :String, info :Iterable[java.util.Map.Entry[String,String]]) {
-      print0(header, info.map(e => (e.getKey, e.getValue)))
-    }
-    print0("Major modes:", pkg.majors)
-    print0("Minor modes:", pkg.minors)
-    print0("Services:", pkg.services)
-    print1("Plugins:", pkg.plugins.entries)
-    print1("Patterns:", pkg.patterns.entries)
-    print1("Interps:", pkg.interps.entries)
-    print1("Minor tags:", pkg.minorTags.entries)
+    // def print0 (header :String, info :Iterable[(String,String)]) {
+    //   if (info.iterator.hasNext) {
+    //     out.println("")
+    //     out.println(header)
+    //     out.printCols(info, "")
+    //   }
+    // }
+    // def print1 (header :String, info :Iterable[java.util.Map.Entry[String,String]]) {
+    //   print0(header, info.map(e => (e.getKey, e.getValue)))
+    // }
+    // print0("Major modes:", pkg.majors)
+    // print0("Minor modes:", pkg.minors)
+    // print0("Services:", pkg.services)
+    // print1("Plugins:", pkg.plugins.entries)
+    // print1("Patterns:", pkg.patterns.entries)
+    // print1("Interps:", pkg.interps.entries)
+    // print1("Minor tags:", pkg.minorTags.entries)
   }
 }
