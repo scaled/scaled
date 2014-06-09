@@ -2,19 +2,20 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.impl.pkg
+package scaled.pkg
 
 import com.google.common.collect.HashMultimap
 import java.net.URLClassLoader
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{Files, FileVisitResult, Path, Paths, SimpleFileVisitor}
 import java.util.regex.Pattern
 import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scala.io.Source
-import scaled.impl._
+import scaled.Logger
 import scaled.util.Errors
 
-class PackageManager (app :Main) {
+class PackageManager (metaDir :Path, val log :Logger) {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
@@ -22,9 +23,6 @@ class PackageManager (app :Main) {
 
   /** A signal emitted when a package is uninstalled. */
   val packageRemoved = Signal[Package]()
-
-  /** A reference to the logger, for use by us and Packages. */
-  val log = app.logger
 
   /** Returns all currently installed packages. */
   def packages :Iterable[Package] = pkgs.values
@@ -42,12 +40,13 @@ class PackageManager (app :Main) {
   /** Returns the name of all modes provided by all packages. */
   def modes (major :Boolean) :Iterable[String] = modeMap(major).keySet
 
-  /** Detects the major mode that should be used to edit `buf`. */
-  def detectMode (buf :BufferImpl) :String = {
+  /** Detects the major mode that should be used to edit a buffer named `name` and with `line0` as
+    * its first line of text. */
+  def detectMode (name :String, line0 :String) :String = {
     // checks for -*- mode: somemode -*- on the first or second line
     def fileLocal :Option[String] = None // TODO
     // if the file starts with #!, detects based on "interpreter"
-    def interp :Option[String] = buf.line(0).asString match {
+    def interp :Option[String] = line0 match {
       case text if (text startsWith "#!") =>
         // break #!/usr/bin/perl -w into tokens, filtering out known meaningless tokens
         val tokens = text.substring(2).split("[ /]").filterNot(skipToks)
@@ -64,8 +63,8 @@ class PackageManager (app :Main) {
       if (ms.size > 1) warn(s"Multiple modes match buffer name '$name': $ms")
       ms.headOption
     }
-    // println(s"Detecting mode for ${buf.name}")
-    fileLocal orElse interp orElse pattern(buf.name) getOrElse "text"
+    // println(s"Detecting mode for ${name}")
+    fileLocal orElse interp orElse pattern(name) getOrElse "text"
   }
   private val skipToks = Set("", "usr", "local", "bin", "env", "opt")
 
@@ -139,9 +138,11 @@ class PackageManager (app :Main) {
     }
   }
 
-  // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
-  // cache the results of our scans and load that instead)
-  private val pkgsDir = Filer.requireDir(app.metaDir.resolve("Packages"))
+  private val pkgsDir = {
+    val dir = metaDir.resolve("Packages")
+    Files.createDirectories(dir)
+    dir
+  }
 
   // if we have more than one built-in package then we're running in dev mode, which means we do
   // package management a bit differently: we don't use custom classloaders (this enables JRebel to
@@ -149,14 +150,21 @@ class PackageManager (app :Main) {
   // custom classloaders to function); TODO: maybe separate these two modes
   if (pkgs.size == 1) {
     val mainDep = Some(pkgs.head._2.info.srcurl)
-    Filer.descendDirs(pkgsDir) { dir =>
-      val pkgFile = dir.resolve("package.scaled")
-      if (!Files.exists(pkgFile)) true // descend into subdirs
-      else {
-        addPackage(PackageInfo(pkgFile, mainDep))
-        false // stop descending
+    // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
+    // cache the results of our scans and load that instead)
+    Files.walkFileTree(pkgsDir, new SimpleFileVisitor[Path]() {
+      override def visitFile (dir :Path, attrs :BasicFileAttributes) = {
+        if (!Files.isDirectory(dir)) FileVisitResult.CONTINUE
+        else {
+          val pkgFile = dir.resolve("package.scaled")
+          if (!Files.exists(pkgFile)) FileVisitResult.CONTINUE // descend into subdirs
+          else {
+            addPackage(PackageInfo(pkgFile, mainDep))
+            FileVisitResult.SKIP_SUBTREE // stop descending
+          }
+        }
       }
-    }
+    })
   } else {
     log.log("*** Package manager running in development mode.")
     log.log("*** Only packages visible via the development classpath will be loaded.")
@@ -203,5 +211,5 @@ class PackageManager (app :Main) {
   // TODO: install package phase where we download and install a package, install its dependencies
   // and ensure that everything is compiled and ready to run
 
-  private def warn (msg :String) = app.logger.log(msg)
+  private def warn (msg :String) = log.log(msg)
 }

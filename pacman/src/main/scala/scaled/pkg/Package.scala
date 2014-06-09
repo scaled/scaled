@@ -2,15 +2,15 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.impl.pkg
+package scaled.pkg
 
 import com.google.common.collect.HashMultimap
-import java.nio.file.Files
+import java.nio.file.{Files, FileVisitResult, SimpleFileVisitor, Path}
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.collection.{Set => GSet}
-import scaled.impl.Filer
 
 // NOTE: package instances are constructed on a background thread
 class Package (mgr :PackageManager, val info :PackageInfo) {
@@ -49,10 +49,13 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
 
   // our root may be a directory or a jar file, in either case we scan it for class files
   if (Files.isDirectory(info.root)) {
-    Filer.descendFiles(info.root) { p =>
-      val name = p.getFileName.toString ; val fn = apply(name)
-      if (fn != null) fn(name, new ClassReader(Files.readAllBytes(p)))
-    }
+    Files.walkFileTree(info.root, new SimpleFileVisitor[Path]() {
+      override def visitFile (file :Path, attrs :BasicFileAttributes) = {
+        val name = file.getFileName.toString ; val fn = apply(name)
+        if (fn != null) fn(name, new ClassReader(Files.readAllBytes(file)))
+        FileVisitResult.CONTINUE
+      }
+    })
   }
   else if (info.root.getFileName.toString endsWith ".jar") {
     val jfile = new JarFile(info.root.toFile)

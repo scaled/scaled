@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.impl.pkg
+package scaled.pkg
 
 import java.io.{BufferedReader, InputStream, InputStreamReader}
 import java.nio.file.{Files, Path}

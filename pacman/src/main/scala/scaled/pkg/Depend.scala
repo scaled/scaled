@@ -2,7 +2,7 @@
 // Scaled - a scalable editor extensible via JVM languages
 // http://github.com/samskivert/scaled/blob/master/LICENSE
 
-package scaled.impl.pkg
+package scaled.pkg
 
 /** Models a Maven or Ivy dependency. */
 case class Depend (groupId :String, artifactId :String, version :String, kind :String)

@@ -252,8 +252,8 @@ class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
     val (width, height) = bufferSize
 
     // determine the mode and injection args
-    val (mode, args) = if (minfo == ModeInfo.Infer) (app.pkgMgr.detectMode(buf), Nil)
-                       else (minfo.name, minfo.args)
+    val (mode, args) = if (minfo != ModeInfo.Infer) (minfo.name, minfo.args)
+                       else (app.pkgMgr.detectMode(buf.name, buf.lines(0).asString), Nil)
 
     // create the modeline and add some default data before anyone else sneaks in
     val mline = new ModeLineImpl(this)

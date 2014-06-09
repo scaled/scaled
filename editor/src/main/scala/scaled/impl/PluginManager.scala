@@ -9,7 +9,7 @@ import java.util.function.{Function => JFunction}
 import reactual.Signal
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.impl.pkg.Package
+import scaled.pkg.Package
 
 /** Implements [[PluginService]] and handles notifications when packages are added and removed. */
 class PluginManager (app :Main) extends AbstractService with PluginService {

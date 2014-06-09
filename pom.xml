@@ -44,6 +44,7 @@
 
   <modules>
     <module>api</module>
+    <module>pacman</module>
     <module>editor</module>
     <module>modes</module>
     <module>libs</module>

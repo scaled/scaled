@@ -7,14 +7,14 @@
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>scaled-editor</artifactId>
+  <artifactId>scaled-pacman</artifactId>
   <packaging>jar</packaging>
 
-  <name>Scaled Editor</name>
-  <description>The main implementation of the Scaled editor.</description>
+  <name>Scaled Package Manager</name>
+  <description>Manages the installation and building of Scaled packages.</description>
 
   <properties>
-    <mainClass>scaled.impl.Main</mainClass>
+    <mainClass>scaled.pkg.Main</mainClass>
   </properties>
 
   <dependencies>
@@ -25,9 +25,15 @@
     </dependency>
 
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>scaled-pacman</artifactId>
-      <version>${project.version}</version>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+      <version>5.0.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.samskivert</groupId>
+      <artifactId>pom-util</artifactId>
+      <version>0.7-SNAPSHOT</version>
     </dependency>
   </dependencies>
 
