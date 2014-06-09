@@ -20,7 +20,6 @@ case class PackageInfo (
   depends :List[String],
   srcdir  :String,
   bindir  :String,
-  builtIn :Boolean,
   errors  :Seq[String]) {
 
   def classesDir = root.resolve(bindir)
@@ -42,20 +41,15 @@ object PackageInfo {
   import scala.collection.convert.WrapAsScala._
 
   /** Creates a package info from the supplied `package.scaled` file. The file is assumed to be in
-    * the top-level directory of the package in question.
-    *
-    * @param mainDep the srcurl of the built-in package (if `Some`), on which we'll automatically
-    * add a dependency. If `None`, this package is assumed to be a built-in package.
-    */
-  def apply (file :Path, mainDep :Option[String]) :PackageInfo =
-    apply(file.getParent, Files.readAllLines(file), mainDep)
+    * the top-level directory of the package in question. */
+  def apply (file :Path) :PackageInfo = apply(file.getParent, Files.readAllLines(file))
 
   /** Creates a package info from the `package.scaled` contents in `lines`. */
-  def apply (root :Path, lines :InputStream, mainDep :Option[String]) :PackageInfo =
-    apply(root, Seq() ++ new BufferedReader(new InputStreamReader(lines)).lines.iterator, mainDep)
+  def apply (root :Path, lines :InputStream) :PackageInfo =
+    apply(root, Seq() ++ new BufferedReader(new InputStreamReader(lines)).lines.iterator)
 
   /** Creates a package info from the `package.scaled` contents in `lines`. */
-  def apply (root :Path, lines :Seq[String], mainDep :Option[String]) :PackageInfo = {
+  def apply (root :Path, lines :Seq[String]) :PackageInfo = {
     val props = MMap[String,String]()
     var depends = List[String]()
     val errors = ArrayBuffer[String]()
@@ -71,9 +65,8 @@ object PackageInfo {
       "unknown"
     })
     PackageInfo(root, require("name"), require("version"), require("descrip"), require("weburl"),
-                require("srcurl"), require("license"), mainDep.toList ++  depends,
-                // if we weren't supplied with a main dependency, then we're a built-in
-                require("srcdir"), props.getOrElse("bindir", "classes"), !mainDep.isDefined, errors)
+                require("srcurl"), require("license"), depends, require("srcdir"),
+                props.getOrElse("bindir", "classes"), errors)
   }
 
   private def trim (line :String) = line.indexOf('#') match {

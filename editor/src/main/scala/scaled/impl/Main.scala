@@ -29,13 +29,10 @@ class Main extends Application {
     }
   }
 
-  // locate and create our metadata dir
-  val homeDir = Paths.get(System.getProperty("user.home"))
-  val metaDir = Filer.requireDir(locateMetaDir)
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val pkgMgr = new PackageManager(metaDir) {
+  val pkgMgr = new PackageManager() {
     override def warn (msg :String) = logger.log(msg)
     override def warn (msg :String, t :Throwable) = logger.log(msg, t)
   }
@@ -131,10 +128,6 @@ class Main extends Application {
       println("Failed to tweak Quit menu item")
       t.printStackTrace(System.err)
   }
-
-  // TODO: platform specific app dirs
-  private def locateMetaDir :Path = homeDir.resolve(
-    Paths.get("Library", "Application Support", "Scaled"))
 }
 
 object Main {

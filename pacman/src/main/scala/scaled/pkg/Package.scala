@@ -4,8 +4,8 @@
 
 package scaled.pkg
 
-import com.google.common.collect.HashMultimap
-import java.nio.file.{Files, FileVisitResult, SimpleFileVisitor, Path}
+import com.google.common.collect.{HashMultimap, Sets}
+import java.nio.file.{Files, FileVisitOption, FileVisitResult, SimpleFileVisitor, Path}
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
@@ -35,13 +35,9 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
   val minorTags = HashMultimap.create[String,String]() // tag -> minor mode
 
   /** The class loader for classes in this package. */
-  val loader :ClassLoader =
-    // if this is a special built-in package, use our normal class loader, otherwise we end up
-    // doubly defining all of our built-in classes which confuses tools like JRebel
-    if (info.builtIn) getClass.getClassLoader
-    else new PackageLoader(info.name, info.classesDir.toUri.toURL) {
-      override protected def resolveDependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
-    }
+  val loader :ClassLoader = new PackageLoader(info.name, info.classesDir.toUri.toURL) {
+    override protected def resolveDependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
+  }
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
@@ -49,10 +45,12 @@ class Package (mgr :PackageManager, val info :PackageInfo) {
 
   // our root may be a directory or a jar file, in either case we scan it for class files
   if (Files.isDirectory(info.root)) {
-    Files.walkFileTree(info.root, new SimpleFileVisitor[Path]() {
+    Files.walkFileTree(info.root, Sets.newHashSet(FileVisitOption.FOLLOW_LINKS), 32, new SimpleFileVisitor[Path]() {
       override def visitFile (file :Path, attrs :BasicFileAttributes) = {
-        val name = file.getFileName.toString ; val fn = apply(name)
-        if (fn != null) fn(name, new ClassReader(Files.readAllBytes(file)))
+        if (attrs.isRegularFile) {
+          val name = file.getFileName.toString ; val fn = apply(name)
+          if (fn != null) fn(name, new ClassReader(Files.readAllBytes(file)))
+        }
         FileVisitResult.CONTINUE
       }
     })

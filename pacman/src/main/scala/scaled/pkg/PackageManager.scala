@@ -13,8 +13,11 @@ import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import scala.io.Source
 
-class PackageManager (metaDir :Path) {
+class PackageManager {
   import scala.collection.convert.WrapAsScala._
+
+  /** The top-level Scaled metadata directory. */
+  val metaDir :Path = { val dir = locateMetaDir ; Files.createDirectories(dir) ; dir }
 
   /** A signal emitted when a package is installed. */
   val packageAdded = Signal[Package]()
@@ -121,64 +124,25 @@ class PackageManager (metaDir :Path) {
   private val interps   = HashMultimap.create[String,String]()
   private val minorTags = HashMultimap.create[String,String]()
 
-  // resolve our "built-in" package(s), which we locate via the classloader
-  getClass.getClassLoader.asInstanceOf[URLClassLoader].getURLs foreach { url =>
-    if (url.getProtocol == "file") {
-      val file = Paths.get(url.getPath) ; val fileName = file.getFileName.toString
-      val isJar = fileName endsWith ".jar"
-      // if this is a directory of classes, we're running in development mode; search this
-      // directory for a package.scaled file which indicates that it provides a built-in package
-      if (!isJar) addBuiltin(file)
-      // if we see a scaled-editor*.jar then we're running in pre-packaged mode; extract the
-      // built-in package metadata from our jar file
-      else if (isJar && (fileName startsWith "scaled-editor")) {
-        val pkg = getClass.getClassLoader.getResourceAsStream("package.scaled")
-        if (pkg == null) warn(s"Expected to find package.scaled on classpath, but didn't!")
-        else addPackage(PackageInfo(file, pkg, None))
-      }
-    }
-  }
-
   private val pkgsDir = {
-    val dir = metaDir.resolve("Packages")
-    Files.createDirectories(dir)
-    dir
+    val dir = metaDir.resolve("Packages") ; Files.createDirectories(dir) ; dir
   }
 
-  // if we have more than one built-in package then we're running in dev mode, which means we do
-  // package management a bit differently: we don't use custom classloaders (this enables JRebel to
-  // work) and we don't load packages from the Packages directory (because those would require
-  // custom classloaders to function); TODO: maybe separate these two modes
-  if (pkgs.size == 1) {
-    val mainDep = Some(pkgs.head._2.info.srcurl)
-    // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
-    // cache the results of our scans and load that instead)
-    Files.walkFileTree(pkgsDir, new SimpleFileVisitor[Path]() {
-      override def visitFile (dir :Path, attrs :BasicFileAttributes) = {
-        if (!Files.isDirectory(dir)) FileVisitResult.CONTINUE
+  // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
+  // cache the results of our scans and load that instead)
+  Files.walkFileTree(pkgsDir, new SimpleFileVisitor[Path]() {
+    override def visitFile (dir :Path, attrs :BasicFileAttributes) = {
+      if (!Files.isDirectory(dir)) FileVisitResult.CONTINUE
+      else {
+        val pkgFile = dir.resolve("package.scaled")
+        if (!Files.exists(pkgFile)) FileVisitResult.CONTINUE // descend into subdirs
         else {
-          val pkgFile = dir.resolve("package.scaled")
-          if (!Files.exists(pkgFile)) FileVisitResult.CONTINUE // descend into subdirs
-          else {
-            addPackage(PackageInfo(pkgFile, mainDep))
-            FileVisitResult.SKIP_SUBTREE // stop descending
-          }
+          addPackage(PackageInfo(pkgFile))
+          FileVisitResult.SKIP_SUBTREE // stop descending
         }
       }
-    })
-  } else {
-    warn("*** Package manager running in development mode.")
-    warn("*** Only packages visible via the development classpath will be loaded.")
-  }
-
-  // scans up from `dir` looking for 'package.scaled' file; then adds package from there
-  private def addBuiltin (dir :Path) {
-    if (dir != null) {
-      val pfile = dir.resolve("package.scaled")
-      if (!Files.exists(pfile)) addBuiltin(dir.getParent)
-      else addPackage(PackageInfo(pfile, None))
     }
-  }
+  })
 
   private def addPackage (info :PackageInfo) {
     // log any errors noted when resolving this package info
@@ -207,6 +171,12 @@ class PackageManager (metaDir :Path) {
     // tell any interested parties about this new package
     packageAdded.emit(pkg)
     // println(s"Added package $pkg")
+  }
+
+  // TODO: platform specific app dirs
+  private def locateMetaDir :Path = {
+    val homeDir = Paths.get(System.getProperty("user.home"))
+    homeDir.resolve(Paths.get("Library", "Application Support", "Scaled"))
   }
 
   // TODO: install package phase where we download and install a package, install its dependencies

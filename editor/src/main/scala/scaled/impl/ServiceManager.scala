@@ -67,7 +67,7 @@ class ServiceManager (app :Main) extends ServiceInjector(app.logger) with MetaSe
 
   override def log = app.logger
   override def exec = app.exec
-  override def metaFile (name :String) = app.metaDir.resolve(name)
+  override def metaFile (name :String) = app.pkgMgr.metaDir.resolve(name)
   override def service[T] (clazz :Class[T]) :T = resolveService(clazz) match {
     case None => throw new InstantiationException(s"Unknown service $clazz")
     case Some(svc) => svc.asInstanceOf[T]
