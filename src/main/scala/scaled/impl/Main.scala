@@ -9,7 +9,6 @@ import javafx.stage.Stage
 import reactual.Signal
 import scala.collection.JavaConversions._
 import scaled._
-import scaled.pkg.PackageManager
 import scaled.util.Errors
 
 class Main extends Application {
@@ -32,10 +31,7 @@ class Main extends Application {
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val pkgMgr = new PackageManager() {
-    override def warn (msg :String) = logger.log(msg)
-    override def warn (msg :String, t :Throwable) = logger.log(msg, t)
-  }
+  val pkgMgr = new pkg.SPackageManager(logger)
   val svcMgr = new ServiceManager(this)
   val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 

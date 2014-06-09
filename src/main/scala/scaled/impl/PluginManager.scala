@@ -9,7 +9,7 @@ import java.util.function.{Function => JFunction}
 import reactual.Signal
 import scala.collection.mutable.ArrayBuffer
 import scaled._
-import scaled.pkg.Package
+import scaled.impl.pkg.SPackage
 
 /** Implements [[PluginService]] and handles notifications when packages are added and removed. */
 class PluginManager (app :Main) extends AbstractService with PluginService {
@@ -32,7 +32,7 @@ class PluginManager (app :Main) extends AbstractService with PluginService {
     // start out adding all matching plugins from known packages
     app.pkgMgr.packages foreach packageAdded
 
-    def packageAdded (pkg :Package) {
+    def packageAdded (pkg :SPackage) {
       pkg.plugins(tag) foreach { pclass =>
         try {
           val p = pclass.newInstance.asInstanceOf[T]
@@ -46,7 +46,7 @@ class PluginManager (app :Main) extends AbstractService with PluginService {
       }
     }
 
-    def packageRemoved (pkg :Package) {
+    def packageRemoved (pkg :SPackage) {
       val pclasses = pkg.plugins(tag)
       var ii = 0 ; while (ii < _plugins.length) {
         if (pclasses(_plugins(ii).getClass)) {
