@@ -15,14 +15,14 @@ Usage: spam <command>
 
 where <command> is one of:
 
-  install [pkg-url]         installs package at pkg-url, and its dependencies
-  list                      lists all installed packages
-  info [pkg-name | --all]   prints detailed info on pkg-name (or all packages)
-  classpath pkg-name        prints the classpath for pkg-name
-  depends pkg-name          prints the dependency tree for pkg-name
+  install [pkg-url]                  installs package at pkg-url, and its dependencies
+  list                               lists all installed packages
+  info [pkg-name | --all]            prints detailed info on pkg-name (or all packages)
+  depends pkg-name                   prints the dependency tree for pkg-name
+  run pkg-name classname [arg ...]   runs classname from pkg-name with args
 """
 
-  lazy val pacman = new PackageManager()
+  val pacman = PackageManager
   val out = new Printer(System.out)
 
   def main (args :Array[String]) {
@@ -43,11 +43,14 @@ where <command> is one of:
           out.println("")
         } else onPackage(name)(printInfo)
 
-      case Array("classpath", pkgName) =>
-        onPackage(pkgName) { pkg => out.println(pkg.loader.classpath.mkString(File.pathSeparator)) }
-
       case Array("depends", pkgName) =>
         onPackage(pkgName) { _.loader.dependTree.dump() }
+
+      case Array("run", pkgName, classname, args @ _*) =>
+        onPackage(pkgName) { pkg =>
+          val clazz = pkg.loader.loadClass(classname)
+          clazz.getMethod("main", classOf[Array[String]]).invoke(null, args.toArray)
+        }
 
       case _ =>
         fail(usage)

@@ -8,7 +8,16 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, FileVisitResult, Path, Paths, SimpleFileVisitor}
 import scala.collection.mutable.{Map => MMap}
 
-class PackageManager {
+object PackageManager {
+
+  /** Used to observe package goings on. */
+  trait Observer {
+    def packageAdded (pkg :Package) :Unit
+    def packageRemoved (pkg :Package) :Unit
+  }
+
+  /** A hook for Scaled to observe package goings on. */
+  var observer :Observer = _
 
   /** The top-level Scaled metadata directory. */
   val metaDir :Path = { val dir = locateMetaDir ; Files.createDirectories(dir) ; dir }
@@ -32,16 +41,12 @@ class PackageManager {
     }
   }
 
-  /** A mapping from `srcurl` to package. `srcurl` is the unique global identifier for a package,
-    * and is what is used to express inter-package dependencies. */
-  private val pkgs = MMap[Source,Package]()
-
-  private val mvn = new MavenResolver(this)
-  private val ivy = new IvyResolver()
-
   private val pkgsDir = {
     val dir = metaDir.resolve("Packages") ; Files.createDirectories(dir) ; dir
   }
+  private val pkgs = MMap[Source,Package]()
+  private val mvn = new MavenResolver()
+  private val ivy = new IvyResolver()
 
   // resolve all packages in our packages directory (TODO: if this ends up being too slow, then
   // cache the results of our scans and load that instead)
@@ -62,7 +67,7 @@ class PackageManager {
     }
   })
 
-  protected def createPackage (info :PackageInfo) :Package = new Package(this, info)
+  protected def createPackage (info :PackageInfo) :Package = new Package(info)
 
   protected def addPackage (info :PackageInfo) :Package = {
     // log any errors noted when resolving this package info
@@ -71,6 +76,8 @@ class PackageManager {
     // create our package and map it by srcurl
     val pkg = createPackage(info)
     pkgs.put(info.source, pkg)
+
+    if (observer != null) observer.packageAdded(pkg)
     pkg
   }
 

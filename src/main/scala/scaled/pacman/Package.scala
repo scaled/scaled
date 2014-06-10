@@ -21,11 +21,12 @@ object Package {
 }
 
 /** Contains runtime metadata for an installed package. */
-class Package (mgr :PackageManager, val info :PackageInfo) {
+class Package (val info :PackageInfo) {
 
   /** The loader for classes in this package. */
   val loader :PackageLoader = new PackageLoader(info.source, info.classesDir) {
-    override protected def resolveDependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
+    override protected def resolveDependLoaders =
+      info.depends.flatMap(PackageManager.resolveDepend(info))
   }
 
   override def toString = info.name

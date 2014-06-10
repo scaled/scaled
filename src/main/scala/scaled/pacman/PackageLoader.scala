@@ -27,7 +27,7 @@ abstract class PackageLoader (val id :Package.Id, val path :Path)
     super.getResource(path)
   }
   override protected def findClass (name :String) :Class[_] = {
-    // println(s"Seeking $name in ${info.name}")
+    // println(s"Seeking $name in $id")
     var loaders = dependLoaders // first try finding the class in our dependencies
     while (!loaders.isEmpty) {
       try return loaders.head.loadClass(name)
