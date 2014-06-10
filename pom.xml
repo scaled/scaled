@@ -51,26 +51,6 @@
     <module>project</module>
   </modules>
 
-  <!-- common depends for all modules -->
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <profiles>
-    <profile>
-      <!-- enable this to test the editor interactively -->
-      <id>devel</id>
-      <modules>
-        <module>devel</module>
-      </modules>
-    </profile>
-  </profiles>
-
   <build>
     <!-- common plugin config for all modules -->
     <pluginManagement>
