@@ -82,11 +82,19 @@ class SPackageManager (log :Logger) {
   private val interps   = HashMultimap.create[String,String]()
   private val minorTags = HashMultimap.create[String,String]()
 
+  private val ScaledAPI = Source.parse("git:https://github.com/scaled/scaled-api.git")
+  private val ScaledEditor = Source.parse("git:https://github.com/scaled/scaled-editor.git")
+
   // wire up our observer
   PackageManager.observer = new PackageManager.Observer() {
     def packageAdded (pkg :Package) {
-      // create a package metadata
-      val meta = new PackageMeta(log, pkg)
+      // create a package metadata ; there's some special hackery to handle the fact that services
+      // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
+      val meta = if (pkg.info.source != ScaledAPI) new PackageMeta(log, pkg)
+                 else new PackageMeta(log, pkg) {
+                   override def service (name :String) =
+                     metas(ScaledEditor).pkg.loader.loadClass(services(name))
+                 }
       metas.put(pkg.info.source, meta)
 
       // map this package's major and minor modes, services and plugins

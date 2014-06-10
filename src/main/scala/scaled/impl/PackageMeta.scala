@@ -16,7 +16,7 @@ import scaled.pacman._
 
 /** Contains additional metadata for a Scaled package. This metadata is extracted from annotations
   * on the Java bytecode found in the package. */
-class PackageMeta (log :Logger, pkg :Package) {
+class PackageMeta (log :Logger, val pkg :Package) {
   import scala.collection.convert.WrapAsScala._
 
   /** Loads and returns the class for the major mode named `name`. */
