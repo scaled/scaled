@@ -37,11 +37,6 @@
     </developer>
   </developers>
 
-  <properties>
-    <scala.version>2.11.0</scala.version>
-    <scala.major.version>2.11</scala.major.version>
-  </properties>
-
   <modules>
     <module>pacman</module>
     <module>api</module>
@@ -50,42 +45,4 @@
     <module>libs</module>
     <module>project</module>
   </modules>
-
-  <build>
-    <!-- common plugin config for all modules -->
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.1</version>
-          <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.scala-tools</groupId>
-          <artifactId>maven-scala-plugin</artifactId>
-          <version>2.15.2</version>
-          <executions>
-            <execution>
-              <id>compile</id>
-              <goals><goal>compile</goal></goals>
-              <phase>compile</phase>
-            </execution>
-            <execution>
-              <id>test-compile</id>
-              <goals><goal>testCompile</goal></goals>
-              <phase>test-compile</phase>
-            </execution>
-            <execution>
-              <phase>process-resources</phase>
-              <goals><goal>compile</goal></goals>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
 </project>
