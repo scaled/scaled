@@ -7,19 +7,17 @@
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>scaled-services</artifactId>
+  <artifactId>scaled-project-support</artifactId>
   <packaging>pom</packaging>
 
-  <name>Scaled Services</name>
-  <description>Aggregates service projects when developing Scaled.</description>
+  <name>Scaled Project Support</name>
+  <description>Aggregates project-service projects when developing Scaled.</description>
 
-  <profiles>
-    <profile>
-      <!-- useful extensions for "bootstrapping" (working on Scaled in Scaled) -->
-      <id>bootstrap</id>
-      <modules>
-        <module>project</module>
-      </modules>
-    </profile>
-  </profiles>
+  <modules>
+    <module>service</module>
+    <module>java</module>
+    <module>scala</module>
+    <module>maven</module>
+    <module>sbt</module>
+  </modules>
 </project>
