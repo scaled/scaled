@@ -7,35 +7,6 @@ package scaled.pacman
 import java.io.{BufferedReader, InputStream, InputStreamReader}
 import java.nio.file.{Files, Path}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
-import scala.io.Source
-
-case class PackageInfo (
-  root    :Path,
-  name    :String,
-  version :String,
-  descrip :String,
-  weburl  :String,
-  srcurl  :String,
-  license :String,
-  depends :List[String],
-  srcdir  :String,
-  bindir  :String,
-  errors  :Seq[String]) {
-
-  def classesDir = root.resolve(bindir)
-
-  override def toString =
-    s"""|   name: $name
-        |version: $version
-        |descrip: $descrip
-        | weburl: $weburl
-        | srcurl: $srcurl
-        |license: $license
-        |depends: $depends
-        | srcdir: $srcdir
-        | bindir: $bindir
-        | errors: $errors""".stripMargin
-}
 
 object PackageInfo {
   import scala.collection.convert.WrapAsScala._
@@ -49,28 +20,36 @@ object PackageInfo {
     apply(root, Seq() ++ new BufferedReader(new InputStreamReader(lines)).lines.iterator)
 
   /** Creates a package info from the `package.scaled` contents in `lines`. */
-  def apply (root :Path, lines :Seq[String]) :PackageInfo = {
-    val props = MMap[String,String]()
-    var depends = List[String]()
-    val errors = ArrayBuffer[String]()
-    lines.map(trim).filter(_.length > 0) foreach { line => line.split(":", 2) match {
-      case Array(key, value) =>
-        val (tkey, tvalue) = (key.trim, value.trim)
-        if (tkey == "depend") depends = tvalue :: depends
-        else props += (tkey -> tvalue) // TODO: validate that prop has meaning?
-      case _ => errors += s"Invalid: $line"
-    }}
-    def require (prop :String) = props.getOrElse(prop, {
-      errors += s"Missing property '$prop'"
-      "unknown"
-    })
-    PackageInfo(root, require("name"), require("version"), require("descrip"), require("weburl"),
-                require("srcurl"), require("license"), depends, require("srcdir"),
-                props.getOrElse("bindir", "classes"), errors)
-  }
+  def apply (root :Path, lines :Iterable[String]) :PackageInfo =
+    new PackageInfo(root, new Config(lines))
+}
 
-  private def trim (line :String) = line.indexOf('#') match {
-    case -1 => line.trim
-    case ii => line.substring(0, ii).trim
-  }
+class PackageInfo (val root :Path, config :Config) {
+  import Config._
+
+  val source  :Source       = config("source",  SourceP)
+  val name    :String       = config("name",    StringP)
+  val version :String       = config("version", StringP)
+  val descrip :String       = config("descrip", StringP)
+  val weburl  :String       = config("weburl",  StringP) // todo UrlP
+  val license :String       = config("license", StringP)
+  val srcdir  :String       = config("srcdir",  StringP) // todo PackageDirP?
+  val bindir  :String       = config("bindir",  StringP)
+  val depends :List[Depend] = config("depend",  DependP)
+
+  val errors = config.finish()
+
+  def classesDir = root.resolve(bindir)
+
+  override def toString =
+    s"""| source: $source
+        |   name: $name
+        |version: $version
+        |descrip: $descrip
+        | weburl: $weburl
+        |license: $license
+        |depends: $depends
+        | srcdir: $srcdir
+        | bindir: $bindir
+        | errors: $errors""".stripMargin
 }

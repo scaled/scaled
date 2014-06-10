@@ -37,26 +37,19 @@ class PackageManager {
     * prefixed by `ivy:` will be resolved from the local Ivy repository. These dependencies will
     * also be assumed to already exist, having been downloaded during package installation.
     */
-  def resolveDepend (info :PackageInfo)(depURL :String) :Option[ClassLoader] = {
-    def fail (msg :String) = { warn(s"$msg [pkg=${info.name}, dep=$depURL]"); None }
-    depURL.split(":", 2) match {
-      case Array("mvn", depURL) => Depend.fromURL(depURL) match {
-        case Some(depend) => mvn.resolveDepend(depend)
-        case None         => fail(s"Invalid Maven dependency URL")
-      }
-      case Array("ivy", depURL) => Depend.fromURL(depURL) match {
-        case Some(depend) => ivy.resolveDepend(depend)
-        case None         => fail(s"Invalid Ivy dependency URL")
-      }
-      case Array(vcs, url) => pkgs.get(depURL).map(_.loader) orElse
-        fail(s"Missing project dependency")
-      case other           => fail(s"Invalid project dependency")
+  def resolveDepend (info :PackageInfo)(depend :Depend) :Option[ClassLoader] = {
+    def fail (msg :String) = { warn(s"$msg [pkg=${info.name}, dep=$depend]"); None }
+    depend match {
+      case MavenDepend(repoId)  => mvn.resolveDepend(repoId)
+      case IvyDepend(repoId)    => ivy.resolveDepend(repoId)
+      case SourceDepend(source) => pkgs.get(source).map(_.loader) orElse fail(
+        s"Missing project dependency")
     }
   }
 
   /** A mapping from `srcurl` to package. `srcurl` is the unique global identifier for a package,
     * and is what is used to express inter-package dependencies. */
-  private val pkgs = MMap[String,Package]()
+  private val pkgs = MMap[Source,Package]()
 
   private val mvn = new MavenResolver(this)
   private val ivy = new IvyResolver()
@@ -89,7 +82,7 @@ class PackageManager {
 
     // create our package and map it by srcurl
     val pkg = createPackage(info)
-    pkgs.put(info.srcurl, pkg)
+    pkgs.put(info.source, pkg)
     pkg
   }
 

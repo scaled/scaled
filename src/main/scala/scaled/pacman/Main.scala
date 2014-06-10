@@ -30,7 +30,7 @@ where <command> is one of:
 
       case Array("list") =>
         out.println("Installed packages:")
-        out.printCols(pacman.packages map { pkg => (pkg.info.name, pkg.info.srcurl) },
+        out.printCols(pacman.packages map { pkg => (pkg.info.name, pkg.info.source.toString) },
                       "No packages found.")
 
       case Array("info", name) =>
@@ -58,10 +58,10 @@ where <command> is one of:
   def printInfo (pkg :Package) {
     out.println(s"Package: ${pkg.info.name}")
     out.printCols(Seq("Install:" -> pkg.info.root.toString,
+                      "Source:"  -> pkg.info.source.toString,
                       "Version:" -> pkg.info.version,
                       "Descrip:" -> pkg.info.descrip,
                       "Web URL:" -> pkg.info.weburl,
-                      "Src URL:" -> pkg.info.srcurl,
                       "License:" -> pkg.info.license,
                       "Src Dir:" -> pkg.info.srcdir,
                       "Bin Dir:" -> pkg.info.bindir), "", 1)

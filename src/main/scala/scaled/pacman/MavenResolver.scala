@@ -17,8 +17,8 @@ class MavenResolver (mgr :PackageManager) {
   /** Resolves the supplied Maven dependency (and its transitive dependencies) and returns a
     * classloader which can deliver classes therefrom.
     */
-  def resolveDepend (depend :Depend) :Option[ClassLoader] =
-    resolve(Dependency(depend.groupId, depend.artifactId, depend.version, depend.kind))
+  def resolveDepend (id :RepoId) :Option[ClassLoader] =
+    resolve(Dependency(id.groupId, id.artifactId, id.version, id.kind)) // TODO: scope
 
   private def resolve (dep :Dependency) :Option[ClassLoader] = synchronized {
     val loader = loaders.get(dep)

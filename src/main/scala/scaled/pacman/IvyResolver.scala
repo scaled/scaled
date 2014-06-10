@@ -18,14 +18,12 @@ class IvyResolver {
   /** Resolves the supplied Ivy dependency (and its transitive dependencies) and returns a
     * classloader which can deliver classes therefrom.
     */
-  def resolveDepend (depend :Depend) :Option[ClassLoader] = {
-    val kindDir = s"${depend.kind}s"
+  def resolveDepend (id :RepoId) :Option[ClassLoader] = {
+    val kindDir = s"${id.kind}s"
     val localFile = localDir.resolve(
-      Paths.get(depend.groupId, depend.artifactId, depend.version, kindDir,
-                s"${depend.artifactId}.${depend.kind}"))
+      Paths.get(id.groupId, id.artifactId, id.version, kindDir, s"${id.artifactId}.${id.kind}"))
     val cacheFile = cacheDir.resolve(
-      Paths.get(depend.groupId, depend.artifactId, kindDir,
-                s"${depend.artifactId}-${depend.version}.${depend.kind}"))
+      Paths.get(id.groupId, id.artifactId, kindDir, s"${id.artifactId}-${id.version}.${id.kind}"))
     if (Files.exists(localFile)) Some(loader(localFile))
     else if (Files.exists(cacheFile)) Some(loader(cacheFile))
     else None

@@ -4,21 +4,44 @@
 
 package scaled.pacman
 
-/** Models a Maven or Ivy dependency. */
-case class Depend (groupId :String, artifactId :String, version :String, kind :String)
+// TODO: other scopes?
+sealed trait Scope
+case object Compile extends Scope
+case object Test extends Scope
+
+// TODO: model kind?
+case class RepoId (groupId :String, artifactId :String, version :String, kind :String, scope :Scope)
+
+sealed trait Depend
+case class SourceDepend (source :Source) extends Depend
+case class MavenDepend (id :RepoId) extends Depend
+case class IvyDepend (id :RepoId) extends Depend
 
 /** [[Depend]] related utilities. */
 object Depend {
 
-  /** Parses the supplied URL into a `Depend`. The URL must be of the form:
-    * `groupId:artifactId:version:kind`. `kind` can be omitted and `jar` will be assumed.
-    */
-  def fromURL (url :String) = url.split(":") match {
+  /** Parses a string representation of a [[Depend]]. */
+  def parse (url :String) :Depend = url.split(":", 2) match {
+    case Array("mvn", rest) => MavenDepend(parseRepoId(rest))
+    case Array("ivy", rest) => IvyDepend(parseRepoId(rest))
+    case Array(vcs,   url ) => SourceDepend(Source.parse(vcs, url))
+  }
+
+  // parses a repo depend: repo:groupId:artifactId:version:kind:scope
+  private def parseRepoId (text :String) :RepoId = text.split(":") match {
+    case Array(groupId, artifactId, version, kind, scope) =>
+      RepoId(groupId, artifactId, version, kind, parseScope(scope))
     case Array(groupId, artifactId, version, kind) =>
-      Some(Depend(groupId, artifactId, version, kind))
+      RepoId(groupId, artifactId, version, kind, Compile)
     case Array(groupId, artifactId, version) =>
-      Some(Depend(groupId, artifactId, version, "jar"))
-    case other =>
-      None
+      RepoId(groupId, artifactId, version, "jar", Compile)
+    case other => throw new IllegalArgumentException(
+      s"Invalid repo id: $text (expect 'groupId:artifactId:version:scope')")
+  }
+
+  private def parseScope (scope :String) = scope match {
+    case "compile" => Compile
+    case "test" => Test
+    case _ => throw new IllegalArgumentException(s"Invalid scope: $scope")
   }
 }
