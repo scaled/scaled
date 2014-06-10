@@ -67,7 +67,10 @@ class PackageManager {
         val pkgFile = dir.resolve("package.scaled")
         if (!Files.exists(pkgFile)) FileVisitResult.CONTINUE // descend into subdirs
         else {
-          addPackage(PackageInfo(pkgFile))
+          try addPackage(PackageInfo(pkgFile))
+          catch {
+            case e :Exception => warn(s"Unable to process package: $pkgFile", e)
+          }
           FileVisitResult.SKIP_SUBTREE // stop descending
         }
       }
