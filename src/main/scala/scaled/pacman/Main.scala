@@ -33,7 +33,7 @@ where <command> is one of:
 
       case Array("list") =>
         out.println("Installed packages:")
-        out.printCols(pacman.packages map { pkg => (pkg.info.name, pkg.info.source.toString) },
+        out.printCols(pacman.packages map { pkg => (pkg.name, pkg.source.toString) },
                       "No packages found.")
 
       case Array("info", name) =>
@@ -58,7 +58,7 @@ where <command> is one of:
   }
 
   def onPackage (name :String)(fn :Package => Unit) {
-    pacman.packages.find(_.info.name == name) match {
+    pacman.packages.find(_.name == name) match {
       case None      => fail(s"Unknown package: $name")
       case Some(pkg) => fn(pkg)
     }
@@ -70,14 +70,14 @@ where <command> is one of:
   }
 
   def printInfo (pkg :Package) {
-    out.println(s"Package: ${pkg.info.name}")
-    out.printCols(Seq("Install:" -> pkg.info.root.toString,
-                      "Source:"  -> pkg.info.source.toString,
-                      "Version:" -> pkg.info.version,
-                      "Descrip:" -> pkg.info.descrip,
-                      "Web URL:" -> pkg.info.weburl,
-                      "License:" -> pkg.info.license,
-                      "Src Dir:" -> pkg.info.srcdir,
-                      "Bin Dir:" -> pkg.info.bindir), "", 1)
+    out.println(s"Package: ${pkg.name}")
+    out.printCols(Seq("Install:" -> pkg.root.toString,
+                      "Source:"  -> pkg.source.toString,
+                      "Version:" -> pkg.version,
+                      "Descrip:" -> pkg.descrip,
+                      "Web URL:" -> pkg.weburl,
+                      "License:" -> pkg.license,
+                      "Src Dir:" -> pkg.srcdir,
+                      "Bin Dir:" -> pkg.bindir), "", 1)
   }
 }

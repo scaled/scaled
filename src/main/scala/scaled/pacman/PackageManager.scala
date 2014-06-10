@@ -33,11 +33,11 @@ object PackageManager {
 
   /** Resolves the specified package dependency, returning a classloader that can be used to load
     * classes from that dependency. */
-  def resolveDepend (info :PackageInfo)(depend :Depend) :Option[PackageLoader] = depend match {
+  def resolveDepend (forpkg :Package)(depend :Depend) :Option[PackageLoader] = depend match {
     case MavenDepend(repoId)  => mvn.resolveDepend(repoId)
     case IvyDepend(repoId)    => ivy.resolveDepend(repoId)
     case SourceDepend(source) => pkgs.get(source).map(_.loader) orElse {
-      warn(s"Missing project dependency [pkg=${info.name}, src=$source]"); None
+      warn(s"Missing project dependency [pkg=${forpkg.name}, src=$source]"); None
     }
   }
 
@@ -57,7 +57,13 @@ object PackageManager {
         val pkgFile = dir.resolve("package.scaled")
         if (!Files.exists(pkgFile)) FileVisitResult.CONTINUE // descend into subdirs
         else {
-          try addPackage(PackageInfo(pkgFile))
+          try {
+            val pkg = Package(pkgFile)
+            // log any errors noted when resolving this package info
+            pkg.errors foreach warn
+            pkgs.put(pkg.source, pkg)
+            if (observer != null) observer.packageAdded(pkg)
+          }
           catch {
             case e :Exception => warn(s"Unable to process package: $pkgFile", e)
           }
@@ -66,20 +72,6 @@ object PackageManager {
       }
     }
   })
-
-  protected def createPackage (info :PackageInfo) :Package = new Package(info)
-
-  protected def addPackage (info :PackageInfo) :Package = {
-    // log any errors noted when resolving this package info
-    info.errors foreach warn
-
-    // create our package and map it by srcurl
-    val pkg = createPackage(info)
-    pkgs.put(info.source, pkg)
-
-    if (observer != null) observer.packageAdded(pkg)
-    pkg
-  }
 
   // TODO: platform specific app dirs
   private def locateMetaDir :Path = {

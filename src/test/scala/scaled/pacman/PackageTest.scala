@@ -9,7 +9,7 @@ import java.nio.file.Paths
 import org.junit._
 import org.junit.Assert._
 
-class PackageInfoTest {
+class PackageTest {
 
   val cwd = Paths.get("")
 
@@ -26,14 +26,14 @@ class PackageInfoTest {
   val scaledSource = Source(Git, new URL("https://github.com/scaled/scaled-api.git"))
 
   @Test def testValid () {
-    val info = PackageInfo(cwd, scaledApi)
+    val info = Package(cwd, scaledApi)
     assertEquals(scaledSource, info.source)
     assertEquals(Nil, info.depends)
     assertTrue(info.errors.isEmpty)
   }
 
   @Test def testExtraCruft () {
-    val info = PackageInfo(cwd, scaledApi ++ Seq(
+    val info = Package(cwd, scaledApi ++ Seq(
       "bezelnut: ruh ruh",
       " peanuts: and popcorn"
     ))
@@ -42,7 +42,7 @@ class PackageInfoTest {
   }
 
   @Test def testDoubleSource () {
-    val info = PackageInfo(cwd, scaledApi ++ Seq(
+    val info = Package(cwd, scaledApi ++ Seq(
       " source: git:https://github.com/scaled/scaled-peanut.git"
     ))
     assertEquals(scaledSource, info.source)
@@ -51,7 +51,7 @@ class PackageInfoTest {
   }
 
   @Test def testDepends () {
-    val info = PackageInfo(cwd, scaledApi ++ Seq(
+    val info = Package(cwd, scaledApi ++ Seq(
       " depend: git:https://github.com/scaled/java-mode.git",
       " depend: mvn:com.samskivert.scaled:textmate-grammar:1.0-SNAPSHOT:jar"
     ))
