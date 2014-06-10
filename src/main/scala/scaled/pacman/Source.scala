@@ -6,22 +6,23 @@ package scaled.pacman
 
 import java.net.{MalformedURLException, URL}
 
-sealed trait VCS
-case object Git extends VCS {
-  override def toString = "git"
-}
-case object Mercurial extends VCS {
-  override def toString = "hg"
-}
-case object Subversion extends VCS {
-  override def toString = "svn"
-}
-
-case class Source (vcs :VCS, url :URL) extends Package.Id {
+case class Source (vcs :Source.VCS, url :URL) extends Package.Id {
   override def toString = s"$vcs:$url"
 }
 
 object Source {
+
+  /** Enumerates our VCSes. */
+  sealed trait VCS
+  case object Git extends VCS {
+    override def toString = "git"
+  }
+  case object Mercurial extends VCS {
+    override def toString = "hg"
+  }
+  case object Subversion extends VCS {
+    override def toString = "svn"
+  }
 
   def parse (text :String) :Source = text split(":", 2) match {
     case Array(vcs, url) => parse(vcs, url)

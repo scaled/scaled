@@ -23,7 +23,7 @@ class PackageTest {
     " srcdir: src/main/scala",
     " bindir: target/classes"
   )
-  val scaledSource = Source(Git, new URL("https://github.com/scaled/scaled-api.git"))
+  val scaledSource = Source(Source.Git, new URL("https://github.com/scaled/scaled-api.git"))
 
   @Test def testValid () {
     val info = Package(cwd, scaledApi)
@@ -56,7 +56,7 @@ class PackageTest {
       " depend: mvn:com.samskivert.scaled:textmate-grammar:1.0-SNAPSHOT:jar"
     ))
     assertEquals(scaledSource, info.source)
-    val javaSource = Source(Git, new URL("https://github.com/scaled/java-mode.git"))
+    val javaSource = Source(Source.Git, new URL("https://github.com/scaled/java-mode.git"))
     val tmRepoId = RepoId("com.samskivert.scaled", "textmate-grammar", "1.0-SNAPSHOT",
                           "jar", Compile)
     info.errors foreach println
