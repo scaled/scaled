@@ -2,7 +2,7 @@
 // Scaled Editor - the Scaled core editor implementation
 // http://github.com/scaled/scaled-editor/blob/master/LICENSE
 
-package scaled.impl.pkg
+package scaled.impl
 
 import com.google.common.collect.{HashMultimap, Sets}
 import java.nio.file.attribute.BasicFileAttributes
@@ -11,20 +11,22 @@ import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.collection.{Set => GSet}
+import scaled.Logger
 import scaled.pacman._
 
-// NOTE: package instances are constructed on a background thread
-class SPackage (mgr :SPackageManager, info :PackageInfo) extends Package(mgr, info) {
+/** Contains additional metadata for a Scaled package. This metadata is extracted from annotations
+  * on the Java bytecode found in the package. */
+class PackageMeta (log :Logger, pkg :Package) {
   import scala.collection.convert.WrapAsScala._
 
   /** Loads and returns the class for the major mode named `name`. */
-  def major (name :String) :Class[_] = loader.loadClass(majors(name))
+  def major (name :String) :Class[_] = pkg.loader.loadClass(majors(name))
   /** Loads and returns the class for the minor mode named `name`. */
-  def minor (name :String) :Class[_] = loader.loadClass(minors(name))
+  def minor (name :String) :Class[_] = pkg.loader.loadClass(minors(name))
   /** Loads and returns the class for the service with class name `name`. */
-  def service (name :String) :Class[_] = loader.loadClass(services(name))
+  def service (name :String) :Class[_] = pkg.loader.loadClass(services(name))
   /** Loads and returns all plugin classes with tag `tag`. */
-  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(loader.loadClass)
+  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(pkg.loader.loadClass)
 
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes
@@ -37,11 +39,12 @@ class SPackage (mgr :SPackageManager, info :PackageInfo) extends Package(mgr, in
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
-    info.name, majors.keySet, minors.keySet, services, info.depends)
+    pkg.info.name, majors.keySet, minors.keySet, services, pkg.info.depends)
 
   // our root may be a directory or a jar file, in either case we scan it for class files
-  if (Files.isDirectory(info.root)) {
-    Files.walkFileTree(info.root, Sets.newHashSet(FileVisitOption.FOLLOW_LINKS), 32, new SimpleFileVisitor[Path]() {
+  if (Files.isDirectory(pkg.info.root)) {
+    val opts = Sets.newHashSet(FileVisitOption.FOLLOW_LINKS)
+    Files.walkFileTree(pkg.info.root, opts, 32, new SimpleFileVisitor[Path]() {
       override def visitFile (file :Path, attrs :BasicFileAttributes) = {
         if (attrs.isRegularFile) {
           val name = file.getFileName.toString ; val fn = apply(name)
@@ -51,8 +54,8 @@ class SPackage (mgr :SPackageManager, info :PackageInfo) extends Package(mgr, in
       }
     })
   }
-  else if (info.root.getFileName.toString endsWith ".jar") {
-    val jfile = new JarFile(info.root.toFile)
+  else if (pkg.info.root.getFileName.toString endsWith ".jar") {
+    val jfile = new JarFile(pkg.info.root.toFile)
     val enum = jfile.entries()
     while (enum.hasMoreElements()) {
       val jentry = enum.nextElement() ; val fn = apply(jentry.getName)
@@ -63,7 +66,7 @@ class SPackage (mgr :SPackageManager, info :PackageInfo) extends Package(mgr, in
       }
     }
   }
-  else throw new IllegalArgumentException("Unsupported package root ${info.root}")
+  else throw new IllegalArgumentException("Unsupported package root ${pkg.info.root}")
 
   private def apply (name :String) = {
     if (name endsWith "Mode.class") parseMode
@@ -104,7 +107,7 @@ class SPackage (mgr :SPackageManager, info :PackageInfo) extends Package(mgr, in
   private def parse (viz :Visitor) = (name :String, reader :ClassReader) => try {
     reader.accept(viz, ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES)
   } catch {
-    case e :Exception => mgr.warn(s"Error parsing package class: $name", e)
+    case e :Exception => log.log(s"Error parsing package class: $name", e)
   }
 
   private def parseMode = parse(new Visitor() {

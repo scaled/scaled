@@ -31,7 +31,7 @@ class Main extends Application {
   val editors = HashBiMap.create[String,EditorPane]()
 
   val server = new Server(this)
-  val pkgMgr = new pkg.SPackageManager(logger)
+  val pkgMgr = new SPackageManager(logger)
   val svcMgr = new ServiceManager(this)
   val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 

@@ -2,7 +2,7 @@
 // Scaled Editor - the Scaled core editor implementation
 // http://github.com/scaled/scaled-editor/blob/master/LICENSE
 
-package scaled.impl.pkg
+package scaled.impl
 
 import com.google.common.collect.HashMultimap
 import java.nio.file.attribute.BasicFileAttributes
@@ -14,14 +14,20 @@ import scaled.Logger
 import scaled.pacman._
 
 /** Extends the base package manager with extra info needed by Scaled. */
-class SPackageManager (logger :Logger) extends PackageManager {
+class SPackageManager (log :Logger) {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
-  val packageAdded = Signal[SPackage]()
+  val packageAdded = Signal[PackageMeta]()
 
   /** A signal emitted when a package is uninstalled. */
-  val packageRemoved = Signal[SPackage]()
+  val packageRemoved = Signal[PackageMeta]()
+
+  /** Returns the top-level metadata directory. */
+  def metaDir :Path = PackageManager.metaDir
+
+  /** Returns info on all known packages. */
+  def packages :Iterable[PackageMeta] = metas.values
 
   /** Resolves the class for the mode named `name`. */
   def mode (major :Boolean, name :String) :Option[Class[_]] =
@@ -45,7 +51,7 @@ class SPackageManager (logger :Logger) extends PackageManager {
         val tokens = text.substring(2).split("[ /]").filterNot(skipToks)
         tokens.map(i => (i, interps.get(i))) collectFirst {
           case (interp, ms) if (!ms.isEmpty) =>
-            if (ms.size > 1) warn("Multiple modes registered to handle interpreter '$interp': $ms")
+            if (ms.size > 1) log.log("Multiple modes registered for interpreter '$interp': $ms")
             ms.head
         }
       case _ => None
@@ -53,7 +59,7 @@ class SPackageManager (logger :Logger) extends PackageManager {
     // matches the file name against all registered mode regular expressions
     def pattern (name :String) :Option[String] = {
       val ms = patterns collect { case (p, m) if (p.matcher(name).matches()) => m }
-      if (ms.size > 1) warn(s"Multiple modes match buffer name '$name': $ms")
+      if (ms.size > 1) log.log(s"Multiple modes match buffer name '$name': $ms")
       ms.headOption
     }
     // println(s"Detecting mode for ${name}")
@@ -64,10 +70,7 @@ class SPackageManager (logger :Logger) extends PackageManager {
   /** Returns the set of minor modes that should be auto-activated for `tags`. */
   def minorModes (tags :Array[String]) :Set[String] = Set() ++ tags flatMap (minorTags.get _)
 
-  override def packages :Iterable[SPackage] = super.packages.map(_.asInstanceOf[SPackage])
-
-  override def warn (msg :String) = logger.log(msg)
-  override def warn (msg :String, t :Throwable) = logger.log(msg, t)
+  private val metas = MMap[Source,PackageMeta]()
 
   private type Finder = String => Class[_]
   private val serviceMap = MMap[String,Finder]()
@@ -79,31 +82,36 @@ class SPackageManager (logger :Logger) extends PackageManager {
   private val interps   = HashMultimap.create[String,String]()
   private val minorTags = HashMultimap.create[String,String]()
 
-  override protected def createPackage (info :PackageInfo) = new SPackage(this, info)
+  // wire up our observer
+  PackageManager.observer = new PackageManager.Observer() {
+    def packageAdded (pkg :Package) {
+      // create a package metadata
+      val meta = new PackageMeta(log, pkg)
+      metas.put(pkg.info.source, meta)
 
-  override protected def addPackage (info :PackageInfo) = {
-    val pkg = super.addPackage(info).asInstanceOf[SPackage]
-
-    // map this package's major and minor modes, services and plugins
-    pkg.majors.keySet foreach { majorMap.put(_, pkg.major _) }
-    pkg.minors.keySet foreach { minorMap.put(_, pkg.minor _) }
-    pkg.services.keySet foreach { serviceMap.put(_, pkg.service _) }
-    // map the file patterns and interpreters defined by this package's major modes
-    pkg.patterns.asMap foreach { case (m, ps) => ps foreach { p =>
-      try patterns += (Pattern.compile(p) -> m)
-      catch {
-        case e :Exception => warn(s"Mode $m specified invalid pattern: $p: $e")
+      // map this package's major and minor modes, services and plugins
+      meta.majors.keySet foreach { majorMap.put(_, meta.major _) }
+      meta.minors.keySet foreach { minorMap.put(_, meta.minor _) }
+      meta.services.keySet foreach { serviceMap.put(_, meta.service _) }
+      // map the file patterns and interpreters defined by this package's major modes
+      meta.patterns.asMap foreach { case (m, ps) => ps foreach { p =>
+        try patterns += (Pattern.compile(p) -> m)
+        catch {
+          case e :Exception => log.log(s"Mode $m specified invalid pattern: $p: $e")
+        }
+      }}
+      meta.interps.asMap foreach { case (m, is) =>
+        is foreach { i => interps.put(i, m) }
       }
-    }}
-    pkg.interps.asMap foreach { case (m, is) =>
-      is foreach { i => interps.put(i, m) }
+      // map the tags defined by this pattern's minor modes
+      minorTags.putAll(meta.minorTags)
+      // tell any interested parties about this new package
+      SPackageManager.this.packageAdded.emit(meta)
     }
-    // map the tags defined by this pattern's minor modes
-    minorTags.putAll(pkg.minorTags)
-    // tell any interested parties about this new package
-    packageAdded.emit(pkg)
-    // println(s"Added package $pkg")
-    pkg
-  }
 
+    def packageRemoved (pkg :Package) {
+      // TODO
+    }
+  }
+  PackageManager.packages foreach PackageManager.observer.packageAdded
 }
