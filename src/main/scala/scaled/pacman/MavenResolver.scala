@@ -4,8 +4,7 @@
 
 package scaled.pacman
 
-import java.net.{URL, URLClassLoader}
-import java.nio.file.Paths
+import java.nio.file.{Paths, Path}
 import pomutil.{Dependency, DependResolver, POM}
 import scala.collection.mutable.{Map => MMap}
 
@@ -17,10 +16,10 @@ class MavenResolver (mgr :PackageManager) {
   /** Resolves the supplied Maven dependency (and its transitive dependencies) and returns a
     * classloader which can deliver classes therefrom.
     */
-  def resolveDepend (id :RepoId) :Option[ClassLoader] =
+  def resolveDepend (id :RepoId) :Option[PackageLoader] =
     resolve(Dependency(id.groupId, id.artifactId, id.version, id.kind)) // TODO: scope
 
-  private def resolve (dep :Dependency) :Option[ClassLoader] = synchronized {
+  private def resolve (dep :Dependency) :Option[PackageLoader] = synchronized {
     val loader = loaders.get(dep)
     if (loader.isDefined) loader
     else {
@@ -39,7 +38,7 @@ class MavenResolver (mgr :PackageManager) {
           }.resolve(false)
         }
       }
-      val loader = new PackageLoader(dep.id, toURL(dep)) {
+      val loader = new PackageLoader(dep.id, toPath(dep)) {
         // TODO: there are issues with this approach: we transitively resolve all depends, but each
         // dependent classloader then resolves its own depends; this means that a situation like:
         //
@@ -54,7 +53,7 @@ class MavenResolver (mgr :PackageManager) {
         // B; TODO!
         protected def resolveDependLoaders = depdeps.flatMap(resolve).toList
       }
-      // println(s"Created Maven loader for $dep (${toURL(dep)})")
+      // println(s"Created Maven loader for $dep (${toPath(dep)})")
       loaders.put(dep, loader)
       Some(loader)
     }
@@ -62,9 +61,9 @@ class MavenResolver (mgr :PackageManager) {
 
   private val DepScopes = Set("compile", "system", "runtime")
 
-  private def toURL (dep :Dependency) :URL = (dep.systemPath match {
+  private def toPath (dep :Dependency) :Path = dep.systemPath match {
     case Some(sp) => Paths.get(sp)
     case None     => (m2repo /: (dep.repositoryPath :+ dep.artifactName))(_ resolve _)
-  }).toUri.toURL
+  }
   private val m2repo = Paths.get(System.getProperty("user.home"), ".m2", "repository")
 }

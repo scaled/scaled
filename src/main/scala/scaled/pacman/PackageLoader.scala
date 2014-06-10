@@ -5,8 +5,10 @@
 package scaled.pacman
 
 import java.net.{URL, URLClassLoader}
+import java.nio.file.Path
 
-abstract class PackageLoader (id :String, url :URL) extends URLClassLoader(Array(url)) {
+abstract class PackageLoader (val id :String, val path :Path)
+    extends URLClassLoader(Array(path.toUri.toURL)) {
 
   override def getResource (path :String) :URL = {
     var loaders = dependLoaders // first try finding the resource in our dependencies

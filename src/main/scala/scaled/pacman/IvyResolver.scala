@@ -18,7 +18,10 @@ class IvyResolver {
   /** Resolves the supplied Ivy dependency (and its transitive dependencies) and returns a
     * classloader which can deliver classes therefrom.
     */
-  def resolveDepend (id :RepoId) :Option[ClassLoader] = {
+  def resolveDepend (id :RepoId) :Option[PackageLoader] = {
+    def loader (path :Path) :PackageLoader = new PackageLoader(id.toString, path) {
+      override protected def resolveDependLoaders = Nil // TODO
+    }
     val kindDir = s"${id.kind}s"
     val localFile = localDir.resolve(
       Paths.get(id.groupId, id.artifactId, id.version, kindDir, s"${id.artifactId}.${id.kind}"))
@@ -27,9 +30,5 @@ class IvyResolver {
     if (Files.exists(localFile)) Some(loader(localFile))
     else if (Files.exists(cacheFile)) Some(loader(cacheFile))
     else None
-  }
-
-  private def loader (file :Path) :URLClassLoader = new URLClassLoader(Array(file.toUri.toURL)) {
-    override def toString = s"IvyLoader($file)"
   }
 }

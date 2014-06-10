@@ -23,27 +23,12 @@ class PackageManager {
   def warn (msg :String, t :Throwable) :Unit = { warn(msg) ; t.printStackTrace(System.err) }
 
   /** Resolves the specified package dependency, returning a classloader that can be used to load
-    * classes from that dependency. Dependencies URLs are of the form:
-    *  - git:https://github.com/scaled/foo-service.git
-    *  - git:https://code.google.com/p/scaled-bar-service/
-    *  - hg:https://code.google.com/p/scaled-baz-service/
-    *  - svn:https://scaled-pants-service.googlecode.com/svn/trunk
-    *  - mvn:com.google.guava:guava:16.0.1:jar
-    *  - ivy:com.google.guava:guava:16.0.1:jar
-    *
-    * Dependencies in the form of a DVCS URL will have been checked out into `pkgsDir` and built.
-    * This happens during package installation, _not_ during this dependency resolution process.
-    * Dependencies prefixed by `mvn:` will be resolved from the local Maven repository, and those
-    * prefixed by `ivy:` will be resolved from the local Ivy repository. These dependencies will
-    * also be assumed to already exist, having been downloaded during package installation.
-    */
-  def resolveDepend (info :PackageInfo)(depend :Depend) :Option[ClassLoader] = {
-    def fail (msg :String) = { warn(s"$msg [pkg=${info.name}, dep=$depend]"); None }
-    depend match {
-      case MavenDepend(repoId)  => mvn.resolveDepend(repoId)
-      case IvyDepend(repoId)    => ivy.resolveDepend(repoId)
-      case SourceDepend(source) => pkgs.get(source).map(_.loader) orElse fail(
-        s"Missing project dependency")
+    * classes from that dependency. */
+  def resolveDepend (info :PackageInfo)(depend :Depend) :Option[PackageLoader] = depend match {
+    case MavenDepend(repoId)  => mvn.resolveDepend(repoId)
+    case IvyDepend(repoId)    => ivy.resolveDepend(repoId)
+    case SourceDepend(source) => pkgs.get(source).map(_.loader) orElse {
+      warn(s"Missing project dependency [pkg=${info.name}, dep=$depend]"); None
     }
   }
 
