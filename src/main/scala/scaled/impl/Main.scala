@@ -21,8 +21,8 @@ class Main extends Application {
   val log = Signal[String]()
 
   val logger = new Logger {
-    override def log (msg :String) :Unit = Main.this.log.emit(msg)
-    override def log (msg :String, exn :Throwable) {
+    override def log (msg :String) :Unit = exec.runOnUI { Main.this.log.emit(msg) }
+    override def log (msg :String, exn :Throwable) :Unit = exec.runOnUI {
       Main.this.log.emit(msg)
       Main.this.log.emit(Errors.stackTraceToString(exn))
     }
