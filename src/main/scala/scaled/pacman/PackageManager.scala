@@ -37,7 +37,7 @@ object PackageManager {
     case MavenDepend(repoId)  => mvn.resolveDepend(repoId)
     case IvyDepend(repoId)    => ivy.resolveDepend(repoId)
     case SourceDepend(source) => pkgs.get(source).map(_.loader) orElse {
-      warn(s"Missing project dependency [pkg=${info.name}, dep=$depend]"); None
+      warn(s"Missing project dependency [pkg=${info.name}, src=$source]"); None
     }
   }
 
