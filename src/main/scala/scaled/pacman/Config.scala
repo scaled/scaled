@@ -18,20 +18,23 @@ class Config (lines :Iterable[String]) {
   def apply[T] (key :String, parser :Parser[T]) :T = {
     val lines = _data.remove(key)
     var res = parser.zero
+    val errors = ArrayBuffer[String]()
     lines foreach { lines =>
       for (n <- lines) try {
         val nval = parser.parse(n)
         res = Some(if (res.isDefined) parser.accum(key)(res.get, nval) else nval)
       } catch {
-        case e :Exception => _errors += e.getMessage
+        case e :Exception => errors += e.getMessage
       }
       res
     }
-    res.getOrElse(throw new IllegalArgumentException(s"Unable to resolve '$key' [data=$lines]"))
+    _errors ++= errors
+    res.getOrElse(throw new IllegalArgumentException(
+      s"Missing or invalid binding for '$key' [data=$lines, errors=${box(errors)}]"))
   }
 
   def finish () :Seq[String] = {
-    _data foreach { case (k, d) => _errors += s"Unknown binding: '$k' [${d.mkString(", ")}]" }
+    _data foreach { case (k, d) => _errors += s"Unknown binding: '$k' ${box(d)}" }
     _errors
   }
 
@@ -39,6 +42,8 @@ class Config (lines :Iterable[String]) {
     case Array(key, value) => Some(key -> value)
     case _ => _errors += s"Invalid: $line" ; None
   }
+
+  private def box (strs :Seq[String]) = strs.mkString("[", ", ", "]")
 
   private def trim (line :String) = line.indexOf('#') match {
     case -1 => line.trim
