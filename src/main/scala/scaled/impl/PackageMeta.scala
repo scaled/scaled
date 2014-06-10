@@ -11,13 +11,16 @@ import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.collection.{Set => GSet}
-import scaled.Logger
+import scaled.{Logger, PackageInfo}
 import scaled.pacman._
 
 /** Contains additional metadata for a Scaled package. This metadata is extracted from annotations
   * on the Java bytecode found in the package. */
 class PackageMeta (log :Logger, val pkg :Package) {
   import scala.collection.convert.WrapAsScala._
+
+  /** Returns info on our package. */
+  def info = PackageInfo(pkg.source.toString, pkg.name, pkg.descrip)
 
   /** Loads and returns the class for the major mode named `name`. */
   def major (name :String) :Class[_] = pkg.loader.loadClass(majors(name))
@@ -39,12 +42,12 @@ class PackageMeta (log :Logger, val pkg :Package) {
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
-    pkg.info.name, majors.keySet, minors.keySet, services, pkg.info.depends)
+    pkg.name, majors.keySet, minors.keySet, services, pkg.depends)
 
   // our root may be a directory or a jar file, in either case we scan it for class files
-  if (Files.isDirectory(pkg.info.root)) {
+  if (Files.isDirectory(pkg.root)) {
     val opts = Sets.newHashSet(FileVisitOption.FOLLOW_LINKS)
-    Files.walkFileTree(pkg.info.root, opts, 32, new SimpleFileVisitor[Path]() {
+    Files.walkFileTree(pkg.root, opts, 32, new SimpleFileVisitor[Path]() {
       override def visitFile (file :Path, attrs :BasicFileAttributes) = {
         if (attrs.isRegularFile) {
           val name = file.getFileName.toString ; val fn = apply(name)
@@ -54,8 +57,8 @@ class PackageMeta (log :Logger, val pkg :Package) {
       }
     })
   }
-  else if (pkg.info.root.getFileName.toString endsWith ".jar") {
-    val jfile = new JarFile(pkg.info.root.toFile)
+  else if (pkg.root.getFileName.toString endsWith ".jar") {
+    val jfile = new JarFile(pkg.root.toFile)
     val enum = jfile.entries()
     while (enum.hasMoreElements()) {
       val jentry = enum.nextElement() ; val fn = apply(jentry.getName)
@@ -66,7 +69,7 @@ class PackageMeta (log :Logger, val pkg :Package) {
       }
     }
   }
-  else throw new IllegalArgumentException("Unsupported package root ${pkg.info.root}")
+  else throw new IllegalArgumentException("Unsupported package root ${pkg.root}")
 
   private def apply (name :String) = {
     if (name endsWith "Mode.class") parseMode

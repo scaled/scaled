@@ -57,6 +57,8 @@ class ServiceManager (app :Main) extends ServiceInjector(app.logger) with MetaSe
 
   // we provide MetaService, so stick ourselves in the cache directly; meta!
   services.put(getClass, this)
+  // wire the package manager up directly as well
+  services.put(app.pkgMgr.getClass, app.pkgMgr)
 
   // create our plugin manager and manually register it in the cache
   private var pluginMgr = new PluginManager(app)

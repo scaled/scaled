@@ -10,11 +10,11 @@ import java.nio.file.{Files, FileVisitResult, Path, Paths, SimpleFileVisitor}
 import java.util.regex.Pattern
 import reactual.Signal
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
-import scaled.Logger
+import scaled.{AbstractService, Logger, PackageService}
 import scaled.pacman._
 
 /** Extends the base package manager with extra info needed by Scaled. */
-class SPackageManager (log :Logger) {
+class SPackageManager (log :Logger) extends AbstractService with PackageService {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
@@ -70,6 +70,13 @@ class SPackageManager (log :Logger) {
   /** Returns the set of minor modes that should be auto-activated for `tags`. */
   def minorModes (tags :Array[String]) :Set[String] = Set() ++ tags flatMap (minorTags.get _)
 
+  override def didStartup () {} // not used
+  override def willShutdown () {} // not used
+
+  override def listPackages = metas.values.map(_.info)
+
+  override def classpath (source :String) = metas(Source.parse(source)).pkg.loader.classpath
+
   private val metas = MMap[Source,PackageMeta]()
 
   private type Finder = String => Class[_]
@@ -90,12 +97,12 @@ class SPackageManager (log :Logger) {
     def packageAdded (pkg :Package) {
       // create a package metadata ; there's some special hackery to handle the fact that services
       // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
-      val meta = if (pkg.info.source != ScaledAPI) new PackageMeta(log, pkg)
+      val meta = if (pkg.source != ScaledAPI) new PackageMeta(log, pkg)
                  else new PackageMeta(log, pkg) {
                    override def service (name :String) =
                      metas(ScaledEditor).pkg.loader.loadClass(services(name))
                  }
-      metas.put(pkg.info.source, meta)
+      metas.put(pkg.source, meta)
 
       // map this package's major and minor modes, services and plugins
       meta.majors.keySet foreach { majorMap.put(_, meta.major _) }
