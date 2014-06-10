@@ -1,8 +1,8 @@
    name: scaled-editor
+ source: git:https://github.com/scaled/scaled-editor.git
 version: 1.0
 descrip: The core of the Scaled editor.
  weburl: https://github.com/scaled/scaled-editor/
- srcurl: git:https://github.com/scaled/scaled-editor.git
 license: New BSD
  srcdir: src/main/scala
  bindir: target/classes
