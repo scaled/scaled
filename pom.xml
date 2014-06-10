@@ -11,7 +11,7 @@
   <description>Manages the installation and building of Scaled packages.</description>
 
   <properties>
-    <mainClass>scaled.pkg.Main</mainClass>
+    <mainClass>scaled.pacman.Main</mainClass>
   </properties>
 
   <dependencies>
