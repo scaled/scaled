@@ -27,14 +27,10 @@ class ServiceInjector (log :Logger) extends AbstractService {
       case h :: t => if (elem == h) t else h :: minus(t, elem)
     }
     var remargs = args ++ stockArgs
-    val params = ctor.getParameterTypes.map { p =>
-      remargs.find(p.isInstance) match {
-        case Some(arg) => remargs = minus(remargs, arg) ; arg
-        case None      => resolveService(p) getOrElse {
-          log.log(s"Unable to satisfy dependency [type=$p, remargs=$remargs]") ; null
-        }
-      }
-    }
+    val params = ctor.getParameterTypes.map { p => remargs.find(p.isInstance) match {
+      case Some(arg) => remargs = minus(remargs, arg) ; arg
+      case None      => resolveService(p)
+    }}
     ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T]
   }
 
@@ -44,9 +40,10 @@ class ServiceInjector (log :Logger) extends AbstractService {
   /** Provides stock injectables (e.g. logger and executor). */
   protected def stockArgs :List[AnyRef] = Nil
 
-  /** Resolves `sclass` as a Scaled service. If no such service exists, `None` is returned,
-    * otherwise the resolved service implementation is returned. */
-  protected def resolveService (sclass :Class[_]) :Option[AbstractService] = None
+  /** Resolves `sclass` as a Scaled service and returns its implementation.
+    * @throws InstantiationException if no such service exists. */
+  protected def resolveService (sclass :Class[_]) :AbstractService =
+    throw new InstantiationException(s"Missing implementation: $sclass")
 }
 
 class ServiceManager (app :Main) extends ServiceInjector(app.logger) with MetaService {
@@ -68,15 +65,14 @@ class ServiceManager (app :Main) extends ServiceInjector(app.logger) with MetaSe
   override def log = app.logger
   override def exec = app.exec
   override def metaFile (name :String) = app.pkgMgr.metaDir.resolve(name)
-  override def service[T] (clazz :Class[T]) :T = resolveService(clazz) match {
-    case None => throw new InstantiationException(s"Unknown service $clazz")
-    case Some(svc) => svc.asInstanceOf[T]
-  }
+  override def service[T] (clazz :Class[T]) :T = resolveService(clazz).asInstanceOf[T]
 
-  override def resolveService (sclass :Class[_]) :Option[AbstractService] = {
-    if (!sclass.getName.endsWith("Service")) None
-    else app.pkgMgr.service(sclass.getName) map {
-      simpl => services.get(simpl)
+  override def resolveService (sclass :Class[_]) = {
+    if (!sclass.getName.endsWith("Service")) throw new InstantiationException(
+      s"Service classes must be named FooService: $sclass")
+    else app.pkgMgr.service(sclass.getName) match {
+      case None       => super.resolveService(sclass)
+      case Some(impl) => services.get(impl)
     }
   }
   // TODO: when to unload resolved services?
