@@ -13,11 +13,17 @@
   <name>Scaled Project Support</name>
   <description>Aggregates project-service projects when developing Scaled.</description>
 
-  <modules>
-    <module>service</module>
-    <module>java</module>
-    <module>scala</module>
-    <module>maven</module>
-    <module>sbt</module>
-  </modules>
+  <profiles>
+    <profile>
+      <!-- useful extensions for "bootstrapping" (working on Scaled in Scaled) -->
+      <id>bootstrap</id>
+      <modules>
+        <module>service</module>
+        <module>java</module>
+        <module>scala</module>
+        <module>maven</module>
+        <module>sbt</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
