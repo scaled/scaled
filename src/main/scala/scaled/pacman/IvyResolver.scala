@@ -19,7 +19,7 @@ class IvyResolver {
     * classloader which can deliver classes therefrom.
     */
   def resolveDepend (id :RepoId) :Option[PackageLoader] = {
-    def loader (path :Path) :PackageLoader = new PackageLoader(id.toString, path) {
+    def loader (path :Path) :PackageLoader = new PackageLoader(id, path) {
       override protected def resolveDependLoaders = Nil // TODO
     }
     val kindDir = s"${id.kind}s"

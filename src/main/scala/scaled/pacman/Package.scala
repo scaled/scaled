@@ -4,11 +4,27 @@
 
 package scaled.pacman
 
+/** Package related bits. */
+object Package {
+
+  /** Used to identify packages. */
+  trait Id {
+  }
+
+  /** Used to report dependency trees. */
+  case class Node (id :Id, depends :List[Node]) {
+    def dump (indent :String = "") {
+      println(indent + id)
+      depends.foreach(_.dump(indent + "."))
+    }
+  }
+}
+
 /** Contains runtime metadata for an installed package. */
 class Package (mgr :PackageManager, val info :PackageInfo) {
 
   /** The loader for classes in this package. */
-  val loader :PackageLoader = new PackageLoader(info.name, info.classesDir) {
+  val loader :PackageLoader = new PackageLoader(info.source, info.classesDir) {
     override protected def resolveDependLoaders = info.depends.flatMap(mgr.resolveDepend(info))
   }
 

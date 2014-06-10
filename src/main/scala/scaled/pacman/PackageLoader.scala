@@ -7,8 +7,15 @@ package scaled.pacman
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Path
 
-abstract class PackageLoader (val id :String, val path :Path)
+abstract class PackageLoader (val id :Package.Id, val path :Path)
     extends URLClassLoader(Array(path.toUri.toURL)) {
+
+  /** Returns this package's classpath. */
+  def classpath :List[Path] = (path :: dependLoaders.flatMap(_.classpath)).distinct
+  // TODO: resolve dependency conflicts (Maven style, most likely)
+
+  /** Returns a tree representing this package's dependencies. */
+  def dependTree :Package.Node = Package.Node(id, dependLoaders.map(_.dependTree))
 
   override def getResource (path :String) :URL = {
     var loaders = dependLoaders // first try finding the resource in our dependencies
@@ -37,6 +44,6 @@ abstract class PackageLoader (val id :String, val path :Path)
 
   override def toString = s"PkgLoader($id)"
 
-  private lazy val dependLoaders :List[ClassLoader] = resolveDependLoaders
-  protected def resolveDependLoaders :List[ClassLoader]
+  private lazy val dependLoaders :List[PackageLoader] = resolveDependLoaders
+  protected def resolveDependLoaders :List[PackageLoader]
 }

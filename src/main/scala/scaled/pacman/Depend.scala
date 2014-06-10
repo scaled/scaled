@@ -10,7 +10,9 @@ case object Compile extends Scope
 case object Test extends Scope
 
 // TODO: model kind?
-case class RepoId (groupId :String, artifactId :String, version :String, kind :String, scope :Scope)
+case class RepoId (
+  groupId :String, artifactId :String, version :String, kind :String, scope :Scope
+) extends Package.Id
 
 sealed trait Depend
 case class SourceDepend (source :Source) extends Depend

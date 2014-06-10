@@ -17,7 +17,7 @@ case object Subversion extends VCS {
   override def toString = "svn"
 }
 
-case class Source (vcs :VCS, url :URL) {
+case class Source (vcs :VCS, url :URL) extends Package.Id {
   override def toString = s"$vcs:$url"
 }
 

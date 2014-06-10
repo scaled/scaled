@@ -38,7 +38,7 @@ class MavenResolver (mgr :PackageManager) {
           }.resolve(false)
         }
       }
-      val loader = new PackageLoader(dep.id, toPath(dep)) {
+      val loader = new PackageLoader(toRepoId(dep), toPath(dep)) {
         // TODO: there are issues with this approach: we transitively resolve all depends, but each
         // dependent classloader then resolves its own depends; this means that a situation like:
         //
@@ -60,6 +60,9 @@ class MavenResolver (mgr :PackageManager) {
   }
 
   private val DepScopes = Set("compile", "system", "runtime")
+
+  private def toRepoId (dep :Dependency) = RepoId(
+    dep.groupId, dep.artifactId, dep.version, dep.`type`, if (dep.scope == "test") Test else Compile)
 
   private def toPath (dep :Dependency) :Path = dep.systemPath match {
     case Some(sp) => Paths.get(sp)

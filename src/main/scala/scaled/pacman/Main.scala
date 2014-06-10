@@ -4,6 +4,8 @@
 
 package scaled.pacman
 
+import java.io.File
+
 /** The main command line entry point for the Scaled Package Manager. */
 object Main {
   import scala.collection.convert.WrapAsScala._
@@ -13,10 +15,11 @@ Usage: spam <command>
 
 where <command> is one of:
 
-  install [pkg-url]                  installs package at pkg-url, and its dependencies
-  list                               lists all installed packages
-  info [pkg-name | --all]            prints detailed info on pkg-name (or all packages)
-  run pkg-name classname [arg ...]   runs classname from pkg-name with args
+  install [pkg-url]         installs package at pkg-url, and its dependencies
+  list                      lists all installed packages
+  info [pkg-name | --all]   prints detailed info on pkg-name (or all packages)
+  classpath pkg-name        prints the classpath for pkg-name
+  depends pkg-name          prints the dependency tree for pkg-name
 """
 
   lazy val pacman = new PackageManager()
@@ -38,21 +41,29 @@ where <command> is one of:
           out.println("------------------------------------------------------------")
           printInfo(pkg)
           out.println("")
-        } else pacman.packages.find(_.info.name == name) match {
-          case None => out.println(s"Unknown package: $name")
-          case Some(pkg) => printInfo(pkg)
-        }
+        } else onPackage(name)(printInfo)
 
-      case Array("run", pkgName, className, args @ _*) =>
-        pacman.packages.find(_.info.name == pkgName) match {
-          case None => out.println(s"Unknown package: $pkgName")
-          case Some(pkg) =>
-        }
+      case Array("classpath", pkgName) =>
+        onPackage(pkgName) { pkg => out.println(pkg.loader.classpath.mkString(File.pathSeparator)) }
+
+      case Array("depends", pkgName) =>
+        onPackage(pkgName) { _.loader.dependTree.dump() }
 
       case _ =>
-        System.err.println(usage)
-        System.exit(255)
+        fail(usage)
     }
+  }
+
+  def onPackage (name :String)(fn :Package => Unit) {
+    pacman.packages.find(_.info.name == name) match {
+      case None      => fail(s"Unknown package: $name")
+      case Some(pkg) => fn(pkg)
+    }
+  }
+
+  def fail (msg :String) {
+    System.err.println(msg)
+    System.exit(255)
   }
 
   def printInfo (pkg :Package) {
@@ -65,22 +76,5 @@ where <command> is one of:
                       "License:" -> pkg.info.license,
                       "Src Dir:" -> pkg.info.srcdir,
                       "Bin Dir:" -> pkg.info.bindir), "", 1)
-    // def print0 (header :String, info :Iterable[(String,String)]) {
-    //   if (info.iterator.hasNext) {
-    //     out.println("")
-    //     out.println(header)
-    //     out.printCols(info, "")
-    //   }
-    // }
-    // def print1 (header :String, info :Iterable[java.util.Map.Entry[String,String]]) {
-    //   print0(header, info.map(e => (e.getKey, e.getValue)))
-    // }
-    // print0("Major modes:", pkg.majors)
-    // print0("Minor modes:", pkg.minors)
-    // print0("Services:", pkg.services)
-    // print1("Plugins:", pkg.plugins.entries)
-    // print1("Patterns:", pkg.patterns.entries)
-    // print1("Interps:", pkg.interps.entries)
-    // print1("Minor tags:", pkg.minorTags.entries)
   }
 }
