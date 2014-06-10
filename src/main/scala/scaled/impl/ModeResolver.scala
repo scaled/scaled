@@ -41,7 +41,7 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
     val isMajor = mclass == classOf[MajorMode]
     val clazz = locate(isMajor, mode)
     if (mclass.isAssignableFrom(clazz)) clazz.asInstanceOf[Class[T]]
-    else throw new IllegalArgumentException(s"$mode is not a ${mclass.getSimpleName}.")
+    else throw new IllegalArgumentException(s"$mode ($clazz) is not a ${mclass.getSimpleName}.")
   }
 
   private def resolve[T] (mode :String, view :BufferViewImpl, mline :ModeLine,
