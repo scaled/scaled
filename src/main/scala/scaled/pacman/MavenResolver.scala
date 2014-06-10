@@ -34,7 +34,7 @@ class MavenResolver {
             // JVM tools project and handle it specially...
             override def rootDepends (forTest :Boolean) =
               if (forTest) super.rootDepends(forTest)
-              else pom.depends filter(d => DepScopes(d.scope))
+              else pom.depends filter(d => DepScopes(d.scope) && !d.optional)
           }.resolve(false)
         }
       }
