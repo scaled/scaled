@@ -28,18 +28,18 @@ abstract class PackageLoader (val id :Package.Id, val path :Path)
   }
   override protected def findClass (name :String) :Class[_] = {
     // println(s"Seeking $name in $id")
-    var loaders = dependLoaders // first try finding the class in our dependencies
+    try return super.findClass(name)
+    catch {
+      case cnfe :ClassNotFoundException => // fall through and search depends
+    }
+    var loaders = dependLoaders
     while (!loaders.isEmpty) {
       try return loaders.head.loadClass(name)
       catch {
         case cnfe :ClassNotFoundException => loaders = loaders.tail
       }
     }
-    try super.findClass(name) // then fall back to looking locally
-    catch {
-      case cnfe :ClassNotFoundException => // provide a more useful error message
-        throw new ClassNotFoundException(s"$id missing dependency: $name")
-    }
+    throw new ClassNotFoundException(s"$id missing dependency: $name")
   }
 
   override def toString = s"PkgLoader($id)"
