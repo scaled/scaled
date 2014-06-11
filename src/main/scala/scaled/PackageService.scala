@@ -10,7 +10,7 @@ import java.nio.file.Path
 case class PackageInfo (source :String, name :String, descrip :String)
 
 /** Provides the ability to interact with the Scaled Package Manager. */
-@Service(name="package", impl="impl.SPackageManager",
+@Service(name="package", impl="impl.PackageManager",
          desc="Provides the ability to interact with the Scaled Package Manager.")
 trait PackageService {
 
