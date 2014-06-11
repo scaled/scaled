@@ -14,7 +14,7 @@ import scaled.{AbstractService, Logger, PackageService}
 import scaled.pacman._
 
 /** Extends the base package manager with extra info needed by Scaled. */
-class SPackageManager (log :Logger) extends AbstractService with PackageService {
+class PackageManager (log :Logger) extends AbstractService with PackageService {
   import scala.collection.convert.WrapAsScala._
 
   /** A signal emitted when a package is installed. */
@@ -23,8 +23,10 @@ class SPackageManager (log :Logger) extends AbstractService with PackageService 
   /** A signal emitted when a package is uninstalled. */
   val packageRemoved = Signal[PackageMeta]()
 
+  private val pkgRepo = scaled.pacman.Main.repo
+
   /** Returns the top-level metadata directory. */
-  def metaDir :Path = PackageManager.metaDir
+  def metaDir :Path = pkgRepo.metaDir
 
   /** Returns info on all known packages. */
   def packages :Iterable[PackageMeta] = metas.values
@@ -93,7 +95,7 @@ class SPackageManager (log :Logger) extends AbstractService with PackageService 
   private val ScaledEditor = Source.parse("git:https://github.com/scaled/scaled-editor.git")
 
   // wire up our observer
-  PackageManager.observer = new PackageManager.Observer() {
+  pkgRepo.observer = new PackageRepo.Observer() {
     def packageAdded (pkg :Package) {
       // create a package metadata ; there's some special hackery to handle the fact that services
       // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
@@ -121,12 +123,12 @@ class SPackageManager (log :Logger) extends AbstractService with PackageService 
       // map the tags defined by this pattern's minor modes
       minorTags.putAll(meta.minorTags)
       // tell any interested parties about this new package
-      SPackageManager.this.packageAdded.emit(meta)
+      PackageManager.this.packageAdded.emit(meta)
     }
 
     def packageRemoved (pkg :Package) {
       // TODO
     }
   }
-  PackageManager.packages foreach PackageManager.observer.packageAdded
+  pkgRepo.packages foreach pkgRepo.observer.packageAdded
 }
