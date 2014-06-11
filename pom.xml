@@ -11,14 +11,15 @@
   <description>Manages the installation and building of Scaled packages.</description>
 
   <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mainClass>scaled.pacman.Main</mainClass>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>com.samskivert</groupId>
-      <artifactId>pom-util</artifactId>
-      <version>0.7-SNAPSHOT</version>
+      <groupId>co.paralleluniverse</groupId>
+      <artifactId>capsule</artifactId>
+      <version>0.5.0</version>
     </dependency>
 
     <dependency>
@@ -32,25 +33,13 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <goals><goal>compile</goal></goals>
-            <phase>compile</phase>
-          </execution>
-          <execution>
-            <id>test-compile</id>
-            <goals><goal>testCompile</goal></goals>
-            <phase>test-compile</phase>
-          </execution>
-          <execution>
-            <phase>process-resources</phase>
-            <goals><goal>compile</goal></goals>
-          </execution>
-        </executions>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
       </plugin>
 
       <!-- builds a standalone jar file during 'mvn package' -->

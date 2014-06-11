@@ -1,0 +1,44 @@
+//
+// Scaled Package Manager - builds and installs Scaled packages
+// http://github.com/scaled/scaled-pacman/blob/master/LICENSE
+
+package scaled.pacman;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+
+public class Source implements Depend.Id {
+
+  public static enum VCS {
+    GIT, HG, SVN;
+    @Override public String toString () {
+      return super.toString().toLowerCase();
+    }
+  }
+
+  public static Source parse (String text) throws MalformedURLException {
+    String[] bits = text.split(":", 2);
+    if (bits.length != 2) throw new IllegalArgumentException("Invalid VCS URL:"+ text);
+    return parse(bits[0], bits[1]);
+  }
+
+  public static Source parse (String vcs, String url) throws MalformedURLException {
+    return new Source(Enum.valueOf(VCS.class, vcs.toUpperCase()), new URL(url));
+  }
+
+  public final VCS vcs;
+  public final URL url;
+
+  public Source (VCS vcs, URL url) {
+    this.vcs = vcs;
+    this.url = url;
+  }
+
+  @Override public String conflictId () { return toString(); }
+  @Override public String toString () { return vcs + ":" + url; }
+  @Override public int hashCode () { return vcs.hashCode() ^ url.hashCode(); }
+  @Override public boolean equals (Object other) {
+    return (other instanceof Source) && vcs == ((Source)other).vcs &&
+      url.equals(((Source)other).url);
+  }
+}
