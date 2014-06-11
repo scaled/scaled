@@ -6,8 +6,10 @@ package scaled.pacman;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -24,6 +26,7 @@ public class Main {
     "  list                               lists all installed packages\n" +
     "  info [pkg-name | --all]            prints detailed info on pkg-name (or all packages)\n" +
     "  depends pkg-name                   prints the dependency tree for pkg-name\n" +
+    "  classpath pkg-name                 prints the classpath for pkg-name\n" +
     "  run pkg-name classname [arg ...]   runs classname from pkg-name with args";
 
   public static PackageRepo repo;
@@ -37,11 +40,12 @@ public class Main {
 
     // we'll introduce proper arg parsing later; for now KISS
     switch (args[0]) {
-    case "install": install(args[1]); break;
-    case    "list": list(); break;
-    case    "info": info(args[1]); break;
-    case "depends": depends(args[1]); break;
-    case     "run": run(args[1], args[2], tail(args, 3)); break;
+    case   "install": install(args[1]); break;
+    case      "list": list(); break;
+    case      "info": info(args[1]); break;
+    case   "depends": depends(args[1]); break;
+    case "classpath": classpath(args[1]); break;
+    case       "run": run(args[1], args[2], tail(args, 3)); break;
     default: fail(USAGE); break;
     }
   }
@@ -80,7 +84,13 @@ public class Main {
   }
 
   private static void depends (String pkgName) {
-    onPackage(pkgName, pkg -> repo.resolveDepends(pkg).dump());
+    onPackage(pkgName, pkg -> pkg.loader().dump(System.out, "", new HashSet<>()));
+  }
+
+  private static void classpath (String pkgName) {
+    onPackage(pkgName, pkg -> {
+        for (Path path : pkg.loader().classpath()) out.println(path);
+    });
   }
 
   private static void run (String pkgName, String classname, String[] args) {

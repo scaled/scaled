@@ -16,9 +16,12 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class PackageRepo {
 
@@ -99,13 +102,18 @@ public class PackageRepo {
       }
     }
 
-    List<Path> localDeps = new ArrayList<>();
-    localDeps.add(pkg.classesDir());
-    // if the package has Maven dependencies, resolve those and add them to local deps
+    // use a linked hash set because Capsule sometimes returns duplicate dependencies, so this will
+    // filter them out; but we need to preserve iteration order
+    LinkedHashSet<Path> mavenDeps = new LinkedHashSet<>();
+    // if the package has Maven dependencies, resolve those and add them to maven deps
     if (!mvnIds.isEmpty()) {
-      for (Path path : _mvn.resolve(mvnIds)) localDeps.add(path);
+      // compute the transitive set of Maven depends already handled by our package dependencies;
+      // we'll omit those from our Maven deps because we want to "inherit" them
+      Set<Path> haveMavenDeps = new HashSet<>();
+      for (PackageLoader dep : packageDeps) dep.accumMavenDeps(haveMavenDeps);
+      for (Path path : _mvn.resolve(mvnIds)) if (!haveMavenDeps.contains(path)) mavenDeps.add(path);
     }
-    return new PackageLoader(pkg.source, localDeps, packageDeps);
+    return new PackageLoader(pkg.source, pkg.classesDir(), mavenDeps, packageDeps);
   }
 
   /** Resolves the dependencies for {@code pkg} into a properly ordered list of class loaders. */
