@@ -62,8 +62,21 @@ public class PackageBuilder {
   }
 
   private void buildScala (Path scalaDir, Path javaDir) throws IOException {
+    List<String> cmd = new ArrayList<>();
+    cmd.add(findJavaHome().resolve("bin").resolve("java").toString());
+
     String scalacId = "org.scala-lang:scala-compiler:2.11.0";
-    List<Path> scalacCP = _mvn.resolve(Arrays.asList(RepoId.parse(scalacId)));
+    cmd.add("-cp");
+    cmd.add(classpathToString(_mvn.resolve(Arrays.asList(RepoId.parse(scalacId)))));
+    cmd.add("scala.tools.nsc.Main");
+
+    cmd.add("-d"); cmd.add(_pkg.root.relativize(_pkg.classesDir()).toString());
+    List<Path> cp = buildClasspath();
+    if (!cp.isEmpty()) { cmd.add("-classpath"); cmd.add(classpathToString(cp)); }
+    if (javaDir != null) addSources(javaDir, ".java", cmd);
+    addSources(scalaDir, ".scala", cmd);
+
+    if (exec(cmd) != 0) throw new IOException("Scala build failed.");
   }
 
   private void buildJava (Path javaDir) throws IOException {
