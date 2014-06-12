@@ -11,7 +11,9 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /** Contains runtime metadata for an installed package. */
@@ -29,8 +31,6 @@ public class Package {
   public final String descrip;
   public final String weburl;
   public final String license;
-  public final String srcdir;
-  public final String bindir;
   public final List<Depend> depends;
 
   public final List<String> errors;
@@ -61,8 +61,6 @@ public class Package {
     descrip = cfg.resolve("descrip", Config.StringP);
     weburl  = cfg.resolve("weburl",  Config.StringP); // todo UrlP
     license = cfg.resolve("license", Config.StringP);
-    srcdir  = cfg.resolve("srcdir",  Config.StringP); // todo PackageDirP?
-    bindir  = cfg.resolve("bindir",  Config.StringP);
     depends = cfg.resolve("depend",  new Config.DependP(Depend.Scope.COMPILE));
     errors  = cfg.finish();
   }
@@ -73,9 +71,18 @@ public class Package {
     return _loader;
   }
 
-  public Path classesDir () {
-    return root.resolve(bindir);
+  public Path sourceDir () { return root.resolve("src").resolve("main"); }
+  public Path outputDir () { return root.resolve("target"); }
+  public Path classesDir () { return outputDir().resolve("classes"); }
+
+  public Map<String,Path> sourceDirs () throws IOException {
+    Map<String,Path> dirs = new HashMap<>();
+    Files.list(root.resolve("src").resolve("main")).forEach(dir -> {
+      dirs.put(dir.getFileName().toString(), dir);
+    });
+    return dirs;
   }
+
 
   @Override public String toString () {
     return (" source=" + source  + "\n" +
@@ -85,8 +92,6 @@ public class Package {
             " weburl=" + weburl  + "\n" +
             "license=" + license + "\n" +
             "depends=" + depends + "\n" +
-            " srcdir=" + srcdir  + "\n" +
-            " bindir=" + bindir  + "\n" +
             " errors=" + errors);
   }
 
