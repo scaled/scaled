@@ -67,13 +67,6 @@ public class Package {
     errors  = cfg.finish();
   }
 
-  /** Returns a resolved dependency tree node for this project. */
-  public DependTree.Node toDependNode () {
-    return new DependTree.Node(source) {
-      @Override public Path path () { return classesDir(); }
-    };
-  }
-
   /** Returns a class loader for loading classes from this package and its depends. */
   public PackageLoader loader () {
     if (_loader == null) _loader = repo.createLoader(this);

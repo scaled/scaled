@@ -17,6 +17,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -65,28 +66,13 @@ public class PackageRepo {
     t.printStackTrace(System.err);
   }
 
-  /** Resolves the dependencies for {@code pkg}. TODO: scope. */
-  public DependTree resolveDepends (Package pkg) {
-    DependTree tree = new DependTree(pkg.toDependNode());
-    resolveDepends(pkg.depends, tree.root);
-    return tree;
-  }
-
-  private void resolveDepends (List<Depend> depends, DependTree.Node into) {
-    List<RepoId> mvnIds = new ArrayList<>();
-    for (Depend dep : depends) {
-      if (dep.id instanceof RepoId) mvnIds.add((RepoId)dep.id);
-      else {
-        Package pkg = _pkgs.get((Source)dep.id);
-        if (pkg != null) {
-          DependTree.Node pnode = pkg.toDependNode();
-          resolveDepends(pkg.depends, pnode);
-          into.children.add(pnode);
-        } else warn("Missing package for depend [owner=" + into.id + ", source=" + dep.id + "]");
-      }
-    }
-    // now resolve the maven dependencies all at once and add them at this level
-    // into.children.addAll(_mvn.resolve(mvnIds));
+  /** Returns a list of {@code pkg}'s transitive package dependencies. The list will be ordered such
+    * that each package will appear later in the list than all packages on which it depends. Note:
+    * {@code pkg} is included at the end of the list. */
+  public List<Package> packageDepends (Package pkg) {
+    LinkedHashMap<Source,Package> pkgs = new LinkedHashMap<>();
+    addPackageDepends(pkgs, pkg);
+    return new ArrayList<>(pkgs.values());
   }
 
   /** Creates a class loader for {@code pkg}. */
@@ -114,25 +100,6 @@ public class PackageRepo {
       for (Path path : _mvn.resolve(mvnIds)) if (!haveMavenDeps.contains(path)) mavenDeps.add(path);
     }
     return new PackageLoader(pkg.source, pkg.classesDir(), mavenDeps, packageDeps);
-  }
-
-  /** Resolves the dependencies for {@code pkg} into a properly ordered list of class loaders. */
-  public List<ClassLoader> resolveLoaders (Package pkg) {
-    DependTree tree = resolveDepends(pkg);
-    List<ClassLoader> loaders = new ArrayList<>();
-    for (Path path : tree.linearize()) {
-      try {
-        ClassLoader loader = _loaders.get(path);
-        if (loader == null) { _loaders.put(
-          path, loader = new URLClassLoader(new URL[] { path.toUri().toURL() }));
-            warn("Created loader " + path);
-        }
-        loaders.add(loader);
-      } catch (MalformedURLException e) {
-        warn("Unable to compute URL for path: " + path, e);
-      }
-    }
-    return loaders;
   }
 
   public PackageRepo () throws IOException {
@@ -165,6 +132,21 @@ public class PackageRepo {
     });
   }
 
+  private void addPackageDepends (LinkedHashMap<Source,Package> pkgs, Package pkg) {
+    // stop if we've already added this package's depends
+    if (pkgs.containsKey(pkg.source)) return;
+    // add all of this package's depends
+    for (Depend dep : pkg.depends) {
+      if (dep.id instanceof Source) {
+        Package dpkg = _pkgs.get(dep.id);
+        if (dpkg == null) warn("Missing depend! [pkg=" + pkg.source + ", dep=" + dep.id + "]");
+        else addPackageDepends(pkgs, dpkg);
+      }
+    }
+    // then add this package
+    pkgs.put(pkg.source, pkg);
+  }
+
   // TODO: platform specific app dirs
   private Path locateMetaDir () {
     Path homeDir = Paths.get(System.getProperty("user.home"));
@@ -173,7 +155,6 @@ public class PackageRepo {
 
   private final Path _pkgsDir;
   private final Map<Source,Package> _pkgs = new HashMap<>();
-  private final Map<Path,ClassLoader> _loaders = new HashMap<>();
   private final MavenResolver _mvn = new MavenResolver();
   // private final IvyResolver _ivy = new IvyResolver();
 }
