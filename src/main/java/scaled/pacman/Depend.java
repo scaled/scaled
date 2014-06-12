@@ -32,4 +32,10 @@ public class Depend {
     this.id = id;
     this.scope = scope;
   }
+
+  @Override public String toString () { return id + ":" + scope.toString().toLowerCase(); }
+  @Override public int hashCode () { return id.hashCode() ^ scope.hashCode(); }
+  @Override public boolean equals (Object oo) {
+    return (oo instanceof Depend) && ((Depend)oo).id.equals(id) && ((Depend)oo).scope == scope;
+  }
 }
