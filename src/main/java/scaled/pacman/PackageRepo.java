@@ -151,7 +151,10 @@ public class PackageRepo {
         try {
           Package pkg = new Package(PackageRepo.this, pkgFile);
           // log any errors noted when resolving this package info
-          for (String error : pkg.errors) warn(error);
+          if (!pkg.errors.isEmpty()) {
+            warn("ERRORS in " + pkg.root + "/package.scaled:");
+            for (String error : pkg.errors) warn("- " + error);
+          }
           _pkgs.put(pkg.source, pkg);
           if (observer != null) observer.packageAdded(pkg);
         } catch (Exception e) {

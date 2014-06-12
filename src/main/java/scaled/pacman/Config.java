@@ -27,7 +27,12 @@ public class Config {
       this.scope = scope;
     }
     public List<Depend> parse (String text) throws Exception {
-      return new ArrayList<>(Collections.singletonList(Depend.parse(text, scope)));
+      try {
+        return new ArrayList<>(Collections.singletonList(Depend.parse(text, scope)));
+      } catch (Exception e) {
+        throw new IllegalArgumentException(
+          "Failed to parse depend '" + text + "': " + e.getMessage());
+      }
     }
     public Optional<List<Depend>> zero () {
       return Optional.of(new ArrayList<>());

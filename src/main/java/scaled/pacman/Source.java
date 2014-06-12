@@ -11,6 +11,12 @@ public class Source implements Depend.Id {
 
   public static enum VCS {
     GIT, HG, SVN;
+
+    public static VCS parse (String vcs) {
+      try { return Enum.valueOf(VCS.class, vcs.toUpperCase()); }
+      catch (Exception e) { throw new IllegalArgumentException("Unknown VCS: " + vcs); }
+    }
+
     @Override public String toString () {
       return super.toString().toLowerCase();
     }
@@ -23,7 +29,7 @@ public class Source implements Depend.Id {
   }
 
   public static Source parse (String vcs, String url) throws MalformedURLException {
-    return new Source(Enum.valueOf(VCS.class, vcs.toUpperCase()), new URL(url));
+    return new Source(VCS.parse(vcs), new URL(url));
   }
 
   public final VCS vcs;
