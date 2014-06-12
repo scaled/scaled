@@ -4,8 +4,8 @@
 
 package scaled.pacman;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class Source implements Depend.Id {
 
@@ -22,20 +22,20 @@ public class Source implements Depend.Id {
     }
   }
 
-  public static Source parse (String text) throws MalformedURLException {
+  public static Source parse (String text) throws URISyntaxException {
     String[] bits = text.split(":", 2);
-    if (bits.length != 2) throw new IllegalArgumentException("Invalid VCS URL:"+ text);
+    if (bits.length != 2) throw new IllegalArgumentException("Invalid VCS URI:"+ text);
     return parse(bits[0], bits[1]);
   }
 
-  public static Source parse (String vcs, String url) throws MalformedURLException {
-    return new Source(VCS.parse(vcs), new URL(url));
+  public static Source parse (String vcs, String url) throws URISyntaxException {
+    return new Source(VCS.parse(vcs), new URI(url));
   }
 
   public final VCS vcs;
-  public final URL url;
+  public final URI url;
 
-  public Source (VCS vcs, URL url) {
+  public Source (VCS vcs, URI url) {
     this.vcs = vcs;
     this.url = url;
   }

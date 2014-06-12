@@ -4,7 +4,7 @@
 
 package scaled.pacman;
 
-import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 
 public class Depend {
 
@@ -18,9 +18,9 @@ public class Depend {
   }
 
   /** Parses a string representation of a [[Depend]]. */
-  public static Depend parse (String url, Scope scope) throws MalformedURLException {
+  public static Depend parse (String url, Scope scope) throws URISyntaxException {
     String[] bits = url.split(":", 2);
-    if (bits.length == 1) throw new IllegalArgumentException("Invalid depend URL: " + url);
+    if (bits.length == 1) throw new IllegalArgumentException("Invalid depend URI: " + url);
     if (bits[0].equals("mvn")) return new Depend(RepoId.parse(bits[1]), scope);
     return new Depend(Source.parse(bits[0], bits[1]), scope);
   }
