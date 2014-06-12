@@ -5,9 +5,6 @@
 package scaled.pacman;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,6 +34,9 @@ public class PackageRepo {
 
   /** The top-level Scaled metadata directory. */
   public final Path metaDir = locateMetaDir();
+
+  /** Used to resolve Maven artifacts. */
+  public final MavenResolver mvn = new MavenResolver();
 
   /** Returns all currently installed packages. */
   public Iterable<Package> packages () {
@@ -97,7 +97,7 @@ public class PackageRepo {
       // we'll omit those from our Maven deps because we want to "inherit" them
       Set<Path> haveMavenDeps = new HashSet<>();
       for (PackageLoader dep : packageDeps) dep.accumMavenDeps(haveMavenDeps);
-      for (Path path : _mvn.resolve(mvnIds)) if (!haveMavenDeps.contains(path)) mavenDeps.add(path);
+      for (Path path : mvn.resolve(mvnIds)) if (!haveMavenDeps.contains(path)) mavenDeps.add(path);
     }
     return new PackageLoader(pkg.source, pkg.classesDir(), mavenDeps, packageDeps);
   }
@@ -155,6 +155,4 @@ public class PackageRepo {
 
   private final Path _pkgsDir;
   private final Map<Source,Package> _pkgs = new HashMap<>();
-  private final MavenResolver _mvn = new MavenResolver();
-  // private final IvyResolver _ivy = new IvyResolver();
 }

@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import scaled.pacman.builder.PackageBuilder;
 
 /** The main command line entry point for the Scaled Package Manager. */
 public class Main {
@@ -84,9 +83,7 @@ public class Main {
                                 new String[] { "Version:", pkg.version },
                                 new String[] { "Descrip:", pkg.descrip },
                                 new String[] { "Web URL:", pkg.weburl },
-                                new String[] { "License:", pkg.license },
-                                new String[] { "Src Dir:", pkg.srcdir },
-                                new String[] { "Bin Dir:", pkg.bindir }), "", 1);
+                                new String[] { "License:", pkg.license }), "", 1);
   }
 
   private static void depends (String pkgName) {
@@ -102,7 +99,7 @@ public class Main {
   private static void build (String pkgName, boolean deps) {
     onPackage(pkgName, pkg -> {
       for (Package bpkg : packageOrDeps(pkg, deps)) {
-        try { new PackageBuilder(bpkg).build(); }
+        try { new PackageBuilder(repo.mvn, bpkg).build(); }
         catch (Exception e) {
           System.err.println("Failure invoking 'build' in: " + bpkg.root);
           e.printStackTrace(System.err);
@@ -114,7 +111,7 @@ public class Main {
   private static void clean (String pkgName, boolean deps) {
     onPackage(pkgName, pkg -> {
       for (Package bpkg : packageOrDeps(pkg, deps)) {
-        try { new PackageBuilder(bpkg).clean(); }
+        try { new PackageBuilder(repo.mvn, bpkg).clean(); }
         catch (Exception e) {
           System.err.println("Failure invoking 'clean' in: " + bpkg.root);
           e.printStackTrace(System.err);

@@ -4,7 +4,7 @@
 
 package scaled.pacman
 
-import java.net.URL
+import java.net.URI
 import java.nio.file.Paths
 import java.util.Collections
 import org.junit._
@@ -26,7 +26,7 @@ class PackageTest {
     " srcdir: src/main/scala",
     " bindir: target/classes"
   )
-  val scaledSource = new Source(Source.VCS.GIT, new URL("https://github.com/scaled/scaled-api.git"))
+  val scaledSource = new Source(Source.VCS.GIT, new URI("https://github.com/scaled/scaled-api.git"))
 
   @Test def testValid () {
     val info = new Package(null, cwd, scaledApi)
@@ -59,7 +59,7 @@ class PackageTest {
       " depend: mvn:com.samskivert.scaled:textmate-grammar:1.0-SNAPSHOT:jar"
     ))
     assertEquals(scaledSource, info.source)
-    val javaSource = new Source(Source.VCS.GIT, new URL("https://github.com/scaled/java-mode.git"))
+    val javaSource = new Source(Source.VCS.GIT, new URI("https://github.com/scaled/java-mode.git"))
     val tmRepoId = new RepoId("com.samskivert.scaled", "textmate-grammar", "1.0-SNAPSHOT", "jar")
     info.errors foreach println
     assertEquals(0, info.errors.size)
