@@ -8,7 +8,7 @@ import java.util.*;
 
 public class Config {
 
-  // defines simply parsing and accumulation scheme for package config files
+  /** Defines simply parsing and accumulation scheme for package config files. */
   public static abstract class Parser<T> {
     public abstract T parse (String text) throws Exception;
     public Optional<T> zero () {
