@@ -43,6 +43,7 @@
       </plugin>
 
       <!-- builds a standalone jar file during 'mvn package' -->
+<!--
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>2.4</version>
@@ -66,6 +67,7 @@
           </execution>
         </executions>
       </plugin>
+-->
     </plugins>
   </build>
 </project>
