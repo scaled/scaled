@@ -6,10 +6,13 @@ package scaled.pacman
 
 import java.net.URL
 import java.nio.file.Paths
+import java.util.Collections
 import org.junit._
 import org.junit.Assert._
 
 class PackageTest {
+  import scala.collection.convert.WrapAsJava._
+  import scala.collection.convert.WrapAsScala._
 
   val cwd = Paths.get("")
 
@@ -23,17 +26,17 @@ class PackageTest {
     " srcdir: src/main/scala",
     " bindir: target/classes"
   )
-  val scaledSource = Source(Source.Git, new URL("https://github.com/scaled/scaled-api.git"))
+  val scaledSource = new Source(Source.VCS.GIT, new URL("https://github.com/scaled/scaled-api.git"))
 
   @Test def testValid () {
-    val info = Package(cwd, scaledApi)
+    val info = new Package(null, cwd, scaledApi)
     assertEquals(scaledSource, info.source)
-    assertEquals(Nil, info.depends)
+    assertEquals(Collections.emptyList(), info.depends)
     assertTrue(info.errors.isEmpty)
   }
 
   @Test def testExtraCruft () {
-    val info = Package(cwd, scaledApi ++ Seq(
+    val info = new Package(null, cwd, scaledApi ++ Seq(
       "bezelnut: ruh ruh",
       " peanuts: and popcorn"
     ))
@@ -42,25 +45,25 @@ class PackageTest {
   }
 
   @Test def testDoubleSource () {
-    val info = Package(cwd, scaledApi ++ Seq(
+    val info = new Package(null, cwd, scaledApi ++ Seq(
       " source: git:https://github.com/scaled/scaled-peanut.git"
     ))
     assertEquals(scaledSource, info.source)
     assertEquals(1, info.errors.size)
-    assertTrue(info.errors.head startsWith "'source'")
+    assertTrue(info.errors.get(0) startsWith "'source'")
   }
 
   @Test def testDepends () {
-    val info = Package(cwd, scaledApi ++ Seq(
+    val info = new Package(null, cwd, scaledApi ++ Seq(
       " depend: git:https://github.com/scaled/java-mode.git",
       " depend: mvn:com.samskivert.scaled:textmate-grammar:1.0-SNAPSHOT:jar"
     ))
     assertEquals(scaledSource, info.source)
-    val javaSource = Source(Source.Git, new URL("https://github.com/scaled/java-mode.git"))
-    val tmRepoId = RepoId("com.samskivert.scaled", "textmate-grammar", "1.0-SNAPSHOT",
-                          "jar", Compile)
+    val javaSource = new Source(Source.VCS.GIT, new URL("https://github.com/scaled/java-mode.git"))
+    val tmRepoId = new RepoId("com.samskivert.scaled", "textmate-grammar", "1.0-SNAPSHOT", "jar")
     info.errors foreach println
     assertEquals(0, info.errors.size)
-    assertEquals(List(SourceDepend(javaSource), MavenDepend(tmRepoId)), info.depends)
+    assertEquals(List(new Depend(javaSource, Depend.Scope.COMPILE),
+                      new Depend(tmRepoId, Depend.Scope.COMPILE)), info.depends.toList)
   }
 }
