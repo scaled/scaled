@@ -109,10 +109,6 @@ public class PackageBuilder {
     return sb.toString();
   }
 
-  private void invokeJVM (List<Path> classpath, List<String> args) throws IOException {
-    Path java = findJavaHome();
-  }
-
   private Path findJavaHome () throws IOException {
     Path jreHome = Paths.get(System.getProperty("java.home"));
     Path javaHome = jreHome.getParent();
