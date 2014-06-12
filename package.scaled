@@ -4,8 +4,6 @@ version: 1.0
 descrip: The API against which Scaled extensions are written.
  weburl: https://github.com/scaled/scaled-api/
 license: New BSD
- srcdir: src/main/scala
- bindir: target/classes
  depend: mvn:com.samskivert:reactual:1.0-SNAPSHOT
  depend: mvn:com.google.guava:guava:16.0.1
  depend: mvn:org.scala-lang:scala-library:2.11.0
