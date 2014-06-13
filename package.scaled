@@ -5,5 +5,5 @@ descrip: The core of the Scaled editor.
  weburl: https://github.com/scaled/scaled-editor/
 license: New BSD
  depend: git:https://github.com/scaled/scaled-api.git
- depend: mvn:com.samskivert.scaled:scaled-pacman:1.0-SNAPSHOT
+ depend: git:https://github.com/scaled/scaled-pacman.git
  depend: mvn:org.ow2.asm:asm:5.0.1
