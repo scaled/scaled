@@ -11,95 +11,116 @@ code editing), but rather that they are not "in your face" from a user experienc
 start from the pristine calm of a colorized window of code, and tastefully grow from there.
 
 Scaled is designed to be extensible in any JVM language. This is technically possible already, but
-will be substantially improved before we claim that anyone would actually want to do this. Our goal
-is that a programmer using Scaled can comfortably extend the editor in their preferred JVM language
+will be substantially improved before I claim that anyone would actually want to do this. My goal is
+that a programmer using Scaled can comfortably extend the editor in their preferred JVM language
 with no more cognitive dissonance than they already endure when using a third party library written
-in Java. We may never reach perfection in that regard, but it will be a damned sight better than
+in Java. I may never reach perfection in that regard, but it will be a damned sight better than
 extending the editor in elisp (nothing against lisp, use Clojure if that's your bag).
 
 ![Hello Scaled screenshot](http://scaled.github.io/images/screenshots/hello-scaled.png)
 
+## Kick the tires
+
+Scaled is still in the early phases of active development, but it is mature enough that I use it
+exclusively to develop itself. It undoubtedly has rough edges, but it's relatively easy to give it a
+whirl.
+
+Scaled includes a package management system which is used to install Scaled itself as well as
+extension packages. The Scaled package manager (spam) is desgined to bootstrap itself. Simply
+download [the `spam` shell script], put it on your shell path and invoke:
+
+```
+spam install scaled-editor
+```
+
+Note: the `java` executable in your shell path must be from a Java 8 JDK installation, or you must
+set the `JAVA_HOME` environment variable to a Java 8 JDK installation before running `spam`.
+
+This will download and build all of the core packages that make up Scaled. Scaled packages are
+fetched directly from their DVCS source URLs and built locally during the installation process.
+Depending on the pre-existing state of your local Maven repository, this may involve downloading a
+bunch of existing jars, and it will involve compiling a bunch of code. It might take a minute or two
+on a reasonably speedy development machine.
+
+Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Application Support/Scaled`
+on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via `spam`, but it's
+cumbersome, instead symlink `SCALED_HOME/Packages/scaled-editor/scaled` into your `~/bin` directory
+or wherever you like to put things so that they are on your shell path, and then invoke Scaled via
+`scaled`.
+
+If you have the `nc` program installed (`brew install netcat`), the `scaled` script will use it to
+communicate with an already running instance of Scaled when possible. Thus you can invoke `scaled
+somefile` on the command line and that file will be opened in the already running Scaled, or Scaled
+will be launched if needed.
+
+## Packages
+
+By default, Scaled comes only with basic text editing capabilities. To properly Feel the Magic (tm),
+you will need to install some packages. You can list the available packages via:
+
+```
+spam list --all
+```
+
+If you are a Java developer, you'll probably want to:
+
+```
+spam install java-mode
+spam install maven-project
+spam install xml-mode
+```
+
+If you like the Scala, be sure to:
+
+```
+spam install scala-mode
+spam install sbt-project
+```
+
+Presently Scaled's integration with Maven projects is decent and its integration with SBT projects
+is largely non-existent. The `sbt-project` is the barest skeleton. Eventually SBT integration will
+be improved, and Gradle integration is also in the cards.
+
+If you do happen to have a `pom.xml` with your project metadata in it, Scaled will automatically
+build your code on save and allow you to navigate through the errors in the editor (via M-] and
+M-[). The current compiler integration is somewhat primitive, and a tighter integration is
+forthcoming.
+
+Scaled also includes basic integration with JUnit, allowing you to run tests directly from within
+the editor and see results. C-c C-t runs the tests in the current file if it looks like it contains
+JUnit tests, and it runs all the tests for the project otherwise.
+
+## Using Scaled
+
+At the moment Scaled's "UI" follows Emacs where that makes sense (pretty much all of the basic
+editing key bindings). Extensions like `project-mode` introduce new interactions and I'm not making
+an effort to model those the myriad hodge-podge Emacs IDE-like extensions that exist, I'm just
+trying to come up with sensible bindings.
+
+At any time, you can invoke `M-x describe-mode` (or `C-h m`) to see all of the key bindings and
+config vars for the the active major and minor modes. You can cross-reference that with the
+[Emacs reference card] to see basic editing commands organized more usefully than alphabetic order
+by key binding description.
+
 ## Development
 
-Presently, the only way to run Scaled is to build it yourself from source. This is not terribly
-difficult, but there are some hoops through which you must jump due to the high velocity with which
-Scaled is currently evolving.
+Chances are, Scaled does not solve all of your development needs and make your favorite kind of
+toast. If you find that the fires in your belly are stoked by the idea of an Emacs-like extensible
+editor built atop the JVM, then perhaps you would like to extend Scaled such that it does solve your
+problems and make your toast. This is becoming a less crazy prospect day by day as the Scaled core
+stabilizes and the facilities for developing Scaled improve.
 
-If you're looking at this README on the filesystem, then you have checked out the `scaled/scaled`
-project from Github and have a directory structure that contains three submodules:
+Because Scaled checks itself and all of its extensions out directly from source, you can simply
+start hacking on the code that was checked out in `SCALED_HOME/Packages`. This is not wildly
+different than how I develop Scaled. I actually have the packages checked out elsewhere and symlink
+them into `SCALED_HOME/Packages`, but that's mainly so that I can arrange the myriad Scaled
+subprojects into a slightly less flat directory structure.
 
-  * `scaled/api` - the API against which all extension are written, and some standard extensions
-  * `scaled/editor` - implementation details: the JavaFX internals, package management, etc.
-  * `scaled/devel` - a meta-package that makes life easier when developing (see below)
-
-This is merely the core of the editor. Most functionality lives in extension packages, which you can
-read about below. Before we get into extensions, let's get the core editor built and running. This
-requires first checking out two libraries on which Scaled depends, and building/installing those
-locally. Before we do *that*, let's pick our build system poison.
-
-NOTE: all of this has to be done with Java 8. If you're not yet regularly building things using Java
-8, you will need to do some jockeying to get Maven or SBT working therewith. Google is your friend
-here.
-
-### Building with Maven
-
-Check out, build and install the following two libraries:
-
-    cd wherever-you-keep-other-peoples-libraries
-    git clone https://github.com/samskivert/pom-util.git
-    cd pom-util
-    mvn install
-
-    cd wherever-you-keep-other-peoples-libraries
-    git clone https://github.com/samskivert/reactual.git
-    cd reactual
-    mvn install
-
-Now go back to your top-level `scaled` directory and invoke:
-
-    mvn test -Pdevel
-
-After a lot of downloading, compiling, buying, selling and processing, you will eventually be
-greeted with a Scaled window that displays an empty scratch buffer.
-
-### Building with SBT
-
-Check out, build and install the following two libraries:
-
-    cd wherever-you-keep-other-peoples-libraries
-    git clone https://github.com/samskivert/pom-util.git
-    cd pom-util
-    sbt publishLocal
-
-    cd wherever-you-keep-other-peoples-libraries
-    git clone https://github.com/samskivert/reactual.git
-    cd reactual
-    sbt publishLocal
-
-Now go back to your top-level `scaled` directory and invoke:
-
-    sbt devel/run
-
-After a lot of downloading, compiling, buying, selling and processing, you will eventually be
-greeted with a Scaled window that displays an empty scratch buffer.
-
-### On the devel submodule and classloaders
-
-The `devel` submodule exists to make life easier when working on Scaled. This is why:
-
-In normal operation, the Scaled core editor loads installed packages into a tree of custom class
-loaders. A package can depend on other packages, or on plain old Maven or Ivy dependencies. This
-allows packages to be loaded and unloaded on demand, but confuses the crap out of useful developmen
-tools like JRebel. It also results in a massive proliferation of little projects, which can be
-annoying to build.
-
-When running Scaled from the `devel` package, the build system aggregates the editor and whatever
-extension package dependencies you care about into a single project. This is all included in a
-single "normal" classpath when running the editor. Note that Scaled _ignores_ the `Packages`
-directory in this mode, so only the packages included in the development project are known to it.
-
-This also allows one to take advantage of SBT's incremental recompilation while working on Scaled,
-until such time as Scaled can fully host its own development environment.
+I'll eventually add support to the Scaled Package Manager to make it easier to maintain a "working"
+Scaled installation in the standard location and a "development" Scaled installation elsewhere which
+you hack on, run when testing, and can break without fear of hosing your development setup. That's
+even theoretically possible right now by running `spam -Dscaled.meta=somedir` (or `scaled
+-Dscaled.meta=somedir` as -D args are passed through to `spam`) but I'd like to make it even easier.
 
 ## Scaled Extensions
 
@@ -130,79 +151,6 @@ Most packages are simpler than the project package. They just export a major mod
 Anyone can write a Scaled extension, but all currently known Scaled extensions live in the
 [Github Scaled project](https://github.com/scaled).
 
-Eventually, Scaled will automatically download and install extensions via a friendly in-editor user
-interface. Right now, you have to download and build them manually.
-
-To make interesting things happen, check out the following extensions:
-
-    cd scaled
-    git clone https://github.com/scaled/textmate-grammar.git
-    git clone https://github.com/scaled/project-service.git
-    git clone https://github.com/scaled/maven-project.git
-    git clone https://github.com/scaled/java-mode.git
-    git clone https://github.com/scaled/scala-mode.git
-    git clone https://github.com/scaled/xml-mode.git
-
-Check them out under the top-level `scaled` directory so that they can be automatically integrated
-into the `devel` build. Once you have them checked out, your directory structure will look like:
-
-  * `scaled/api` - same as before
-  * `scaled/editor` - same as before
-  * `scaled/devel` - same as before
-  * `scaled/textmate-grammar` - a library for grokking TextMate grammars
-  * `scaled/project-service` - defines project-mode and project services
-  * `scaled/maven-project` - extends project-mode with some Maven project smarts
-  * `scaled/java-mode` - a (primitive) major mode for editing .java, and .properties files
-  * `scaled/scala-mode` - a (less primitive) major mode for editing .scala files
-  * `scaled/xml-mode` - a (primitive) major mode for editing XML files
-
-Now you can use the `bootstrap` Maven profile to automatically include these depends into the build:
-
-    mvn test -Pdevel -Pbootstrap
-
-SBT is informed of profiles via a Java System property (`-Dprofiles="foo bar baz"`) so assuming your
-SBT script supports it (as the excellent [sbt-extras] does), invoke SBT thusly:
-
-    sbt -Dprofiles="devel bootstrap"
-
-## Using Scaled
-
-With the above extensions installed, you can run Scaled and type `C-x C-f` (that means hold down
-control and press and release `x`, keep control held down and press and release `f`) and type `pTAB`
-into the box that pops up and it will load the `pom.xml` file.
-
-You should see colorized XML in the buffer (if not something's not working). Assuming you do see
-colorized XML, then you'll also be in project mode which means that if you type `C-x C-f` again,
-that will have been rerouted by the project minor mode to load any file in the entire project (you
-can access the default `find-file` via `S-C-x S-C-f`).
-
-If you ran from Maven, the cwd will have been the top-level `scaled` directory and you'll be loading
-from the top-level project defined by the `scaled/pom.xml` in that directory, which means you'll see
-all the Scaled source if you try to load another file and use tab completion. If you ran from SBT,
-the cwd will have been the `scaled/devel` submodule directory and you'll be loading from the project
-defined by `scaled/devel/pom.xml` which contains only two files.
-
-In that case you can use `S-C-x S-C-f` (or `M-x find-file-default`) to load the `scaled/pom.xml`
-file and trigger a switch to the parent project. Eventually `project-mode` and tab completion will
-be enhanced to allow one to easily expand the scope of completion from a project to the project and
-its dependencies, which will make working on a graph of interdependent projects more comfortable.
-One will also be able to navigate based on type information, jumping to the definition of a type or
-method, for project types that support such intelligence.
-
-That's about the extent of the excitement for the moment. I'm using Scaled to work on Scaled with
-reasonably productivity, so things are pretty robust for Scala editing, but your tolerance for
-missing editor features may be lower than my own, so
-
-At the moment Scaled's "UI" follows Emacs where that makes sense (pretty much all of the basic
-editing key bindings). Extensions like `project-mode` introduce new interactions and I'm not making
-an effort to model those the myriad hodge-podge Emacs IDE-like extensions that exist, I'm just
-trying to come up with sensible bindings.
-
-At any time, you can invoke `M-x describe-mode` (or `C-h m`) to see all of the key bindings and
-config vars for the the active major and minor modes. You can cross-reference that with the
-[Emacs reference card] to see basic editing commands organized more usefully than alphabetic order
-by key binding description.
-
 ## License
 
 Scaled is released under the New BSD License. The most recent version of the code is available at
@@ -210,3 +158,4 @@ https://github.com/scaled/scaled
 
 [Emacs reference card]: http://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 [sbt-extras]: https://github.com/paulp/sbt-extras
+[the `spam` shell script]: https://raw.githubusercontent.com/scaled/scaled-pacman/master/spam
