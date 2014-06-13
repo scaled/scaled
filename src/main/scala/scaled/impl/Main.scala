@@ -49,7 +49,6 @@ class Main extends Application {
       case null => createEditor(new Stage(), workspace, NoGeom)
       case epane => epane
     }
-    println(s"Opening $workspace / $path")
     epane.visitPath(path)
   }
 
