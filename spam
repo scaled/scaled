@@ -22,43 +22,62 @@ declare PACMAN=$SCALED_HOME/Packages/scaled-pacman
 declare PACMAN_JAR=$PACMAN/scaled-pacman.jar
 declare PACMAN_BUILD=$PACMAN/target/classes
 
-# sneak in a debug argument
-declare DEBUG=""
-if [ "$1" = "-d" ]; then
-    DEBUG="-Ddebug=true"
-    shift
-fi
-
 download() {
   local URL="$1"
   local FILE="$2"
 
   echo "Downloading $URL..."
-  mkdir -p `dirname $FILE`
-  if hash curl 2>/dev/null; then
-      curl -s -o $FILE $URL
-  elif hash wget 2>/dev/null; then
-      wget -q -O $FILE $URL
-  else
-      echo "Need curl or wget to install dependencies."
-      exit 255
-  fi
+  mkdir -p "${FILE%/*}" && {
+      if hash curl 2>/dev/null; then
+          curl -s -S -o "$FILE" $URL
+      elif hash wget 2>/dev/null; then
+          wget -nv -O "$FILE" $URL
+      else
+          echo "Need curl or wget to install dependencies."
+          exit 255
+      fi
+  } && [[ -s "$FILE" ]]
 }
 
 # download capsule if needed
-if [ ! -f $M2CAPSULE ]; then
-    download "http://central.maven.org/maven2/$CAPSULE" $M2CAPSULE
+if [ ! -s $M2CAPSULE ]; then
+    download "http://central.maven.org/maven2/$CAPSULE" "$M2CAPSULE"
 fi
 
 # download pacman if needed
-if [ -f "$PACMAN_JAR" ]; then
+if [ -s "$PACMAN_JAR" ]; then
     PACMANCP="$PACMAN_JAR"
 elif [ -d "$PACMAN_BUILD" ]; then
     PACMANCP="$PACMAN_BUILD"
 else
-    echo "TODO: download $PACMAN_JAR"
+    download "http://TODO" "$PACMAN_JAR"
     exit 255
 fi
 
+addJvmArg () {
+  JVMARGS=( "${JVMARGS[@]}" "$1" )
+}
+addArg () {
+  ARGS=( "${ARGS[@]}" "$1" )
+}
+
+# process command line args
+declare -a JVMARGS=("-classpath" "$PACMANCP:$M2CAPSULE")
+declare -a ARGS=("scaled.pacman.Main")
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -D*     ) addJvmArg "$1"           && shift ;;
+        -J*     ) addJvmArg "${1:2}"       && shift ;;
+        -d      ) addJvmArg "-Ddebug=true" && shift ;;
+        -l|--log) LOG=$2                   && shift 2 ;;
+        *       ) addArg "$1"              && shift ;;
+    esac
+done
+
 # bombs away!
-exec $JAVA_CMD $JVMARGS -classpath "$PACMANCP:$M2CAPSULE" $DEBUG scaled.pacman.Main "$@"
+if [ ! -z "$LOG" ]; then
+    echo $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}"
+    exec $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}" >>$LOG 2>&1 &
+else
+    exec $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}"
+fi
