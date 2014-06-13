@@ -6,7 +6,9 @@ package scaled.pacman;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +27,8 @@ public class Main {
     "where <command> is one of:\n" +
     "\n" +
     "  list                          lists all installed packages\n" +
-    "  install pkg-url               installs package at pkg-url, and its depends\n" +
+    "  search text                   lists all packages in directory which match text\n" +
+    "  install [pkg-name | pkg-url]  installs package (by name or url) and its depends\n" +
     "  info [pkg-name | --all]       prints detailed info on pkg-name (or all packages)\n" +
     "  depends pkg-name              prints the depend tree for pkg-name\n" +
     "  classpath pkg-name            prints the classpath for pkg-name\n" +
@@ -33,8 +36,9 @@ public class Main {
     "  clean pkg-name [--deps]       cleans pkg-name (and its depends if --deps)\n" +
     "  run pkg-name class [arg ...]  runs class from pkg-name with args";
 
-  public static PackageRepo repo;
   public static Printer out = new Printer(System.out);
+  public static PackageRepo repo;
+  public static PackageDirectory index = new PackageDirectory();
 
   public static void main (String[] args) throws IOException {
     if (args.length == 0) fail(USAGE);
@@ -42,9 +46,13 @@ public class Main {
     // create our package repository and grind our packages
     repo = new PackageRepo();
 
+    // read our index (downloading the initial package if necessary)
+    initIndex();
+
     // we'll introduce proper arg parsing later; for now KISS
     switch (args[0]) {
     case      "list": list(); break;
+    case    "search": search(optarg(args, 1, "")); break;
     case   "install": install(args[1]); break;
     case      "info": info(args[1]); break;
     case   "depends": depends(args[1]); break;
@@ -56,11 +64,46 @@ public class Main {
     }
   }
 
-  private static void install (String url) throws IOException {
+  private static final String IDX_GIT_URL = "https://github.com/scaled/scaled-directory.git";
+  private static void initIndex () {
     try {
-      PackageFetcher.install(repo, Source.parse(url));
-    } catch (URISyntaxException e) {
-      fail("Invalid package URL '" + url + "': " + e.getMessage());
+      Path idir = repo.pkgsDir.resolve("scaled-directory");
+      if (!Files.exists(idir)) {
+        System.out.println("* Fetching Scaled package directory...");
+        VCSDriver.get(Source.VCS.GIT).checkout(new URI(IDX_GIT_URL), idir);
+      }
+      index.init(repo.log, idir);
+    } catch (Exception e) {
+      repo.log.log("Error inititalizing package directory, 'search' and 'install' by name " +
+                   "are not going to work.", "error", e);
+    }
+  }
+
+  private static void install (String whence) throws IOException {
+    // see if this is a known package name
+    PackageDirectory.Entry entry = index.byName.get(whence);
+    if (entry != null) {
+      PackageFetcher.install(repo, entry.source);
+    }
+    // if this looks like a URL, try checking it out by URL
+    else if (whence.contains(":")) {
+      try {
+        PackageFetcher.install(repo, Source.parse(whence));
+      } catch (URISyntaxException e) {
+        // look for this package in our directory
+        fail("Invalid package URL '" + whence + "': " + e.getMessage());
+      }
+    }
+    else fail("Unknown package '" + whence + "'");
+  }
+
+  private static void search (String text) {
+    String ltext = text.toLowerCase();
+    for (PackageDirectory.Entry entry : index.entries) {
+      if (entry.name.toLowerCase().contains(ltext) ||
+          entry.descrip.toLowerCase().contains(ltext)) {
+        System.out.println(entry.name + " " + entry.descrip);
+      }
     }
   }
 
