@@ -132,7 +132,7 @@ public class Main {
       "Package already installed: " + source + "\n" +
       "Use 'spam update' to update the package if desired.");
     try { PackageFetcher.install(repo, source); }
-    catch (Exception e) { fail("Install failed: " + e.getMessage()); }
+    catch (Exception e) { fail("Install failed: " + e); }
   }
 
   private static void info (String pkgName) {
