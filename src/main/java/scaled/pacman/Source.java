@@ -24,7 +24,7 @@ public class Source implements Depend.Id {
 
   public static Source parse (String text) throws URISyntaxException {
     String[] bits = text.split(":", 2);
-    if (bits.length != 2) throw new IllegalArgumentException("Invalid VCS URI:"+ text);
+    if (bits.length != 2) throw new IllegalArgumentException("Invalid VCS URI: "+ text);
     return parse(bits[0], bits[1]);
   }
 

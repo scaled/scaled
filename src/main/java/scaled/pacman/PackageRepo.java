@@ -44,17 +44,24 @@ public class PackageRepo {
   /** The top-level Scaled metadata directory. */
   public final Path metaDir = locateMetaDir();
 
-  /** The directory into which packages are installed. */
-  public final Path pkgsDir = getMetaDir("Packages");
-
   /** Used to resolve Maven artifacts. */
   public final MavenResolver mvn = new MavenResolver();
 
   /** Creates (if necessary) and returns a directory in the top-level Scaled metadata directory. */
-  public Path getMetaDir (String name) throws IOException {
+  public Path metaDir (String name) throws IOException {
     Path dir = metaDir.resolve(name);
     Files.createDirectories(dir);
     return dir;
+  }
+
+  /** Returns the directory in which all packages are installed. */
+  public Path packagesDir () throws IOException {
+    return metaDir("Packages");
+  }
+
+  /** Returns the directory in which a package named {@code name} should be installed. */
+  public Path packageDir (String name) throws IOException {
+    return packagesDir().resolve(name);
   }
 
   /** Returns all currently installed packages. */
@@ -110,9 +117,9 @@ public class PackageRepo {
     return new PackageLoader(pkg.source, pkg.classesDir(), mavenDeps, packageDeps);
   }
 
-  public PackageRepo () throws IOException {
+  public void init () throws IOException {
     // resolve all packages in our packages directory (TODO: use cache if this is too slow)
-    Files.walkFileTree(pkgsDir, FOLLOW_LINKS, MAX_PKG_DEPTH, new SimpleFileVisitor<Path>() {
+    Files.walkFileTree(packagesDir(), FOLLOW_LINKS, MAX_PKG_DEPTH, new SimpleFileVisitor<Path>() {
       @Override public FileVisitResult preVisitDirectory (Path dir, BasicFileAttributes attrs) {
         Path pkgFile = dir.resolve(Package.FILE);
         if (!Files.exists(pkgFile)) return FileVisitResult.CONTINUE; // descend into subdirs

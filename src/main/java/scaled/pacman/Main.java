@@ -5,7 +5,6 @@
 package scaled.pacman;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -28,6 +27,7 @@ public class Main {
     "\n" +
     "  list                          lists all installed packages\n" +
     "  search text                   lists all packages in directory which match text\n" +
+    "  refresh                       updates the package directory index\n" +
     "  install [pkg-name | pkg-url]  installs package (by name or url) and its depends\n" +
     "  info [pkg-name | --all]       prints detailed info on pkg-name (or all packages)\n" +
     "  depends pkg-name              prints the depend tree for pkg-name\n" +
@@ -36,15 +36,16 @@ public class Main {
     "  clean pkg-name [--deps]       cleans pkg-name (and its depends if --deps)\n" +
     "  run pkg-name class [arg ...]  runs class from pkg-name with args";
 
-  public static Printer out = new Printer(System.out);
-  public static PackageRepo repo;
-  public static PackageDirectory index = new PackageDirectory();
+  public static final Printer out = new Printer(System.out);
+  public static final PackageRepo repo = new PackageRepo();
+  public static final PackageDirectory index = new PackageDirectory();
 
-  public static void main (String[] args) throws IOException {
+  public static void main (String[] args) {
     if (args.length == 0) fail(USAGE);
 
     // create our package repository and grind our packages
-    repo = new PackageRepo();
+    try { repo.init(); }
+    catch (Exception e) { fail("Failed to create package repository: " + e.getMessage()); }
 
     // read our index (downloading the initial package if necessary)
     initIndex();
@@ -53,6 +54,7 @@ public class Main {
     switch (args[0]) {
     case      "list": list(); break;
     case    "search": search(optarg(args, 1, "")); break;
+    case   "refresh": refresh(); break;
     case   "install": install(args[1]); break;
     case      "info": info(args[1]); break;
     case   "depends": depends(args[1]); break;
@@ -67,7 +69,7 @@ public class Main {
   private static final String IDX_GIT_URL = "https://github.com/scaled/scaled-directory.git";
   private static void initIndex () {
     try {
-      Path idir = repo.pkgsDir.resolve("scaled-directory");
+      Path idir = repo.packageDir("scaled-directory");
       if (!Files.exists(idir)) {
         System.out.println("* Fetching Scaled package directory...");
         VCSDriver.get(Source.VCS.GIT).checkout(new URI(IDX_GIT_URL), idir);
@@ -79,32 +81,37 @@ public class Main {
     }
   }
 
-  private static void install (String whence) throws IOException {
+  private static void install (String whence) {
     // see if this is a known package name
     PackageDirectory.Entry entry = index.byName.get(whence);
-    if (entry != null) {
-      PackageFetcher.install(repo, entry.source);
-    }
+    if (entry != null) install(entry.source);
     // if this looks like a URL, try checking it out by URL
     else if (whence.contains(":")) {
-      try {
-        PackageFetcher.install(repo, Source.parse(whence));
-      } catch (URISyntaxException e) {
-        // look for this package in our directory
-        fail("Invalid package URL '" + whence + "': " + e.getMessage());
-      }
+      try { install(Source.parse(whence)); }
+      catch (Exception e) { fail("Cannot install '" + whence + "': " + e.getMessage()); }
     }
     else fail("Unknown package '" + whence + "'");
+  }
+
+  private static void install (Source source) {
+    if (repo.packageBySource(source).isPresent()) fail(
+      "Package already installed: " + source + "\n" +
+      "Use 'spam update' to update the package if desired.");
+    try { PackageFetcher.install(repo, source); }
+    catch (Exception e) { fail("Install failed: " + e.getMessage()); }
   }
 
   private static void search (String text) {
     String ltext = text.toLowerCase();
     for (PackageDirectory.Entry entry : index.entries) {
-      if (entry.name.toLowerCase().contains(ltext) ||
-          entry.descrip.toLowerCase().contains(ltext)) {
-        System.out.println(entry.name + " " + entry.descrip);
-      }
+      if (entry.matches(ltext)) System.out.println(entry);
     }
+  }
+
+  private static void refresh () {
+    out.println("Refreshing Scaled package index...");
+    try { VCSDriver.get(Source.VCS.GIT).update(repo.packageDir("scaled-directory")); }
+    catch (Exception e) { fail("Refresh failed: " + e.getMessage()); }
   }
 
   private static void list () {
@@ -130,9 +137,8 @@ public class Main {
     out.printCols(Arrays.asList(new String[] { "Install:", pkg.root.toString() },
                                 new String[] { "Source:",  pkg.source.toString() },
                                 new String[] { "Version:", pkg.version },
-                                new String[] { "Descrip:", pkg.descrip },
                                 new String[] { "Web URL:", pkg.weburl },
-                                new String[] { "License:", pkg.license }), "", 1);
+                                new String[] { "Descrip:", pkg.descrip }), "", 1);
   }
 
   private static void depends (String pkgName) {

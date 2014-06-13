@@ -28,6 +28,14 @@ public class PackageDirectory {
       this.name = name;
       this.descrip = descrip;
     }
+
+    public boolean matches (String ltext) {
+      return name.toLowerCase().contains(ltext) || descrip.toLowerCase().contains(ltext);
+    }
+
+    @Override public String toString () {
+      return name + " " + descrip;
+    }
   }
 
   public List<Entry> entries = new ArrayList<>();

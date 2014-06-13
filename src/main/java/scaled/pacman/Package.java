@@ -31,9 +31,9 @@ public class Package {
   public final Source source;
   public final String name;
   public final String version;
-  public final String descrip;
-  public final String weburl;
   public final String license;
+  public final String weburl;
+  public final String descrip;
   public final List<Depend> depends;
 
   public final List<String> errors;
@@ -61,9 +61,9 @@ public class Package {
     source  = cfg.resolve("source",  Config.SourceP);
     name    = cfg.resolve("name",    Config.StringP);
     version = cfg.resolve("version", Config.StringP);
-    descrip = cfg.resolve("descrip", Config.StringP);
-    weburl  = cfg.resolve("weburl",  Config.StringP); // todo UrlP
     license = cfg.resolve("license", Config.StringP);
+    weburl  = cfg.resolve("weburl",  Config.StringP); // todo UrlP
+    descrip = cfg.resolve("descrip", Config.StringP);
     depends = cfg.resolve("depend",  new Config.DependP(Depend.Scope.COMPILE));
     errors  = cfg.finish();
   }
@@ -91,9 +91,9 @@ public class Package {
     return (" source=" + source  + "\n" +
             "   name=" + name    + "\n" +
             "version=" + version + "\n" +
-            "descrip=" + descrip + "\n" +
-            " weburl=" + weburl  + "\n" +
             "license=" + license + "\n" +
+            " weburl=" + weburl  + "\n" +
+            "descrip=" + descrip + "\n" +
             "depends=" + depends + "\n" +
             " errors=" + errors);
   }

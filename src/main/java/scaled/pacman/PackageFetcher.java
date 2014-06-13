@@ -20,9 +20,8 @@ public class PackageFetcher {
     PackageFetcher pf = installer(repo, source);
     repo.log.log("Cloning " + source + " into temp dir...");
     pf.checkout();
-    repo.log.log("Processing depend...");
     Package pkg = pf.installDepends();
-    repo.log.log("Building " + source + "...");
+    repo.log.log("Building " + pkg.name + "...");
     PackageBuilder pb = new PackageBuilder(repo, pkg);
     pb.clean();
     pb.build();
@@ -35,7 +34,7 @@ public class PackageFetcher {
     * into the Scaled packages directory.
     */
   public static PackageFetcher installer (PackageRepo repo, Source source) throws IOException {
-    Path temp = Files.createTempDirectory(repo.getMetaDir("Scratch"), "install");
+    Path temp = Files.createTempDirectory(repo.metaDir("Scratch"), "install");
     // delete this directory on JVM shutdown, if we haven't done it already
     Runtime.getRuntime().addShutdownHook(new Thread() { public void run () {
       try { Filez.deleteAll(temp); }
@@ -72,7 +71,7 @@ public class PackageFetcher {
   }
 
   public void install (Package pkg) throws IOException {
-    Path target = _repo.pkgsDir.resolve(pkg.name);
+    Path target = _repo.packageDir(pkg.name);
     Files.move(_pkgDir, target, StandardCopyOption.ATOMIC_MOVE);
     _repo.addPackage(target.resolve(Package.FILE));
   }
