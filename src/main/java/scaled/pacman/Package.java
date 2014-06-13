@@ -74,18 +74,18 @@ public class Package {
     return _loader;
   }
 
-  public Path sourceDir () { return root.resolve("src").resolve("main"); }
-  public Path outputDir () { return root.resolve("target"); }
-  public Path classesDir () { return outputDir().resolve("classes"); }
-
+  public Path mainDir () { return root.resolve("src").resolve("main"); }
   public Map<String,Path> sourceDirs () throws IOException {
     Map<String,Path> dirs = new HashMap<>();
-    Files.list(root.resolve("src").resolve("main")).forEach(dir -> {
+    Files.list(mainDir()).forEach(dir -> {
       dirs.put(dir.getFileName().toString(), dir);
     });
     return dirs;
   }
+  public Path resourcesDir () { return mainDir().resolve("resources"); }
 
+  public Path outputDir () { return root.resolve("target"); }
+  public Path classesDir () { return outputDir().resolve("classes"); }
 
   @Override public String toString () {
     return (" source=" + source  + "\n" +

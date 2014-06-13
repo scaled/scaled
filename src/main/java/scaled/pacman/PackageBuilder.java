@@ -36,7 +36,9 @@ public class PackageBuilder {
     // create the build output directory
     Files.createDirectories(_pkg.classesDir());
 
-    // TODO: copy resources into classes dir
+    // if a resources directory exists, copy that over
+    Path rsrcDir = _pkg.resourcesDir();
+    if (Files.exists(rsrcDir)) Filez.copyAll(rsrcDir, _pkg.classesDir());
 
     // now build whatever source we find in the project
     Map<String,Path> srcDirs = _pkg.sourceDirs();
