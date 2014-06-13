@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#
+# Scaled Package Manager bootstrap script
+
+# use java found in path unless JAVA_HOME is set, in which case, that
+declare JAVA_CMD=java
+# if set, use JAVA_HOME over java found in path
+[[ -e "$JAVA_HOME/bin/java" ]] && JAVA_CMD="$JAVA_HOME/bin/java"
+
+# determine the location where Scaled will store its bits
+declare SCALED_HOME=$HOME/.scaled
+declare APPSUP="$HOME/Library/Application Support"
+[[ -d $APPSUP ]] && SCALED_HOME="$APPSUP/Scaled"
+
+# declare some Maven bits
+declare M2REPO=$HOME/.m2/repository
+declare CAPSULE=co/paralleluniverse/capsule/0.5.0/capsule-0.5.0.jar
+declare M2CAPSULE=$M2REPO/$CAPSULE
+
+# declare some pacman bits
+declare PACMAN=$SCALED_HOME/Packages/scaled-pacman
+declare PACMAN_JAR=$PACMAN/scaled-pacman.jar
+declare PACMAN_BUILD=$PACMAN/target/classes
+
+# sneak in a debug argument
+declare DEBUG=""
+if [ "$1" = "-d" ]; then
+    DEBUG="-Ddebug=true"
+    shift
+fi
+
+download() {
+  local URL="$1"
+  local FILE="$2"
+
+  echo "Downloading $URL..."
+  mkdir -p `dirname $FILE`
+  if hash curl 2>/dev/null; then
+      curl -s -o $FILE $URL
+  elif hash wget 2>/dev/null; then
+      wget -q -O $FILE $URL
+  else
+      echo "Need curl or wget to install dependencies."
+      exit 255
+  fi
+}
+
+# download capsule if needed
+if [ ! -f $M2CAPSULE ]; then
+    download "http://central.maven.org/maven2/$CAPSULE" $M2CAPSULE
+fi
+
+# download pacman if needed
+if [ -f "$PACMAN_JAR" ]; then
+    PACMANCP="$PACMAN_JAR"
+elif [ -d "$PACMAN_BUILD" ]; then
+    PACMANCP="$PACMAN_BUILD"
+else
+    echo "TODO: download $PACMAN_JAR"
+    exit 255
+fi
+
+# bombs away!
+exec $JAVA_CMD $JVMARGS -classpath "$PACMANCP:$M2CAPSULE" $DEBUG scaled.pacman.Main "$@"
