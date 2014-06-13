@@ -50,7 +50,7 @@ if [ -s "$PACMAN_JAR" ]; then
 elif [ -d "$PACMAN_BUILD" ]; then
     PACMANCP="$PACMAN_BUILD"
 else
-    download "http://TODO" "$PACMAN_JAR"
+    download "https://github.com/scaled/scaled-pacman/releases/download/v0.1.0/scaled-pacman.jar" "$PACMAN_JAR"
     exit 255
 fi
 
