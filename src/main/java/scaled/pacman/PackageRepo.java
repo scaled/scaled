@@ -5,6 +5,7 @@
 package scaled.pacman;
 
 import java.io.IOException;
+import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -110,7 +112,7 @@ public class PackageRepo {
 
   public PackageRepo () throws IOException {
     // resolve all packages in our packages directory (TODO: use cache if this is too slow)
-    Files.walkFileTree(pkgsDir, new SimpleFileVisitor<Path>() {
+    Files.walkFileTree(pkgsDir, FOLLOW_LINKS, MAX_PKG_DEPTH, new SimpleFileVisitor<Path>() {
       @Override public FileVisitResult preVisitDirectory (Path dir, BasicFileAttributes attrs) {
         Path pkgFile = dir.resolve(Package.FILE);
         if (!Files.exists(pkgFile)) return FileVisitResult.CONTINUE; // descend into subdirs
@@ -161,4 +163,8 @@ public class PackageRepo {
   }
 
   private final Map<Source,Package> _pkgs = new HashMap<>();
+
+  private static final Set<FileVisitOption> FOLLOW_LINKS = Collections.singleton(
+    FileVisitOption.FOLLOW_LINKS);
+  private static final int MAX_PKG_DEPTH = 6;
 }
