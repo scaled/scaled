@@ -40,7 +40,7 @@ public abstract class VCSDriver {
     }
 
     public void checkout (URI url, Path into) throws IOException {
-      Exec.exec(into.getParent(), "git", "clone", url.toString(),
+      Exec.exec(into.getParent(), "git", "clone", "-q", url.toString(),
                 into.getFileName().toString()).expect(0, "git clone failed");
     }
 
