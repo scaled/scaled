@@ -164,9 +164,12 @@ public class PackageRepo {
     String root = System.getProperty("scaled.meta");
     if (root != null) return Paths.get(root);
 
-    // TODO: platform specific app dirs
     Path homeDir = Paths.get(System.getProperty("user.home"));
-    return homeDir.resolve(Paths.get("Library", "Application Support", "Scaled"));
+    // if we're on a Mac, put things in $HOME/Library/Application Support/Scaled
+    Path appSup = Paths.get("Library", "Application Support");
+    if (Files.exists(appSup)) return appSup.resolve("Scaled");
+    // otherwise use $HOME/.scaled (TODO: we can probably do better on Windows)
+    else return homeDir.resolve(".scaled");
   }
 
   private final Map<Source,Package> _pkgs = new HashMap<>();
