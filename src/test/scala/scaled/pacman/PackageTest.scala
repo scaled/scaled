@@ -7,8 +7,8 @@ package scaled.pacman
 import java.net.URI
 import java.nio.file.Paths
 import java.util.Collections
-import org.junit._
 import org.junit.Assert._
+import org.junit._
 
 class PackageTest {
   import scala.collection.convert.WrapAsJava._
@@ -22,9 +22,7 @@ class PackageTest {
     "version: 1.0",
     "descrip: The API against which Scaled extensions are written.",
     " weburl: https://github.com/scaled/scaled-api/",
-    "license: New BSD",
-    " srcdir: src/main/scala",
-    " bindir: target/classes"
+    "license: New BSD"
   )
   val scaledSource = new Source(Source.VCS.GIT, new URI("https://github.com/scaled/scaled-api.git"))
 

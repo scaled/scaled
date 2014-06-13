@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 /** Contains runtime metadata for an installed package. */
 public class Package {
 
+  /** The string {@code package.scaled} for all to share and enjoy. */
+  public static String FILE = "package.scaled";
+
   /** The repository from whence this package came. */
   public final PackageRepo repo;
 

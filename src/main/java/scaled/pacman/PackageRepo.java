@@ -32,11 +32,28 @@ public class PackageRepo {
   /** A hook for Scaled to observe package goings on. */
   public Observer observer;
 
+  /** A log instance whence logging is sent. This goes to stderr, unless/until Scaled takes over the
+    * JVM at which point it reroutes it to the *messages* buffer. */
+  public Log log = new Log() {
+    public void log (String msg) { System.err.println(msg); }
+    public void log (String msg, Throwable error) { log(msg); error.printStackTrace(System.err); }
+  };
+
   /** The top-level Scaled metadata directory. */
   public final Path metaDir = locateMetaDir();
 
+  /** The directory into which packages are installed. */
+  public final Path pkgsDir = getMetaDir("Packages");
+
   /** Used to resolve Maven artifacts. */
   public final MavenResolver mvn = new MavenResolver();
+
+  /** Creates (if necessary) and returns a directory in the top-level Scaled metadata directory. */
+  public Path getMetaDir (String name) throws IOException {
+    Path dir = metaDir.resolve(name);
+    Files.createDirectories(dir);
+    return dir;
+  }
 
   /** Returns all currently installed packages. */
   public Iterable<Package> packages () {
@@ -53,17 +70,6 @@ public class PackageRepo {
   /** Returns the package identified by {@code source}, if any. */
   public Optional<Package> packageBySource (Source source) {
     return Optional.ofNullable(_pkgs.get(source));
-  }
-
-  /** Emits a warning message. By default these go to stderr. */
-  public void warn (String msg) {
-    System.err.println(msg);
-  }
-
-  /** Emits a warning message. By default these go to stderr. */
-  public void warn (String msg, Throwable t) {
-    warn(msg);
-    t.printStackTrace(System.err);
   }
 
   /** Returns a list of {@code pkg}'s transitive package dependencies. The list will be ordered such
@@ -84,7 +90,7 @@ public class PackageRepo {
       else {
         Package dpkg = _pkgs.get((Source)dep.id);
         if (dpkg != null) packageDeps.add(dpkg.loader());
-        else warn("Missing package depend [owner=" + pkg.source + ", source=" + dep.id + "]");
+        else log.log("Missing package depend", "owner", pkg.source, "source", dep.id);
       }
     }
 
@@ -103,45 +109,42 @@ public class PackageRepo {
   }
 
   public PackageRepo () throws IOException {
-    // create our top-level and Packages directories (if needed)
-    Files.createDirectories(metaDir);
-    _pkgsDir = metaDir.resolve("Packages");
-    Files.createDirectories(_pkgsDir);
-
-    // resolve all packages in our packages directory
-    // (TODO: if this ends up being too slow, cache the results)
-    Files.walkFileTree(_pkgsDir, new SimpleFileVisitor<Path>() {
-      @Override public FileVisitResult visitFile (Path dir, BasicFileAttributes attrs) {
-        if (!Files.isDirectory(dir)) return FileVisitResult.CONTINUE;
-        Path pkgFile = dir.resolve("package.scaled");
+    // resolve all packages in our packages directory (TODO: use cache if this is too slow)
+    Files.walkFileTree(pkgsDir, new SimpleFileVisitor<Path>() {
+      @Override public FileVisitResult preVisitDirectory (Path dir, BasicFileAttributes attrs) {
+        Path pkgFile = dir.resolve(Package.FILE);
         if (!Files.exists(pkgFile)) return FileVisitResult.CONTINUE; // descend into subdirs
-        try {
-          Package pkg = new Package(PackageRepo.this, pkgFile);
-          // log any errors noted when resolving this package info
-          if (!pkg.errors.isEmpty()) {
-            warn("ERRORS in " + pkg.root + "/package.scaled:");
-            for (String error : pkg.errors) warn("- " + error);
-          }
-          _pkgs.put(pkg.source, pkg);
-          if (observer != null) observer.packageAdded(pkg);
-        } catch (Exception e) {
-          warn("Unable to process package: "+ pkgFile, e);
-        }
+        addPackage(pkgFile);
         return FileVisitResult.SKIP_SUBTREE; // stop descending
       }
     });
+  }
+
+  public boolean addPackage (Path pkgFile) {
+    try {
+      Package pkg = new Package(PackageRepo.this, pkgFile);
+      // log any errors noted when resolving this package info
+      if (!pkg.errors.isEmpty()) {
+        log.log("ERRORS in " + pkg.root + "/package.scaled:");
+        for (String error : pkg.errors) log.log("- " + error);
+      }
+      _pkgs.put(pkg.source, pkg);
+      if (observer != null) observer.packageAdded(pkg);
+      return true;
+    } catch (Exception e) {
+      log.log("Unable to process package: "+ pkgFile, e);
+      return false;
+    }
   }
 
   private void addPackageDepends (LinkedHashMap<Source,Package> pkgs, Package pkg) {
     // stop if we've already added this package's depends
     if (pkgs.containsKey(pkg.source)) return;
     // add all of this package's depends
-    for (Depend dep : pkg.depends) {
-      if (dep.id instanceof Source) {
-        Package dpkg = _pkgs.get(dep.id);
-        if (dpkg == null) warn("Missing depend! [pkg=" + pkg.source + ", dep=" + dep.id + "]");
-        else addPackageDepends(pkgs, dpkg);
-      }
+    for (Depend dep : pkg.depends) if (dep.isSource()) {
+      Package dpkg = _pkgs.get(dep.id);
+      if (dpkg == null) log.log("Missing depend!", "pkg", pkg.source, "dep", dep.id);
+      else addPackageDepends(pkgs, dpkg);
     }
     // then add this package
     pkgs.put(pkg.source, pkg);
@@ -149,10 +152,13 @@ public class PackageRepo {
 
   // TODO: platform specific app dirs
   private Path locateMetaDir () {
+    // if our metadir has been overridden, use the specified value
+    String root = System.getProperty("scaled.meta");
+    if (root != null) return Paths.get(root);
+
     Path homeDir = Paths.get(System.getProperty("user.home"));
     return homeDir.resolve(Paths.get("Library", "Application Support", "Scaled"));
   }
 
-  private final Path _pkgsDir;
   private final Map<Source,Package> _pkgs = new HashMap<>();
 }

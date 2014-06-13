@@ -33,6 +33,11 @@ public class Depend {
     this.scope = scope;
   }
 
+  /** Returns true if this is a source depend. */
+  public boolean isSource () {
+    return (id instanceof Source);
+  }
+
   @Override public String toString () { return id + ":" + scope.toString().toLowerCase(); }
   @Override public int hashCode () { return id.hashCode() ^ scope.hashCode(); }
   @Override public boolean equals (Object oo) {

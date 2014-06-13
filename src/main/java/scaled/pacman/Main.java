@@ -6,6 +6,7 @@ package scaled.pacman;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,7 +56,12 @@ public class Main {
     }
   }
 
-  private static void install (String pkgurl) {
+  private static void install (String url) throws IOException {
+    try {
+      PackageFetcher.install(repo, Source.parse(url));
+    } catch (URISyntaxException e) {
+      fail("Invalid package URL '" + url + "': " + e.getMessage());
+    }
   }
 
   private static void list () {
@@ -99,7 +105,7 @@ public class Main {
   private static void build (String pkgName, boolean deps) {
     onPackage(pkgName, pkg -> {
       for (Package bpkg : packageOrDeps(pkg, deps)) {
-        try { new PackageBuilder(repo.mvn, bpkg).build(); }
+        try { new PackageBuilder(repo, bpkg).build(); }
         catch (Exception e) {
           System.err.println("Failure invoking 'build' in: " + bpkg.root);
           e.printStackTrace(System.err);
@@ -111,7 +117,7 @@ public class Main {
   private static void clean (String pkgName, boolean deps) {
     onPackage(pkgName, pkg -> {
       for (Package bpkg : packageOrDeps(pkg, deps)) {
-        try { new PackageBuilder(repo.mvn, bpkg).clean(); }
+        try { new PackageBuilder(repo, bpkg).clean(); }
         catch (Exception e) {
           System.err.println("Failure invoking 'clean' in: " + bpkg.root);
           e.printStackTrace(System.err);
