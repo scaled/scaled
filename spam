@@ -29,7 +29,7 @@ download() {
   echo "Downloading $URL..."
   mkdir -p "${FILE%/*}" && {
       if hash curl 2>/dev/null; then
-          curl -s -S -o "$FILE" $URL
+          curl -L -s -S -o "$FILE" $URL
       elif hash wget 2>/dev/null; then
           wget -nv -O "$FILE" $URL
       else
@@ -51,7 +51,7 @@ elif [ -d "$PACMAN_BUILD" ]; then
     PACMANCP="$PACMAN_BUILD"
 else
     download "https://github.com/scaled/scaled-pacman/releases/download/v0.1.0/scaled-pacman.jar" "$PACMAN_JAR"
-    exit 255
+    PACMANCP="$PACMAN_JAR"
 fi
 
 addJvmArg () {
