@@ -18,9 +18,8 @@ declare CAPSULE=co/paralleluniverse/capsule/0.5.0/capsule-0.5.0.jar
 declare M2CAPSULE=$M2REPO/$CAPSULE
 
 # declare some pacman bits
-declare PACMAN=$SCALED_HOME/Packages/scaled-pacman
-declare PACMAN_JAR=$PACMAN/scaled-pacman.jar
-declare PACMAN_BUILD=$PACMAN/target/classes
+declare PACMAN_JAR=$SCALED_HOME/pacman.jar
+declare PACMAN_BUILD=$SCALED_HOME/Packages/scaled-pacman/target/classes
 
 download() {
   local URL="$1"
@@ -77,8 +76,7 @@ done
 
 # bombs away!
 if [ ! -z "$LOG" ]; then
-    echo $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}"
-    exec $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}" >>$LOG 2>&1 &
+    exec $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}" >$LOG 2>&1 &
 else
     exec $JAVA_CMD "${JVMARGS[@]}" "${ARGS[@]}"
 fi
