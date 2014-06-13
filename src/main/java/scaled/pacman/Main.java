@@ -25,7 +25,7 @@ public class Main {
     "\n" +
     "where <command> is one of:\n" +
     "\n" +
-    "  list                          lists all installed packages\n" +
+    "  list [--all]                  lists installed (or all) packages\n" +
     "  search text                   lists all packages in directory which match text\n" +
     "  refresh                       updates the package directory index\n" +
     "  install [pkg-name | pkg-url]  installs package (by name or url) and its depends\n" +
@@ -52,7 +52,7 @@ public class Main {
 
     // we'll introduce proper arg parsing later; for now KISS
     switch (args[0]) {
-    case      "list": list(); break;
+    case      "list": list(optarg(args, 1, "").equals("--all")); break;
     case    "search": search(optarg(args, 1, "")); break;
     case   "refresh": refresh(); break;
     case   "install": install(args[1]); break;
@@ -81,6 +81,40 @@ public class Main {
     }
   }
 
+  private static void list (boolean all) {
+    List<String[]> info = new ArrayList<>();
+    for (Package pkg : repo.packages()) info.add(tuple(pkg.name, pkg.descrip));
+    if (!info.isEmpty()) info.add(0, tuple("Installed:", ""));
+    if (all) {
+      if (!info.isEmpty()) info.add(tuple("", ""));
+      info.add(tuple("Not installed:", ""));
+      for (PackageDirectory.Entry ent : index.entries) {
+        if (!repo.packageBySource(ent.source).isPresent()) info.add(tuple(ent.name, ent.descrip));
+      }
+    }
+    out.printCols(info, "No packages found.");
+  }
+
+  private static void search (String text) {
+    String ltext = text.toLowerCase();
+    List<String[]> info = new ArrayList<>();
+    for (PackageDirectory.Entry entry : index.entries) {
+      if (entry.matches(ltext)) {
+        String name = entry.name;
+        if (repo.packageBySource(entry.source).isPresent()) name += " [*]";
+        info.add(tuple(name, entry.descrip));
+      }
+    }
+    out.printCols(info, "No matches.");
+    if (!info.isEmpty()) out.println("[*] indicates installed package");
+  }
+
+  private static void refresh () {
+    out.println("Refreshing Scaled package index...");
+    try { VCSDriver.get(Source.VCS.GIT).update(repo.packageDir("scaled-directory")); }
+    catch (Exception e) { fail("Refresh failed: " + e.getMessage()); }
+  }
+
   private static void install (String whence) {
     // see if this is a known package name
     PackageDirectory.Entry entry = index.byName.get(whence);
@@ -101,28 +135,6 @@ public class Main {
     catch (Exception e) { fail("Install failed: " + e.getMessage()); }
   }
 
-  private static void search (String text) {
-    String ltext = text.toLowerCase();
-    for (PackageDirectory.Entry entry : index.entries) {
-      if (entry.matches(ltext)) System.out.println(entry);
-    }
-  }
-
-  private static void refresh () {
-    out.println("Refreshing Scaled package index...");
-    try { VCSDriver.get(Source.VCS.GIT).update(repo.packageDir("scaled-directory")); }
-    catch (Exception e) { fail("Refresh failed: " + e.getMessage()); }
-  }
-
-  private static void list () {
-    out.println("Installed packages:");
-    List<String[]> info = new ArrayList<>();
-    for (Package pkg : repo.packages()) {
-      info.add(new String[] { pkg.name, pkg.source.toString() });
-    }
-    out.printCols(info, "No packages found.");
-  }
-
   private static void info (String pkgName) {
     if (!pkgName.equals("--all")) onPackage(pkgName, Main::printInfo);
     else for (Package pkg : repo.packages()) {
@@ -134,11 +146,11 @@ public class Main {
 
   private static void printInfo (Package pkg) {
     out.println("Package: "+ pkg.name);
-    out.printCols(Arrays.asList(new String[] { "Install:", pkg.root.toString() },
-                                new String[] { "Source:",  pkg.source.toString() },
-                                new String[] { "Version:", pkg.version },
-                                new String[] { "Web URL:", pkg.weburl },
-                                new String[] { "Descrip:", pkg.descrip }), "", 1);
+    out.printCols(Arrays.asList(tuple("Install:", pkg.root.toString()),
+                                tuple("Source:",  pkg.source.toString()),
+                                tuple("Version:", pkg.version),
+                                tuple("Web URL:", pkg.weburl),
+                                tuple("Descrip:", pkg.descrip)), "", 1);
   }
 
   private static void depends (String pkgName) {
@@ -194,6 +206,10 @@ public class Main {
     Optional<Package> po = repo.packageByName(name);
     if (po.isPresent()) fn.accept(po.get());
     else fail("Unknown package: "+ name);
+  }
+
+  private static String[] tuple (String... strs) {
+    return strs;
   }
 
   private static String optarg (String[] args, int idx, String defval) {
