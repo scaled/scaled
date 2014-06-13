@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#
+# Starts Scaled from the command line; handles talking to running instances
+
+# if we have the curspace tool, do some magic to make scaled work per-desktop
+declare WORKSPACE="unknown"
+if hash curspace 2>/dev/null; then
+    WORKSPACE=`curspace`
+fi
+
+# figure out where to put our log file
+LOG=$HOME/.scaled/scaled.log
+if [ -d "$HOME/Library/Logs" ]; then
+    LOG="$HOME/Library/Logs/scaled.log"
+fi
+
+# if scaled is already running
+PORT=32323
+LISTENER=`netstat -n -p udp | grep $PORT`
+if [ -z "$LISTENER" ] ; then
+    if hash spam 2>/dev/null; then
+        exec spam -Dscaled.workspace=$WORKSPACE -J-verbose:gc --log $LOG \
+            run scaled-editor scaled.impl.Main "$@"
+    else
+        echo "Scaled package manager 'spam' must be on your shell search path."
+    fi
+
+elif hash nc 2>/dev/null; then
+    # send request to running scaled process
+    for ARG in $* ; do
+        if [ -f $ARG ]; then
+            FILE=`echo $(cd $(dirname $ARG); pwd)/$(basename $ARG)`
+        else
+            FILE=$ARG
+        fi
+        echo open "@$WORKSPACE" $FILE | nc -c -u localhost $PORT
+    done
+
+else
+    echo "Install 'nc' to communicate with running Scaled instance."
+fi
