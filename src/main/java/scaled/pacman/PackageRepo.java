@@ -152,12 +152,12 @@ public class PackageRepo {
     pkgs.put(pkg.source, pkg);
   }
 
-  // TODO: platform specific app dirs
   private Path locateMetaDir () {
     // if our metadir has been overridden, use the specified value
     String root = System.getProperty("scaled.meta");
     if (root != null) return Paths.get(root);
 
+    // TODO: platform specific app dirs
     Path homeDir = Paths.get(System.getProperty("user.home"));
     return homeDir.resolve(Paths.get("Library", "Application Support", "Scaled"));
   }
