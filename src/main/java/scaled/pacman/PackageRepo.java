@@ -166,7 +166,7 @@ public class PackageRepo {
 
     Path homeDir = Paths.get(System.getProperty("user.home"));
     // if we're on a Mac, put things in ~/Library/Application Support/Scaled
-    Path appSup = Paths.get("Library", "Application Support");
+    Path appSup = homeDir.resolve("Library").resolve("Application Support");
     if (Files.exists(appSup)) return appSup.resolve("Scaled");
     // otherwise use ~/.scaled (TODO: we can probably do better on Windows)
     else return homeDir.resolve(".scaled");
