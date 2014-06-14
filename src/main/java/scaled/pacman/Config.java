@@ -104,7 +104,8 @@ public class Config {
   }
 
   private String trim (String line) {
-    int hidx = line.indexOf('#');
+    // comments can either start at column zero, or must be preceded by a space
+    int hidx = (line.length() > 0 && line.charAt(0) == '#') ? 0 : line.indexOf(" #");
     return (hidx == -1) ? line.trim() : line.substring(0, hidx).trim();
   }
 
