@@ -49,21 +49,12 @@ public class Source implements Depend.Id {
 
   /** Returns only the package source. Module information is omitted. */
   public Source packageSource () {
-    try {
-      return (url.getFragment() == null) ? this : new Source(
-        vcs, new URI(url.getScheme(), url.getHost(), url.getPath()));
-    } catch (URISyntaxException e) {
-      throw new AssertionError(e); // in theory, not possible
-    }
+    return (url.getFragment() == null) ? this : new Source(vcs, withFrag(url, null));
   }
 
   /** Returns the source for the module {@code module} within the package identified by this. */
   public Source moduleSource (String module) {
-    try {
-      return new Source(vcs, new URI(url.getScheme(), url.getHost(), url.getPath(), module));
-    } catch (URISyntaxException e) {
-      throw new AssertionError(e); // in theory, not possible
-    }
+    return new Source(vcs, withFrag(url, module));
   }
 
   @Override public String conflictId () { return toString(); }
@@ -72,5 +63,13 @@ public class Source implements Depend.Id {
   @Override public boolean equals (Object other) {
     return (other instanceof Source) && vcs == ((Source)other).vcs &&
       url.equals(((Source)other).url);
+  }
+
+  private URI withFrag (URI uri, String frag) {
+    try {
+      return new URI(uri.getScheme(), uri.getHost(), uri.getPath(), frag);
+    } catch (URISyntaxException e) {
+      throw new AssertionError(e); // in theory, not possible
+    }
   }
 }
