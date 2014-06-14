@@ -25,6 +25,9 @@ public class Module {
   /** The package that contains this module. */
   public final Package pkg;
 
+  /** This module's simple name. */
+  public final String name;
+
   /** The root of this module, generally a directory. */
   public final Path root;
 
@@ -35,8 +38,9 @@ public class Module {
   public final List<Depend> depends;
 
   /** Creates a module info with the supplied metadata. */
-  public Module (Package pkg, Path root, Source source, Config cfg) {
+  public Module (Package pkg, String name, Path root, Source source, Config cfg) {
     this.pkg  = pkg;
+    this.name = name;
     this.root = root;
     this.source = source;
     this.depends = cfg.resolve("depend", new Config.DependListP(Depend.Scope.COMPILE));

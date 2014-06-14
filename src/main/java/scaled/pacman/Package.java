@@ -73,7 +73,7 @@ public class Package {
     // if no modules were defined, create the default module using package config
     List<String> mods = cfg.resolve("module", Config.StringListP);
     if (mods.isEmpty()) {
-      _modules.put(Module.DEFAULT, new Module(this, root, source, cfg));
+      _modules.put(Module.DEFAULT, new Module(this, Module.DEFAULT, root, source, cfg));
     }
 
     // we're done with the package config, so accumulate any errors
@@ -81,14 +81,14 @@ public class Package {
 
     // this will noop if no modules were defined, but we structure the code this way because we need
     // errors to be initialized before we parse our module configs
-    for (String module : mods) {
-      Path mroot = root.resolve(module);
+    for (String mname : mods) {
+      Path mroot = root.resolve(mname);
       try {
         Config mcfg = new Config(Files.readAllLines(mroot.resolve("module.scaled")));
-        _modules.put(module, new Module(this, mroot, source.moduleSource(module), mcfg));
+        _modules.put(mname, new Module(this, mname, mroot, source.moduleSource(mname), mcfg));
         errors.addAll(mcfg.finish());
       } catch (IOException ioe) {
-        errors.add("Failed to parse module " + module + ": " + ioe);
+        errors.add("Failed to parse module " + mname + ": " + ioe);
       }
     }
   }
