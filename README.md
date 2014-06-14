@@ -21,9 +21,9 @@ extending the editor in elisp (nothing against lisp, use Clojure if that's your 
 
 ## Kick the tires
 
-Scaled is still in the early phases of active development, but it is mature enough that I use it
-exclusively to develop itself. It undoubtedly has rough edges, but it's relatively easy to give it a
-whirl.
+Scaled is still in the early phases of active development. It is mature enough that I use it
+exclusively to develop itself, but it has rough edges. Fortunately, it's relatively easy to give it
+a whirl.
 
 Scaled includes a package management system which is used to install Scaled itself as well as
 extension packages. The Scaled package manager (spam) is desgined to bootstrap itself. Simply
@@ -45,19 +45,18 @@ on a reasonably speedy development machine.
 Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Application Support/Scaled`
 on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via `spam`, but it's
 cumbersome, instead symlink `SCALED_HOME/Packages/scaled-editor/scaled` into your `~/bin` directory
-or wherever you like to put things so that they are on your shell path, and then invoke Scaled via
+(or wherever you like to put things so that they are on your shell path), and then invoke Scaled via
 `scaled`.
 
 If you have the `nc` program installed (`brew install netcat`), the `scaled` script will use it to
 communicate with an already running instance of Scaled when possible. Thus you can invoke `scaled
-somefile` on the command line and that file will be opened in the already running Scaled, or Scaled
-will be launched if needed.
+somefile` on the command line and that file will be opened in the already running Scaled if one
+exists, or Scaled will be launched otherwise.
 
 ## Packages
 
-By default, Scaled comes only with basic text editing capabilities. To properly Feel the Magic (tm),
-you will need to install some packages. You can list the available packages via:
-
+By default, Scaled comes only with basic text editing capabilities. To properly Feel the Magic™, you
+will need to install some packages. You can list the available packages via
 ```
 spam list --all
 ```
@@ -78,17 +77,17 @@ spam install sbt-project
 ```
 
 Presently Scaled's integration with Maven projects is decent and its integration with SBT projects
-is largely non-existent. The `sbt-project` is the barest skeleton. Eventually SBT integration will
-be improved, and Gradle integration is also in the cards.
+is the barest skeleton. Eventually SBT integration will be improved, and Gradle integration is also
+in the cards.
 
 If you do happen to have a `pom.xml` with your project metadata in it, Scaled will automatically
-build your code on save and allow you to navigate through the errors in the editor (via M-] and
-M-[). The current compiler integration is somewhat primitive, and a tighter integration is
+build your code on save and allow you to navigate through the errors in the editor (via `M-]` and
+`M-[`). The current compiler integration is somewhat primitive, and a tighter integration is
 forthcoming.
 
 Scaled also includes basic integration with JUnit, allowing you to run tests directly from within
-the editor and see results. C-c C-t runs the tests in the current file if it looks like it contains
-JUnit tests, and it runs all the tests for the project otherwise.
+the editor and see results. `C-c C-t` runs the tests in the current file if it looks like it
+contains JUnit tests, and it runs all the tests for the project otherwise.
 
 ## Using Scaled
 
@@ -104,14 +103,14 @@ by key binding description.
 
 ## Development
 
-Chances are, Scaled does not solve all of your development needs and make your favorite kind of
-toast. If you find that the fires in your belly are stoked by the idea of an Emacs-like extensible
-editor built atop the JVM, then perhaps you would like to extend Scaled such that it does solve your
-problems and make your toast. This is becoming a less crazy prospect day by day as the Scaled core
-stabilizes and the facilities for developing Scaled improve.
+Chances are, Scaled does not currently solve all of your development needs and make your favorite
+kind of toast. If you find that the fires in your belly are stoked by the idea of an Emacs-like
+extensible editor built atop the JVM, then perhaps you would like to extend Scaled such that it does
+support your desired toast-making capabilities. This is becoming a less crazy prospect day by day as
+the Scaled core stabilizes and the facilities for developing Scaled improve.
 
 Because Scaled checks itself and all of its extensions out directly from source, you can simply
-start hacking on the code that was checked out in `SCALED_HOME/Packages`. This is not wildly
+start hacking on the code that is checked out in `SCALED_HOME/Packages`. This is not wildly
 different than how I develop Scaled. I actually have the packages checked out elsewhere and symlink
 them into `SCALED_HOME/Packages`, but that's mainly so that I can arrange the myriad Scaled
 subprojects into a slightly less flat directory structure.
@@ -122,7 +121,11 @@ you hack on, run when testing, and can break without fear of hosing your develop
 even theoretically possible right now by running `spam -Dscaled.meta=somedir` (or `scaled
 -Dscaled.meta=somedir` as -D args are passed through to `spam`) but I'd like to make it even easier.
 
-## Scaled Extensions
+There's not much documentation on Scaled's internals yet, but if more than zero people turn up and
+want to help, then I'll gladly move the writing of said documentation up my priority list. The main
+ways to extend scaled are described below.
+
+### Scaled Extensions
 
 Scaled extensions come in three main flavors:
 
