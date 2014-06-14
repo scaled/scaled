@@ -29,7 +29,7 @@ class PackageTest {
   @Test def testValid () {
     val info = new Package(null, cwd, scaledApi)
     assertEquals(scaledSource, info.source)
-    assertEquals(Collections.emptyList(), info.depends)
+    assertEquals(Collections.emptyList(), info.module(Module.DEFAULT).depends)
     assertTrue(info.errors.isEmpty)
   }
 
@@ -62,6 +62,7 @@ class PackageTest {
     info.errors foreach println
     assertEquals(0, info.errors.size)
     assertEquals(List(new Depend(javaSource, Depend.Scope.COMPILE),
-                      new Depend(tmRepoId, Depend.Scope.COMPILE)), info.depends.toList)
+                      new Depend(tmRepoId, Depend.Scope.COMPILE)),
+                 info.module(Module.DEFAULT).depends.toList)
   }
 }

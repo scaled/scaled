@@ -40,6 +40,32 @@ public class Source implements Depend.Id {
     this.url = url;
   }
 
+  /** Returns the module referenced by this source depend. The moduls is encoded in the URI
+    * fragment and defaults to {@link Module#DEFAULT} if none is specified.
+    */
+  public String module () {
+    return (url.getFragment() == null) ? Module.DEFAULT : url.getFragment();
+  }
+
+  /** Returns only the package source. Module information is omitted. */
+  public Source packageSource () {
+    try {
+      return (url.getFragment() == null) ? this : new Source(
+        vcs, new URI(url.getScheme(), url.getHost(), url.getPath()));
+    } catch (URISyntaxException e) {
+      throw new AssertionError(e); // in theory, not possible
+    }
+  }
+
+  /** Returns the source for the module {@code module} within the package identified by this. */
+  public Source moduleSource (String module) {
+    try {
+      return new Source(vcs, new URI(url.getScheme(), url.getHost(), url.getPath(), module));
+    } catch (URISyntaxException e) {
+      throw new AssertionError(e); // in theory, not possible
+    }
+  }
+
   @Override public String conflictId () { return toString(); }
   @Override public String toString () { return vcs + ":" + url; }
   @Override public int hashCode () { return vcs.hashCode() ^ url.hashCode(); }

@@ -21,30 +21,37 @@ public class Config {
     }
   }
 
-  public static class DependP extends Parser<List<Depend>> {
-    public final Depend.Scope scope;
-    public DependP (Depend.Scope scope) {
-      this.scope = scope;
-    }
-    public List<Depend> parse (String text) throws Exception {
-      try {
-        return new ArrayList<>(Collections.singletonList(Depend.parse(text, scope)));
-      } catch (Exception e) {
-        throw new IllegalArgumentException(
-          "Failed to parse depend '" + text + "': " + e.getMessage());
-      }
-    }
-    public Optional<List<Depend>> zero () {
+  public static abstract class ListParser<T> extends Parser<List<T>> {
+    public Optional<List<T>> zero () {
       return Optional.of(new ArrayList<>());
     }
-    public List<Depend> accum (String key, List<Depend> have, List<Depend> next) {
+    public List<T> accum (String key, List<T> have, List<T> next) {
       have.addAll(next);
       return have;
     }
   }
 
+  public static class DependListP extends ListParser<Depend> {
+    public final Depend.Scope scope;
+    public DependListP (Depend.Scope scope) {
+      this.scope = scope;
+    }
+    public List<Depend> parse (String text) throws Exception {
+      try {
+        return Collections.singletonList(Depend.parse(text, scope));
+      } catch (Exception e) {
+        throw new IllegalArgumentException(
+          "Failed to parse depend '" + text + "': " + e.getMessage());
+      }
+    }
+  }
+
   public static Parser<String> StringP = new Parser<String>() {
     public String parse (String text) { return text; }
+  };
+
+  public static Parser<List<String>> StringListP = new ListParser<String>() {
+    public List<String> parse (String text) { return Collections.singletonList(text); }
   };
 
   public static Parser<Source> SourceP = new Parser<Source>() {

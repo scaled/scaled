@@ -16,29 +16,30 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Loads classes for a particular package. A package has two kinds of dependencies: Maven
- * dependencies, which are private to the package, and will be searched first, and Package
- * dependencies, wherein a Scaled package depends on another Scaled package.
+ * Loads classes for a particular module. A module has two kinds of dependencies: Maven
+ * dependencies, which are private to the package, and will be searched first, and Source
+ * dependencies, wherein a Scaled package module depends on another module (possibly in a different
+ * package).
  */
-public class PackageLoader extends URLClassLoader {
+public class ModuleLoader extends URLClassLoader {
 
   public final Source source;
   public final Path classes;
   public final Collection<Path> mavenDeps;
-  public final Iterable<PackageLoader> packageDeps;
+  public final Iterable<ModuleLoader> moduleDeps;
 
-  public PackageLoader (Source source, Path classes, Collection<Path> mavenDeps,
-                        Iterable<PackageLoader> packageDeps) {
+  public ModuleLoader (Source source, Path classes, Collection<Path> mavenDeps,
+                       Iterable<ModuleLoader> moduleDeps) {
     super(toURLs(classes, mavenDeps));
     this.source = source;
     this.classes = classes;
     this.mavenDeps = mavenDeps;
-    this.packageDeps = packageDeps;
+    this.moduleDeps = moduleDeps;
   }
 
   public void accumMavenDeps (Set<Path> into) {
     into.addAll(mavenDeps);
-    for (PackageLoader dep : packageDeps) dep.accumMavenDeps(into);
+    for (ModuleLoader dep : moduleDeps) dep.accumMavenDeps(into);
   }
 
   public List<Path> classpath () {
@@ -54,7 +55,7 @@ public class PackageLoader extends URLClassLoader {
       out.println(indent + "= " + classes);
       String dindent = indent + "- ";
       for (Path path : mavenDeps) out.println(dindent + path);
-      for (PackageLoader pkg : packageDeps) pkg.dump(out, dindent, seen);
+      for (ModuleLoader pkg : moduleDeps) pkg.dump(out, dindent, seen);
     } else {
       out.println(indent + "(*) " + source);
     }
@@ -64,14 +65,14 @@ public class PackageLoader extends URLClassLoader {
     if (seen.add(source)) {
       cp.add(classes);
       cp.addAll(mavenDeps);
-      for (PackageLoader dep : packageDeps) dep.buildClasspath(cp, seen);
+      for (ModuleLoader dep : moduleDeps) dep.buildClasspath(cp, seen);
     }
   }
 
   @Override public URL getResource (String path) {
     URL rsrc = super.getResource(path);
     if (rsrc != null) return rsrc;
-    for (PackageLoader loader : packageDeps) {
+    for (ModuleLoader loader : moduleDeps) {
       URL drsrc = loader.getResource(path);
       if (drsrc != null) return drsrc;
     }
@@ -81,8 +82,8 @@ public class PackageLoader extends URLClassLoader {
   @Override protected Class<?> findClass (String name) throws ClassNotFoundException {
     // System.err.println("Seeking "+ name +" in "+ source);
     try { return super.findClass(name); }
-    catch (ClassNotFoundException cnfe) {} // check our package deps
-    for (PackageLoader loader : packageDeps) {
+    catch (ClassNotFoundException cnfe) {} // check our module deps
+    for (ModuleLoader loader : moduleDeps) {
       try { return loader.loadClass(name); }
       catch (ClassNotFoundException cnfe) {} // keep going
     }
@@ -90,7 +91,7 @@ public class PackageLoader extends URLClassLoader {
   }
 
   @Override public String toString () {
-    return "PkgLoader(" + source + ")";
+    return "ModLoader(" + source + ")";
   }
 
   private static URL[] toURLs (Path classes, Collection<Path> paths) {

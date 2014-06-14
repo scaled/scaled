@@ -81,7 +81,13 @@ public class PackageRepo {
     return Optional.ofNullable(_pkgs.get(source));
   }
 
-  /** Returns a list of {@code pkg}'s transitive package dependencies. The list will be ordered such
+  /** Returns the module identified by {@code source}, if any. */
+  public Optional<Module> moduleBySource (Source source) {
+    Package pkg = _pkgs.get(source.packageSource());
+    return Optional.ofNullable(pkg == null ? null : pkg.module(source.module()));
+  }
+
+  /** Returns a list of {@code pkg}'s transitive module dependencies. The list will be ordered such
     * that each package will appear later in the list than all packages on which it depends. Note:
     * {@code pkg} is included at the end of the list. */
   public List<Package> packageDepends (Package pkg) {
@@ -91,30 +97,30 @@ public class PackageRepo {
   }
 
   /** Creates a class loader for {@code pkg}. */
-  public PackageLoader createLoader (Package pkg) {
+  public ModuleLoader createLoader (Module module) {
     List<RepoId> mvnIds = new ArrayList<>();
-    List<PackageLoader> packageDeps = new ArrayList<>();
-    for (Depend dep : pkg.depends) {
+    List<ModuleLoader> moduleDeps = new ArrayList<>();
+    for (Depend dep : module.depends) {
       if (dep.id instanceof RepoId) mvnIds.add((RepoId)dep.id);
       else {
-        Package dpkg = _pkgs.get((Source)dep.id);
-        if (dpkg != null) packageDeps.add(dpkg.loader());
-        else log.log("Missing package depend", "owner", pkg.source, "source", dep.id);
+        Optional<Module> dmod = moduleBySource((Source)dep.id);
+        if (dmod.isPresent()) moduleDeps.add(dmod.get().loader());
+        else log.log("Missing source depend", "owner", module.source, "source", dep.id);
       }
     }
 
     // use a linked hash set because Capsule sometimes returns duplicate dependencies, so this will
     // filter them out; but we need to preserve iteration order
     LinkedHashSet<Path> mavenDeps = new LinkedHashSet<>();
-    // if the package has Maven dependencies, resolve those and add them to maven deps
+    // if the module has Maven dependencies, resolve those and add them to maven deps
     if (!mvnIds.isEmpty()) {
-      // compute the transitive set of Maven depends already handled by our package dependencies;
+      // compute the transitive set of Maven depends already handled by our module dependencies;
       // we'll omit those from our Maven deps because we want to "inherit" them
       Set<Path> haveMavenDeps = new HashSet<>();
-      for (PackageLoader dep : packageDeps) dep.accumMavenDeps(haveMavenDeps);
+      for (ModuleLoader dep : moduleDeps) dep.accumMavenDeps(haveMavenDeps);
       for (Path path : mvn.resolve(mvnIds)) if (!haveMavenDeps.contains(path)) mavenDeps.add(path);
     }
-    return new PackageLoader(pkg.source, pkg.classesDir(), mavenDeps, packageDeps);
+    return new ModuleLoader(module.source, module.classesDir(), mavenDeps, moduleDeps);
   }
 
   public void init () throws IOException {
@@ -149,11 +155,14 @@ public class PackageRepo {
   private void addPackageDepends (LinkedHashMap<Source,Package> pkgs, Package pkg) {
     // stop if we've already added this package's depends
     if (pkgs.containsKey(pkg.source)) return;
-    // add all of this package's depends
-    for (Depend dep : pkg.depends) if (dep.isSource()) {
-      Package dpkg = _pkgs.get(dep.id);
-      if (dpkg == null) log.log("Missing depend!", "pkg", pkg.source, "dep", dep.id);
-      else addPackageDepends(pkgs, dpkg);
+    // add all packages on which any of this package's modules depend
+    for (Module mod : pkg.modules()) {
+      for (Depend dep : mod.depends) if (dep.isSource()) {
+        Source psrc = ((Source)dep.id).packageSource();
+        Package dpkg = _pkgs.get(psrc);
+        if (dpkg == null) log.log("Missing depend!", "mod", mod.source, "dep", dep.id);
+        else addPackageDepends(pkgs, dpkg);
+      }
     }
     // then add this package
     pkgs.put(pkg.source, pkg);

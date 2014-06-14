@@ -25,16 +25,15 @@ public class Main {
     "\n" +
     "where <command> is one of:\n" +
     "\n" +
-    "  list [--all]                  lists installed (or all) packages\n" +
-    "  search text                   lists all packages in directory which match text\n" +
-    "  refresh                       updates the package directory index\n" +
-    "  install [pkg-name | pkg-url]  installs package (by name or url) and its depends\n" +
-    "  info [pkg-name | --all]       prints detailed info on pkg-name (or all packages)\n" +
-    "  depends pkg-name              prints the depend tree for pkg-name\n" +
-    "  classpath pkg-name            prints the classpath for pkg-name\n" +
-    "  build pkg-name [--deps]       cleans and builds pkg-name (and its depends if --deps)\n" +
-    "  clean pkg-name [--deps]       cleans pkg-name (and its depends if --deps)\n" +
-    "  run pkg-name class [arg ...]  runs class from pkg-name with args";
+    "  list [--all]                         lists installed (or all) packages\n" +
+    "  search text                          lists all packages in directory which match text\n" +
+    "  refresh                              updates the package directory index\n" +
+    "  install [pkg-name | pkg-url]         installs package (by name or url) and its depends\n" +
+    "  info [pkg-name | --all]              prints detailed info on pkg-name (or all packages)\n" +
+    "  depends pkg-name                     prints the depend tree for pkg-name\n" +
+    "  build pkg-name [--deps]              cleans and builds pkg-name (and depends if --deps)\n" +
+    "  clean pkg-name [--deps]              cleans pkg-name (and its depends if --deps)\n" +
+    "  run pkg-name#module class [arg ...]  runs class from pkg-name#module with args";
 
   public static final Printer out = new Printer(System.out);
   public static final PackageRepo repo = new PackageRepo();
@@ -58,7 +57,6 @@ public class Main {
     case   "install": install(args[1]); break;
     case      "info": info(args[1]); break;
     case   "depends": depends(args[1]); break;
-    case "classpath": classpath(args[1]); break;
     case     "build": build(args[1], optarg(args, 2, "").equals("--deps")); break;
     case     "clean": clean(args[1], optarg(args, 2, "").equals("--deps")); break;
     case       "run": run(args[1], args[2], tail(args, 3)); break;
@@ -152,16 +150,13 @@ public class Main {
                                 tuple("Source:",  pkg.source.toString()),
                                 tuple("Version:", pkg.version),
                                 tuple("Web URL:", pkg.weburl),
+                                tuple("Modules:", pkg.moduleNames().toString()),
                                 tuple("Descrip:", pkg.descrip)), "", 1);
   }
 
   private static void depends (String pkgName) {
-    onPackage(pkgName, pkg -> pkg.loader().dump(System.out, "", new HashSet<>()));
-  }
-
-  private static void classpath (String pkgName) {
     onPackage(pkgName, pkg -> {
-        for (Path path : pkg.loader().classpath()) out.println(path);
+      for (Module mod : pkg.modules()) mod.loader().dump(System.out, "", new HashSet<>());
     });
   }
 
@@ -193,10 +188,15 @@ public class Main {
     return deps ? repo.packageDepends(pkg) : Collections.singletonList(pkg);
   }
 
-  private static void run (String pkgName, String classname, String[] args) {
+  private static void run (String pkgMod, String classname, String[] args) {
+    int hidx = pkgMod.indexOf("#");
+    String pkgName = (hidx == -1) ? pkgMod : pkgMod.substring(0, hidx);
+    String modName = (hidx == -1) ? Module.DEFAULT : pkgMod.substring(hidx+1);
     onPackage(pkgName, pkg -> {
+      Module mod = pkg.module(modName);
+      if (mod == null) fail("Unknown module: " + modName + " in package: " + pkgName);
       try {
-        Class<?> clazz = pkg.loader().loadClass(classname);
+        Class<?> clazz = mod.loader().loadClass(classname);
         clazz.getMethod("main", String[].class).invoke(null, (Object)args);
       } catch (Exception e) {
         e.printStackTrace(System.err);
