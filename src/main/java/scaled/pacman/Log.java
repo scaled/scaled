@@ -19,7 +19,7 @@ public abstract class Log {
    */
   public void log (String msg, String key, Object value, Object... keyVals) {
     StringBuilder sb = new StringBuilder(msg);
-    sb.append("[").append(key).append("=").append(value);
+    sb.append(" [").append(key).append("=").append(value);
     int ii = 0; for (int ll = keyVals.length-1; ii < ll; ii += 2) {
       sb.append(", ").append(keyVals[ii]).append("=").append(keyVals[ii+1]);
     }
