@@ -64,10 +64,11 @@ public class Main {
     }
   }
 
-  private static final String IDX_GIT_URL = "https://github.com/scaled/scaled-directory.git";
+  private static final String IDX_GIT_URL = "https://github.com/scaled/scaledex.git";
+  private static final String IDX_PKG_NAME = "scaledex";
   private static void initIndex () {
     try {
-      Path idir = repo.packageDir("scaled-directory");
+      Path idir = repo.packageDir(IDX_PKG_NAME);
       if (!Files.exists(idir)) {
         System.out.println("* Fetching Scaled package directory...");
         VCSDriver.get(Source.VCS.GIT).checkout(new URI(IDX_GIT_URL), idir);
@@ -109,7 +110,7 @@ public class Main {
 
   private static void refresh () {
     out.println("Refreshing Scaled package index...");
-    try { VCSDriver.get(Source.VCS.GIT).update(repo.packageDir("scaled-directory")); }
+    try { VCSDriver.get(Source.VCS.GIT).update(repo.packageDir(IDX_PKG_NAME)); }
     catch (Exception e) { fail("Refresh failed: " + e.getMessage()); }
   }
 
