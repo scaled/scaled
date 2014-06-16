@@ -9,7 +9,6 @@ import java.net.URISyntaxException;
 public class Depend {
 
   public static interface Id {
-    String conflictId ();
   }
 
   // TODO: other scopes?
