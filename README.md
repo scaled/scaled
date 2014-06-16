@@ -160,5 +160,4 @@ Scaled is released under the New BSD License. The most recent version of the cod
 https://github.com/scaled/scaled
 
 [Emacs reference card]: http://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
-[sbt-extras]: https://github.com/paulp/sbt-extras
-[the `spam` shell script]: https://raw.githubusercontent.com/scaled/scaled-pacman/master/spam
+[the `spam` shell script]: https://raw.githubusercontent.com/scaled/scaled/master/bin/spam
