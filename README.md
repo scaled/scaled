@@ -44,7 +44,7 @@ on a reasonably speedy development machine.
 
 Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Application Support/Scaled`
 on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via `spam`, but it's
-cumbersome, instead symlink `SCALED_HOME/Packages/scaled-editor/scaled` into your `~/bin` directory
+cumbersome, instead symlink `SCALED_HOME/Packages/scaled/bin/scaled` into your `~/bin` directory
 (or wherever you like to put things so that they are on your shell path), and then invoke Scaled via
 `scaled`.
 
