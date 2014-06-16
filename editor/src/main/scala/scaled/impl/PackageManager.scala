@@ -123,8 +123,8 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   private val interps   = HashMultimap.create[String,String]()
   private val minorTags = HashMultimap.create[String,String]()
 
-  private val ScaledAPI = Source.parse("git:https://github.com/scaled/scaled-api.git")
-  private val ScaledEditor = Source.parse("git:https://github.com/scaled/scaled-editor.git")
+  private val ScaledAPI = Source.parse("git:https://github.com/scaled/scaled.git#api")
+  private val ScaledEditor = Source.parse("git:https://github.com/scaled/scaled.git#editor")
 
   // wire up our observer
   pkgRepo.observer = new PackageRepo.Observer() {
