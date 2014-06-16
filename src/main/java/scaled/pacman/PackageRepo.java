@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +47,9 @@ public class PackageRepo {
 
   /** Used to resolve Maven artifacts. */
   public final MavenResolver mvn = new MavenResolver();
+
+  /** Used to resolve System artifacts. */
+  public final SystemResolver sys = new SystemResolver(log);
 
   /** Creates (if necessary) and returns a directory in the top-level Scaled metadata directory. */
   public Path metaDir (String name) throws IOException {
@@ -99,9 +103,11 @@ public class PackageRepo {
   /** Creates a class loader for {@code pkg}. */
   public ModuleLoader createLoader (Module module) {
     List<RepoId> mvnIds = new ArrayList<>();
+    List<SystemId> sysIds = new ArrayList<>();
     List<ModuleLoader> moduleDeps = new ArrayList<>();
     for (Depend dep : module.depends) {
       if (dep.id instanceof RepoId) mvnIds.add((RepoId)dep.id);
+      else if (dep.id instanceof SystemId) sysIds.add((SystemId)dep.id);
       else {
         Optional<Module> dmod = moduleBySource((Source)dep.id);
         if (dmod.isPresent()) moduleDeps.add(dmod.get().loader());
@@ -111,16 +117,21 @@ public class PackageRepo {
 
     // use a linked hash set because Capsule sometimes returns duplicate dependencies, so this will
     // filter them out; but we need to preserve iteration order
-    LinkedHashSet<Path> mavenDeps = new LinkedHashSet<>();
-    // if the module has Maven dependencies, resolve those and add them to maven deps
-    if (!mvnIds.isEmpty()) {
-      // compute the transitive set of Maven depends already handled by our module dependencies;
-      // we'll omit those from our Maven deps because we want to "inherit" them
-      Set<Path> haveMavenDeps = new HashSet<>();
-      for (ModuleLoader dep : moduleDeps) dep.accumMavenDeps(haveMavenDeps);
-      for (Path path : mvn.resolve(mvnIds)) if (!haveMavenDeps.contains(path)) mavenDeps.add(path);
+    LinkedHashSet<Path> binDeps = new LinkedHashSet<>();
+    // if the module has binary dependencies, resolve those and add them to maven deps
+    if (!mvnIds.isEmpty() || !sysIds.isEmpty()) {
+      // compute the transitive set of binary depends already handled by our module dependencies;
+      // we'll omit those from our binary deps because we want to "inherit" them
+      Set<Path> haveBinaryDeps = new HashSet<>();
+      for (ModuleLoader dep : moduleDeps) dep.accumBinaryDeps(haveBinaryDeps);
+      addFiltered(haveBinaryDeps, mvn.resolve(mvnIds), binDeps);
+      addFiltered(haveBinaryDeps, sys.resolve(module.source, sysIds), binDeps);
     }
-    return new ModuleLoader(module.source, module.classesDir(), mavenDeps, moduleDeps);
+    return new ModuleLoader(module.source, module.classesDir(), binDeps, moduleDeps);
+  }
+
+  private void addFiltered (Set<Path> except, List<Path> source, Collection<Path> dest) {
+    for (Path path : source) if (!except.contains(path)) dest.add(path);
   }
 
   public void init () throws IOException {

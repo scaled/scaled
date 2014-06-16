@@ -6,9 +6,9 @@ package scaled.pacman;
 
 public class RepoId implements Depend.Id {
 
-  // parses a repo depend: repo:groupId:artifactId:version:kind
+  // parses a repo depend: groupId:artifactId:version:kind
   public static RepoId parse (String text) {
-    String[] bits = text.split(":", 5);
+    String[] bits = text.split(":", 4);
     if (bits.length < 3) throw new IllegalArgumentException(
       "Invalid repo id: "+ text +" (expect 'groupId:artifactId:version')");
     String kind = bits.length > 3 ? bits[3] : "jar";

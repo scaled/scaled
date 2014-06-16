@@ -20,8 +20,15 @@ public class Depend {
   public static Depend parse (String url, Scope scope) throws URISyntaxException {
     String[] bits = url.split(":", 2);
     if (bits.length == 1) throw new IllegalArgumentException("Invalid depend URI: " + url);
-    if (bits[0].equals("mvn")) return new Depend(RepoId.parse(bits[1]), scope);
-    return new Depend(Source.parse(bits[0], bits[1]), scope);
+    return new Depend(parseId(bits[0], bits[1]), scope);
+  }
+
+  private static Id parseId (String tag, String data) throws URISyntaxException {
+    switch (tag) {
+      case "mvn": return RepoId.parse(data);
+      case "sys": return SystemId.parse(data);
+      default:    return Source.parse(tag, data);
+    }
   }
 
   public final Id id;

@@ -16,30 +16,29 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Loads classes for a particular module. A module has two kinds of dependencies: Maven
- * dependencies, which are private to the package, and will be searched first, and Source
- * dependencies, wherein a Scaled package module depends on another module (possibly in a different
- * package).
+ * Loads classes for a particular module. A module has two kinds of depends: binary depends, which
+ * are private to the package, and will be searched first, and module depends, wherein a Scaled
+ * package module depends on another module (possibly in a different package).
  */
 public class ModuleLoader extends URLClassLoader {
 
   public final Source source;
   public final Path classes;
-  public final Collection<Path> mavenDeps;
+  public final Collection<Path> binaryDeps;
   public final Iterable<ModuleLoader> moduleDeps;
 
-  public ModuleLoader (Source source, Path classes, Collection<Path> mavenDeps,
+  public ModuleLoader (Source source, Path classes, Collection<Path> binaryDeps,
                        Iterable<ModuleLoader> moduleDeps) {
-    super(toURLs(classes, mavenDeps));
+    super(toURLs(classes, binaryDeps));
     this.source = source;
     this.classes = classes;
-    this.mavenDeps = mavenDeps;
+    this.binaryDeps = binaryDeps;
     this.moduleDeps = moduleDeps;
   }
 
-  public void accumMavenDeps (Set<Path> into) {
-    into.addAll(mavenDeps);
-    for (ModuleLoader dep : moduleDeps) dep.accumMavenDeps(into);
+  public void accumBinaryDeps (Set<Path> into) {
+    into.addAll(binaryDeps);
+    for (ModuleLoader dep : moduleDeps) dep.accumBinaryDeps(into);
   }
 
   public List<Path> classpath () {
@@ -54,7 +53,7 @@ public class ModuleLoader extends URLClassLoader {
       out.println(indent + source);
       out.println(indent + "= " + classes);
       String dindent = indent + "- ";
-      for (Path path : mavenDeps) out.println(dindent + path);
+      for (Path path : binaryDeps) out.println(dindent + path);
       for (ModuleLoader pkg : moduleDeps) pkg.dump(out, dindent, seen);
     } else {
       out.println(indent + "(*) " + source);
@@ -64,7 +63,7 @@ public class ModuleLoader extends URLClassLoader {
   private void buildClasspath (List<Path> cp, Set<Source> seen) {
     if (seen.add(source)) {
       cp.add(classes);
-      cp.addAll(mavenDeps);
+      cp.addAll(binaryDeps);
       for (ModuleLoader dep : moduleDeps) dep.buildClasspath(cp, seen);
     }
   }
