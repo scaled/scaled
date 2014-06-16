@@ -40,6 +40,8 @@ public class PackageBuilder {
 
   /** Builds the specified module. */
   public void build (Module mod) throws IOException {
+    if (!mod.isDefault()) _repo.log.log("Building " + mod.pkg.name + "#" + mod.name + "...");
+
     // create the build output directory
     Files.createDirectories(mod.classesDir());
 

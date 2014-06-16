@@ -46,6 +46,11 @@ public class Module {
     this.depends = cfg.resolve("depend", new Config.DependListP(Depend.Scope.COMPILE));
   }
 
+  /** Returns true if this is the default module in a single-module package, false otherwise. */
+  public boolean isDefault () {
+    return name == DEFAULT;
+  }
+
   /** Returns a class loader for loading classes from this module and its depends. */
   public ModuleLoader loader () {
     if (_loader == null) _loader = pkg.repo.createLoader(this);
