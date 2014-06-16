@@ -14,7 +14,7 @@ LISTENER=`netstat -n -p udp | grep $PORT`
 if [ -z "$LISTENER" ] ; then
     if hash spam 2>/dev/null; then
         exec spam -Dscaled.workspace=$WORKSPACE $SCALED_ARGS \
-            run scaled-editor scaled.impl.Main "$@"
+            run "scaled#editor" scaled.impl.Main "$@"
     else
         echo "Scaled package manager 'spam' must be on your shell search path."
     fi
