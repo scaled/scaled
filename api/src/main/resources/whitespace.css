@@ -1,0 +1,17 @@
+/**
+ * Styles for whitespace-mode.
+ */
+
+.whitespaceTrailingFace {
+  -fx-bg-fill: #AB1500;
+}
+
+/** TODO: from emacs
+ '(whitespace-tab ((((class color) (background dark)) (:background "grey5" :foreground "grey10"))))
+ '(whitespace-indentation ((t (:background "#111"))))
+ '(whitespace-newline ((t (:foreground "#012" :weight normal))))
+ '(whitespace-space-before-tab ((t (:background "#640"))))
+ '(whitespace-space-after-tab ((t (:background "#640"))))
+ '(whitespace-trailing ((t (:background "#900"))))
+ '(trailing-whitespace ((t (:background "#900"))))
+*/
