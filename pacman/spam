@@ -19,7 +19,7 @@ declare M2CAPSULE=$M2REPO/$CAPSULE
 
 # declare some pacman bits
 declare PACMAN_JAR=$SCALED_HOME/pacman.jar
-declare PACMAN_BUILD=$SCALED_HOME/Packages/scaled-pacman/target/classes
+declare PACMAN_BUILD=$SCALED_HOME/Packages/scaled/pacman/target/classes
 
 download() {
   local URL="$1"
