@@ -30,7 +30,7 @@ extension packages. The Scaled package manager (spam) is desgined to bootstrap i
 download [the `spam` shell script], put it on your shell path and invoke:
 
 ```
-spam install scaled-editor
+spam install scaled
 ```
 
 Note: the `java` executable in your shell path must be from a Java 8 JDK installation, or you must
