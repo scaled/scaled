@@ -1,6 +1,6 @@
 //
 // Scaled - a scalable editor extensible via JVM languages
-// http://github.com/samskivert/scaled/blob/master/LICENSE
+// http://github.com/scaled/scaled/blob/master/LICENSE
 
 package scaled.minor
 

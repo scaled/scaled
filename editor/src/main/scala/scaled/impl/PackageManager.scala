@@ -1,6 +1,6 @@
 //
-// Scaled Editor - the Scaled core editor implementation
-// http://github.com/scaled/scaled-editor/blob/master/LICENSE
+// Scaled - a scalable editor extensible via JVM languages
+// http://github.com/scaled/scaled/blob/master/LICENSE
 
 package scaled.impl
 

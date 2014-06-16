@@ -1,6 +1,6 @@
 //
-// Scaled API - the API against which Scaled extensions are written
-// http://github.com/scaled/scaled-api/blob/master/LICENSE
+// Scaled - a scalable editor extensible via JVM languages
+// http://github.com/scaled/scaled/blob/master/LICENSE
 
 package scaled
 

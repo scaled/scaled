@@ -1,3 +1,7 @@
+//
+// Scaled - a scalable editor extensible via JVM languages
+// http://github.com/scaled/scaled/blob/master/LICENSE
+
 package scaled.impl
 
 import com.google.common.collect.HashBiMap
