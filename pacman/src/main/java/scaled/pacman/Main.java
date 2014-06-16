@@ -150,7 +150,7 @@ public class Main {
                                 tuple("Source:",  pkg.source.toString()),
                                 tuple("Version:", pkg.version),
                                 tuple("Web URL:", pkg.weburl),
-                                tuple("Modules:", pkg.moduleNames().toString()),
+                                tuple("Modules:", pkg.modules().toString()),
                                 tuple("Descrip:", pkg.descrip)), "", 1);
   }
 

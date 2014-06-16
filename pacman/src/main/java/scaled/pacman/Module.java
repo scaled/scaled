@@ -8,11 +8,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Contains runtime metadata for one of a package's modules. */
-public class Module {
+public class Module implements Comparable<Module> {
 
   /** The string {@code module.scaled} for all to share and enjoy. */
   public static String FILE = "module.scaled";
@@ -34,8 +36,11 @@ public class Module {
   /** A source that identifies this module. */
   public final Source source;
 
-  /** This modules dependencies. */
+  /** This module' depends. */
   public final List<Depend> depends;
+
+  /** This module's intra-package depends. */
+  public final Set<String> localDepends = new HashSet<>();
 
   /** Creates a module info with the supplied metadata. */
   public Module (Package pkg, String name, Path root, Source source, Config cfg) {
@@ -44,6 +49,13 @@ public class Module {
     this.root = root;
     this.source = source;
     this.depends = cfg.resolve("depend", new Config.DependListP(Depend.Scope.COMPILE));
+
+    // compute our local depends
+    for (Depend dep : depends) {
+      if (!dep.isSource()) continue;
+      Source depsrc = (Source)dep.id;
+      if (depsrc.packageSource().equals(pkg.source)) localDepends.add(depsrc.module());
+    }
   }
 
   /** Returns true if this is the default module in a single-module package, false otherwise. */
@@ -69,6 +81,17 @@ public class Module {
 
   public Path outputDir () { return root.resolve("target"); }
   public Path classesDir () { return outputDir().resolve("classes"); }
+
+  // from interface Comparable
+  public int compareTo (Module other) {
+    if (localDepends.contains(other.name)) return 1;
+    else if (other.localDepends.contains(name)) return -1;
+    else return name.compareTo(other.name);
+  }
+
+  @Override public String toString () {
+    return pkg.name + "#" + name;
+  }
 
   private ModuleLoader _loader;
 }

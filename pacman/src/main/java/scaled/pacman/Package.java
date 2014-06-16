@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /** Contains runtime metadata for an installed package. */
 public class Package {
@@ -34,14 +35,11 @@ public class Package {
 
   public final List<String> errors;
 
-  /** Returns all modules contained in this packge. */
+  /** Returns all modules contained in this packge. These are returned topologically sorted, such
+    * that any module which depends on another module in this package will show up later in the
+    * list than the module on which it depends. */
   public Iterable<Module> modules () {
-    return _modules.values();
-  }
-
-  /** Returns the names of all modules contained in this packge. */
-  public Iterable<String> moduleNames () {
-    return _modules.keySet();
+    return new TreeSet<>(_modules.values());
   }
 
   /** Returns the module with name {@code name} or null. */
