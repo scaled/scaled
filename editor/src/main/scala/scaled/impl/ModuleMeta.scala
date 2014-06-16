@@ -11,7 +11,7 @@ import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.collection.{Set => GSet}
-import scaled.{Logger, PackageInfo}
+import scaled.Logger
 import scaled.pacman._
 
 /** Contains additional metadata for a Scaled package module. This metadata is extracted from
