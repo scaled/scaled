@@ -14,22 +14,19 @@ import scala.collection.{Set => GSet}
 import scaled.{Logger, PackageInfo}
 import scaled.pacman._
 
-/** Contains additional metadata for a Scaled package. This metadata is extracted from annotations
-  * on the Java bytecode found in the package. */
-class PackageMeta (log :Logger, val pkg :Package) {
+/** Contains additional metadata for a Scaled package module. This metadata is extracted from
+  * annotations on the Java bytecode found in the module code. */
+class ModuleMeta (log :Logger, val mod :Module) {
   import scala.collection.convert.WrapAsScala._
 
-  /** Returns info on our package. */
-  def info = PackageInfo(pkg.source.toString, pkg.name, pkg.descrip)
-
   /** Loads and returns the class for the major mode named `name`. */
-  def major (name :String) :Class[_] = pkg.loader.loadClass(majors(name))
+  def major (name :String) :Class[_] = mod.loader.loadClass(majors(name))
   /** Loads and returns the class for the minor mode named `name`. */
-  def minor (name :String) :Class[_] = pkg.loader.loadClass(minors(name))
+  def minor (name :String) :Class[_] = mod.loader.loadClass(minors(name))
   /** Loads and returns the class for the service with class name `name`. */
-  def service (name :String) :Class[_] = pkg.loader.loadClass(services(name))
+  def service (name :String) :Class[_] = mod.loader.loadClass(services(name))
   /** Loads and returns all plugin classes with tag `tag`. */
-  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(pkg.loader.loadClass)
+  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(mod.loader.loadClass)
 
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes
@@ -42,12 +39,12 @@ class PackageMeta (log :Logger, val pkg :Package) {
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
-    pkg.name, majors.keySet, minors.keySet, services, pkg.depends)
+    mod.name, majors.keySet, minors.keySet, services, mod.depends)
 
   // our root may be a directory or a jar file, in either case we scan it for class files
-  if (Files.isDirectory(pkg.root)) {
+  if (Files.isDirectory(mod.root)) {
     val opts = Sets.newHashSet(FileVisitOption.FOLLOW_LINKS)
-    Files.walkFileTree(pkg.root, opts, 32, new SimpleFileVisitor[Path]() {
+    Files.walkFileTree(mod.root, opts, 32, new SimpleFileVisitor[Path]() {
       override def visitFile (file :Path, attrs :BasicFileAttributes) = {
         if (attrs.isRegularFile) {
           val name = file.getFileName.toString ; val fn = apply(name)
@@ -57,8 +54,8 @@ class PackageMeta (log :Logger, val pkg :Package) {
       }
     })
   }
-  else if (pkg.root.getFileName.toString endsWith ".jar") {
-    val jfile = new JarFile(pkg.root.toFile)
+  else if (mod.root.getFileName.toString endsWith ".jar") {
+    val jfile = new JarFile(mod.root.toFile)
     val enum = jfile.entries()
     while (enum.hasMoreElements()) {
       val jentry = enum.nextElement() ; val fn = apply(jentry.getName)
@@ -69,7 +66,7 @@ class PackageMeta (log :Logger, val pkg :Package) {
       }
     }
   }
-  else throw new IllegalArgumentException("Unsupported package root ${pkg.root}")
+  else throw new IllegalArgumentException("Unsupported package root ${mod.root}")
 
   private def apply (name :String) = {
     if (name endsWith "Mode.class") parseMode

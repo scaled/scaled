@@ -17,19 +17,19 @@ import scaled.pacman._
 class PackageManager (log :Logger) extends AbstractService with PackageService {
   import scala.collection.convert.WrapAsScala._
 
-  /** A signal emitted when a package is installed. */
-  val packageAdded = Signal[PackageMeta]()
+  /** A signal emitted when a package module is installed. */
+  val moduleAdded = Signal[ModuleMeta]()
 
-  /** A signal emitted when a package is uninstalled. */
-  val packageRemoved = Signal[PackageMeta]()
+  /** A signal emitted when a package module is uninstalled. */
+  val moduleRemoved = Signal[ModuleMeta]()
 
   private val pkgRepo = scaled.pacman.Main.repo
 
   /** Returns the top-level metadata directory. */
   def metaDir :Path = pkgRepo.metaDir
 
-  /** Returns info on all known packages. */
-  def packages :Iterable[PackageMeta] = metas.values
+  /** Returns info on all known modules. */
+  def modules :Iterable[ModuleMeta] = metas.values
 
   /** Resolves the class for the mode named `name`. */
   def mode (major :Boolean, name :String) :Option[Class[_]] =
@@ -75,11 +75,43 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   override def didStartup () {} // not used
   override def willShutdown () {} // not used
 
-  override def listPackages = metas.values.map(_.info)
+  override def classpath (source :String) = metas(Source.parse(source)).mod.loader.classpath
 
-  override def classpath (source :String) = metas(Source.parse(source)).pkg.loader.classpath
+  private def moduleAdded (mod :Module) {
+    // create a package metadata ; there's some special hackery to handle the fact that services
+    // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
+    val meta = if (mod.source != ScaledAPI) new ModuleMeta(log, mod)
+               else new ModuleMeta(log, mod) {
+                 override def service (name :String) =
+                   metas(ScaledEditor).mod.loader.loadClass(services(name))
+               }
+    metas.put(mod.source, meta)
 
-  private val metas = MMap[Source,PackageMeta]()
+    // map this package's major and minor modes, services and plugins
+    meta.majors.keySet foreach { majorMap.put(_, meta.major _) }
+    meta.minors.keySet foreach { minorMap.put(_, meta.minor _) }
+    meta.services.keySet foreach { serviceMap.put(_, meta.service _) }
+    // map the file patterns and interpreters defined by this package's major modes
+    meta.patterns.asMap foreach { case (m, ps) => ps foreach { p =>
+      try patterns += (Pattern.compile(p) -> m)
+      catch {
+        case e :Exception => log.log(s"Mode $m specified invalid pattern: $p: $e")
+      }
+    }}
+    meta.interps.asMap foreach { case (m, is) =>
+      is foreach { i => interps.put(i, m) }
+    }
+    // map the tags defined by this pattern's minor modes
+    minorTags.putAll(meta.minorTags)
+    // tell any interested parties about this new package module
+    PackageManager.this.moduleAdded.emit(meta)
+  }
+
+  private def moduleRemoved (mod :Module) {
+    // TODO
+  }
+
+  private val metas = MMap[Source,ModuleMeta]()
 
   private type Finder = String => Class[_]
   private val serviceMap = MMap[String,Finder]()
@@ -96,39 +128,8 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
 
   // wire up our observer
   pkgRepo.observer = new PackageRepo.Observer() {
-    def packageAdded (pkg :Package) {
-      // create a package metadata ; there's some special hackery to handle the fact that services
-      // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
-      val meta = if (pkg.source != ScaledAPI) new PackageMeta(log, pkg)
-                 else new PackageMeta(log, pkg) {
-                   override def service (name :String) =
-                     metas(ScaledEditor).pkg.loader.loadClass(services(name))
-                 }
-      metas.put(pkg.source, meta)
-
-      // map this package's major and minor modes, services and plugins
-      meta.majors.keySet foreach { majorMap.put(_, meta.major _) }
-      meta.minors.keySet foreach { minorMap.put(_, meta.minor _) }
-      meta.services.keySet foreach { serviceMap.put(_, meta.service _) }
-      // map the file patterns and interpreters defined by this package's major modes
-      meta.patterns.asMap foreach { case (m, ps) => ps foreach { p =>
-        try patterns += (Pattern.compile(p) -> m)
-        catch {
-          case e :Exception => log.log(s"Mode $m specified invalid pattern: $p: $e")
-        }
-      }}
-      meta.interps.asMap foreach { case (m, is) =>
-        is foreach { i => interps.put(i, m) }
-      }
-      // map the tags defined by this pattern's minor modes
-      minorTags.putAll(meta.minorTags)
-      // tell any interested parties about this new package
-      PackageManager.this.packageAdded.emit(meta)
-    }
-
-    def packageRemoved (pkg :Package) {
-      // TODO
-    }
+    def packageAdded (pkg :Package) :Unit = pkg.modules.foreach(moduleAdded)
+    def packageRemoved (pkg :Package) :Unit = pkg.modules.foreach(moduleRemoved)
   }
   pkgRepo.packages foreach pkgRepo.observer.packageAdded
 }

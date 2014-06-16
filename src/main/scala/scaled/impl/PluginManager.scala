@@ -15,8 +15,8 @@ class PluginManager (app :Main) extends AbstractService with PluginService {
   import scala.collection.convert.WrapAsScala._
 
   // we need to know when packages are added and removed
-  app.pkgMgr.packageAdded.onValue { pkg => psets.values.foreach { _.packageAdded(pkg) }}
-  app.pkgMgr.packageAdded.onValue { pkg => psets.values.foreach { _.packageRemoved(pkg) }}
+  app.pkgMgr.moduleAdded.onValue { pkg => psets.values.foreach { _.moduleAdded(pkg) }}
+  app.pkgMgr.moduleAdded.onValue { pkg => psets.values.foreach { _.moduleRemoved(pkg) }}
 
   class PluginSetImpl[T <: AbstractPlugin] (tag :String) extends PluginSet[T](tag) {
 
@@ -28,11 +28,11 @@ class PluginManager (app :Main) extends AbstractService with PluginService {
     private val _plugins = ArrayBuffer[T]()
     def plugins = _plugins
 
-    // start out adding all matching plugins from known packages
-    app.pkgMgr.packages foreach packageAdded
+    // start out adding all matching plugins from known package modules
+    app.pkgMgr.modules foreach moduleAdded
 
-    def packageAdded (pkg :PackageMeta) {
-      pkg.plugins(tag) foreach { pclass =>
+    def moduleAdded (mod :ModuleMeta) {
+      mod.plugins(tag) foreach { pclass =>
         try {
           val p = pclass.newInstance.asInstanceOf[T]
           _plugins += p
@@ -45,8 +45,8 @@ class PluginManager (app :Main) extends AbstractService with PluginService {
       }
     }
 
-    def packageRemoved (pkg :PackageMeta) {
-      val pclasses = pkg.plugins(tag)
+    def moduleRemoved (mod :ModuleMeta) {
+      val pclasses = mod.plugins(tag)
       var ii = 0 ; while (ii < _plugins.length) {
         if (pclasses(_plugins(ii).getClass)) {
           _removed.emit(_plugins.remove(ii))
