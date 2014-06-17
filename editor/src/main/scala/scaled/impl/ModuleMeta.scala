@@ -16,17 +16,22 @@ import scaled.pacman._
 
 /** Contains additional metadata for a Scaled package module. This metadata is extracted from
   * annotations on the Java bytecode found in the module code. */
-class ModuleMeta (log :Logger, val mod :Module) {
+class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   import scala.collection.convert.WrapAsScala._
 
+  /** Returns the class loader for our module. */
+  def loader :ModuleLoader = mod.loader(repo)
+  /** Loads the class `name` via this module's class loader. */
+  def loadClass (name :String) :Class[_] = loader.loadClass(name)
+
   /** Loads and returns the class for the major mode named `name`. */
-  def major (name :String) :Class[_] = mod.loader.loadClass(majors(name))
+  def major (name :String) :Class[_] = loadClass(majors(name))
   /** Loads and returns the class for the minor mode named `name`. */
-  def minor (name :String) :Class[_] = mod.loader.loadClass(minors(name))
+  def minor (name :String) :Class[_] = loadClass(minors(name))
   /** Loads and returns the class for the service with class name `name`. */
-  def service (name :String) :Class[_] = mod.loader.loadClass(services(name))
+  def service (name :String) :Class[_] = loadClass(services(name))
   /** Loads and returns all plugin classes with tag `tag`. */
-  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(mod.loader.loadClass)
+  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(loadClass)
 
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes

@@ -20,9 +20,6 @@ public class Package {
   /** The string {@code package.scaled} for all to share and enjoy. */
   public static String FILE = "package.scaled";
 
-  /** The repository from whence this package came. */
-  public final PackageRepo repo;
-
   /** The root of this package, generally a directory. */
   public final Path root;
 
@@ -52,17 +49,16 @@ public class Package {
 
   /** Creates a package info from the supplied `package.scaled` file.
     * The file is assumed to be in the top-level directory of the package in question. */
-  public Package (PackageRepo repo, Path file) throws IOException {
-    this(repo, file.getParent(), Files.readAllLines(file));
+  public Package (Path file) throws IOException {
+    this(file.getParent(), Files.readAllLines(file));
   }
 
   /** Creates a package info from the `package.scaled` contents in `lines`. */
-  public Package (PackageRepo repo, Path root, Iterable<String> lines) {
-    this(repo, root, new Config(lines));
+  public Package (Path root, Iterable<String> lines) {
+    this(root, new Config(lines));
   }
 
-  public Package (PackageRepo repo, Path root, Config cfg) {
-    this.repo = repo;
+  public Package (Path root, Config cfg) {
     this.root = root;
     source  = cfg.resolve("source",  Config.SourceP);
     name    = cfg.resolve("name",    Config.StringP);

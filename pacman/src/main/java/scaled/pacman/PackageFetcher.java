@@ -59,7 +59,7 @@ public class PackageFetcher {
   /** Ensures that all depends of this package have been installed.
     * This assumes that {@code pkgDir} points to a valid checkout of this project. */
   public Package installDepends () throws IOException {
-    Package pkg = new Package(_repo, _pkgDir.resolve(Package.FILE));
+    Package pkg = new Package(_pkgDir.resolve(Package.FILE));
     for (Source source : pkg.packageDepends()) {
       // this package is already installed
       if (_repo.packageBySource(source).isPresent()) continue;

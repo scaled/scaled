@@ -115,7 +115,7 @@ public class PackageRepo {
         // resolved even though the package itself is not yet registered with this repo
         Optional<Module> dmod = !module.isSibling(depsrc) ? moduleBySource(depsrc) :
           Optional.ofNullable(module.pkg.module(depsrc.module()));
-        if (dmod.isPresent()) moduleDeps.add(dmod.get().loader());
+        if (dmod.isPresent()) moduleDeps.add(dmod.get().loader(this));
         else log.log("Missing source depend", "owner", module.source, "source", depsrc);
       }
     }
@@ -153,7 +153,7 @@ public class PackageRepo {
 
   public boolean addPackage (Path pkgFile) {
     try {
-      Package pkg = new Package(PackageRepo.this, pkgFile);
+      Package pkg = new Package(pkgFile);
       // log any errors noted when resolving this package info
       if (!pkg.errors.isEmpty()) {
         log.log("ERRORS in " + pkg.root + "/package.scaled:");

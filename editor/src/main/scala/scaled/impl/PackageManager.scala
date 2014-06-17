@@ -75,15 +75,14 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   override def didStartup () {} // not used
   override def willShutdown () {} // not used
 
-  override def classpath (source :String) = metas(Source.parse(source)).mod.loader.classpath
+  override def classpath (source :String) = metas(Source.parse(source)).loader.classpath
 
   private def moduleAdded (mod :Module) {
     // create a package metadata ; there's some special hackery to handle the fact that services
     // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
-    val meta = if (mod.source != ScaledAPI) new ModuleMeta(log, mod)
-               else new ModuleMeta(log, mod) {
-                 override def service (name :String) =
-                   metas(ScaledEditor).mod.loader.loadClass(services(name))
+    val meta = if (mod.source != ScaledAPI) new ModuleMeta(log, pkgRepo, mod)
+               else new ModuleMeta(log, pkgRepo, mod) {
+                 override def service (name :String) = metas(ScaledEditor).loadClass(services(name))
                }
     metas.put(mod.source, meta)
 

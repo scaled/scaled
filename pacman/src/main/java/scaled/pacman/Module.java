@@ -69,8 +69,8 @@ public class Module implements Comparable<Module> {
   }
 
   /** Returns a class loader for loading classes from this module and its depends. */
-  public ModuleLoader loader () {
-    if (_loader == null) _loader = pkg.repo.createLoader(this);
+  public ModuleLoader loader (PackageRepo repo) {
+    if (_loader == null) _loader = repo.createLoader(this);
     return _loader;
   }
 

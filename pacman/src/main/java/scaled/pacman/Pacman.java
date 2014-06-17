@@ -157,7 +157,7 @@ public class Pacman {
 
   private static void depends (String pkgName) {
     onPackage(pkgName, pkg -> {
-      for (Module mod : pkg.modules()) mod.loader().dump(System.out, "", new HashSet<>());
+      for (Module mod : pkg.modules()) mod.loader(repo).dump(System.out, "", new HashSet<>());
     });
   }
 
@@ -197,7 +197,7 @@ public class Pacman {
       Module mod = pkg.module(modName);
       if (mod == null) fail("Unknown module: " + modName + " in package: " + pkgName);
       try {
-        Class<?> clazz = mod.loader().loadClass(classname);
+        Class<?> clazz = mod.loader(repo).loadClass(classname);
         clazz.getMethod("main", String[].class).invoke(null, (Object)args);
       } catch (Exception e) {
         e.printStackTrace(System.err);
