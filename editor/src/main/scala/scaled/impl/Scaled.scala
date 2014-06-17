@@ -15,7 +15,7 @@ import scala.collection.JavaConversions._
 import scaled._
 import scaled.util.Errors
 
-class Main extends Application {
+class Scaled extends Application {
 
   private val pool = Executors.newFixedThreadPool(4) // TODO: config
 
@@ -25,10 +25,10 @@ class Main extends Application {
   val log = Signal[String]()
 
   val logger = new Logger {
-    override def log (msg :String) :Unit = exec.runOnUI { Main.this.log.emit(msg) }
+    override def log (msg :String) :Unit = exec.runOnUI { Scaled.this.log.emit(msg) }
     override def log (msg :String, exn :Throwable) :Unit = exec.runOnUI {
-      Main.this.log.emit(msg)
-      Main.this.log.emit(Errors.stackTraceToString(exn))
+      Scaled.this.log.emit(msg)
+      Scaled.this.log.emit(Errors.stackTraceToString(exn))
     }
   }
 
@@ -129,9 +129,9 @@ class Main extends Application {
   }
 }
 
-object Main {
+object Scaled {
 
   def main (args :Array[String]) {
-    Application.launch(classOf[Main], args :_*)
+    Application.launch(classOf[Scaled], args :_*)
   }
 }
