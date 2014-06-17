@@ -33,6 +33,9 @@ public class Package {
   public final String weburl;
   public final String descrip;
 
+  public final List<String> jcopts;
+  public final List<String> scopts;
+
   public final List<String> errors;
 
   /** Returns all modules contained in this packge. These are returned topologically sorted, such
@@ -67,6 +70,11 @@ public class Package {
     license = cfg.resolve("license", Config.StringP);
     weburl  = cfg.resolve("weburl",  Config.StringP); // todo UrlP
     descrip = cfg.resolve("descrip", Config.StringP);
+
+    jcopts  = cfg.resolve("jcopt",   Config.StringListP);
+    jcopts.addAll(cfg.resolve("jcopts", Config.WordsP));
+    scopts  = cfg.resolve("scopt",  Config.StringListP);
+    scopts.addAll(cfg.resolve("scopts", Config.WordsP));
 
     // if no modules were defined, create the default module using package config
     List<String> mods = cfg.resolve("module", Config.StringListP);

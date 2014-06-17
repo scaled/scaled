@@ -71,6 +71,7 @@ public class PackageBuilder {
     cmd.add("scala.tools.nsc.Main");
 
     cmd.add("-d"); cmd.add(mod.root.relativize(mod.classesDir()).toString());
+    cmd.addAll(mod.pkg.scopts);
     List<Path> cp = buildClasspath(mod);
     if (!cp.isEmpty()) { cmd.add("-classpath"); cmd.add(classpathToString(cp)); }
     if (javaDir != null) addSources(mod.root, javaDir, ".java", cmd);
@@ -83,8 +84,7 @@ public class PackageBuilder {
     List<String> cmd = new ArrayList<>();
     cmd.add(findJavaHome().resolve("bin").resolve("javac").toString());
 
-    cmd.add("-source"); cmd.add("1.8");
-    cmd.add("-target"); cmd.add("1.8");
+    cmd.addAll(mod.pkg.jcopts);
     cmd.add("-d"); cmd.add(mod.root.relativize(mod.classesDir()).toString());
     List<Path> cp = buildClasspath(mod);
     if (!cp.isEmpty()) { cmd.add("-cp"); cmd.add(classpathToString(cp)); }

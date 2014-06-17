@@ -50,6 +50,10 @@ public class Config {
     public String parse (String text) { return text; }
   };
 
+  public static Parser<List<String>> WordsP = new ListParser<String>() {
+    public List<String> parse (String text) { return Arrays.asList(text.split(" ")); }
+  };
+
   public static Parser<List<String>> StringListP = new ListParser<String>() {
     public List<String> parse (String text) { return Collections.singletonList(text); }
   };
