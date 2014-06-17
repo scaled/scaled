@@ -58,8 +58,12 @@ class Scaled extends Application {
 
   /** Closes `epane`. If that was the last open editor pane, terminates Scaled. */
   def closeEditor (epane :EditorPane) {
-    epane.dispose()
-    epane.stage.close()
+    try {
+      epane.dispose()
+      epane.stage.close()
+    } catch {
+      case e :Throwable => logger.log(s"Error closing $epane", e)
+    }
     editors.inverse.remove(epane)
     if (editors.isEmpty()) sys.exit(0) // TODO: cleanup?
   }
