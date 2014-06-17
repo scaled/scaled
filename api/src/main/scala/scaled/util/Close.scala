@@ -37,7 +37,7 @@ object Close {
         try iter.next.close()
         catch {
           case t :Throwable =>
-            if (exn == null) exn == new RuntimeException("Close failure(s).")
+            if (exn == null) exn = new RuntimeException("Close failure(s).")
             exn.addSuppressed(t)
         }
       }
