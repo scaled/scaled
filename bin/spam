@@ -62,7 +62,7 @@ addArg () {
 
 # process command line args
 declare -a JVMARGS=("-classpath" "$PACMANCP:$M2CAPSULE")
-declare -a ARGS=("scaled.pacman.Main")
+declare -a ARGS=("scaled.pacman.Pacman")
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -D*     ) addJvmArg "$1"           && shift ;;

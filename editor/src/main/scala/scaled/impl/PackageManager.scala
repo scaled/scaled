@@ -23,7 +23,7 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   /** A signal emitted when a package module is uninstalled. */
   val moduleRemoved = Signal[ModuleMeta]()
 
-  private val pkgRepo = scaled.pacman.Main.repo
+  private val pkgRepo = Pacman.repo
 
   /** Returns the top-level metadata directory. */
   def metaDir :Path = pkgRepo.metaDir

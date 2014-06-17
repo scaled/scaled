@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /** The main command line entry point for the Scaled Package Manager. */
-public class Main {
+public class Pacman {
 
   public static String USAGE =
     "Usage: spam <command>\n" +
@@ -137,7 +137,7 @@ public class Main {
   }
 
   private static void info (String pkgName) {
-    if (!pkgName.equals("--all")) onPackage(pkgName, Main::printInfo);
+    if (!pkgName.equals("--all")) onPackage(pkgName, Pacman::printInfo);
     else for (Package pkg : repo.packages()) {
       out.println("------------------------------------------------------------");
       printInfo(pkg);
