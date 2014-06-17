@@ -96,7 +96,8 @@ public class Package {
     Set<Source> deps = new HashSet<>();
     for (Module mod : modules()) {
       for (Depend dep : mod.depends) if (dep.isSource()) {
-        deps.add(((Source)dep.id).packageSource());
+        Source source = ((Source)dep.id).packageSource();
+        if (!source.equals(this.source)) deps.add(source); // don't include self-depends
       }
     }
     return deps;
