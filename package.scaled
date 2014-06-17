@@ -7,3 +7,5 @@ license: New BSD
  module: api
  module: pacman
  module: editor
+ jcopts: -source 1.8 -target 1.8 -Xlint:all
+ scopts: -deprecation -feature
