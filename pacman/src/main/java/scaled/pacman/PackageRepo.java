@@ -109,9 +109,14 @@ public class PackageRepo {
       if (dep.id instanceof RepoId) mvnIds.add((RepoId)dep.id);
       else if (dep.id instanceof SystemId) sysIds.add((SystemId)dep.id);
       else {
-        Optional<Module> dmod = moduleBySource((Source)dep.id);
+        Source depsrc = (Source)dep.id;
+        // if we depend on a module in our same package, resolve it specially; this ensures that
+        // when we're building a package prior to installing it, intrapackage depends are properly
+        // resolved even though the package itself is not yet registered with this repo
+        Optional<Module> dmod = !module.isSibling(depsrc) ? moduleBySource(depsrc) :
+          Optional.ofNullable(module.pkg.module(depsrc.module()));
         if (dmod.isPresent()) moduleDeps.add(dmod.get().loader());
-        else log.log("Missing source depend", "owner", module.source, "source", dep.id);
+        else log.log("Missing source depend", "owner", module.source, "source", depsrc);
       }
     }
 

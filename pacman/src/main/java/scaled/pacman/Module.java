@@ -63,6 +63,11 @@ public class Module implements Comparable<Module> {
     return name == DEFAULT;
   }
 
+  /** Returns true if {@code source} represents a module in our same package. */
+  public boolean isSibling (Source source) {
+    return pkg.source.equals(source.packageSource());
+  }
+
   /** Returns a class loader for loading classes from this module and its depends. */
   public ModuleLoader loader () {
     if (_loader == null) _loader = pkg.repo.createLoader(this);
