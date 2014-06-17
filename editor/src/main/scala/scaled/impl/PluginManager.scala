@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
 import scaled._
 
 /** Implements [[PluginService]] and handles notifications when packages are added and removed. */
-class PluginManager (app :Main) extends AbstractService with PluginService {
+class PluginManager (app :Scaled) extends AbstractService with PluginService {
   import scala.collection.convert.WrapAsScala._
 
   // we need to know when packages are added and removed

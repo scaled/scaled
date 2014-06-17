@@ -54,7 +54,7 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
   }
 }
 
-class AppModeResolver (app :Main, editor :Editor)
+class AppModeResolver (app :Scaled, editor :Editor)
     extends ModeResolver(app.logger, app.exec, editor) {
 
   override def modes (major :Boolean) = Set() ++ app.pkgMgr.modes(major)

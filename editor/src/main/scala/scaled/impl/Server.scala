@@ -15,7 +15,7 @@ import scala.annotation.tailrec
   * indicating the virtual workspace in which the shell script is being invoked, so that Scaled
   * can open an editor window for that workspace and open `PATH` in that window.
   */
-class Server (app :Main) extends Thread {
+class Server (app :Scaled) extends Thread {
   setDaemon(true)
 
   /** The port on which we listen for commands. */

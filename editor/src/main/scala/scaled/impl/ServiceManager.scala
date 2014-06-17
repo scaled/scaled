@@ -46,7 +46,7 @@ class ServiceInjector (log :Logger) extends AbstractService {
     throw new InstantiationException(s"Missing implementation: $sclass")
 }
 
-class ServiceManager (app :Main) extends ServiceInjector(app.logger) with MetaService {
+class ServiceManager (app :Scaled) extends ServiceInjector(app.logger) with MetaService {
 
   private var services = CacheBuilder.newBuilder.build(
     new CacheLoader[Class[_],AbstractService]() {

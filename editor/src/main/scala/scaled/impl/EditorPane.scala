@@ -25,7 +25,7 @@ import scaled.util.Errors
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (app :Main, val stage :Stage) extends Region with Editor {
+class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
 
   /** Used to resolve modes in this editor. */
   val resolver = new AppModeResolver(app, this)
