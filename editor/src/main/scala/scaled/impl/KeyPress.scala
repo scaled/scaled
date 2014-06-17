@@ -77,7 +77,7 @@ object KeyPress {
       case kp => kp
     }
     val kps = seq.split(" ") map(parse)
-    if (kps contains None) None else Some(kps.toSeq flatten)
+    if (kps contains None) None else Some(kps.toSeq.flatten)
   }
 
   /** Converts a single key press description (e.g. 'a', 'C-c', 'M-S-F2', etc.) into a `KeyPress`
