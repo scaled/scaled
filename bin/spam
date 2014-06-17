@@ -49,7 +49,7 @@ if [ -s "$PACMAN_JAR" ]; then
 elif [ -d "$PACMAN_BUILD" ]; then
     PACMANCP="$PACMAN_BUILD"
 else
-    download "https://github.com/scaled/scaled/releases/download/v.0.1.0/pacman.jar" "$PACMAN_JAR"
+    download "https://github.com/scaled/scaled/releases/download/v0.1.1/pacman.jar" "$PACMAN_JAR"
     PACMANCP="$PACMAN_JAR"
 fi
 
