@@ -75,11 +75,11 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     "S-C-." -> "next-bracket",
     "S-C-/" -> "bounce-bracket",
 
-    "C-M-\\"      -> "indent-region",
-    "C-c C-c"     -> "comment-region",
-    "C-u C-c C-c" -> "uncomment-region", // TODO: prefix args?
+    "C-M-\\"  -> "indent-region",
+    "C-c C-c" -> "comment-region",
+    "C-c C-u" -> "uncomment-region", // TODO: prefix args?
 
-    "M-A-s"       -> "show-syntax"
+    "M-A-s" -> "show-syntax"
   )
 
   /** A context provided to our indenters. */
