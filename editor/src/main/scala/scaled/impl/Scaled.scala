@@ -84,6 +84,10 @@ class Scaled extends Application {
     tweakQuitMenuItem()
   }
 
+  override def stop () {
+    pool.shutdown()
+  }
+
   private def parseGeometry (geom :String) :Geom = geom.split("[x+]") match {
     case Array(w, h, x, y) => Geom(Some(w.toInt -> h.toInt), Some(x.toInt -> y.toInt))
     case Array(w, h)       => Geom(Some(w.toInt -> h.toInt), None)
