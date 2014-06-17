@@ -14,6 +14,7 @@ import scaled._
 class UndoStack (buffer :BufferImpl) extends Undoer {
   import UndoStack._
 
+  // TODO: dont listen to read-only buffers
   buffer.edited.onValue { edit => accum += edit }
 
   def delimitAction (point :Loc) {
