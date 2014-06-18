@@ -47,6 +47,7 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   private[this] val _name = Value(initStore.name)
   private[this] val _store = Value(initStore)
   private[this] val _mark = Value(None :Option[Loc])
+  private[this] val _editable = Value(true)
   private[this] val _dirty = Value(false)
   private[this] val _willSave = Signal[Buffer]()
   private[this] val _edited = Signal[Edit]()
@@ -68,8 +69,10 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   override def lineStyled = _lineStyled
   override def lines = _lines
   override def maxLineLength = lines(_maxRow).length
-  // refine return type to ease life for internal friends
+  // refine `dirtyV` return type to ease life for internal friends
   override def dirtyV :Value[Boolean] = _dirty
+  override def editableV = _editable
+  override def editable_= (editable :Boolean) = _editable() = editable
   override def willSave = _willSave
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)

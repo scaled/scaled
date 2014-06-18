@@ -48,6 +48,9 @@ abstract class BufferV extends Region {
   /** The current mark, if any. */
   def mark :Option[Loc]
 
+  /** Whether or not this buffer can be edited interactively (by the user). */
+  def editable :Boolean
+
   /** Whether or not this buffer has been modified since it was loaded or last saved. */
   def dirty :Boolean
 
@@ -384,6 +387,9 @@ abstract class Buffer extends BufferV {
   /** Saves this buffer to `store`, updating [[store]] and [[name]] appropriately. */
   def saveTo (store :Store) :Unit
 
+  /** Configures whether this buffer can be edited interactively (by the user). */
+  def editable_= (editable :Boolean) :Unit
+
   /** Marks this buffer as clean. In general one should not use this method, as a buffer will
     * automatically be marked clean on being saved. However, some buffers are special and don't
     * represent the contents of a file and may wish to manage cleanliness specially. */
@@ -528,6 +534,7 @@ object Buffer {
     def name = _name
     val store = new TextStore(name, "", "")
     def mark = None
+    def editable = false
     def dirty = false
     def lines = _lines
     val maxLineLength = _lines.map(_.length).max
@@ -546,6 +553,9 @@ abstract class RBuffer extends Buffer {
 
   /** The current mark, if any. */
   def markV :ValueV[Option[Loc]]
+
+  /** A reactive view of [[editable]]. */
+  def editableV :ValueV[Boolean]
 
   /** A reactive view of [[dirty]]. */
   def dirtyV :ValueV[Boolean]
@@ -567,5 +577,6 @@ abstract class RBuffer extends Buffer {
   override def name = nameV()
   override def store = storeV()
   override def mark = markV()
+  override def editable = editableV()
   override def dirty = dirtyV()
 }

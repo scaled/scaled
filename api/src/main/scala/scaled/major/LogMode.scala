@@ -11,6 +11,9 @@ import scaled._
        are not.""")
 class LogMode (env :Env) extends ReadingMode(env) {
 
+  // mark our buffer as uneditable
+  buffer.editable = false
+
   override def keymap = super.keymap ++ Seq(
     "M-k" -> "clear-log"
   )
