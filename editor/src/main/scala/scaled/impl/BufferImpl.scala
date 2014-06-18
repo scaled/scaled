@@ -30,7 +30,7 @@ object BufferImpl {
   }
 
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
-  def scratch (name :String) :BufferImpl = apply(Store(cwd.resolve(Paths.get(name))))
+  def scratch (name :String) :BufferImpl = apply(new TextStore(name, cwd.toString, ""))
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()
