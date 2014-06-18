@@ -21,15 +21,17 @@ public class SystemResolver {
 
   public List<Path> resolve (Source owner, List<SystemId> ids) {
     List<Path> results = new ArrayList<>();
-    try {
-      for (SystemId id : ids) results.add(resolve(id));
-    } catch (Exception e) {
-      log.log("Failed to resolve system depend", "source", owner, "error", e);
+    for (SystemId id : ids) {
+      try {
+        results.add(resolve(id));
+      } catch (Exception e) {
+        log.log("Failed to resolve system depend", "source", owner, "id", id, "error", e);
+      }
     }
     return results;
   }
 
-  private Path resolve (SystemId id) {
+  public Path resolve (SystemId id) {
     if (id.platform.equals("jdk")) {
       if (id.artifact.equals("tools")) {
         return javaHome.resolve("lib").resolve("tools.jar");
