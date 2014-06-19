@@ -5,7 +5,6 @@ descrip: A Scalable editor, extensible via JVM languages.
  weburl: https://github.com/scaled/scaled/
 license: New BSD
  module: api
- module: pacman
  module: editor
  jcopts: -source 1.8 -target 1.8 -Xlint:all
  scopts: -deprecation -feature
