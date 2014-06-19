@@ -11,9 +11,18 @@ public class Depend {
   public static interface Id {
   }
 
-  // TODO: other scopes?
   public static enum Scope {
-    COMPILE, TEST;
+    MAIN {
+      public boolean include (boolean testScope) { return true; }
+    },
+    TEST {
+      public boolean include (boolean testScope) { return testScope; }
+    },
+    EXEC {
+      public boolean include (boolean testScope) { return false; }
+    };
+
+    public abstract boolean include (boolean testScope);
   }
 
   /** Parses a string representation of a [[Depend]]. */

@@ -36,7 +36,7 @@ public class Module implements Comparable<Module> {
   /** A source that identifies this module. */
   public final Source source;
 
-  /** This module' depends. */
+  /** This module's depends. */
   public final List<Depend> depends;
 
   /** This module's intra-package depends. */
@@ -48,7 +48,9 @@ public class Module implements Comparable<Module> {
     this.name = name;
     this.root = root;
     this.source = source;
-    this.depends = cfg.resolve("depend", new Config.DependListP(Depend.Scope.COMPILE));
+    this.depends = cfg.resolve("depend", new Config.DependListP(Depend.Scope.MAIN));
+    this.depends.addAll(cfg.resolve("testdep", new Config.DependListP(Depend.Scope.TEST)));
+    this.depends.addAll(cfg.resolve("execdep", new Config.DependListP(Depend.Scope.EXEC)));
 
     // compute our local depends
     for (Depend dep : depends) {
@@ -70,7 +72,7 @@ public class Module implements Comparable<Module> {
 
   /** Returns a class loader for loading classes from this module and its depends. */
   public ModuleLoader loader (PackageRepo repo) {
-    if (_loader == null) _loader = repo.createLoader(this);
+    if (_loader == null) _loader = repo.createLoader(this, false);
     return _loader;
   }
 

@@ -101,11 +101,12 @@ public class PackageRepo {
   }
 
   /** Creates a class loader for {@code pkg}. */
-  public ModuleLoader createLoader (Module module) {
+  public ModuleLoader createLoader (Module module, boolean testScope) {
     List<RepoId> mvnIds = new ArrayList<>();
     List<SystemId> sysIds = new ArrayList<>();
     List<ModuleLoader> moduleDeps = new ArrayList<>();
     for (Depend dep : module.depends) {
+      if (!dep.scope.include(testScope)) continue; // skip depends that don't match our scope
       if (dep.id instanceof RepoId) mvnIds.add((RepoId)dep.id);
       else if (dep.id instanceof SystemId) sysIds.add((SystemId)dep.id);
       else {
