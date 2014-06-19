@@ -27,14 +27,14 @@ class PackageTest {
   val scaledSource = new Source(Source.VCS.GIT, new URI("https://github.com/scaled/scaled-api.git"))
 
   @Test def testValid () {
-    val info = new Package(null, cwd, scaledApi)
+    val info = new Package(cwd, scaledApi)
     assertEquals(scaledSource, info.source)
     assertEquals(Collections.emptyList(), info.module(Module.DEFAULT).depends)
     assertTrue(info.errors.isEmpty)
   }
 
   @Test def testExtraCruft () {
-    val info = new Package(null, cwd, scaledApi ++ Seq(
+    val info = new Package(cwd, scaledApi ++ Seq(
       "bezelnut: ruh ruh",
       " peanuts: and popcorn"
     ))
@@ -43,7 +43,7 @@ class PackageTest {
   }
 
   @Test def testDoubleSource () {
-    val info = new Package(null, cwd, scaledApi ++ Seq(
+    val info = new Package(cwd, scaledApi ++ Seq(
       " source: git:https://github.com/scaled/scaled-peanut.git"
     ))
     assertEquals(scaledSource, info.source)
@@ -52,7 +52,7 @@ class PackageTest {
   }
 
   @Test def testDepends () {
-    val info = new Package(null, cwd, scaledApi ++ Seq(
+    val info = new Package(cwd, scaledApi ++ Seq(
       " depend: git:https://github.com/scaled/java-mode.git",
       " depend: mvn:com.samskivert.scaled:textmate-grammar:1.0-SNAPSHOT:jar"
     ))
@@ -61,8 +61,8 @@ class PackageTest {
     val tmRepoId = new RepoId("com.samskivert.scaled", "textmate-grammar", "1.0-SNAPSHOT", "jar")
     info.errors foreach println
     assertEquals(0, info.errors.size)
-    assertEquals(List(new Depend(javaSource, Depend.Scope.COMPILE),
-                      new Depend(tmRepoId, Depend.Scope.COMPILE)),
+    assertEquals(List(new Depend(javaSource, Depend.Scope.MAIN),
+                      new Depend(tmRepoId, Depend.Scope.MAIN)),
                  info.module(Module.DEFAULT).depends.toList)
   }
 }
