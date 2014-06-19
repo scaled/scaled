@@ -7,6 +7,7 @@ package scaled.pacman;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +33,7 @@ public class Package {
 
   public final List<String> jcopts;
   public final List<String> scopts;
+  public final List<Depend> depends;
 
   public final List<String> errors;
 
@@ -71,11 +73,13 @@ public class Package {
     jcopts.addAll(cfg.resolve("jcopts", Config.WordsP));
     scopts  = cfg.resolve("scopt",  Config.StringListP);
     scopts.addAll(cfg.resolve("scopts", Config.WordsP));
+    depends = cfg.resolveDepends();
 
-    // if no modules were defined, create the default module using package config
+    // if no modules were defined, create the default module using an empty config
     List<String> mods = cfg.resolve("module", Config.StringListP);
     if (mods.isEmpty()) {
-      _modules.put(Module.DEFAULT, new Module(this, Module.DEFAULT, root, source, cfg));
+      _modules.put(Module.DEFAULT, new Module(
+        this, Module.DEFAULT, root, source, new Config(Collections.emptyList())));
     }
 
     // we're done with the package config, so accumulate any errors

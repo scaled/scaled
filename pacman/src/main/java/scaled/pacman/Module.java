@@ -48,9 +48,8 @@ public class Module implements Comparable<Module> {
     this.name = name;
     this.root = root;
     this.source = source;
-    this.depends = cfg.resolve("depend", new Config.DependListP(Depend.Scope.MAIN));
-    this.depends.addAll(cfg.resolve("testdep", new Config.DependListP(Depend.Scope.TEST)));
-    this.depends.addAll(cfg.resolve("execdep", new Config.DependListP(Depend.Scope.EXEC)));
+    this.depends = cfg.resolveDepends();
+    this.depends.addAll(pkg.depends); // inherit our package depends
 
     // compute our local depends
     for (Depend dep : depends) {

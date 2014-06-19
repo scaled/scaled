@@ -100,6 +100,13 @@ public class Config {
       "Missing or invalid binding for '%s' [data=%s, errors=%s]", key, vals, errors));
   }
 
+  public List<Depend> resolveDepends () {
+    List<Depend> depends = resolve("depend", new DependListP(Depend.Scope.MAIN));
+    depends.addAll(resolve("testdep", new DependListP(Depend.Scope.TEST)));
+    depends.addAll(resolve("execdep", new DependListP(Depend.Scope.EXEC)));
+    return depends;
+  }
+
   public List<String> finish () {
     for (Map.Entry<String,List<String>> e : _data.entrySet()) {
       _errors.add(String.format("Unknown binding: '%s' %s", e.getKey(), e.getValue()));
