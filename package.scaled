@@ -9,3 +9,4 @@ license: New BSD
  module: editor
  jcopts: -source 1.8 -target 1.8 -Xlint:all
  scopts: -deprecation -feature
+testdep: mvn:junit:junit:4.11
