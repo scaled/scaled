@@ -207,8 +207,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
           // adjust the position if the popup is pushed off the screen
           val bounds = getLayoutBounds
           val lr = lx + bounds.getWidth + vx ; val lb = ly + bounds.getHeight + vy
-          val dx = if (lx < -vx) -vx-lx else if (lr > vw) vw-lr else 0
-          val dy = if (ly < -vy) -vy-ly else if (lb > vh) vh-lb else 0
+          val dx = if (lx < -vx) -vx-lx else if (lr > vw) math.max(vx-lx, vw-lr) else 0
+          val dy = if (ly < -vy) -vy-ly else if (lb > vh) math.max(vy-ly, vh-lb) else 0
 
           setLayoutX(lx+dx)
           setLayoutY(ly+dy)
