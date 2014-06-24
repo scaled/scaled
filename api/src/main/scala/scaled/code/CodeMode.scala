@@ -38,16 +38,16 @@ object CodeConfig extends Config.Defs {
   val docStyle = "codeDocFace"
   /** The CSS style applied to `keyword` syntax. */
   val keywordStyle = "codeKeywordFace"
-  /** The CSS style applied to `reference` syntax. */
-  val referenceStyle = "codeReferenceFace"
   /** The CSS style applied to `string` syntax. */
   val stringStyle = "codeStringFace"
+  /** The CSS style applied to `module` syntax. */
+  val moduleStyle = "codeModuleFace"
   /** The CSS style applied to `type` syntax. */
   val typeStyle = "codeTypeFace"
-  /** The CSS style applied to `variable` syntax. */
-  val variableStyle = "codeVariableFace"
   /** The CSS style applied to `function` syntax. */
   val functionStyle = "codeFunctionFace"
+  /** The CSS style applied to `variable` syntax. */
+  val variableStyle = "codeVariableFace"
   /** The CSS style applied to `invalid` syntax. */
   val invalidStyle = "codeInvalidFace"
 

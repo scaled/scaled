@@ -16,7 +16,7 @@
 }
 
 .codeConstantFace {
-  -fx-fill: #339999;
+  -fx-fill: LightSteelBlue;
 }
 
 .codeDocFace {
@@ -27,12 +27,12 @@
   -fx-fill: #FFCC00;
 }
 
-.codeReferenceFace {
-  -fx-fill: LightSteelBlue;
-}
-
 .codeStringFace {
   -fx-fill: #62FA00;
+}
+
+.codeModuleFace {
+  -fx-fill: LightSteelBlue;
 }
 
 .codeTypeFace {
