@@ -103,7 +103,7 @@ object Config {
     def update (value :String) = v.update(m.config, value)
   }
 
-  /** The base class for a collection of configuration definitions. The (global) editor config object
+  /** The base class for a collection of config definitions. The (global) editor config object
     * ([[EditorConfig]]) extends this as well as each individual mode's config definition object.
     */
   abstract class Defs (global :Boolean = false) {
