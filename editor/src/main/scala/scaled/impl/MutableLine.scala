@@ -21,10 +21,10 @@ object MutableLine {
   /** Creates a mutable line with a copy of the contents of `line`. */
   def apply (buffer :BufferImpl, line :LineV) = {
     val cs = new Array[Char](line.length)
-    val ss = new Array[Styles](line.length)
     val xs = new Array[Syntax](line.length)
-    line.sliceInto(0, line.length, cs, ss, xs, 0)
-    new MutableLine(buffer, cs, ss, xs)
+    val ts = new Tags()
+    line.sliceInto(0, line.length, cs, xs, ts, 0)
+    new MutableLine(buffer, cs, xs, ts)
   }
 }
 
@@ -44,22 +44,22 @@ object MutableLine {
   * line instance and the array may subsequently be mutated thereby.
   */
 class MutableLine (
-  buffer :BufferImpl, initCs :Array[Char], initSs :Array[Styles], initXs :Array[Syntax]
+  buffer :BufferImpl, initCs :Array[Char], initXs :Array[Syntax], val tags :Tags
 ) extends LineV with Store.Writable {
   def this (buffer :BufferImpl, cs :Array[Char]) = this(
-    buffer, cs, Array.fill(cs.length)(Styles.None), Array.fill(cs.length)(Syntax.Default))
+    buffer, cs, Array.fill(cs.length)(Syntax.Default), new Tags())
 
-  require(initCs != null && initSs != null && initXs != null)
+  require(initCs != null && initXs != null && tags != null)
 
   protected var _chars = initCs
-  protected var _styles = initSs
   protected var _syns = initXs
+  protected def _tags = tags
   private[this] var _end = initCs.size
 
   override def length = _end
-  override def view (start :Int, until :Int) = new Line(_chars, _styles, _syns, start, until-start)
-  override def slice (start :Int, until :Int) =
-    new Line(_chars.slice(start, until), _styles.slice(start, until), _syns.slice(start, until))
+  override def view (start :Int, until :Int) = new Line(_chars, _syns, tags, start, until-start)
+  override def slice (start :Int, until :Int) = new Line(
+    _chars.slice(start, until), _syns.slice(start, until), tags.slice(start, until))
   override protected def _offset = 0
 
   override def write (out :Writer) = out.write(_chars, 0, _end)
@@ -72,11 +72,10 @@ class MutableLine (
     MutableLine(buffer, delete(loc, _end-loc.col))
   }
 
-  /** Inserts `c` into this line at `loc` with styles `styles` and syntax `syntax`. */
-  def insert (loc :Loc, c :Char, styles :Styles, syntax :Syntax) {
+  /** Inserts `c` into this line at `loc` with syntax `syntax`. */
+  def insert (loc :Loc, c :Char, syntax :Syntax) {
     prepInsert(loc.col, 1)
     _chars(loc.col) = c
-    _styles(loc.col) = styles
     _syns(loc.col) = syntax
     _end += 1
   }
@@ -84,7 +83,7 @@ class MutableLine (
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
   def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = {
     prepInsert(loc.col, count)
-    line.sliceInto(offset, offset+count, _chars, _styles, _syns, loc.col)
+    line.sliceInto(offset, offset+count, _chars, _syns, tags, loc.col)
     _end += count
     loc + (0, count)
   }
@@ -103,8 +102,8 @@ class MutableLine (
     require(pos >= 0 && last <= _end, s"$pos >= 0 && $last <= ${_end}")
     val deleted = slice(pos, pos+length)
     System.arraycopy(_chars , last, _chars , pos, _end-last)
-    System.arraycopy(_styles, last, _styles, pos, _end-last)
     System.arraycopy(_syns  , last, _syns  , pos, _end-last)
+    tags.delete(pos, last)
     _end -= length
     deleted
   }
@@ -125,12 +124,12 @@ class MutableLine (
     else if (deltaLength < 0) {
       val toShift = _end-lastDeleted
       System.arraycopy(_chars , lastDeleted, _chars , lastAdded, toShift)
-      System.arraycopy(_styles, lastDeleted, _styles, lastAdded, toShift)
       System.arraycopy(_syns  , lastDeleted, _syns  , lastAdded, toShift)
     }
     // otherwise, we've got a perfect match, no shifting needed
 
-    line.sliceInto(0, added, _chars, _styles, _syns, pos)
+    tags.clear(pos, lastDeleted)
+    line.sliceInto(0, added, _chars, _syns, tags, pos)
     _end += deltaLength
     replaced
   }
@@ -145,21 +144,26 @@ class MutableLine (
     loc.atCol(last)
   }
 
-  /** Transforms styles (using `fn`) starting at `loc` and continuing to column `last`. If any
-    * characters actually change style, a call to `BufferImpl.noteLineStyled` will be made after
-    * the style has been applied to the entire region. */
-  def updateStyles (fn :Styles => Styles, loc :Loc, last :Int = length) {
-    val end = math.min(length, last)
-    @tailrec def loop (pos :Int, first :Int) :Int = if (pos >= end) first else {
-      val ostyles = _styles(pos) ; val nstyles = fn(ostyles)
-      if (nstyles eq ostyles) loop(pos+1, first)
-      else {
-        _styles(pos) = nstyles
-        loop(pos+1, if (first == -1) pos else first)
-      }
+  /** Adds `tag` to this line. If `tag` is of type `String` then `noteLineStyled` is emitted. */
+  def addTag[T] (tag :T, start :Loc, until :Int) {
+    tags.add(tag, start.col, until)
+    if (tag.isInstanceOf[String]) buffer.noteLineStyled(start)
+  }
+
+  /** Removes `tag` to this line. If `tag` is of type `String` and a tag was found and removed, then
+    * `noteLineStyled` is emitted. */
+  def removeTag[T] (tag :T, start :Loc, until :Int) {
+    if (tags.remove(tag, start.col, until) && tag.isInstanceOf[String]) {
+      buffer.noteLineStyled(start)
     }
-    val first = loop(loc.col, -1)
-    if (first != -1) buffer.noteLineStyled(loc.atCol(first))
+  }
+
+  /** Removes matching tags from this line. If `class` is `String` and at least one tag is removed,
+    * then `noteLineStyled` is emitted. */
+  def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Int) {
+    if (tags.removeAll(tclass, pred, start.col, until) && tclass == classOf[String]) {
+      buffer.noteLineStyled(start)
+    }
   }
 
   /** Sets the syntax of chars in `[loc,last)` to `syntax`. */
@@ -184,21 +188,18 @@ class MutableLine (
       val nchars = new Array[Char](_chars.length+length + MutableLine.ExpandN)
       System.arraycopy(_chars, 0, nchars, 0, pos)
       System.arraycopy(_chars, pos, nchars, tailpos, taillen)
-      val nstyles = new Array[Styles](nchars.length)
-      System.arraycopy(_styles, 0, nstyles, 0, pos)
-      System.arraycopy(_styles, pos, nstyles, tailpos, taillen)
       val nsyns = new Array[Syntax](nchars.length)
       System.arraycopy(_syns, 0, nsyns, 0, pos)
       System.arraycopy(_syns, pos, nsyns, tailpos, taillen)
       _chars = nchars
-      _styles = nstyles
       _syns = nsyns
     }
     // otherwise shift characters down, if necessary
     else if (pos < curend) {
       System.arraycopy(_chars , pos, _chars , tailpos, taillen)
-      System.arraycopy(_styles, pos, _styles, tailpos, taillen)
       System.arraycopy(_syns  , pos, _syns  , tailpos, taillen)
     }
+    // we always shift our tags
+    _tags.expand(pos, length)
   }
 }

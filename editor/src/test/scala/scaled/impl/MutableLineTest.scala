@@ -17,7 +17,7 @@ class MutableLineTest {
     assertEquals("Every good boy deserves tasty fudge.", line.asString)
     line.delete(Loc(0, line.length-1), 1)
     assertEquals("Every good boy deserves tasty fudge", line.asString)
-    line.insert(Loc(0, line.length), '!', Styles.None, Syntax.Default)
+    line.insert(Loc(0, line.length), '!', Syntax.Default)
     assertEquals("Every good boy deserves tasty fudge!", line.asString)
     line.replace(Loc(0, line.asString.indexOf("tasty")), 5, Line("lots of"))
     assertEquals("Every good boy deserves lots of fudge!", line.asString)

@@ -47,15 +47,15 @@ class BufferBuilder (fillWidth :Int) {
   }
 
   /** Appends a single line of `text` to the buffer, styled by `styles`. */
-  def add (text :String, styles :Styles = Styles.None) :this.type = add(styledLine(text, styles))
+  def add (text :String, styles :String*) :this.type = add(styledLine(text, styles))
 
   /** Appends `text` to the buffer, filling it at this builder's fill width. */
-  def addFilled (text :String, styles :Styles = Styles.None) :this.type =
-    addPreFilled("", text, styles)
+  def addFilled (text :String, styles :String*) :this.type =
+    addPreFilled("", text, styles :_*)
 
   /** Appends `text` to the buffer, prefixing every line with `prefix`, and filling it at this
     * builder's fill width (minus the width of the prefix). */
-  def addPreFilled (prefix :String, text :String, styles :Styles = Styles.None) :this.type = {
+  def addPreFilled (prefix :String, text :String, styles :String*) :this.type = {
     val filler = new Filler(math.max(fillWidth-prefix.length, MinFillWidth))
     filler.append(Filler.flatten(text))
     if (prefix.length > 0) filler.filled.foreach { f => f.insert(0, prefix) }
@@ -70,8 +70,8 @@ class BufferBuilder (fillWidth :Int) {
     * [[TextConfig.headerStyle]] and followed by a line of `===`s. */
   def addHeader (text :String) :this.type  = {
     if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
-    add(text, Styles(TextConfig.headerStyle))
-    add(toDashes(text, '='), Styles(TextConfig.headerStyle))
+    add(text, TextConfig.headerStyle)
+    add(toDashes(text, '='), TextConfig.headerStyle)
   }
 
   /** Adds a subheader to the accumulating buffer. If the preceding line is not blank, a blank line
@@ -79,8 +79,8 @@ class BufferBuilder (fillWidth :Int) {
     * [[TextConfig.subHeaderStyle]] and followed by a line of `---`s. */
   def addSubHeader (text :String) :this.type  = {
     if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
-    add(text, Styles(TextConfig.subHeaderStyle))
-    add(toDashes(text, '-'), Styles(TextConfig.subHeaderStyle))
+    add(text, TextConfig.subHeaderStyle)
+    add(toDashes(text, '-'), TextConfig.subHeaderStyle)
   }
 
   /** Adds a section header to the accumulating buffer. If the preceding line is not blank, a blank
@@ -88,7 +88,7 @@ class BufferBuilder (fillWidth :Int) {
     * [[TextConfig.sectionStyle]]. */
   def addSection (text :String) :this.type  = {
     if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
-    add(text, Styles(TextConfig.sectionStyle))
+    add(text, TextConfig.sectionStyle)
   }
 
   /** Adds `keyvalue` with `key` styled in [[TextConfig.prefixStyle]]. The caller is expected to
@@ -96,8 +96,8 @@ class BufferBuilder (fillWidth :Int) {
     * wrapped to the builder's fill width minus the width of the key (wrapped lines will be prefixed
     * with `key.length` spaces). */
   def addKeyValue (key :String, value :String) :this.type = {
-    def simple (value :CharSequence) = Line.builder(s"$key$value").withStyles(
-      Styles(TextConfig.prefixStyle), 0, key.length).build()
+    def simple (value :CharSequence) = Line.builder(s"$key$value").withStyle(
+      TextConfig.prefixStyle, 0, key.length).build()
     val valueFill = math.max(fillWidth-key.length, MinFillWidth)
     if (value.length <= valueFill) add(simple(value))
     else {
@@ -118,10 +118,8 @@ class BufferBuilder (fillWidth :Int) {
     kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
   }
 
-  private def styledLine (text :CharSequence, styles :Styles) = {
-    if (styles eq Styles.None) Line(text)
-    else Line.builder(text).withStyles(styles).build()
-  }
+  private def styledLine (text :CharSequence, styles :Seq[String]) =
+    ((Line.builder(text) /: styles)(_.withStyle(_))).build()
 
   private def toDashes (text :String, dash :Char) = {
     val sb = new StringBuilder()

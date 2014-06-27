@@ -74,35 +74,42 @@ class LineViewImpl (_line :LineV) extends LineView {
   /** Validates this line, rebuilding its visualization. This is called when the line becomes
     * visible. Non-visible lines defer visualization rebuilds until they become visible. */
   def validate () :Unit = if (!_valid) {
-    _valid = true
-    // go through the line accumulating runs of characters that are all styled with the same face
-    val last = _line.length
-    var start = 0
-    var end = 0
-    var styles :Styles = null
-    val kids = ArrayBuffer[Node]()
-    while (end <= last) {
-      val cstyles = _line.stylesAt(end)
-      if ((cstyles ne styles) || end == last) {
-        if (end > 0) {
-          val text = _line.sliceString(start, end)
-          assert(end > start)
-          assert(text.indexOf('\r') == -1 && text.indexOf('\n') == -1,
-                 s"Text cannot have newlines: $text")
-          val tnode = new FillableText(text)
-          tnode.setFontSmoothingType(FontSmoothingType.LCD)
-          tnode.getStyleClass.add("textFace")
-          styles.addTo(tnode.getStyleClass)
-          tnode.setTextOrigin(VPos.TOP)
-          kids += tnode.fillRect
-          kids += tnode
-        }
-        styles = cstyles
-        start = end
-      }
-      end += 1
-    }
+    // go through the line and add all of the styled line fragments
+    class Adder extends Function3[Seq[Tag[String]],Int,Int,Unit]() {
+      private val kids = ArrayBuffer[Node]()
+      private var last :Int = 0
 
-    if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
+      def add (start :Int, end :Int, styles :Seq[Tag[String]]) {
+        val text = _line.sliceString(start, end)
+        assert(end > start)
+        assert(text.indexOf('\r') == -1 && text.indexOf('\n') == -1,
+               s"Text cannot have newlines: $text")
+        val tnode = new FillableText(text)
+        tnode.setFontSmoothingType(FontSmoothingType.LCD)
+        val sc = tnode.getStyleClass
+        sc.add("textFace")
+        styles.foreach(t => sc.add(t.tag))
+        tnode.setTextOrigin(VPos.TOP)
+        kids += tnode.fillRect
+        kids += tnode
+      }
+
+      def apply (cls :Seq[Tag[String]], start :Int, end :Int) {
+        // if we skipped over any unstyled text, add it now
+        if (start > last) add(last, start, Nil)
+        add(start, end, cls)
+        last = end
+      }
+
+      def finish () {
+        // if there's trailing unstyled text, add that
+        if (last < _line.length) add(last, _line.length, Nil)
+        if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
+      }
+    }
+    _valid = true // mark ourselves valid now to avoid looping if freakoutery
+    val adder = new Adder()
+    _line.visitTags(classOf[String])(adder)
+    adder.finish()
   }
 }

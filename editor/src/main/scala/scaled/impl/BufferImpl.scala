@@ -99,8 +99,8 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
 
   override def markClean () :Unit = _dirty() = false
 
-  override def insert (loc :Loc, c :Char, styles :Styles, syntax :Syntax) = {
-    _lines(loc.row).insert(loc, c, styles, syntax)
+  override def insert (loc :Loc, c :Char, syntax :Syntax) = {
+    _lines(loc.row).insert(loc, c, syntax)
     noteInsert(loc, loc.nextC)
   }
   override def insert (loc :Loc, line :LineV) = {
@@ -187,18 +187,32 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
     noteInsert(loc, loc.nextStart)
   }
 
-  override def updateStyles (fn :Styles => Styles, start :Loc, until :Loc) {
-    if (until < start) updateStyles(fn, until, start)
-    else if (until > end) updateStyles(fn, start, end) // bound until into the buffer
-    else if (start.row == until.row) line(start).updateStyles(fn, start, until.col)
-    else onRows(start, until)(_.updateStyles(fn, _, _))
-  }
-
   override def setSyntax (syntax :Syntax, start :Loc, until :Loc) {
     if (until < start) setSyntax(syntax, until, start)
     else if (until > end) setSyntax(syntax, start, end) // bound until into the buffer
     else if (start.row == until.row) line(start).setSyntax(syntax, start, until.col)
     else onRows(start, until)(_.setSyntax(syntax, _, _))
+  }
+
+  override def addTag[T] (tag :T, start :Loc, until :Loc) {
+    if (until < start) addTag(tag, until, start)
+    else if (until > end) addTag(tag, start, end) // bound until into the buffer
+    else if (start.row == until.row) line(start).addTag(tag, start, until.col)
+    else onRows(start, until)(_.addTag(tag, _, _))
+  }
+
+  override def removeTag[T] (tag :T, start :Loc, until :Loc) {
+    if (until < start) removeTag(tag, until, start)
+    else if (until > end) removeTag(tag, start, end) // bound until into the buffer
+    else if (start.row == until.row) line(start).removeTag(tag, start, until.col)
+    else onRows(start, until)(_.removeTag(tag, _, _))
+  }
+
+  override def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Loc) {
+    if (until < start) removeTags(tclass, pred, until, start)
+    else if (until > end) removeTags(tclass, pred, start, end) // bound until into the buffer
+    else if (start.row == until.row) line(start).removeTags(tclass, pred, start, until.col)
+    else onRows(start, until)(_.removeTags(tclass, pred, _, _))
   }
 
   //

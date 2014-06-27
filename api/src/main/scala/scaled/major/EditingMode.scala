@@ -222,7 +222,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     val np = view.point()
     // insert the typed character at the point
     if (typed.length != 1) view.buffer.insert(np, Line(typed))
-    else view.buffer.insert(np, typed.charAt(0), Styles.None, Syntax.Default)
+    else view.buffer.insert(np, typed.charAt(0), Syntax.Default)
   }
 
   @Fn("Deletes the character immediately previous to the point.")
@@ -293,8 +293,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     else {
       val swap = tp.prevC
       buffer.replace(swap, 2, new Line(Array(buffer charAt tp, buffer charAt swap),
-                                       Array(buffer stylesAt tp, buffer stylesAt swap),
-                                       Array(buffer syntaxAt tp, buffer syntaxAt swap)))
+                                       Array(buffer syntaxAt tp, buffer syntaxAt swap),
+                                       new Tags()))
       view.point() = tp.nextC
     }
   }

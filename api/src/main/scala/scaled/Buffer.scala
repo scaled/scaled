@@ -125,13 +125,13 @@ abstract class BufferV extends Region {
 
   /** Returns the CSS style classes of the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def stylesAt (loc :Loc) :Styles = line(loc.row).stylesAt(loc.col)
+  def stylesAt (loc :Loc) :List[String] = line(loc.row).stylesAt(loc.col)
 
   /** Returns `stylesAt(loc)` unless `loc` is at the end of its line, in which case the styles
     * for the character preceding `loc` are returned. If the line containing `loc` is empty, empty
     * styles are returned.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def stylesNear (loc :Loc) :Styles = {
+  def stylesNear (loc :Loc) :List[String] = {
     val line = this.line(loc.row) ; val len = line.length
     line.stylesAt(if (loc.col < len || len == 0) loc.col else len-1)
   }
@@ -403,10 +403,9 @@ abstract class Buffer extends BufferV {
   /** That which handles undoing and redoing for this buffer. */
   def undoer :Undoer
 
-  /** Inserts the single character `c` into this buffer at `loc` with CSS style classes `styles`
-    * and tagged with syntax `syntax`.
+  /** Inserts the single character `c` into this buffer at `loc` tagged with syntax `syntax`.
     * @return the buffer location just after the inserted character. */
-  def insert (loc :Loc, c :Char, styles :Styles, syntax :Syntax) :Loc
+  def insert (loc :Loc, c :Char, syntax :Syntax) :Loc
 
   /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
     * into the line at `loc`, a new line will not be created. If you wish to create a new line,
@@ -464,27 +463,39 @@ abstract class Buffer extends BufferV {
     * which immediately follows the `loc.row`th line. */
   def split (loc :Loc) :Unit
 
-  /** Updates the CSS style classes of the characters between `[start, until)` by applying `fn` to
-    * the existing styles. To add a single style do: `updateStyles(_ + style, ...)` to remove a
-    * single style do: `updateStyles(_ - style, ...)`. */
-  def updateStyles (fn :Styles => Styles, start :Loc, until :Loc) :Unit
-  /** Updates the CSS style classes of the characters in region `r` by applying `fn` to the existing
-    * styles. */
-  def updateStyles (fn :Styles => Styles, r :Region) :Unit = updateStyles(fn, r.start, r.end)
-
-  /** Adds CSS style class `style` to the characters between `[start, until)`. */
-  def addStyle (style :String, start :Loc, until :Loc) = updateStyles(_ + style, start, until)
-  /** Adds CSS style class `style` to the characters in region `r`. */
-  def addStyle (style :String, r :Region) :Unit = addStyle(style :String, r.start, r.end)
-  /** Removes CSS style class `style` from the characters between `[start, until)`. */
-  def removeStyle (style :String, start :Loc, until :Loc) = updateStyles(_ - style, start, until)
-  /** Removes CSS style class `style` from the characters in region `r`. */
-  def removeStyle (style :String, r :Region) :Unit = removeStyle(style, r.start, r.end)
-
   /** Sets the syntax of the characters between `[start, until)` to `syntax`. */
   def setSyntax (syntax :Syntax, start :Loc, until :Loc) :Unit
   /** Sets the syntax of the characters in region `r` to `syntax`. */
   def setSyntax (syntax :Syntax, r :Region) :Unit = setSyntax(syntax, r.start, r.end)
+
+  /** Tags the region `[start, until)` with `tag`. */
+  def addTag[T] (tag :T, start :Loc, until :Loc) :Unit
+  /** Tags the region `r` with `tag`. */
+  def addTag[T] (tag :T, r :Region) :Unit = addTag(tag, r.start, r.end)
+  /** Removes the specified tag from the region `[start, until)`. If an existing tag partially
+    * overlaps the region, it will be split at the region boundaries and the overlapping fragment
+    * removed. */
+  def removeTag[T] (tag :T, start :Loc, until :Loc) :Unit
+  /** Removes the specified tag from the region `r`. If an existing tag partially overlaps the
+    * region, it will be split at the region boundaries and the overlapping fragment removed. */
+  def removeTag[T] (tag :T, r :Region) :Unit = removeTag(tag, r.start, r.end)
+
+  /** Removes tags which overlap `[start, until)`, match `tclass` and for which `pred` is true.
+    * Unlike [[removeTag]] this removes entire tags, it does not split overlappers. */
+  def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Loc) :Unit
+  /** Removes tags which overlap `r`, match `tclass` and for which `pred` is true.
+    * Unlike [[removeTag]] this removes entire tags, it does not split overlappers. */
+  def removeTags[T] (tclass :Class[T], pred :T => Boolean, r :Region) :Unit =
+    removeTags(tclass, pred, r.start, r.end)
+
+  /** Adds CSS style class `style` to the characters between `[start, until)`. */
+  def addStyle (style :String, start :Loc, until :Loc) = addTag(style.intern, start, until)
+  /** Adds CSS style class `style` to the characters in region `r`. */
+  def addStyle (style :String, r :Region) :Unit = addStyle(style, r.start, r.end)
+  /** Removes CSS style class `style` from the characters between `[start, until)`. */
+  def removeStyle (style :String, start :Loc, until :Loc) = removeTag(style, start, until)
+  /** Removes CSS style class `style` from the characters in region `r`. */
+  def removeStyle (style :String, r :Region) :Unit = removeStyle(style, r.start, r.end)
 }
 
 /** `Buffer` related types and utilities. */

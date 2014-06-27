@@ -25,10 +25,11 @@ class Scaled extends Application {
   val log = Signal[String]()
 
   val logger = new Logger {
-    override def log (msg :String) :Unit = exec.runOnUI { Scaled.this.log.emit(msg) }
+    override def log (msg :String) :Unit = exec.runOnUI { println(msg) ; Scaled.this.log.emit(msg) }
     override def log (msg :String, exn :Throwable) :Unit = exec.runOnUI {
       Scaled.this.log.emit(msg)
       Scaled.this.log.emit(Errors.stackTraceToString(exn))
+      println(msg) ; exn.printStackTrace(System.out)
     }
   }
 
