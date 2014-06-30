@@ -25,11 +25,12 @@ class Scaled extends Application {
   val log = Signal[String]()
 
   val logger = new Logger {
-    override def log (msg :String) :Unit = exec.runOnUI { println(msg) ; Scaled.this.log.emit(msg) }
-    override def log (msg :String, exn :Throwable) :Unit = exec.runOnUI {
+    override def log (msg :String) :Unit = exec.runOnUI { doLog(msg) }
+    override def log (msg :String, exn :Throwable) :Unit =
+      exec.runOnUI { doLog(msg) ; doLog(Errors.stackTraceToString(exn)) }
+    private def doLog (msg :String) {
+      debugLog(msg)
       Scaled.this.log.emit(msg)
-      Scaled.this.log.emit(Errors.stackTraceToString(exn))
-      println(msg) ; exn.printStackTrace(System.out)
     }
   }
 
@@ -46,6 +47,10 @@ class Scaled extends Application {
     }
     override val bgExec = pool
   }
+
+  /** If debug logging is enabled, writes `msg` to console, otherwise noops. */
+  val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
+                 else (msg :String) => ()
 
   /** Opens `path` in the editor pane associated with `workspace`. If no such editor pane exists one
     * is created. */

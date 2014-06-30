@@ -62,7 +62,11 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
       case null => err.toString
       case msg  => msg
     }, false)
-    if (!Errors.isFeedback(err)) recordMessage(Errors.stackTraceToString(err))
+    if (!Errors.isFeedback(err)) {
+      val trace = Errors.stackTraceToString(err)
+      app.debugLog(trace)
+      recordMessage(trace)
+    }
   }
   override def clearStatus () = {
     _statusPopup.clear()
