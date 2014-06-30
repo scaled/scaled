@@ -160,7 +160,7 @@ class Tags {
       // if the node overlaps the expansion point, expand it
       else if (nend > start) replace(mkNode(node.tag, nstart, nend+length))
       // otherwise it starts and ends before the expansion point, ignore it
-      pnode = node
+      pnode = pnode.next // TODO: write failing test for 'pnode = node'...
       node = node.next
     }
   }
@@ -210,8 +210,10 @@ class Tags {
         val nstart = node.start ; val nend = node.end
         // node starts before region
         if (nstart < start) {
+          // if node also ends before region, it is not affected
+          if (nend <= start) loop(node, mod)
           // if it ends inside the region, chop off the right
-          if (nend <= end) {
+          else if (nend <= end) {
             val frag = mkNode(node.tag, node.start, start)
             pnode.setNext(frag.setNext(node.next))
             loop(frag, true)
