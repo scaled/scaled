@@ -81,7 +81,7 @@ class MutableLine (
   }
 
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
-  def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = {
+  def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = if (count == 0) loc else {
     prepInsert(loc.col, count)
     line.sliceInto(offset, offset+count, _chars, _syns, tags, loc.col)
     _end += count
@@ -97,15 +97,18 @@ class MutableLine (
   /** Deletes `length` chars from this line starting at `loc`.
     * @return the deleted chars as a line. */
   def delete (loc :Loc, length :Int) :Line = {
-    val pos = loc.col
-    val last = pos + length
-    require(pos >= 0 && last <= _end, s"$pos >= 0 && $last <= ${_end}")
-    val deleted = slice(pos, pos+length)
-    System.arraycopy(_chars , last, _chars , pos, _end-last)
-    System.arraycopy(_syns  , last, _syns  , pos, _end-last)
-    tags.delete(pos, last)
-    _end -= length
-    deleted
+    if (length == 0) Line.Empty
+    else {
+      val pos = loc.col
+      val last = pos + length
+      require(pos >= 0 && last <= _end, s"$pos >= 0 && $last <= ${_end}")
+      val deleted = slice(pos, pos+length)
+      System.arraycopy(_chars , last, _chars , pos, _end-last)
+      System.arraycopy(_syns  , last, _syns  , pos, _end-last)
+      tags.delete(pos, last)
+      _end -= length
+      deleted
+    }
   }
 
   /** Replaces `delete` chars starting at `loc` with `line`. */
@@ -128,7 +131,7 @@ class MutableLine (
     }
     // otherwise, we've got a perfect match, no shifting needed
 
-    tags.clear(pos, lastDeleted)
+    if (delete > 0) tags.clear(pos, lastDeleted)
     line.sliceInto(0, added, _chars, _syns, tags, pos)
     _end += deltaLength
     replaced
@@ -153,7 +156,8 @@ class MutableLine (
   /** Removes `tag` to this line. If `tag` is of type `String` and a tag was found and removed, then
     * `noteLineStyled` is emitted. */
   def removeTag[T] (tag :T, start :Loc, until :Int) {
-    if (tags.remove(tag, start.col, until) && tag.isInstanceOf[String]) {
+    val scol = start.col
+    if (until > scol && tags.remove(tag, scol, until) && tag.isInstanceOf[String]) {
       buffer.noteLineStyled(start)
     }
   }
