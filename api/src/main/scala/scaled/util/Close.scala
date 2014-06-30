@@ -29,6 +29,9 @@ object Close {
     /** Removes `ac` from this close list. */
     def -= (ac :AutoCloseable) :Unit = remove(ac)
 
+    /** Applies `fn` to all closeables in this bag. For sneaky business. */
+    def foreach[U] (fn :AutoCloseable => U) :Unit = _acs foreach fn
+
     /** Closes all closeables in this list and clears it. If any exceptions occur during closure,
       * they are accumulated into single [[RuntimeException]] as suppressed exceptions. */
     def close () {
