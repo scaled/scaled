@@ -35,7 +35,13 @@ abstract class Tag[T] {
     // TODO: this can probably be done more efficiently
     contains(start) || contains(end-1) || (start < this.start && end >= this.end)
 
-  override def toString :String = s"${tag.getClass.getName}='$tag' @ $start-$end"
+  override def toString :String = s"$tagType='$tag' @ $start-$end"
+
+  // we'd use getClass.simpleName except that's a landmine in Scala; yay!
+  private def tagType = {
+    val nm = tag.getClass.getName
+    nm.substring(nm.lastIndexOf('.')+1)
+  }
 }
 
 /** Maintains an ordered collection of tags for a line. Supports the various queries and mutations

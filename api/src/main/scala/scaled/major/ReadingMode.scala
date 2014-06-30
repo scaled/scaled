@@ -519,7 +519,10 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Displays the tags at the point.")
   def showTags () {
-    val info = buffer.tagsAt(view.point()).map(_.toString)
+    val info = buffer.tagsAt(view.point()) match {
+      case Nil => List("No tags.")
+      case tags => tags.map(_.toString)
+    }
     view.popup() = Popup(info, Popup.UpRight(view.point()))
   }
 
