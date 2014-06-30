@@ -85,7 +85,7 @@ class Tags {
 
   /** Visits tags which match `tclass` in order. `vis` will be called for each region which contains
     * a unique set of tags (including no tags). */
-  def visit[T] (tclass :Class[T])(vis :(Seq[Tag[T]], Int, Int) => Unit) {
+  def visit[T] (tclass :Class[T])(vis :(Seq[Tag[T]], Int, Int) => Unit) :Unit = try {
     var vts = Seq[Tag[T]]() ; var start = 0 ; var maxex = Int.MaxValue
     var node = _root.next ; while (node != null) {
       if (!tclass.isInstance(node.tag)) node = node.next
@@ -120,6 +120,10 @@ class Tags {
       vts = vts.filter(_.end > start)
       maxex = (Int.MaxValue /: vts)((mx, vt) => math.min(vt.end, mx))
     }
+  } catch {
+    case t :Throwable =>
+      println(s"Visit choked $this ($tags)")
+      t.printStackTrace(System.out)
   }
 
   /** Removes `tag` from this collection. If `tag` exists but does not match the exact start and end
@@ -178,20 +182,21 @@ class Tags {
 
   /** Slices `[start, end)` from these tags into `into` at `offset`. */
   def sliceInto (start :Int, end :Int, into :Tags, offset :Int) {
+    def clip[T] (tag :T, cstart :Int, cend :Int) = if (cend > cstart) into.add(tag, cstart, cend)
     var node = _root.next ; while (node != null && node.start < end) {
       val nstart = node.start ; val nend = node.end
       // node starts at or before the region
       if (nstart <= start) {
         // if the node overlaps the region, slice out the middle
-        if (nend >= end) into.add(node.tag, offset, offset+end-start)
+        if (nend >= end) clip(node.tag, offset, offset+end-start)
         // if the node overlaps on the left, include the overlappy bit
-        else if (nend > start) into.add(node.tag, offset, offset+nend-start)
+        else if (nend > start) clip(node.tag, offset, offset+nend-start)
         // otherwise it starts and ends before the region; ignore it
       }
       // node starts inside the region
       else if (nstart < end) {
         // take as much of the node as fits in the region
-        into.add(node.tag, offset+nstart-start, offset+math.min(nend, end)-start)
+        clip(node.tag, offset+nstart-start, offset+math.min(nend, end)-start)
       }
       // otherwise node starts after region, ignore it
       node = node.next
