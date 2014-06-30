@@ -133,31 +133,28 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
 
   getStyleClass.add("editor")
 
-  private case class OpenBuffer (
-    content :BorderPane, area :BufferArea, view :BufferViewImpl, disp :DispatcherImpl
-  ) {
+  private case class OpenBuffer (pane :BorderPane,     area :BufferArea,
+                                 view :BufferViewImpl, disp :DispatcherImpl) {
     def buffer = view.buffer
     def name = buffer.name
-    def dispose () {
-      disp.dispose()
-    }
+    def dispose () :Unit = disp.dispose()
     override def toString = name
   }
   private val _buffers = ArrayBuffer[OpenBuffer]()
 
   private var _active :OpenBuffer = _
   private def setBuffer (buf :OpenBuffer) {
-    if (_active == buf) _active.content.toFront()
+    if (_active == buf) _active.pane.toFront()
     else {
       if (_active != null) {
-        getChildren.remove(_active.content)
+        getChildren.remove(_active.pane)
         _active.area.hibernate()
       }
       stage.setTitle(s"Scaled - ${buf.name}")
       _active = buf
 
       val start = System.nanoTime() // TEMP: perf debugging
-      getChildren.add(_active.content)
+      getChildren.add(_active.pane)
       val elapsed = (System.nanoTime() - start)/1000
       if (elapsed > 500) println(s"EditorPane add BufferArea $elapsed us")
     }
@@ -190,10 +187,10 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   private val _logcon = app.log.onValue(recordMessage)
 
   // we manage layout manually for a variety of nefarious reasons
-  override protected def computeMinWidth (height :Double) = _active.content.minWidth(height)
-  override protected def computeMinHeight (width :Double) = _active.content.minHeight(width)
-  override protected def computePrefWidth (height :Double) = _active.content.prefWidth(height)
-  override protected def computePrefHeight (width :Double) = _active.content.prefHeight(width)
+  override protected def computeMinWidth (height :Double) = _active.pane.minWidth(height)
+  override protected def computeMinHeight (width :Double) = _active.pane.minHeight(width)
+  override protected def computePrefWidth (height :Double) = _active.pane.prefWidth(height)
+  override protected def computePrefHeight (width :Double) = _active.pane.prefHeight(width)
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 
@@ -201,7 +198,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     val bounds = getLayoutBounds
     val vw = bounds.getWidth ; val vh = bounds.getHeight
     val statusHeight = _statusLine.prefHeight(vw) ; val contentHeight = vh-statusHeight
-    _active.content.resize(vw, contentHeight)
+    _active.pane.resize(vw, contentHeight)
     _statusLine.resizeRelocate(0, contentHeight, vw, statusHeight)
 
     // the status overlay is centered in the top 1/4th of the screen
@@ -273,12 +270,12 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     // also set up a listener on it such that if it is written to a new file and that new file has
     // a name that conflicts with an existing buffer, we name<2> it then as well
 
-    val content = new BorderPane()
+    val pane = new BorderPane()
     val area = new BufferArea(this, view, disp)
-    content.setCenter(area)
-    content.setBottom(mline)
+    pane.setCenter(area)
+    pane.setBottom(mline)
 
-    val obuf = OpenBuffer(content, area, view, disp)
+    val obuf = OpenBuffer(pane, area, view, disp)
     _buffers += obuf
     obuf
   }
