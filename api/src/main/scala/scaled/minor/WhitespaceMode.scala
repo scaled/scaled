@@ -52,8 +52,8 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
       // RBufferView.heightV; encapsulate it in a Colorizer helper class?
     }
 
-    override protected def didDeactivate () {
-      buffer.removeStyle(trailingStyle, buffer.start, buffer.end)
+    override protected def didDeactivate (bufferDisposing :Boolean) {
+      if (!bufferDisposing) buffer.removeStyle(trailingStyle, buffer.start, buffer.end)
     }
 
     private def queueRethink (row :Int*) {

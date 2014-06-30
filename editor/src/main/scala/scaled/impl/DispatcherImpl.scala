@@ -48,7 +48,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   major onValueNotify { major =>
     val hadMajor = (_majorMeta != null)
     // all old modes need to be cleaned out, and applicable minor modes re-resolved
-    _metas foreach { _.dispose() }
+    _metas foreach { _.dispose(false) }
     // set up our new major mode
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
@@ -128,7 +128,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
 
   /* Disposes the major mode associated with this dispatcher and any active minor modes. */
   def dispose () {
-    _metas map(_.mode) foreach(_.dispose())
+    _metas foreach(_.dispose(true))
     _metas = Nil // render ourselves useless
     _prefixes = Set()
   }
@@ -180,14 +180,11 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   }
 
   private def removeMode (minor :MinorMode) {
-    val ometas = _metas
     _metas = _metas.filterNot { mm =>
-      if (mm.mode == minor) { mm.dispose(); true }
+      if (mm.mode == minor) { mm.dispose(false); true }
       else false
     }
     modesChanged()
-    // if we actually removed this mode, dispose it
-    if (ometas != _metas) minor.dispose()
   }
 
   private def modesChanged () {
@@ -270,10 +267,14 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     // the global user sheets (so that the global user sheets are always last)
     addSheets(mode.stylesheets)
 
-    def dispose () {
-      // remove this mode's stylesheet (if any) from the editor
-      mode.stylesheets.foreach { ss => editor.getStylesheets.remove(ss) }
-      // and dispose the mode
+    def dispose (bufferDisposing :Boolean) {
+      // if the buffer is not going away...
+      if (!bufferDisposing) {
+        // remove this mode's stylesheet (if any) from the editor
+        mode.stylesheets.foreach { ss => editor.getStylesheets.remove(ss) }
+        // tell the mode that it's being deactivated before we dispose it
+        mode.deactivate()
+      }
       mode.dispose()
     }
   }

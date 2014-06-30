@@ -138,6 +138,20 @@ abstract class Mode (env :Env) {
     */
   def keymap :Seq[(String, String)]
 
+  /** Called when a mode is deactivated but the buffer to which it was attached will remain active.
+    * This will precede the call to [[dispose]]. If a mode is maintaining any transient state in the
+    * buffer, it should remove it here. That way the cost of removal is avoided if the buffer itself
+    * is going to be thrown away too.
+    */
+  def deactivate () {
+    // deactivate any active behaviors now; this ensures that they're informed that the buffer is
+    // not going away and they need to do extra work to leave it unmolested
+    _toClose foreach {
+      case bh :Behavior => bh.setActive(false)
+      case _            => // noop!
+    }
+  }
+
   /** Cleans up any external resources managed by this mode. This is called when the mode is
     * disabled or the buffer containing the mode is going away. */
   def dispose () {
