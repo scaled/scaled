@@ -67,6 +67,9 @@ abstract class LineV extends CharSequence {
   /** Returns the CSS style classes applied to the character at `pos`, if any. */
   def stylesAt (pos :Int) :List[String] = _tags.tagsAt(classOf[String], pos)
 
+  /** Returns all tags which overlap `pos`. */
+  def tagsAt (pos :Int) :List[Tag[_]] = _tags.tagsAt(pos)
+
   /** Returns all tags which match `tclass` and overlap `pos`. */
   def tagsAt[T] (tclass :Class[T], pos :Int) :List[T] = _tags.tagsAt(tclass, pos)
 

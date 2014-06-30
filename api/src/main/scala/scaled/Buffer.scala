@@ -123,6 +123,10 @@ abstract class BufferV extends Region {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
 
+  /** Returns all tags on the character at `loc`.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def tagsAt (loc :Loc) :List[Tag[_]] = line(loc.row).tagsAt(loc.col)
+
   /** Returns the CSS style classes of the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def stylesAt (loc :Loc) :List[String] = line(loc.row).stylesAt(loc.col)

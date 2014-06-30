@@ -34,6 +34,8 @@ abstract class Tag[T] {
   def overlaps (start :Int, end :Int) =
     // TODO: this can probably be done more efficiently
     contains(start) || contains(end-1) || (start < this.start && end >= this.end)
+
+  override def toString :String = s"${tag.getClass.getName}='$tag' @ $start-$end"
 }
 
 /** Maintains an ordered collection of tags for a line. Supports the various queries and mutations
@@ -78,6 +80,15 @@ class Tags {
   def tagsAt[T] (tclass :Class[T], idx :Int) :List[T] = {
     var rs = Nil :List[T] ; var node = _root.next ; while (node != null) {
       if (tclass.isInstance(node.tag) && node.contains(idx)) rs = node.tag.asInstanceOf[T] :: rs
+      node = node.next
+    }
+    rs
+  }
+
+  /** Returns all tags that intersect `idx`. */
+  def tagsAt (idx :Int) :List[Tag[_]] = {
+    var rs = Nil :List[Tag[_]] ; var node = _root.next ; while (node != null) {
+      if (node.contains(idx)) rs = node :: rs
       node = node.next
     }
     rs
@@ -148,6 +159,9 @@ class Tags {
     }
     removed
   }
+
+  // TODO: write checkInvariant() which ensures that tags are all in correct order; then call it
+  // before and after every method (until we've ironed out all the bugs)
 
   /** Deletes tags in the specified region, chopping overlapping tags at the region and shifting
     * tags beyond the region `end-start` characters to the left. */
