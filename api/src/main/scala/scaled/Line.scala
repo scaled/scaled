@@ -65,13 +65,13 @@ abstract class LineV extends CharSequence {
   def syntaxAt (pos :Int) :Syntax = if (pos < length) _syns(_offset+pos) else Syntax.Default
 
   /** Returns the CSS style classes applied to the character at `pos`, if any. */
-  def stylesAt (pos :Int) :List[String] = _tags.tagsAt(classOf[String], pos)
+  def stylesAt (pos :Int) :List[String] = _tags.tagsAt(classOf[String], pos).map(_.tag)
+
+  /** Returns all tags which match `tclass` and overlap `pos`. */
+  def tagsAt[T] (tclass :Class[T], pos :Int) :List[Tag[T]] = _tags.tagsAt(tclass, pos)
 
   /** Returns all tags which overlap `pos`. */
   def tagsAt (pos :Int) :List[Tag[_]] = _tags.tagsAt(pos)
-
-  /** Returns all tags which match `tclass` and overlap `pos`. */
-  def tagsAt[T] (tclass :Class[T], pos :Int) :List[T] = _tags.tagsAt(tclass, pos)
 
   /** Visits tags which match `tclass` in order. `vis` will be called for each region which contains
     * a unique set of tags (including no tags). In the case of overlapping tags, the overlapping
