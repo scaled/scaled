@@ -55,11 +55,11 @@ class Tags {
   import Tags._
 
   // a dummy element at the root of our node linked list simplifies logic
-  private val _root :Node[_] = Node(null, Int.MinValue, Int.MaxValue)
+  private val _root :Node[_] = rootNode()
 
   /** Adds a tag for the specified region denoted by `tag`. */
   def add[T] (tag :T, start :Int, end :Int) {
-    _root.insert(Node[T](tag, start, end))
+    _root.insert(mkNode(tag, start, end))
   }
 
   /** Returns the tags in this collection as a list. They are sorted by increasing `start`. */
@@ -156,9 +156,9 @@ class Tags {
       val nstart = node.start ; val nend = node.end
       @inline def replace (frag :Node[_]) = pnode.setNext(frag.setNext(node.next))
       // if the node starts at or after the expansion point, shift it
-      if (nstart >= start) replace(Node(node.tag, nstart+length, nend+length))
+      if (nstart >= start) replace(mkNode(node.tag, nstart+length, nend+length))
       // if the node overlaps the expansion point, expand it
-      else if (nend > start) replace(Node(node.tag, nstart, nend+length))
+      else if (nend > start) replace(mkNode(node.tag, nstart, nend+length))
       // otherwise it starts and ends before the expansion point, ignore it
       pnode = node
       node = node.next
@@ -212,13 +212,13 @@ class Tags {
         if (nstart < start) {
           // if it ends inside the region, chop off the right
           if (nend <= end) {
-            val frag = Node(node.tag, node.start, start)
+            val frag = mkNode(node.tag, node.start, start)
             pnode.setNext(frag.setNext(node.next))
             loop(frag, true)
           }
           else { // otherwise split it into before and after region parts
-            val lfrag = Node(node.tag, node.start, start)
-            val rfrag = Node(node.tag, end-shift, node.end-shift) // after part is shifted
+            val lfrag = mkNode(node.tag, node.start, start)
+            val rfrag = mkNode(node.tag, end-shift, node.end-shift) // after part is shifted
             pnode.setNext(lfrag.setNext(rfrag.setNext(node.next)))
             loop(rfrag, true)
           }
@@ -229,14 +229,14 @@ class Tags {
           if (nend <= end) loop(pnode.setNext(node.next), true)
           // otherwise retain the after part (and shift it)
           else {
-            val frag = Node(node.tag, end-shift, nend-shift)
+            val frag = mkNode(node.tag, end-shift, nend-shift)
             pnode.setNext(frag.setNext(node.next))
             loop(frag, true)
           }
         }
         // node starts and ends after region, may need to be shifted
         else if (shift != 0) {
-          val frag = Node(node.tag, nstart-shift, nend-shift)
+          val frag = mkNode(node.tag, nstart-shift, nend-shift)
           pnode.setNext(frag.setNext(node.next))
           loop(frag, true)
         }
@@ -248,6 +248,14 @@ class Tags {
 }
 
 object Tags {
+
+  private def mkNode[T] (tag :T, start :Int, end :Int) = {
+    if (start < 0) throw new IllegalArgumentException(s"start must be >= 0 ($tag, $start, $end)")
+    if (end <= start) throw new IllegalArgumentException(s"end must be > start ($tag, $start, $end)")
+    new Node(tag, start, end)
+  }
+
+  private def rootNode () = Node(null, Int.MinValue, Int.MaxValue)
 
   private case class Node[T] (tag :T, start :Int, end :Int) extends Tag[T] {
     var next :Node[_] = _
