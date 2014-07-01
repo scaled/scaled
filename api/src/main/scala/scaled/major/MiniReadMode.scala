@@ -40,17 +40,32 @@ class MiniReadMode[T] (
 
   @Fn("Commits the current minibuffer read with its current contents.")
   def commitRead () {
-    completer.commit(curcomp, current) match {
-      // if they attempt to commit and the completer doesn't like it, complete with the current
-      // contents instead to let them know they need to complete with something valid
-      case None => complete()
-      // otherwise save the current contents to our history and send back our result
-      case Some(result) =>
-        // only add contents to history if it's non-empty
-        val lns = buffer.region(buffer.start, buffer.end)
-        if (lns.size > 1 || lns.head.length > 0) history.filterAdd(lns)
-        promise.succeed(result)
+    val curpre = current
+    // if they commit and we have no current completion...
+    if (!curcomp.isDefined) {
+      // generate a completion and then attempt to commit with that; if they provided a valid
+      // completion (or more likely it was provided as a default) then it will commit directly
+      curcomp = Some(completer.complete(curpre))
+      // don't allow the default completion to be used because the user hasn't seen it yet
+      completer.commit(curcomp, curpre, false) match {
+        // if no match, display the completion to let them know we need more info
+        case None    => display(curpre, curcomp.get)
+        case Some(r) => succeed(r)
+      }
     }
+    // otherwise we commit with the current completion
+    else completer.commit(curcomp, curpre, true) match {
+      case None    => complete()
+      case Some(r) => succeed(r)
+    }
+  }
+
+  // saves the current contents to our history and sends back a resultult
+  private def succeed (result :T) {
+    // only add contents to history if it's non-empty
+    val lns = buffer.region(buffer.start, buffer.end)
+    if (lns.size > 1 || lns.head.length > 0) history.filterAdd(lns)
+    promise.succeed(result)
   }
 
   private var curcomp :Option[Completion[T]] =  None
@@ -88,6 +103,10 @@ class MiniReadMode[T] (
     val curpre = current
     val comp = completer.complete(curpre)
     curcomp = Some(comp)
+    display(curpre, comp)
+  }
+
+  private def display (curpre :String, comp :Completion[_]) {
     if (comp.comps.isEmpty) miniui.showCompletions(Seq("No match."))
     else if (comp.comps.size == 1) {
       miniui.showCompletions(Seq())

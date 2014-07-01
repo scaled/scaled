@@ -123,8 +123,10 @@ abstract class Completer[T] {
     * it attempts to return the lexically first current completion (which is what will be
     * displayed at the top of the completions list).
     */
-  def commit (comp :Option[Completion[T]], current :String) :Option[T] = {
-    comp.flatMap(_.apply(current)) orElse fromString(current) orElse comp.flatMap(_.defval)
+  def commit (comp :Option[Completion[T]], current :String, allowDefault :Boolean) :Option[T] = {
+    comp.flatMap(_.apply(current)) orElse fromString(current) orElse {
+      if (allowDefault) comp.flatMap(_.defval) else None
+    }
   }
 
   /** If the value being completed is a path, this separator will be used to omit the path elements
