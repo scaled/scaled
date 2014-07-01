@@ -233,7 +233,7 @@ class Tags {
     chaineq(_root, other.asInstanceOf[Tags]._root))
 
   private def delete (pred :Any => Boolean, start :Int, end :Int, shift :Int) :Boolean = {
-    val where = s"delete($pred, $start, $end, $shift"
+    val where = s"delete($pred, $start, $end, $shift)"
     checkInvariant(where)
     @inline @tailrec def loop (pnode :Node[_], mod :Boolean) :Boolean = {
       val node = pnode.next
@@ -286,7 +286,7 @@ class Tags {
   private def checkInvariant (where :String) {
     var node = _root.next ; while (node != null) {
       if (node.next != null && node.start > node.next.start) throw new IllegalStateException(
-        s"Invalid node order $node !< ${node.next}: $tags")
+        s"Invalid node order: $where -> $node in $tags")
       node = node.next
     }
   }
