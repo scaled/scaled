@@ -1,5 +1,7 @@
 # Scaled
 
+![Travis build status](https://travis-ci.org/scaled/scaled.svg?branch=master)
+
 Scaled is a modern programmer's text editor, built atop Java 8 and JavaFX 8, mostly written in
 Scala, and which is designed to be extensible "all the way down" like Emacs. Like Emacs, "all the
 way down" doesn't actually go all the way down, but it goes down a lot further than most other
