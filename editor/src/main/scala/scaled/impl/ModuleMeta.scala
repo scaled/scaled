@@ -49,7 +49,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   // our root may be a directory or a jar file, in either case we scan it for class files
   if (Files.isDirectory(mod.root)) {
     val opts = Sets.newHashSet(FileVisitOption.FOLLOW_LINKS)
-    Files.walkFileTree(mod.root, opts, 32, new SimpleFileVisitor[Path]() {
+    Files.walkFileTree(mod.classesDir, opts, 32, new SimpleFileVisitor[Path]() {
       override def visitFile (file :Path, attrs :BasicFileAttributes) = {
         if (attrs.isRegularFile) {
           val name = file.getFileName.toString ; val fn = apply(name)
@@ -59,6 +59,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
       }
     })
   }
+  // TODO: this code path is no longer used; nix it?
   else if (mod.root.getFileName.toString endsWith ".jar") {
     val jfile = new JarFile(mod.root.toFile)
     val enum = jfile.entries()
