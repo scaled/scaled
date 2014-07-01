@@ -180,11 +180,10 @@ class Tags {
     checkInvariant(where)
     var pnode = _root ; var node = _root.next ; while (node != null) {
       val nstart = node.start ; val nend = node.end
-      @inline def replace (frag :Node[_]) = pnode.setNext(frag.setNext(node.next))
       // if the node starts at or after the expansion point, shift it
-      if (nstart >= start) replace(mkNode(node.tag, nstart+length, nend+length))
+      if (nstart >= start) pnode.replaceNext(mkNode(node.tag, nstart+length, nend+length))
       // if the node overlaps the expansion point, expand it
-      else if (nend > start) replace(mkNode(node.tag, nstart, nend+length))
+      else if (nend > start) pnode.replaceNext(mkNode(node.tag, nstart, nend+length))
       // otherwise it starts and ends before the expansion point, ignore it
       pnode = pnode.next // TODO: write failing test for 'pnode = node'...
       node = node.next
@@ -246,16 +245,18 @@ class Tags {
           // if node also ends before region, it is not affected
           if (nend <= start) loop(node, mod)
           // if it ends inside the region, chop off the right
-          else if (nend <= end) {
-            val frag = mkNode(node.tag, node.start, start)
-            pnode.setNext(frag.setNext(node.next))
-            loop(frag, true)
-          }
+          else if (nend <= end) loop(pnode.replaceNext(mkNode(node.tag, node.start, start)), true)
           else { // otherwise split it into before and after region parts
             val lfrag = mkNode(node.tag, node.start, start)
-            val rfrag = mkNode(node.tag, end-shift, node.end-shift) // after part is shifted
-            pnode.setNext(lfrag.setNext(rfrag.setNext(node.next)))
-            loop(rfrag, true)
+            val rfrag = mkNode(node.tag, end-shift, node.end)
+            // replace the split node with the left fragment
+            pnode.replaceNext(lfrag)
+            // 'insert' the right fragment because it may not sort immediately after the left
+            // fragment in our ordered tag list; note that the right fragment will be shifted when
+            // this loop arrives there, so we don't create it shifted by default; this is somewhat
+            // inefficient, but avoiding the extra allocation would greatly complicate things
+            lfrag.insert(rfrag)
+            loop(lfrag, true)
           }
         }
         // node starts inside region
@@ -263,17 +264,11 @@ class Tags {
           // if it also ends inside the region, just delete it
           if (nend <= end) loop(pnode.setNext(node.next), true)
           // otherwise retain the after part (and shift it)
-          else {
-            val frag = mkNode(node.tag, end-shift, nend-shift)
-            pnode.setNext(frag.setNext(node.next))
-            loop(frag, true)
-          }
+          else loop(pnode.replaceNext(mkNode(node.tag, end-shift, nend-shift)), true)
         }
         // node starts and ends after region, may need to be shifted
         else if (shift != 0) {
-          val frag = mkNode(node.tag, nstart-shift, nend-shift)
-          pnode.setNext(frag.setNext(node.next))
-          loop(frag, true)
+          loop(pnode.replaceNext(mkNode(node.tag, nstart-shift, nend-shift)), true)
         }
         else loop(node, mod)
       }
@@ -314,6 +309,7 @@ object Tags {
     }
 
     def setNext (node :Node[_]) :this.type = { next = node ; this }
+    def replaceNext (node :Node[_]) :node.type = { node.next = next.next ; next = node ; node }
   }
 
   private def chaineq (a :Node[_], b :Node[_]) :Boolean = a match {

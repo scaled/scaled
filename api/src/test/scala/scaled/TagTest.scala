@@ -51,13 +51,13 @@ class TagTest {
     tags.add(2, 4, 8) // should not match our type tests
     tags.add("three", 6, 8)
 
-    assertEquals(List("one"),          tags.tagsAt(classOf[String], 1))
-    assertEquals(List("one"),          tags.tagsAt(classOf[String], 2))
-    assertEquals(List("one"),          tags.tagsAt(classOf[String], 3))
-    assertEquals(List("two", "one"),   tags.tagsAt(classOf[String], 4))
-    assertEquals(List("two"),          tags.tagsAt(classOf[String], 5))
-    assertEquals(List("three", "two"), tags.tagsAt(classOf[String], 6))
-    assertEquals(List("three", "two"), tags.tagsAt(classOf[String], 7))
+    assertEquals(List("one"),          tags.tagsAt(classOf[String], 1).map(_.tag))
+    assertEquals(List("one"),          tags.tagsAt(classOf[String], 2).map(_.tag))
+    assertEquals(List("one"),          tags.tagsAt(classOf[String], 3).map(_.tag))
+    assertEquals(List("two", "one"),   tags.tagsAt(classOf[String], 4).map(_.tag))
+    assertEquals(List("two"),          tags.tagsAt(classOf[String], 5).map(_.tag))
+    assertEquals(List("three", "two"), tags.tagsAt(classOf[String], 6).map(_.tag))
+    assertEquals(List("three", "two"), tags.tagsAt(classOf[String], 7).map(_.tag))
     assertEquals(Nil, tags.tagsAt(classOf[String], 8))
   }
 
@@ -189,7 +189,7 @@ class TagTest {
     // 01        8901
 
     tags.clear(2, 8)
-    assertEquals(List((0, 2, "R"), (0, 2, "C"), (8, 12, "C"), (8, 10, "L")),
+    assertEquals(List((0, 2, "R"), (0, 2, "C"), (8, 10, "L"), (8, 12, "C")),
                  tags.tags.map(t => (t.start, t.end, t.tag.toString)))
   }
 
