@@ -31,6 +31,11 @@ abstract class Matcher {
   /** Replaces a match from this matcher in `buffer` at `at` with `lines`.
     * @return the location immediately following the replaced text. */
   def replace (buffer :Buffer, at :Loc, lines :Seq[LineV]) :Loc
+
+  /** Returns the text that describes this matcher, for display to the user. Hence if the matcher is
+    * a regexp, this should be the original regexp text. If it's a simple string matcher, this
+    * should be the string being matched. */
+  def show :String
 }
 
 /** A specialized matcher that searches and matches regular expressions. */
@@ -60,8 +65,11 @@ class RegexpMatcher (pattern :String) extends Matcher {
   def group (number :Int) :String = result.group(number)
 
   override def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
-    prep(haystack, begin, end)
-    if (!m.find) -1 else m.start
+    if (end <= begin) -1
+    else {
+      prep(haystack, begin, end)
+      if (!m.find) -1 else m.start
+    }
   }
 
   def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
@@ -94,7 +102,8 @@ class RegexpMatcher (pattern :String) extends Matcher {
     at + repl
   }
 
-  override def toString = pattern
+  override def show = pattern
+  override def toString = pattern + ":regex"
 
   private def prep (haystack :Array[Char], start :Int, end :Int) {
     current = haystack
@@ -115,7 +124,7 @@ object Matcher {
       at + lines
     }
     protected def eq (have :Char, want :Char) = have == want
-    override def toString = super.toString + ":exact"
+    override def toString = show + ":exact"
   }
 
   /** Returns a case-insensitive matcher on `cs`. NOTE: `cs` must be all lower case. */
@@ -131,7 +140,7 @@ object Matcher {
       newend
     }
     protected def eq (have :Char, want :Char) = have == want || have == Character.toLowerCase(want)
-    override def toString = super.toString + ":loose"
+    override def toString = show + ":loose"
   }
 
   /** Returns a regep matcher on `pattern`. */
@@ -175,7 +184,8 @@ object Matcher {
 
     def matchLength = needle.length
 
-    override def toString = needle.toString
+    override def show = needle.toString
+    override def toString = show
 
     private def search (n :CharSequence, hay :Array[Char], start :Int, stop :Int, dd :Int) = try {
       val length = n.length
