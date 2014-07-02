@@ -5,6 +5,7 @@
 package scaled
 
 import java.util.concurrent.{Executor => JExecutor}
+import reactual.{Future, Promise}
 
 /** Handles invoking execution units on the UI thread and background threads. */
 abstract class Executor {
@@ -37,4 +38,27 @@ abstract class Executor {
   def runInBG (op : => Unit) :Unit = bgExec.execute(new Runnable() {
     override def run () = op
   })
+
+  /** Returns a promise which will notify listeners of success or failure on the UI thread,
+    * regardless of the thread on which it is completed. */
+  def uiPromise[R] :Promise[R] = new Promise[R]() {
+    private def superSucceed (value :R) = super.succeed(value)
+    override def succeed (value :R) = runOnUI(new Runnable() {
+      def run () = superSucceed(value)
+    })
+    private def superFail (cause :Throwable) = super.fail(cause)
+    override def fail (cause :Throwable) = runOnUI(new Runnable() {
+      def run () = superFail(cause)
+    })
+  }
+
+  /** Runs `op` on a background thread, reports the results on the UI thread.
+    * @return a future that will deliver the result or cause of failure when available. */
+  def runAsync[R] (op : => R) :Future[R] = {
+    val result = uiPromise[R]
+    bgExec.execute(new Runnable() {
+      override def run () = try result.succeed(op) catch { case t :Throwable => result.fail(t) }
+    })
+    result
+  }
 }
