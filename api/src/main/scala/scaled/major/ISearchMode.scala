@@ -4,7 +4,7 @@
 
 package scaled.major
 
-import reactual.{Value, Future, Promise}
+import reactual.{Connection, Value, Future, Promise}
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scaled._
@@ -42,7 +42,7 @@ class ISearchMode (
       this.matches = Some(matches)
       if (curstate eq this) {
         miniui.setPrompt(prompt)
-        showMatches()
+        showMatches(matches, sought)
       }
     }
     matchesF.onSuccess(setMatches)
@@ -74,8 +74,7 @@ class ISearchMode (
       */
     def apply (prev :State) {
       if (prev.sought ne sought) {
-        prev.clearMatches()
-        showMatches()
+        if (matches.isDefined) showMatches(matches.get, sought)
         setContents(sought)
       }
       if (prev.start != start || prev.end != end) {
@@ -87,10 +86,7 @@ class ISearchMode (
     }
 
     /** Clears the highlights applied by this state. */
-    def clear () {
-      clearMatches()
-      mainBuffer.removeStyle(activeMatchStyle, this)
-    }
+    def clear () :Unit = mainBuffer.removeStyle(activeMatchStyle, this)
 
     def extend (esought :Seq[LineV]) = {
       val search = mkSearch(esought)
@@ -128,15 +124,26 @@ class ISearchMode (
     protected def mkSearch (sought :Seq[LineV]) = Search(
       mainBuffer, mainBuffer.start, mainBuffer.end, sought)
 
-    // TODO: defer showMatches for 250-500ms?
-    protected def showMatches () :Unit = if (matches.isDefined) matches.get foreach { l =>
-      mainBuffer.addStyle(matchStyle, l, l + sought) }
-    protected def clearMatches () :Unit = if (matches.isDefined) matches.get foreach { l =>
-      mainBuffer.removeStyle(matchStyle, l, l + sought) }
-
     protected def advance (next :Loc, fwd :Boolean, wrap :Boolean) =
       if (next == Loc.None) State(sought, matchesF, start, end,        fwd, true,  wrap)
       else                  State(sought, matchesF, next, next+sought, fwd, false, wrap)
+  }
+
+  // tracks the styles added for a complete set of matches
+  private var _clearMatches = () => ()
+  private var _pendingShow = Connection.Noop
+  private def showMatches (matches :Seq[Loc], sought :Seq[LineV]) {
+    _pendingShow.close() // cancel any pending show
+    _clearMatches()      // clear any currently highlighted matches
+    // defer actually showing these matches for 250ms
+    _pendingShow = env.exec.uiTimer(250).connectSuccess { _ =>
+      _pendingShow = Connection.Noop
+      matches foreach { l => mainBuffer.addStyle(matchStyle, l, l + sought) }
+      _clearMatches = { () =>
+        matches foreach { l => mainBuffer.removeStyle(matchStyle, l, l + sought) }
+        _clearMatches = () => ()
+      }
+    }
   }
 
   // we track the state of our isearch as a stack of states
@@ -199,7 +206,8 @@ class ISearchMode (
 
   override def dispose () {
     super.dispose()
-    curstate.clear() // clear any highlights
+    _clearMatches() // clear all matches highlight
+    curstate.clear() // clear active match highlight
   }
 
   // when a non-isearch key binding is pressed...
