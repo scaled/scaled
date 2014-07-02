@@ -119,39 +119,4 @@ class BufferImplTest {
     // finally make sure the originally extracted regions didn't change out from under us
     checkregions()
   }
-
-  @Test def testSingleLineSearch () {
-    val buffer = testBuffer(testText)
-    val the = Seq(Line("the"))
-    // search for all the thes in the whole buffer
-    val allThes = buffer.search(the, buffer.start, buffer.end)
-    assertEquals(5, allThes.size)
-    // search for thes on the first line (should be none)
-    val l2 = Loc(1, 0)
-    val firstThes = buffer.search(the, buffer.start, l2)
-    assertEquals(0, firstThes.size)
-    // search for thes in the first half of the second line (should be one)
-    val l2half = Loc(1, 20)
-    val firstHalfThes = buffer.search(the, l2, l2half)
-    assertEquals(1, firstHalfThes.size)
-    // search for thes in the second line just before the second 'the' (should be one)
-    val l2most = Loc(1, 51)
-    // println(buffer.region(l2, l2most).map(_.asString).mkString)
-    val firstMostThes = buffer.search(the, l2, l2most)
-    assertEquals(1, firstMostThes.size)
-    // search for thes in the second line just including the second 'the' (should be two)
-    val l2mostp = Loc(1, 52)
-    // println(buffer.region(l2, l2mostp).map(_.asString).mkString)
-    val firstMostPThes = buffer.search(the, l2, l2mostp)
-    assertEquals(2, firstMostPThes.size)
-    // search for thes on the whole second line (should be three)
-    val l3 = Loc(2, 0)
-    val secondThes = buffer.search(the, l2, l3)
-    assertEquals(3, secondThes.size)
-    // search for at most two thes on the whole second line (should be two)
-    val secondLimitThes = buffer.search(the, l2, l3, 2)
-    assertEquals(2, secondLimitThes.size)
-  }
-
-  // TODO: @Test def testMultiLineSearch () {}
 }
