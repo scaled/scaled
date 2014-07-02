@@ -149,8 +149,11 @@ class MutableLine (
 
   /** Adds `tag` to this line. If `tag` is of type `String` then `noteLineStyled` is emitted. */
   def addTag[T] (tag :T, start :Loc, until :Int) {
-    tags.add(tag, start.col, until)
-    if (tag.isInstanceOf[String]) buffer.noteLineStyled(start)
+    val scol = start.col
+    if (until > scol) {
+      tags.add(tag, scol, until)
+      if (tag.isInstanceOf[String]) buffer.noteLineStyled(start)
+    } // else NOOP!
   }
 
   /** Removes `tag` to this line. If `tag` is of type `String` and a tag was found and removed, then
