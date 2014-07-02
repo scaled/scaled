@@ -39,9 +39,19 @@ abstract class Executor {
     override def run () = op
   })
 
+  /** Runs `op` on a background thread, reports the results on the UI thread.
+    * @return a future that will deliver the result or cause of failure when available. */
+  def runAsync[R] (op : => R) :Future[R] = {
+    val result = uiPromise[R]()
+    bgExec.execute(new Runnable() {
+      override def run () = try result.succeed(op) catch { case t :Throwable => result.fail(t) }
+    })
+    result
+  }
+
   /** Returns a promise which will notify listeners of success or failure on the UI thread,
     * regardless of the thread on which it is completed. */
-  def uiPromise[R] :Promise[R] = new Promise[R]() {
+  def uiPromise[R] () :Promise[R] = new Promise[R]() {
     private def superSucceed (value :R) = super.succeed(value)
     override def succeed (value :R) = runOnUI(new Runnable() {
       def run () = superSucceed(value)
@@ -52,13 +62,9 @@ abstract class Executor {
     })
   }
 
-  /** Runs `op` on a background thread, reports the results on the UI thread.
-    * @return a future that will deliver the result or cause of failure when available. */
-  def runAsync[R] (op : => R) :Future[R] = {
-    val result = uiPromise[R]
-    bgExec.execute(new Runnable() {
-      override def run () = try result.succeed(op) catch { case t :Throwable => result.fail(t) }
-    })
-    result
-  }
+  /** Returns a future which completes on the UI thread after `delay` milliseconds. Completion
+    * callbacks can be registered on this future to invoke code on the UI thread after the delay.
+    * Using futures to model timers allows us to avoid reimplmenting callbacks and cancelations for
+    * yet another time. */
+  def uiTimer (delay :Long) :Future[Unit] = Future.failure(new UnsupportedOperationException())
 }

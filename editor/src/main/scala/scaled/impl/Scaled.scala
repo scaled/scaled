@@ -7,10 +7,13 @@ package scaled.impl
 import com.google.common.collect.HashBiMap
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
+import javafx.animation.{KeyFrame, Timeline}
 import javafx.application.{Application, Platform}
+import javafx.event.{ActionEvent, EventHandler}
 import javafx.scene.Scene
 import javafx.stage.Stage
-import reactual.Signal
+import javafx.util.Duration
+import reactual.{Signal, Promise}
 import scala.collection.JavaConversions._
 import scaled._
 import scaled.util.Errors
@@ -46,6 +49,13 @@ class Scaled extends Application {
       override def execute (op :Runnable) = Platform.runLater(op)
     }
     override val bgExec = pool
+    override def uiTimer (delay :Long) = {
+      val result = Promise[Unit]()
+      new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {
+        override def handle (event :ActionEvent) = result.succeed(())
+      })).play()
+      result
+    }
   }
 
   /** If debug logging is enabled, writes `msg` to console, otherwise noops. */
