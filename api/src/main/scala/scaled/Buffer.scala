@@ -324,7 +324,7 @@ abstract class BufferV extends Region {
     val stopr = stop.row ; val stopc = stop.col
     @inline @tailrec def seek (row :Int, col :Int) :Loc = line(row).indexOf(m, col) match {
       case -1 => if (row == stopr) Loc.None else seek(row+1, 0)
-      case ii => if (row == stopr && ii >= stopc) Loc.None else Loc(row, ii)
+      case ii => if (row == stopr && ii + m.matchLength > stopc) Loc.None else Loc(row, ii)
     }
     if (start < stop) seek(start.row, start.col) else Loc.None
   }
@@ -342,43 +342,6 @@ abstract class BufferV extends Region {
     }
     if (start > stop) seek(start.row, start.col-1) else Loc.None
   }
-
-  /** Searches for `lns` in the buffer, starting at `start` and not searching beyond `end`. If only
-    * a single line is sought, it can match anywhere in a line in the buffer. If more than one line
-    * is sought, the first line must match the end of a buffer line, and subsequent lines must
-    * match entirely until the last line which must match the start of the corresponding buffer
-    * line. The text of the lines must not contain line separator characters.
-    *
-    * If the sought text is mixed case, exact-case matching is used, otherwise case-insensitive
-    * matching is used.
-    *
-    * @param maxMatches the search is stopped once this many matches are found.
-    */
-  def search (lns :Seq[LineV], start :Loc, end :Loc, maxMatches :Int = Int.MaxValue) :Seq[Loc] = {
-    lns match {
-      case Seq() => Seq()
-      // searching for a single line can match anywhere in a line, so we handle specially
-      case Seq(ln) => if (ln.length == 0) Seq()
-                      else searchFrom(Matcher.on(ln), start, end, maxMatches, Seq())
-      // multiline searches have to match the end of one line, zero or more intermediate lines, and
-      // the start of the final line
-      case lines =>
-        Seq() // TODO
-    }
-  }
-
-  private def searchFrom (m :Matcher, start :Loc, end :Loc, maxMatches :Int,
-                          accum :Seq[Loc]) :Seq[Loc] =
-    if (maxMatches == 0 || start > end) accum
-    else line(start).indexOf(m, start.col) match {
-      // if no match on this line, move to the next line and keep searching
-      case -1 => searchFrom(m, start.nextStart, end, maxMatches, accum)
-      // if we did match on this line, make sure it's < end, add it, and keep searching
-      case ii =>
-        val next = start.atCol(ii+m.matchLength)
-        if (next > end) accum
-        else searchFrom(m, next, end, maxMatches-1, accum :+ (start atCol ii))
-    }
 }
 
 /** Extends [[BufferV]] with a mutation API. See [[RBuffer]] for a further extension which provides
