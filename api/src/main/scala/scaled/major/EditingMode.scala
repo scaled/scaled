@@ -495,19 +495,23 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       "q"  -> "exit, skipping all remaining matches"
     )
     def done (count :Int) :Unit = editor.emitStatus(s"Replaced $count occurrence(s).")
+    def clear (loc :Loc) = buffer.removeStyle(activeMatchStyle, loc, search.matchEnd(loc))
     def loop (from :Loc, count :Int) {
       val next = search.findForward(from)
       if (next == Loc.None) done(count)
       else {
+        buffer.addStyle(activeMatchStyle, next, search.matchEnd(next))
         view.point() = next
         val nextEnd = search.matchEnd(next)
-        editor.mini("readopt", Promise[String](), prompt, opts) onSuccess(_ match {
-          case "y"|" "  => loop(search.replace(buffer, next, to), count+1)
-          case "n"|"BS" => loop(nextEnd, count)
-          case "q"      => done(count)
-          case "!"      => replaceAll(search, to, next, count)
-          case "."      => search.replace(buffer, next, to) ; done(count+1)
-        })
+        editor.mini("readopt", Promise[String](), prompt, opts).
+          onComplete(_ => clear(next)).
+          onSuccess(_ match {
+            case "y"|" "  => loop(search.replace(buffer, next, to), count+1)
+            case "n"|"BS" => loop(nextEnd, count)
+            case "q"      => done(count)
+            case "!"      => replaceAll(search, to, next, count)
+            case "."      => search.replace(buffer, next, to); done(count+1)
+          })
       }
     }
     loop(start, 0)
