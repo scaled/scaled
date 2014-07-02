@@ -464,13 +464,53 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     }
   }
 
-  /** Non-interactively replaces all matches of `fromM` with `to` between `start` and `end`. */
-  def replaceAll (fromM :Matcher, to :Seq[LineV], start :Loc, end :Loc) {
-    @inline @tailrec def loop (loc :Loc) {
-      val next = buffer.findForward(fromM, loc, end)
-      if (next != Loc.None) loop(fromM.replace(buffer, next, to))
+  /** Non-interactively replaces all matches of `search` with `to`, starting at `start`.
+    * The number of replacements will be reported on completion.
+    * @param preCount the number of replacements already performed prior to this call.
+    */
+  def replaceAll (search :Search, to :Seq[LineV], start :Loc, preCount :Int = 0) {
+    @inline @tailrec def loop (loc :Loc, count :Int) :Int = {
+      val next = search.findForward(loc)
+      if (next != Loc.None) loop(search.replace(buffer, next, to), count+1)
+      else count
     }
-    loop(start)
+    val total = loop(start, preCount)
+    editor.emitStatus(s"Replaced $total occurrence(s).")
+  }
+
+  /** Processes a query replace of `fromM` with `to` from `start`. If no more matches exist, the
+    * query replace is considered done and success is reported. Otherwise the next match is sought
+    * and the user queried as to whether it should be replaced, and then the query replace is
+    * repeated following that match.
+    */
+  def queryReplace (search :Search, to :Seq[LineV], start :Loc) {
+    val prompt = s"Query replacing '${search.show}' with '${Line.toText(to)}': (C-h for help)"
+    val opts = Seq(
+      "y"  -> "replaces one match",
+      "n"  -> "skips to the next match",
+      " "  -> "replaces one match",
+      "BS" -> "skips to the next match",
+      "."  -> "replace one match and exit",
+      "!"  -> "replace all remaining matches",
+      "q"  -> "exit, skipping all remaining matches"
+    )
+    def done (count :Int) :Unit = editor.emitStatus(s"Replaced $count occurrence(s).")
+    def loop (from :Loc, count :Int) {
+      val next = search.findForward(from)
+      if (next == Loc.None) done(count)
+      else {
+        view.point() = next
+        val nextEnd = search.matchEnd(next)
+        editor.mini("readopt", Promise[String](), prompt, opts) onSuccess(_ match {
+          case "y"|" "  => loop(search.replace(buffer, next, to), count+1)
+          case "n"|"BS" => loop(nextEnd, count)
+          case "q"      => done(count)
+          case "!"      => replaceAll(search, to, next, count)
+          case "."      => search.replace(buffer, next, to) ; done(count+1)
+        })
+      }
+    }
+    loop(start, 0)
   }
 
   @Fn("""Queries the user for a FROM and TO string. Replaces all instances of FROM with TO
@@ -482,7 +522,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
       // TODO: transient mark mode and replacing in the region; that's super useful, so maybe
       // this alone is worth the trouble of emulating transient mark mode...
-      replaceAll(Matcher.on(from), Line.fromText(to), view.point(), buffer.end)
+      val search = Search(buffer, view.point(), buffer.end, Matcher.on(from))
+      replaceAll(search, Line.fromText(to), search.min)
     })
   }
 
@@ -491,7 +532,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def replaceRegexp () {
     getReplaceArgs("Replace regexp", (from, to) => {
       // TODO: transient mark mode and replacing in the region
-      replaceAll(Matcher.regexp(from), Line.fromText(to), view.point(), buffer.end)
+      val search = Search(buffer, view.point(), buffer.end, Matcher.regexp(from))
+      replaceAll(search, Line.fromText(to), search.min)
     })
   }
 
@@ -499,7 +541,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          from the point to the end of the buffer with interactive confirmation.""")
   def queryReplace () {
     getReplaceArgs("Query replace", (from, to) => {
-      println(s"TODO: query replace '$from' with '$to'")
+      val search = Search(buffer, view.point(), buffer.end, Matcher.on(from))
+      queryReplace(search, Line.fromText(to), search.min)
     })
   }
 
