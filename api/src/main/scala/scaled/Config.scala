@@ -215,4 +215,9 @@ object EditorConfig extends Config.Defs(true) {
   val underlineStyle = "underlineFace"
   /** The CSS class name for (non-semantic) struck-through text. */
   val strikeStyle = "strikeFace"
+
+  /** The CSS style applied to search matches. */
+  val matchStyle = "matchFace"
+  /** The CSS style applied to the active search match. */
+  val activeMatchStyle = "activeMatchFace"
 }

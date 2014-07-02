@@ -16,12 +16,6 @@ object ISearchConfig extends Config.Defs {
   val isearchRingSize = key(40)
   /** The ring in which recent searches are stored. */
   val isearchRing = fnKey(cfg => new Ring(cfg(isearchRingSize)))
-
-  /** The CSS style applied to isearch matches. */
-  val isearchMatchStyle = "isearchMatchFace"
-
-  /** The CSS style applied to isearch matches. */
-  val isearchActiveMatchStyle = "isearchActiveMatchFace"
 }
 
 @Major(name="mini-isearch", tags=Array("mini"), desc="""
@@ -35,6 +29,7 @@ class ISearchMode (
   mainDisp  :Dispatcher,
   direction :String
 ) extends MinibufferMode(env, promise) {
+  import EditorConfig._
   import ISearchConfig._
 
   @inline protected final def mainBuffer = mainView.buffer
@@ -84,8 +79,8 @@ class ISearchMode (
         setContents(sought)
       }
       if (prev.start != start || prev.end != end) {
-        mainBuffer.removeStyle(isearchActiveMatchStyle, prev)
-        mainBuffer.addStyle(isearchActiveMatchStyle, this)
+        mainBuffer.removeStyle(activeMatchStyle, prev)
+        mainBuffer.addStyle(activeMatchStyle, this)
       }
       mainView.point() = point
       miniui.setPrompt(prompt)
@@ -94,7 +89,7 @@ class ISearchMode (
     /** Clears the highlights applied by this state. */
     def clear () {
       clearMatches()
-      mainBuffer.removeStyle(isearchActiveMatchStyle, this)
+      mainBuffer.removeStyle(activeMatchStyle, this)
     }
 
     def extend (esought :Seq[LineV]) = {
@@ -135,9 +130,9 @@ class ISearchMode (
 
     // TODO: defer showMatches for 250-500ms?
     protected def showMatches () :Unit = if (matches.isDefined) matches.get foreach { l =>
-      mainBuffer.addStyle(isearchMatchStyle, l, l + sought) }
+      mainBuffer.addStyle(matchStyle, l, l + sought) }
     protected def clearMatches () :Unit = if (matches.isDefined) matches.get foreach { l =>
-      mainBuffer.removeStyle(isearchMatchStyle, l, l + sought) }
+      mainBuffer.removeStyle(matchStyle, l, l + sought) }
 
     protected def advance (next :Loc, fwd :Boolean, wrap :Boolean) =
       if (next == Loc.None) State(sought, matchesF, start, end,        fwd, true,  wrap)

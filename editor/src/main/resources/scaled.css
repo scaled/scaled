@@ -111,18 +111,17 @@
   -fx-font-weight: bold;
 }
 
-/** TODO: from emacs
- '(link ((t (:underline t :foreground "#7CF"))))
- '(link-visited ((t (:underline t :foreground "#36A"))))
-*/
-
-/** ISearch mode faces. */
-.isearchMatchFace {
+.matchFace {
   -fx-bg-stroke: Red !important;
 }
 
-.isearchActiveMatchFace {
+.activeMatchFace {
   -fx-fill: White !important;
   -fx-bg-fill: Red !important;
   -fx-bg-stroke: White !important;
 }
+
+/** TODO: from emacs
+ '(link ((t (:underline t :foreground "#7CF"))))
+ '(link-visited ((t (:underline t :foreground "#36A"))))
+*/
