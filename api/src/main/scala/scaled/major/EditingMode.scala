@@ -503,15 +503,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
         buffer.addStyle(activeMatchStyle, next, search.matchEnd(next))
         view.point() = next
         val nextEnd = search.matchEnd(next)
-        editor.mini("readopt", Promise[String](), prompt, opts).
-          onComplete(_ => clear(next)).
-          onSuccess(_ match {
-            case "y"|" "  => loop(search.replace(buffer, next, to), count+1)
-            case "n"|"BS" => loop(nextEnd, count)
-            case "q"      => done(count)
-            case "!"      => replaceAll(search, to, next, count)
-            case "."      => search.replace(buffer, next, to); done(count+1)
-          })
+        editor.mini.readOpt(prompt, opts).onComplete(_ => clear(next)).onSuccess(_ match {
+          case "y"|" "  => loop(search.replace(buffer, next, to), count+1)
+          case "n"|"BS" => loop(nextEnd, count)
+          case "q"      => done(count)
+          case "!"      => replaceAll(search, to, next, count)
+          case "."      => search.replace(buffer, next, to); done(count+1)
+        })
       }
     }
     loop(start, 0)

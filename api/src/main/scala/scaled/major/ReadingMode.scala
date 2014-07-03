@@ -437,7 +437,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       case Nil => editor.exit()
       case buf :: tail =>
         val prompt = s"${buf.store} is modified. Save?"
-        editor.mini("readopt", Promise[String](), prompt, opts) onSuccess(_ match {
+        editor.mini.readOpt(prompt, opts) onSuccess(_ match {
           case "y" => buf.save() ; saveLoop(tail)
           case "n" => saveLoop(tail)
           case "q" => saveLoop(Nil)

@@ -47,4 +47,13 @@ trait Minibuffer {
   // TODO: should I just return Future[Unit] and automatically emit "Canceled." and fail the future
   // if they choose 'n'? that would make chaining confirmations simpler/more succinct...
 
+  /** Prompts the user to enter one of the supplied `opts`. Returns a future which contains the
+    * chosen option. An additional option, `C-h`, will be automatically added which displays the
+    * options and their accompanying help strings.
+    *
+    * @param prompt the text to display when requesting input.
+    * @param opts a sequence of `(key trigger, help text)` pairs which define the options.
+    */
+  def readOpt (prompt :String, opts :Seq[(String,String)]) :Future[String] =
+    apply("readopy", Promise[String](), prompt, opts)
 }
