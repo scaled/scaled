@@ -75,6 +75,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   }
 
   override def mini = _mini
+  override def statusMini = _statusMini
   override def buffers = _buffers.map(_.buffer)
 
   override def visitFile (store :Store) = {
@@ -171,6 +172,18 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   _mini.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
   getChildren.add(_mini)
 
+  private val _statusMini = new MiniStatus(this) {
+    override def onShow () {
+      super.onShow()
+      _statusLine.setVisible(false)
+    }
+    override def onClear () {
+      _statusLine.setVisible(true)
+      _focus().area.requestFocus() // restore buffer focus on clear
+    }
+  }
+  getChildren.add(_statusMini)
+
   // we manage focus specially, via this reactive value
   private val _focus = Value[OpenBuffer](null)
   _focus onValue onFocusChange
@@ -195,7 +208,9 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     val vw = bounds.getWidth ; val vh = bounds.getHeight
     val statusHeight = _statusLine.prefHeight(vw) ; val contentHeight = vh-statusHeight
     _active.pane.resize(vw, contentHeight)
+    // the status line and status minibuffer occupy the same space; only one is visible at a time
     _statusLine.resizeRelocate(0, contentHeight, vw, statusHeight)
+    _statusMini.resizeRelocate(0, contentHeight, vw, statusHeight)
 
     // the status overlay is centered in the top 1/4th of the screen
     if (_statusPopup.isVisible) layoutInArea(

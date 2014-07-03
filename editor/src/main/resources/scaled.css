@@ -46,7 +46,7 @@
   -fx-font-size: 15px;
 }
 
-.mini .prompt {
+.mini .prompt, .status .prompt {
   -fx-text-fill: #00FCFF;
 }
 

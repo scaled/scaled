@@ -39,6 +39,7 @@ object TestData {
     def mini = new Minibuffer() {
       def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     }
+    def statusMini = mini
     def buffers = Seq()
     def openBuffer (buffer :String) = null
     def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = null

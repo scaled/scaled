@@ -39,8 +39,13 @@ trait Editor {
     * status message. */
   def clearStatus () :Unit
 
-  /** Provides access to the minibuffer. */
+  /** Provides access to the overlay popup minibuffer. Prefer this for most interactions. */
   def mini :Minibuffer
+
+  /** Provides access to the status-line minibuffer. Use this only when the minibuffer interaction
+    * requires the user to see the contents of the main buffer, and hence the popup minibuffer would
+    * potentially obscure important data. */
+  def statusMini :Minibuffer
 
   /** Returns all open buffers. The buffers will be returned in order of most recent activation. */
   def buffers :Seq[Buffer]

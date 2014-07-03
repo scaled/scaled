@@ -205,12 +205,12 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          C-g when search is successful aborts and moves point to starting point.
          """)
   def isearchForward () {
-    editor.mini("isearch", Promise[Boolean](), view, disp, "forward")
+    editor.statusMini("isearch", Promise[Boolean](), view, disp, "forward")
   }
 
   @Fn("Searches incrementally backward. See the command isearch-forward for more info.")
   def isearchBackward () {
-    editor.mini("isearch", Promise[Boolean](), view, disp, "backward")
+    editor.statusMini("isearch", Promise[Boolean](), view, disp, "backward")
   }
 
   //
