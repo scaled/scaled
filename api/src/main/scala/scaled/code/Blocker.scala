@@ -57,6 +57,11 @@ class Blocker (buffer :BufferV, openers :String, closers :String) {
     }
   }
 
+  /** Returns the inner-most block that encloses `loc` and has the specified syntax. Returns block
+    * (marked non-valid) that encloses the entire buffer if no smaller block could be found. */
+  def require (loc :Loc, syntax :Syntax) =
+    apply(loc, syntax) getOrElse Block(buffer.start, buffer.end, false)
+
   // scans backwards, looking for an unmatched opener
   class Scanner (starts :String, ends :String) extends Function2[Char,Syntax,Boolean] {
     val counts = new Array[Int](starts.length)

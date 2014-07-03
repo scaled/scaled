@@ -130,7 +130,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     // find the position of the first non-whitespace character on the line
     val line = buffer.line(row)
     val start = Loc(row, line.firstNonWS)
-    val block = blocker(start, Syntax.Default) getOrElse Block(buffer.start, buffer.end, false)
+    val block = blocker.require(start, Syntax.Default)
     @tailrec @inline def loop (ins :List[Indenter]) :Int =
       if (ins.isEmpty) 0 else {
         val opt = ins.head(block, line, start)
