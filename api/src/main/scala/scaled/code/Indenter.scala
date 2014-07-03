@@ -35,10 +35,10 @@ abstract class Indenter (ctx :Indenter.Context) {
   protected def debug (msg :String) :Unit = if (ctx.debug) println(msg)
 
   protected def findCodeForward (m :Matcher, start :Loc, block :Block) :Loc =
-    Indenter.findCodeForward(buffer, ctx.blocker, m, start, block)
+    Indenter.findCodeForward(ctx, m, start, block)
 
   protected def findCodeBackward (m :Matcher, start :Loc, block :Block) :Loc =
-    Indenter.findCodeBackward(buffer, ctx.blocker, m, start, block)
+    Indenter.findCodeBackward(ctx, m, start, block)
 }
 
 object Indenter {
@@ -138,26 +138,26 @@ object Indenter {
     * `bk` (nested more deeply), or that do not have code syntax, are omitted.
     * @return the match location or `Loc.None` if `bk.end is reached without finding a match.
     */
-  def findCodeForward (buffer :BufferV, bkr :Blocker, m :Matcher, start :Loc, bk :Block) :Loc =
-    buffer.findForward(m, start, bk.end) match {
+  def findCodeForward (ctx :Context, m :Matcher, start :Loc, bk :Block) :Loc =
+    ctx.buffer.findForward(m, start, bk.end) match {
       case Loc.None => Loc.None
       // findForward starts looking at `loc` so we have to bump forward a character before making
       // our recursive call
-      case loc => if (buffer.syntaxAt(loc).isCode && bkr(loc) == Some(bk)) loc
-                  else findCodeForward(buffer, bkr, m, buffer.forward(loc, 1), bk)
+      case loc => if (ctx.buffer.syntaxAt(loc).isCode && ctx.blocker(loc) == Some(bk)) loc
+                  else findCodeForward(ctx, m, ctx.buffer.forward(loc, 1), bk)
     }
 
   /** Seeks a match to `m` starting from `start` and proceeding backward. Matches that are not in
     * `bk` (nested more deeply), or that do not have code syntax, are omitted.
     * @return the match location or `Loc.None` if `bk.start` is reached without finding a match.
     */
-  def findCodeBackward (buffer :BufferV, bkr :Blocker, m :Matcher, start :Loc, bk :Block) :Loc =
-    buffer.findBackward(m, start, bk.start) match {
+  def findCodeBackward (ctx :Context, m :Matcher, start :Loc, bk :Block) :Loc =
+    ctx.buffer.findBackward(m, start, bk.start) match {
       case Loc.None => Loc.None
       // findBackward starts looking prior to `loc` not at `loc` so we don't need to adjust `loc`
       // before making our recursive call
-      case loc => if (buffer.syntaxAt(loc).isCode && bkr(loc) == Some(bk)) loc
-                  else findCodeBackward(buffer, bkr, m, loc, bk)
+      case loc => if (ctx.buffer.syntaxAt(loc).isCode && ctx.blocker(loc) == Some(bk)) loc
+                  else findCodeBackward(ctx, m, loc, bk)
     }
 
   /** Returns the token (word) immediately preceding `pos` in `line`. If non-whitespace, non-word
