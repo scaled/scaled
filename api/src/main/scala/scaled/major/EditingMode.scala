@@ -446,14 +446,14 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       case Some((from, to)) => s" default ($from -> $to)"
       case _ => ""
     }
-    editor.miniRead(s"$prefix$defprompt:", "", history, Completer.none) onSuccess { from =>
+    editor.mini.read(s"$prefix$defprompt:", "", history, Completer.none) onSuccess { from =>
       if (from == "") defrep match {
         case Some((from, to)) => repFn(from, to)
         case                _ => editor.emitStatus("Aborted")
       }
       else {
         val prompt = s"$prefix '$from' with:"
-        editor.miniRead(prompt, "", history, Completer.none) onSuccess { to =>
+        editor.mini.read(prompt, "", history, Completer.none) onSuccess { to =>
           // normally MiniReadMode won't add a blank response to the history, but in the case of
           // a blank 'to' replacement, we do want to add it to the history
           if (to == "") history.add(Line.fromText(to))
@@ -571,16 +571,16 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          in the specified directory.""")
   def writeFile () {
     val bufwd = buffer.store.parent
-    editor.miniRead("Write file:", bufwd, config(fileHistory), Completer.file) onSuccess { store =>
+    editor.mini.read("Write file:", bufwd, config(fileHistory), Completer.file) onSuccess { store =>
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
       (if (!editor.buffers.exists(_.store == store)) Future.success(true)
-       else editor.miniReadYN(s"A buffer is visiting '${store.name}'; proceed?")) onSuccess {
+       else editor.mini.readYN(s"A buffer is visiting '${store.name}'; proceed?")) onSuccess {
         case false => editor.popStatus("Canceled.")
         case true =>
           // require confirmation if the target file already exists
           (if (!store.exists) Future.success(true)
-           else editor.miniReadYN(s"File '$store' exists; overwrite?")) onSuccess {
+           else editor.mini.readYN(s"File '$store' exists; overwrite?")) onSuccess {
              case false => editor.popStatus("Canceled.")
              case true =>
                buffer.saveTo(store)

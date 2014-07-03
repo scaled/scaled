@@ -74,11 +74,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     _active.view.clearEphemeralPopup()
   }
 
-  override def mini[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = {
-    _mini.toFront()
-    _mini.read(mode, result, args.toList)
-  }
-
+  override def mini = _mini
   override def buffers = _buffers.map(_.buffer)
 
   override def visitFile (store :Store) = {

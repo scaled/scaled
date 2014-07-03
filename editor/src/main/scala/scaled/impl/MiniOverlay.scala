@@ -14,7 +14,7 @@ import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
 import scaled.util.Errors
 
-abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
+abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuffer {
 
   getStyleClass.addAll("overpop", "mini")
   setVisible(false)
@@ -69,13 +69,12 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
   /** Called when we clear an active minibuffer. */
   def onClear () :Unit
 
-  /** Displays a minibuffer with the specified mode. */
-  def read[R] (mode :String, result :Promise[R], args :List[Any]) :Future[R] = try {
+  override def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = try {
     if (getCenter != null) throw Errors.feedback(
       "Command attempted to use minibuffer while in minibuffer")
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
-    val modeArgs = ui :: result :: args
+    val modeArgs = ui :: result :: args.toList
     val disp = new DispatcherImpl(editor, editor.resolver, view, ModeLine.Noop,
                                   s"mini-$mode", modeArgs)
     val area = new BufferArea(editor, view, disp) {
@@ -87,6 +86,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane {
     }
     setCenter(area)
     setVisible(true)
+    toFront()
     area.requestFocus()
     result onComplete { _ =>
       ui.setPrompt("")
