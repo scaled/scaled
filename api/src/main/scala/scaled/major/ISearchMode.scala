@@ -133,8 +133,7 @@ class ISearchMode (
   private var _clearMatches = () => ()
   private var _pendingShow = Connection.Noop
   private def showMatches (matches :Seq[Loc], sought :Seq[LineV]) {
-    _pendingShow.close() // cancel any pending show
-    _clearMatches()      // clear any currently highlighted matches
+    clearMatches()
     // defer actually showing these matches for 250ms
     _pendingShow = env.exec.uiTimer(250).connectSuccess { _ =>
       _pendingShow = Connection.Noop
@@ -144,6 +143,10 @@ class ISearchMode (
         _clearMatches = () => ()
       }
     }
+  }
+  private def clearMatches () {
+    _pendingShow.close() // cancel any pending show
+    _clearMatches()      // clear any currently highlighted matches
   }
 
   // we track the state of our isearch as a stack of states
@@ -206,7 +209,7 @@ class ISearchMode (
 
   override def dispose () {
     super.dispose()
-    _clearMatches() // clear all matches highlight
+    clearMatches()
     curstate.clear() // clear active match highlight
   }
 
