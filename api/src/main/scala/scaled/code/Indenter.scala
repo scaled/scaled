@@ -34,11 +34,11 @@ abstract class Indenter (ctx :Indenter.Context) {
   /** Issues an indentation debugging message. */
   protected def debug (msg :String) :Unit = if (ctx.debug) println(msg)
 
-  protected def findCodeForward (m :Matcher, start :Loc, stop :Loc = buffer.end) :Loc =
-    Indenter.findCodeForward(buffer, m, start, stop)
+  protected def findCodeForward (m :Matcher, start :Loc, block :Block) :Loc =
+    Indenter.findCodeForward(buffer, ctx.blocker, m, start, block)
 
-  protected def findCodeBackward (m :Matcher, start :Loc, stop :Loc = buffer.start) :Loc =
-    Indenter.findCodeBackward(buffer, m, start, stop)
+  protected def findCodeBackward (m :Matcher, start :Loc, block :Block) :Loc =
+    Indenter.findCodeBackward(buffer, ctx.blocker, m, start, block)
 }
 
 object Indenter {
@@ -47,6 +47,7 @@ object Indenter {
   /** Provides context to Indenters. */
   abstract class Context {
     def buffer :BufferV
+    def blocker :Blocker
     def debug :Boolean
     def indentWidth :Int
   }
@@ -133,23 +134,30 @@ object Indenter {
     case ii => line.indexOf(isNotWhitespace, ii+m.matchLength) == -1
   }
 
-  /** Performs [[Buffer.findForward]] but skips over non-code matches. */
-  def findCodeForward (buffer :BufferV, m :Matcher, start :Loc, stop :Loc) :Loc =
-    buffer.findForward(m, start, stop) match {
+  /** Seeks a match to `m` starting from `start` and proceeding forward. Matches that are not in
+    * `bk` (nested more deeply), or that do not have code syntax, are omitted.
+    * @return the match location or `Loc.None` if `bk.end is reached without finding a match.
+    */
+  def findCodeForward (buffer :BufferV, bkr :Blocker, m :Matcher, start :Loc, bk :Block) :Loc =
+    buffer.findForward(m, start, bk.end) match {
       case Loc.None => Loc.None
       // findForward starts looking at `loc` so we have to bump forward a character before making
       // our recursive call
-      case loc => if (buffer.syntaxAt(loc).isCode) loc
-                  else findCodeForward(buffer, m, buffer.forward(loc, 1), stop)
+      case loc => if (buffer.syntaxAt(loc).isCode && bkr(loc) == Some(bk)) loc
+                  else findCodeForward(buffer, bkr, m, buffer.forward(loc, 1), bk)
     }
 
-  /** Performs [[Buffer.findBackward]] but skips over non-code matches. */
-  def findCodeBackward (buffer :BufferV, m :Matcher, start :Loc, stop :Loc) :Loc =
-    buffer.findBackward(m, start, stop) match {
+  /** Seeks a match to `m` starting from `start` and proceeding backward. Matches that are not in
+    * `bk` (nested more deeply), or that do not have code syntax, are omitted.
+    * @return the match location or `Loc.None` if `bk.start` is reached without finding a match.
+    */
+  def findCodeBackward (buffer :BufferV, bkr :Blocker, m :Matcher, start :Loc, bk :Block) :Loc =
+    buffer.findBackward(m, start, bk.start) match {
       case Loc.None => Loc.None
       // findBackward starts looking prior to `loc` not at `loc` so we don't need to adjust `loc`
       // before making our recursive call
-      case loc => if (buffer.syntaxAt(loc).isCode) loc else findCodeBackward(buffer, m, loc, stop)
+      case loc => if (buffer.syntaxAt(loc).isCode && bkr(loc) == Some(bk)) loc
+                  else findCodeBackward(buffer, bkr, m, loc, bk)
     }
 
   /** Returns the token (word) immediately preceding `pos` in `line`. If non-whitespace, non-word
@@ -394,7 +402,7 @@ object Indenter {
   abstract class AnchorAlign (ctx :Context) extends Indenter(ctx) {
 
     protected def indentToAnchor (block :Block, pos :Loc, anchorM :Matcher) :Option[Int] =
-      findCodeBackward(anchorM, pos, block.start) match {
+      findCodeBackward(anchorM, pos, block) match {
         case Loc.None => None
         case      loc => debug(s"Aligning to '$anchorM' @ $loc") ; Some(loc.col)
       }

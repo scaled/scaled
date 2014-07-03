@@ -85,6 +85,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** A context provided to our indenters. */
   val indentCtx = new Indenter.Context {
     def buffer = CodeMode.this.buffer
+    def blocker = CodeMode.this.blocker
     def debug = config(CodeConfig.debugIndent)
     def indentWidth = if (config(CodeConfig.autoDetectIndent) && detectedIndent > 0) detectedIndent
                       else config(CodeConfig.indentWidth)
