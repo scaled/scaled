@@ -55,5 +55,5 @@ trait Minibuffer {
     * @param opts a sequence of `(key trigger, help text)` pairs which define the options.
     */
   def readOpt (prompt :String, opts :Seq[(String,String)]) :Future[String] =
-    apply("readopy", Promise[String](), prompt, opts)
+    apply("readopt", Promise[String](), prompt, opts)
 }
