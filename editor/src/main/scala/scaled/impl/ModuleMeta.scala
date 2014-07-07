@@ -20,7 +20,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   import scala.collection.convert.WrapAsScala._
 
   /** Returns the class loader for our module. */
-  def loader :ModuleLoader = mod.loader(repo)
+  def loader :ModuleLoader = mod.loader(repo.resolver)
   /** Loads the class `name` via this module's class loader. */
   def loadClass (name :String) :Class[_] = loader.loadClass(name)
 
