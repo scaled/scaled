@@ -38,6 +38,7 @@ import reactual.Future
   * in this entity's execution context.
   */
 abstract class Pipe[E] {
+  import Pipe._
 
   /** Dispatches `f` on the target process (on the appropriate thread). $SAMECTX */
   def tell (f :E => Unit)
@@ -51,4 +52,33 @@ abstract class Pipe[E] {
   /** Dispatches `f` on the target process (on the appropriate thread) and makes the result
     * available as a future. $SAMECTX */
   def req[R] (f :E => R) :Future[R]
+}
+
+/** "Funnels" values into a pipe. This facilitates type-checked callbacks between processes.
+  * Process B can expose an API which accepts a funnel from the calling process, and process B
+  * knows that it can deliver values to the funnel, which will result in some method being called
+  * on the calling process in the calling process's execution context.
+  */
+abstract class Funnel[-V] extends (V => Unit) {
+
+  /** Delivers a value to this funnel. */
+  def apply (value :V) :Unit
+}
+
+/** Static [[Pipe]] things. */
+object Pipe {
+
+  /** Returns a reference to the pipe for the process executing on this thread, or null. */
+  def current :Pipe[_] = curpipe.get
+
+  /** Creates a "funnel" into the currently executing process's pipe. When a value is applied to the
+    * funnel, `f` will be invoked on the value in the currently executing process's execution
+    * context. */
+  def funnel[V] (f :V => Unit) :Funnel[V] = curpipe.get.funnel(f)
+
+  private[scaled] abstract class Impl[E] extends Pipe[E] {
+    def funnel [V] (f :V => Unit) :Funnel[V]
+  }
+
+  private[scaled] val curpipe = new ThreadLocal[Impl[_]]()
 }

@@ -7,21 +7,20 @@ package scaled.impl
 import java.util.ArrayDeque
 import java.util.concurrent.{Callable, Executor, ExecutionException, FutureTask}
 import reactual.{Future, Promise}
-import scaled.Pipe
+import scaled.{Pipe, Funnel}
 
 /** Implements the machinery of a concurrent sequential process. A queue of actions is maintained
   * for each process and when a process has actions to be executed, it queues itself up on an
   * executor and executes all pending actions on the executor's thread.
   */
-class Plumbing[P] (exec :Executor, process : => P) extends Pipe[P] with Runnable {
-  import Plumbing._
+class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Runnable {
 
   override def tell (op :P => Unit) :Unit = postOp(new Runnable() {
     override def run () { op(_process) }
   })
 
   override def ask[R] (f :P => R) = {
-    if (current.get == this) f(_process)
+    if (Pipe.current == this) f(_process)
     else {
         val task = new FutureTask[R](new Callable[R]() {
             override def call = f(_process)
@@ -43,15 +42,21 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe[P] with Runnable
     p
   }
 
+  override def funnel [V] (f :V => Unit) = new Funnel[V]() {
+    override def apply (value :V) = postOp(new Runnable() {
+      override def run () = f(value)
+    })
+  }
+
   override def run () {
-    current.set(this)
+    Pipe.curpipe.set(this)
     var op = pop()
     while (op != null) {
       try op.run()
       catch { case t :Throwable => reportError(t) }
       op = pop()
     }
-    current.set(null)
+    Pipe.curpipe.set(null)
   }
 
   /** Logs an error that happens during async action invocation. */
@@ -81,11 +86,4 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe[P] with Runnable
   // we only manipulate these in push() and pop(), which are synchronized
   private[this] var _active :Boolean = false
   private[this] val _ops = new ArrayDeque[Runnable]()
-}
-
-/** Static plumbing bits. */
-object Plumbing {
-
-  /** A reference to the plumbing for the process executing on this thread (if any). */
-  val current = new ThreadLocal[Plumbing[_]]()
 }
