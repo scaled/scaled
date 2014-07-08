@@ -62,11 +62,11 @@ class Scaled extends Application {
   val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
                  else (msg :String) => ()
 
-  /** Opens `path` in the editor pane associated with `workspace`. If no such editor pane exists one
+  /** Opens `path` in the editor pane associated with `desktop`. If no such editor pane exists one
     * is created. */
-  def openInWorkspace (path :String, workspace :String) {
-    val epane = editors.get(workspace) match {
-      case null => createEditor(new Stage(), workspace, NoGeom)
+  def openInDesktop (path :String, desktop :String) {
+    val epane = editors.get(desktop) match {
+      case null => createEditor(new Stage(), desktop, NoGeom)
       case epane => epane
     }
     epane.visitPath(path)
@@ -89,7 +89,7 @@ class Scaled extends Application {
 
   override def start (stage :Stage) {
     val geom = Option(System.getProperty("geometry")).map(parseGeometry).getOrElse(NoGeom)
-    val epane = createEditor(stage, System.getProperty("scaled.workspace", "default"), geom)
+    val epane = createEditor(stage, System.getProperty("scaled.desktop", "default"), geom)
     // open a pane/tab for each file passed on the command line
     getParameters.getRaw foreach epane.visitPath
 
@@ -110,7 +110,7 @@ class Scaled extends Application {
     case _                 => Geom(None, None)
   }
 
-  private def createEditor (stage :Stage, workspace :String, geom :Geom) :EditorPane = {
+  private def createEditor (stage :Stage, desktop :String, geom :Geom) :EditorPane = {
     val epane = new EditorPane(this, stage) {
       override def bufferSize = geom.size getOrElse super.bufferSize
     }
@@ -129,7 +129,7 @@ class Scaled extends Application {
     geom.pos.foreach { pos => stage.setX(pos._1) ; stage.setY(pos._2) }
 
     stage.show()
-    editors.put(workspace, epane)
+    editors.put(desktop, epane)
     epane
   }
 

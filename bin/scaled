@@ -3,9 +3,9 @@
 # Starts Scaled from the command line; handles talking to running instances
 
 # if we have the curspace tool, do some magic to make scaled work per-desktop
-declare WORKSPACE="unknown"
+declare DESKTOP="unknown"
 if hash curspace 2>/dev/null; then
-    WORKSPACE=`curspace`
+    DESKTOP=`curspace`
 fi
 
 # if scaled is already running
@@ -13,7 +13,7 @@ PORT=32323
 LISTENER=`netstat -n -p udp | grep $PORT`
 if [ -z "$LISTENER" ] ; then
     if hash spam 2>/dev/null; then
-        exec spam -Dscaled.workspace=$WORKSPACE $SCALED_ARGS \
+        exec spam -Dscaled.desktop=$DESKTOP $SCALED_ARGS \
             run "scaled#editor" scaled.impl.Scaled "$@"
     else
         echo "Scaled package manager 'spam' must be on your shell search path."
@@ -27,7 +27,7 @@ elif hash nc 2>/dev/null; then
         else
             FILE=$ARG
         fi
-        echo open "@$WORKSPACE" $FILE | nc -c -u localhost $PORT
+        echo open "@$DESKTOP" $FILE | nc -c -u localhost $PORT
     done
 
 else

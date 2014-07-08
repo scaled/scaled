@@ -9,9 +9,9 @@ import reactual.{Future, Promise}
 /** Provides access to data and services encapsulated by the editor. The editor is not quite the
   * entire app, but rather a single window which contains a set of buffers and state geared toward
   * working on one "thing". A user may wish to do everything in one editor, or they may have
-  * multiple editors open (perhaps one on each virtual workspace), each dedicated to a distinct
-  * task. As such, buffers are not shared between editors, but background services are, because
-  * those can be shared without impacting the user experience.
+  * multiple editors open (perhaps one on each virtual desktop), each dedicated to a distinct task.
+  * As such, buffers are not shared between editors, but background services are, because those can
+  * be shared without impacting the user experience.
   */
 trait Editor {
 
