@@ -76,6 +76,7 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger) with Meta
   override def exec = app.exec
   override def metaFile (name :String) = app.pkgMgr.metaDir.resolve(name)
   override def service[T] (clazz :Class[T]) :T = resolveService(clazz).asInstanceOf[T]
+  override def process[P] (thunk : => P) = new Plumbing(exec.bgExec, thunk)
 
   override def resolveService (sclass :Class[_]) = {
     if (!sclass.getName.endsWith("Service")) throw new InstantiationException(

@@ -41,6 +41,12 @@ trait MetaService {
     * @throws InstantiationException if there is an error creating the service.  */
   def service[T] (implicit tag :ClassTag[T]) :T = service(tag.runtimeClass.asInstanceOf[Class[T]])
 
+  /** Creates a process whose object is created by `thunk`. The creation of the process object takes
+    * place in the execution context (thread) assigned to the process, not immediately. It will be
+    * created the first time a request is made via the returned pipe. If immediate creation and
+    * initialization is desired, follow this call with an immediate NOOP `tell`. */
+  def process[P] (thunk : => P) :Pipe[P]
+
   /** Creates an instance of `clazz` via Scaled's dependency injection mechanism. `clazz` must have
     * a single public constructor.
     *
