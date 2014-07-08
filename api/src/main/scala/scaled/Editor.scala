@@ -4,7 +4,7 @@
 
 package scaled
 
-import reactual.{Future, Promise}
+import reactual.{Future, Promise, OptValue}
 
 /** Provides access to data and services encapsulated by the editor. The editor is not quite the
   * entire app, but rather a single window which contains a set of buffers and state geared toward
@@ -81,4 +81,8 @@ trait Editor {
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
     * to buffer kill hooks which can abort the kill. */
   def killBuffer (buffer :Buffer) :Unit
+
+  /** Returns the state value associated with the specified type, if any.
+    * This mechanism is a simple way for modes and services to maintain editor-wide state. */
+  def state[T] (klass :Class[T]) :OptValue[T]
 }

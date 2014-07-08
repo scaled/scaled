@@ -11,7 +11,7 @@ import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region, VBox}
 import javafx.stage.Stage
-import reactual.{Future, Promise, Value}
+import reactual.{Future, OptValue, Promise, Value}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scaled._
 import scaled.major.TextMode
@@ -110,6 +110,11 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     ob.view
   }
   override def killBuffer (buffer :Buffer) = killBuffer(requireBuffer(buffer))
+
+  override def state[T] (klass :Class[T]) = _states.synchronized {
+    _states.getOrElseUpdate(klass, OptValue[T]()).asInstanceOf[OptValue[T]]
+  }
+  private val _states = MMap[Class[_],OptValue[_]]()
 
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :String) {

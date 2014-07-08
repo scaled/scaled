@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import reactual.{Future, Promise}
+import reactual.{Future, Promise, OptValue}
 import scaled._
 import scaled.major.TextMode
 
@@ -47,6 +47,7 @@ object TestData {
     def visitConfig (name :String) = null
     def visitBuffer (buffer :Buffer) = null
     def killBuffer (buffer :Buffer) {}
+    def state[T] (klass :Class[T]) = OptValue[T]()
   }
 
   val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
