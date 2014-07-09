@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import java.lang.reflect.InvocationTargetException
 import scaled._
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 
@@ -12,26 +13,33 @@ import com.google.common.cache.{CacheBuilder, CacheLoader}
 class ServiceInjector (log :Logger) extends AbstractService {
 
   def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
-    // println(s"Creating instance of ${clazz.getName}")
-    val ctor = clazz.getConstructors match {
-      case Array(ctor) => ctor
-      case ctors       => throw new IllegalArgumentException(
-        s"${clazz.getName} must have only one constructor [has=${ctors.mkString(", ")}]")
-    }
+    def fail (t :Throwable) = throw new InstantiationException(
+      s"Unable to inject $clazz [args=$args]").initCause(t)
+    try {
+      // println(s"Creating instance of ${clazz.getName}")
+      val ctor = clazz.getConstructors match {
+        case Array(ctor) => ctor
+        case ctors       => throw new IllegalArgumentException(
+          s"${clazz.getName} must have only one constructor [has=${ctors.mkString(", ")}]")
+      }
 
-    // match the args to the ctor parameters; the first arg of the desired type is used and then
-    // removed from the arg list, so we can request multiple args of the same type as long as
-    // they're in the correct order
-    def minus (args :List[Any], elem :Any) :List[Any] = args match {
-      case Nil => Nil
-      case h :: t => if (elem == h) t else h :: minus(t, elem)
+      // match the args to the ctor parameters; the first arg of the desired type is used and then
+      // removed from the arg list, so we can request multiple args of the same type as long as
+      // they're in the correct order
+      def minus (args :List[Any], elem :Any) :List[Any] = args match {
+        case Nil => Nil
+        case h :: t => if (elem == h) t else h :: minus(t, elem)
+      }
+      var remargs = args ++ stockArgs
+      val params = ctor.getParameterTypes.map { p => remargs.find(p.isInstance) match {
+        case Some(arg) => remargs = minus(remargs, arg) ; arg
+        case None      => resolveService(p)
+      }}
+      ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T]
+    } catch {
+      case ite :InvocationTargetException => fail(ite.getCause)
+      case t :Throwable => fail(t)
     }
-    var remargs = args ++ stockArgs
-    val params = ctor.getParameterTypes.map { p => remargs.find(p.isInstance) match {
-      case Some(arg) => remargs = minus(remargs, arg) ; arg
-      case None      => resolveService(p)
-    }}
-    ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T]
   }
 
   override def didStartup () {} // unused
