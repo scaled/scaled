@@ -5,9 +5,9 @@
 package scaled.impl
 
 import java.nio.file.Paths
-import reactual.{ReactionException, Signal, SignalV, Value, ValueV}
+import reactual.{OptValue, ReactionException, Signal, SignalV, Value, ValueV}
 import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scaled._
 import scaled.util.Errors
 
@@ -76,6 +76,11 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   override def willSave = _willSave
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
+
+  override def state[T] (klass :Class[T]) = _states.synchronized {
+    _states.getOrElseUpdate(klass, OptValue[T]()).asInstanceOf[OptValue[T]]
+  }
+  private val _states = MMap[Class[_],OptValue[_]]()
 
   override def saveTo (store :Store) {
     if (store.readOnly) throw Errors.feedback(s"Cannot save to read-only file: $store")

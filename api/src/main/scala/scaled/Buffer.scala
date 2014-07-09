@@ -4,7 +4,7 @@
 
 package scaled
 
-import reactual.{SignalV, ValueV}
+import reactual.{SignalV, ValueV, OptValue}
 import scala.annotation.tailrec
 
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.
@@ -156,6 +156,10 @@ abstract class BufferV extends Region {
     val line = this.line(loc.row) ; val len = line.length
     line.syntaxAt(if (loc.col < len || len == 0) loc.col else len-1)
   }
+
+  /** Returns the current state value associated with the specified type, if any.
+    * See [[RBuffer.state]]. */
+  def getState[T] (klass :Class[T]) :Option[T]
 
   /** Returns a copy of the data between `[start, until)`. $RNLNOTE */
   def region (start :Loc, until :Loc) :Seq[Line] =
@@ -520,6 +524,7 @@ object Buffer {
     def dirty = false
     def lines = _lines
     val maxLineLength = _lines.map(_.length).max
+    def getState[T] (klass :Class[T]) = None
   }
 }
 
@@ -555,10 +560,15 @@ abstract class RBuffer extends Buffer {
     * before that `Loc`. */
   def lineStyled :SignalV[Loc]
 
+  /** Returns the state value associated with the specified type, if any.
+    * This mechanism is a simple way for modes to maintain buffer-wide state. */
+  def state[T] (klass :Class[T]) :OptValue[T]
+
   // implement some Buffer methods in terms of our reactive values
   override def name = nameV()
   override def store = storeV()
   override def mark = markV()
   override def editable = editableV()
   override def dirty = dirtyV()
+  override def getState[T] (klass :Class[T]) = state(klass).getOption
 }
