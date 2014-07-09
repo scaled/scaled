@@ -40,14 +40,14 @@ object TestData {
       def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     }
     def statusMini = mini
+    val state = new State()
     def buffers = Seq()
     def openBuffer (buffer :String) = null
-    def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = null
+    def createBuffer (buffer :String, reuse :Boolean, mode :Option[String], args :Any*) = null
     def visitFile (file :Store) = null
     def visitConfig (name :String) = null
     def visitBuffer (buffer :Buffer) = null
     def killBuffer (buffer :Buffer) {}
-    def state[T] (klass :Class[T]) = OptValue[T]()
   }
 
   val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)

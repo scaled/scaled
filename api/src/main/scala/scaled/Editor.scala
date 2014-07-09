@@ -47,6 +47,9 @@ trait Editor {
     * potentially obscure important data. */
   def statusMini :Minibuffer
 
+  /** A reactive mapping of editor-wide state. */
+  def state :State
+
   /** Returns all open buffers. The buffers will be returned in order of most recent activation. */
   def buffers :Seq[Buffer]
 
@@ -72,17 +75,15 @@ trait Editor {
     * (as is, so be careful you're not getting an unexpected buffer in this case). Otherwise
     * in the event of name collision, a fresh buffer name will be generated from `buffer` by
     * appending <N> to the name with increasing values of N until an unused name is obtained.
-    * @param mode specifies the desired mode for the buffer and any custom injection arguments.
-    * The mode will be auto-detected if `Infer` is supplied.
+    * @param mode the desired major mode for the buffer or `None` to have the mode inferred.
+    * @param args a combination of major mode arguments and initial buffer state. Any values in the
+    * args list that are of type `State.Init` will be used to initialize the buffer state, and any
+    * other values will be passed to the major mode during constructor injection.
     * @return the view for the buffer.
     */
-  def createBuffer (buffer :String, reuse :Boolean, mode :ModeInfo = ModeInfo.Infer) :BufferView
+  def createBuffer (buffer :String, reuse :Boolean, mode :Option[String], args :Any*) :BufferView
 
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
     * to buffer kill hooks which can abort the kill. */
   def killBuffer (buffer :Buffer) :Unit
-
-  /** Returns the state value associated with the specified type, if any.
-    * This mechanism is a simple way for modes and services to maintain editor-wide state. */
-  def state[T] (klass :Class[T]) :OptValue[T]
 }

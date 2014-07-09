@@ -39,15 +39,6 @@ abstract class Env {
   def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
 }
 
-/** Used to specify the name of a mode and extra arguments to be made available for injection to its
-  * constructor. See [[Editor.createBuffer]] for use. */
-case class ModeInfo (name :String, args :List[Any])
-
-object ModeInfo {
-  /** A special instance indicating that the mode should be inferred. */
-  val Infer = ModeInfo(null, Nil)
-}
-
 /** Defines the attributes of an editor mode (major or minor). An editing mode has two main
   * components:
   *  - a collection of fns; an fn is a function that can be called interactively (by virtue of

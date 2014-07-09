@@ -61,6 +61,9 @@ abstract class BufferV extends Region {
     */
   def needsSave :Boolean = dirty && store.exists
 
+  /** A mapping of buffer-local state. */
+  def state :StateV
+
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
     * exists for symmetry with [[end]]. */
   def start :Loc = Loc.Zero
@@ -156,10 +159,6 @@ abstract class BufferV extends Region {
     val line = this.line(loc.row) ; val len = line.length
     line.syntaxAt(if (loc.col < len || len == 0) loc.col else len-1)
   }
-
-  /** Returns the current state value associated with the specified type, if any.
-    * See [[RBuffer.state]]. */
-  def getState[T] (klass :Class[T]) :Option[T]
 
   /** Returns a copy of the data between `[start, until)`. $RNLNOTE */
   def region (start :Loc, until :Loc) :Seq[Line] =
@@ -522,9 +521,9 @@ object Buffer {
     def mark = None
     def editable = false
     def dirty = false
+    val state = new State()
     def lines = _lines
     val maxLineLength = _lines.map(_.length).max
-    def getState[T] (klass :Class[T]) = None
   }
 }
 
@@ -560,9 +559,8 @@ abstract class RBuffer extends Buffer {
     * before that `Loc`. */
   def lineStyled :SignalV[Loc]
 
-  /** Returns the state value associated with the specified type, if any.
-    * This mechanism is a simple way for modes to maintain buffer-wide state. */
-  def state[T] (klass :Class[T]) :OptValue[T]
+  /** A reactive mapping of buffer-local state. */
+  override val state :State = new State()
 
   // implement some Buffer methods in terms of our reactive values
   override def name = nameV()
@@ -570,5 +568,4 @@ abstract class RBuffer extends Buffer {
   override def mark = markV()
   override def editable = editableV()
   override def dirty = dirtyV()
-  override def getState[T] (klass :Class[T]) = state(klass).getOption
 }

@@ -187,7 +187,7 @@ object Completer {
         want && !except(b)
       } , _.name)
       override protected def fromString (name :String) =
-        if (name == "") defbuf else Some(editor.createBuffer(name, true).buffer)
+        if (name == "") defbuf else Some(editor.createBuffer(name, true, None).buffer)
     }
 
   /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */

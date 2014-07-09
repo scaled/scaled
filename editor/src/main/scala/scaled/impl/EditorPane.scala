@@ -76,12 +76,13 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
 
   override def mini = _mini
   override def statusMini = _statusMini
+  override val state = new State()
   override def buffers = _buffers.map(_.buffer)
 
   override def visitFile (store :Store) = {
     _focus() = _buffers.find(_.buffer.store == store) getOrElse {
       if (!store.exists) emitStatus("(New file)")
-      newBuffer(BufferImpl(store))
+      newBuffer(BufferImpl(store), None, Nil)
     }
     _focus().view
   }
@@ -101,20 +102,15 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     view
   }
 
-  override def createBuffer (buffer :String, reuse :Boolean, minfo :ModeInfo) = {
+  override def createBuffer (buffer :String, reuse :Boolean, mode :Option[String], args :Any*) = {
+    def create (name :String) = newBuffer(createEmptyBuffer(name, args), mode, args.toList)
     val ob = _buffers.find(_.name == buffer) match {
-      case None     => newBuffer(createEmptyBuffer(buffer), minfo)
-      case Some(ob) => if (reuse) ob
-                       else newBuffer(createEmptyBuffer(freshName(buffer)), minfo)
+      case None     => create(buffer)
+      case Some(ob) => if (reuse) ob else create(freshName(buffer))
     }
     ob.view
   }
   override def killBuffer (buffer :Buffer) = killBuffer(requireBuffer(buffer))
-
-  override def state[T] (klass :Class[T]) = _states.synchronized {
-    _states.getOrElseUpdate(klass, OptValue[T]()).asInstanceOf[OptValue[T]]
-  }
-  private val _states = MMap[Class[_],OptValue[_]]()
 
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :String) {
@@ -225,12 +221,17 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
   }
 
-  private def createEmptyBuffer (name :String) = {
+  private def createEmptyBuffer (name :String, args :Seq[Any]) = {
     val parent = _buffers.headOption match {
       case None     => cwd
       case Some(ob) => Paths.get(ob.buffer.store.parent)
     }
-    BufferImpl(Store(parent.resolve(name)))
+    val buf = BufferImpl(Store(parent.resolve(name)))
+    args foreach {
+      case st :State.Init[_] => st.apply(buf.state)
+      case _ => // ignore, this is a major mode arg
+    }
+    buf
   }
 
   private def freshName (name :String, n :Int = 1) :String = {
@@ -243,7 +244,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   private final val MessagesName = "*messages*"
   private def newMessages () = {
     _pendingMessages = Nil
-    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), ModeInfo("log", Nil))
+    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), Some("log"), Nil)
     _pendingMessages foreach { msg =>
       mbuf.view.point() = mbuf.buffer.append(Line.fromText(msg + System.lineSeparator))
     }
@@ -263,14 +264,13 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   }
 
   private final val ScratchName = "*scratch*"
-  private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName))
+  private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName), None, Nil)
 
-  private def newBuffer (buf :BufferImpl, minfo :ModeInfo = ModeInfo.Infer) :OpenBuffer = {
+  private def newBuffer (buf :BufferImpl, modeO :Option[String], args :List[Any]) :OpenBuffer = {
     val (width, height) = bufferSize
 
-    // determine the mode and injection args
-    val (mode, args) = if (minfo != ModeInfo.Infer) (minfo.name, minfo.args)
-                       else (app.pkgMgr.detectMode(buf.name, buf.lines(0).asString), Nil)
+    // if no mode was specified, have the package manager infer one
+    val mode = modeO getOrElse app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)
 
     // create the modeline and add some default data before anyone else sneaks in
     val mline = new ModeLineImpl(this)

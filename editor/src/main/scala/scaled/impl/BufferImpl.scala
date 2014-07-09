@@ -77,11 +77,6 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
 
-  override def state[T] (klass :Class[T]) = _states.synchronized {
-    _states.getOrElseUpdate(klass, OptValue[T]()).asInstanceOf[OptValue[T]]
-  }
-  private val _states = MMap[Class[_],OptValue[_]]()
-
   override def saveTo (store :Store) {
     if (store.readOnly) throw Errors.feedback(s"Cannot save to read-only file: $store")
     // run our on-save hooks, but don't let them abort the save if they choke
