@@ -507,7 +507,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     bb.addBlank()
 
     val major = disp.modes.last
-    val view = editor.createBuffer(s"*mode:${major.name}*", true, Some("help"))
+    val view = editor.bufferConfig(s"*mode:${major.name}*").mode("help").reuse().create()
     editor.visitBuffer(bb.applyTo(view))
   }
 

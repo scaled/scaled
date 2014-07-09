@@ -18,7 +18,7 @@ import scaled._
   * Minor modes are added (and removed) dynamically, but a dispatcher's major mode never changes.
   */
 class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferViewImpl,
-                      mline :ModeLine, majorMode :String, modeArgs :List[Any])
+                      mline :ModeLine, majorMode :String, modeArgs :List[Any], tags :List[String])
     extends Dispatcher {
 
   private val isModifier = Set(KeyCode.SHIFT, KeyCode.CONTROL, KeyCode.ALT, KeyCode.META,
@@ -53,7 +53,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
     // automatically activate any minor modes that match our major mode's tags
-    resolver.minorModes(major.tags) foreach { mode =>
+    resolver.minorModes(major.tags ++ tags) foreach { mode =>
       try addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
       catch {
         case e :Exception =>

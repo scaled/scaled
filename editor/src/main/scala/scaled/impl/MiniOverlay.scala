@@ -76,7 +76,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
     val modeArgs = ui :: result :: args.toList
     val disp = new DispatcherImpl(editor, editor.resolver, view, ModeLine.Noop,
-                                  s"mini-$mode", modeArgs)
+                                  s"mini-$mode", modeArgs, Nil)
     val area = new BufferArea(editor, view, disp) {
       override protected def wasResized (widthChars :Int, heightChars :Int) {
         // only persist width; height is unfortunately delivered bogus values due to JavaFX

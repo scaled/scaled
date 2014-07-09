@@ -43,10 +43,10 @@ object TestData {
     val state = new State()
     def buffers = Seq()
     def openBuffer (buffer :String) = null
-    def createBuffer (buffer :String, reuse :Boolean, mode :Option[String], args :Any*) = null
     def visitFile (file :Store) = null
     def visitConfig (name :String) = null
     def visitBuffer (buffer :Buffer) = null
+    def createBuffer (config :BufferConfig) = null
     def killBuffer (buffer :Buffer) {}
   }
 

@@ -34,9 +34,7 @@ public @interface Minor {
     /**
      * Zero or more tags describing major modes in which this minor mode should be automatically
      * enabled. See {@link Major#tags} for a list of common tags. For example, a mode which
-     * supports editing programming code would include {@code code} here. Omitting this element
-     * means that this minor mode will not be automatically enabled and must be manually enabled by
-     * the user, or configured by them to be enabled under more specific circumstances.
+     * supports editing programming code would include {@code code} here.
      */
     String[] tags () default {};
 }

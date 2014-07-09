@@ -82,7 +82,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   override def visitFile (store :Store) = {
     _focus() = _buffers.find(_.buffer.store == store) getOrElse {
       if (!store.exists) emitStatus("(New file)")
-      newBuffer(BufferImpl(store), None, Nil)
+      newBuffer(BufferImpl(store), bufferConfig(""))
     }
     _focus().view
   }
@@ -102,11 +102,11 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     view
   }
 
-  override def createBuffer (buffer :String, reuse :Boolean, mode :Option[String], args :Any*) = {
-    def create (name :String) = newBuffer(createEmptyBuffer(name, args), mode, args.toList)
-    val ob = _buffers.find(_.name == buffer) match {
-      case None     => create(buffer)
-      case Some(ob) => if (reuse) ob else create(freshName(buffer))
+  override def createBuffer (config :BufferConfig) = {
+    def create (name :String) = newBuffer(createEmptyBuffer(name, config._state), config)
+    val ob = _buffers.find(_.name == config.name) match {
+      case None     => create(config.name)
+      case Some(ob) => if (config._reuse) ob else create(freshName(config.name))
     }
     ob.view
   }
@@ -221,16 +221,13 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
   }
 
-  private def createEmptyBuffer (name :String, args :Seq[Any]) = {
+  private def createEmptyBuffer (name :String, args :List[State.Init[_]]) = {
     val parent = _buffers.headOption match {
       case None     => cwd
       case Some(ob) => Paths.get(ob.buffer.store.parent)
     }
     val buf = BufferImpl(Store(parent.resolve(name)))
-    args foreach {
-      case st :State.Init[_] => st.apply(buf.state)
-      case _ => // ignore, this is a major mode arg
-    }
+    args foreach { _.apply(buf.state) }
     buf
   }
 
@@ -244,7 +241,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   private final val MessagesName = "*messages*"
   private def newMessages () = {
     _pendingMessages = Nil
-    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), Some("log"), Nil)
+    val mbuf = newBuffer(BufferImpl.scratch(MessagesName), bufferConfig("").mode("log"))
     _pendingMessages foreach { msg =>
       mbuf.view.point() = mbuf.buffer.append(Line.fromText(msg + System.lineSeparator))
     }
@@ -264,13 +261,13 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   }
 
   private final val ScratchName = "*scratch*"
-  private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName), None, Nil)
+  private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName), bufferConfig(""))
 
-  private def newBuffer (buf :BufferImpl, modeO :Option[String], args :List[Any]) :OpenBuffer = {
+  private def newBuffer (buf :BufferImpl, config :BufferConfig) :OpenBuffer = {
     val (width, height) = bufferSize
 
     // if no mode was specified, have the package manager infer one
-    val mode = modeO getOrElse app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)
+    val mode = config._mode getOrElse app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)
 
     // create the modeline and add some default data before anyone else sneaks in
     val mline = new ModeLineImpl(this)
@@ -280,7 +277,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     // TODO: move this to LineNumberMode? (and enable col number therein)
     val view = new BufferViewImpl(this, buf, width, height)
     mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
-    val disp = new DispatcherImpl(this, resolver, view, mline, mode, args)
+    val disp = new DispatcherImpl(this, resolver, view, mline, mode, config._args, config._tags)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has

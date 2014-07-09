@@ -68,20 +68,41 @@ trait Editor {
     * @return the view for the buffer. */
   def visitBuffer (buffer :Buffer) :BufferView
 
-  /** Creates a new buffer with the specified name. NOTE: the buffer will not be visited (made the
-    * active buffer). Follow this call with a call to [[visitBuffer]] if that is desired.
-    *
-    * @param reuse if true and a buffer named `buffer` exists, it will be returned directly
-    * (as is, so be careful you're not getting an unexpected buffer in this case). Otherwise
-    * in the event of name collision, a fresh buffer name will be generated from `buffer` by
-    * appending <N> to the name with increasing values of N until an unused name is obtained.
-    * @param mode the desired major mode for the buffer or `None` to have the mode inferred.
-    * @param args a combination of major mode arguments and initial buffer state. Any values in the
-    * args list that are of type `State.Init` will be used to initialize the buffer state, and any
-    * other values will be passed to the major mode during constructor injection.
-    * @return the view for the buffer.
-    */
-  def createBuffer (buffer :String, reuse :Boolean, mode :Option[String], args :Any*) :BufferView
+  /** Used to create new buffers. Obtain via [[Editor.buffer]], then call [[create]. */
+  case class BufferConfig (name :String, _reuse :Boolean, _mode :Option[String],
+                           _args :List[Any], _state :List[State.Init[_]], _tags :List[String]) {
+
+    /** Requests reuse of an existing buffer with the same name. If a buffer named `buffer` exists,
+      * it will be returned directly (as is, so be careful you're not getting an unexpected buffer
+      * in this case). Otherwise in the event of name collision, a fresh buffer name will be
+      * generated from `buffer` by appending <N> to the name with increasing values of N until an
+      * unused name is obtained.
+      */
+    def reuse () :BufferConfig = copy(_reuse=true)
+
+    /** Configures the the desired major mode. By default the mode is inferred.
+      * @param mode the name of the major mode to use.
+      * @param args arguments to pass to the major mode during constructor injection.
+      */
+    def mode (name :String, args :Any*) = copy(_mode=Some(name), _args=args.toList)
+
+    /** Configures initial buffer state. */
+    def state (state :State.Init[_]*) = copy(_state=state.toList)
+
+    /** Configures additional tags to be used when resolving minor modes for this buffer. These are
+      * combined with the tags provided by the major mode. */
+    def tags (tags :String*) = copy(_tags=tags.toList)
+
+    /** Creates the buffer using the current configuration. */
+    def create () :BufferView = createBuffer(this)
+  }
+
+  /** Returns a buffer config for a buffer named `buffer`. */
+  def bufferConfig (buffer :String) :BufferConfig =
+    new BufferConfig(buffer, false, None, Nil, Nil, Nil)
+
+  /** Creates a buffer per the specifications of `config`. */
+  def createBuffer (config :BufferConfig) :BufferView
 
   /** Requests to kill the buffer with the specified name. The buffer may not actually be killed due
     * to buffer kill hooks which can abort the kill. */
