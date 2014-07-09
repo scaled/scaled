@@ -81,7 +81,7 @@ class Scaled extends Application {
       case e :Throwable => logger.log(s"Error closing $epane", e)
     }
     editors.inverse.remove(epane)
-    if (editors.isEmpty()) sys.exit(0) // TODO: cleanup?
+    if (editors.isEmpty()) Platform.exit()
   }
 
   case class Geom (size :Option[(Int,Int)], pos :Option[(Int,Int)])
