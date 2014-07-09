@@ -37,13 +37,6 @@ class Scaled extends Application {
     }
   }
 
-  val editors = HashBiMap.create[String,EditorPane]()
-
-  val server = new Server(this)
-  val pkgMgr = new PackageManager(logger)
-  val svcMgr = new ServiceManager(this)
-  val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
-
   val exec = new Executor {
     override val uiExec = new java.util.concurrent.Executor {
       override def execute (op :Runnable) = Platform.runLater(op)
@@ -57,6 +50,13 @@ class Scaled extends Application {
       result
     }
   }
+
+  val editors = HashBiMap.create[String,EditorPane]()
+
+  val server = new Server(this)
+  val pkgMgr = new PackageManager(logger)
+  val svcMgr = new ServiceManager(this)
+  val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 
   /** If debug logging is enabled, writes `msg` to console, otherwise noops. */
   val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
