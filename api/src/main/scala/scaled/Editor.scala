@@ -108,3 +108,10 @@ trait Editor {
     * to buffer kill hooks which can abort the kill. */
   def killBuffer (buffer :Buffer) :Unit
 }
+
+/** [[Editor]]-related stuffs. */
+object Editor {
+
+  /** Global editor state indicating which virtual desktop on which Scaled is running. */
+  case class Desktop (id :String)
+}

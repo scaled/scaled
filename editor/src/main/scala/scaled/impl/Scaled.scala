@@ -114,6 +114,9 @@ class Scaled extends Application {
     val epane = new EditorPane(this, stage) {
       override def bufferSize = geom.size getOrElse super.bufferSize
     }
+    // stuff this editor's desktop id into global editor state
+    epane.state(classOf[Editor.Desktop]).update(Editor.Desktop(desktop))
+
     val scene = new Scene(epane)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     stage.setScene(scene)
