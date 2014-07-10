@@ -73,6 +73,9 @@ abstract class LineV extends CharSequence {
   /** Returns all tags which overlap `pos`. */
   def tagsAt (pos :Int) :List[Tag[_]] = _tags.tagsAt(pos)
 
+  /** Returns all tags on this line as a list. */
+  def tags :List[Tag[_]] = _tags.tags
+
   /** Visits tags which match `tclass` in order. `vis` will be called for each region which contains
     * a unique set of tags (including no tags). In the case of overlapping tags, the overlapping
     * region(s) will be visited separately with all overlapping tags passed as a list. */

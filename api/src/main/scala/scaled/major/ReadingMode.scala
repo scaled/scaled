@@ -103,6 +103,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     "C-h v" -> "describe-var",
     "C-h m" -> "describe-mode",
     "M-A-t" -> "show-tags",
+    "M-C-t" -> "show-line-tags",
 
     // meta commands
     "M-x" -> "execute-extended-command"
@@ -513,17 +514,25 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Displays the styles at the point.")
   def showStyles () {
-    val info = Seq(buffer.stylesAt(view.point()).toString)
-    view.popup() = Popup(info, Popup.UpRight(view.point()))
+    val p = view.point()
+    val info = Seq(buffer.stylesAt(p).toString)
+    view.popup() = Popup(info, Popup.UpRight(p))
   }
 
   @Fn("Displays the tags at the point.")
   def showTags () {
-    val info = buffer.tagsAt(view.point()) match {
+    val p = view.point()
+    val info = buffer.tagsAt(p) match {
       case Nil => List("No tags.")
       case tags => tags.map(_.toString)
     }
-    view.popup() = Popup(info, Popup.UpRight(view.point()))
+    view.popup() = Popup(info, Popup.UpRight(p))
+  }
+
+  @Fn("Displays all tags on the current line.")
+  def showLineTags () {
+    val p = view.point()
+    view.popup() = Popup(buffer.line(p).tags.map(_.toString), Popup.UpRight(p))
   }
 
   //
