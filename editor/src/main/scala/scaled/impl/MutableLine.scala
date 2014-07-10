@@ -40,21 +40,20 @@ object MutableLine {
   * that the line emit this event rather than the buffer, so that the caller can't "forget" to emit
   * an event along with a line edit.
   *
-  * @param initChars The initial characters in this line. Ownership of this array is taken by this
-  * line instance and the array may subsequently be mutated thereby.
+  * @param cs The initial characters in this line. Ownership of this array is taken by this line
+  * instance and the array may subsequently be mutated thereby.
   */
-class MutableLine (
-  buffer :BufferImpl, initCs :Array[Char], initXs :Array[Syntax], val tags :Tags
-) extends LineV with Store.Writable {
+class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags :Tags)
+    extends LineV with Store.Writable {
   def this (buffer :BufferImpl, cs :Array[Char]) = this(
     buffer, cs, Array.fill(cs.length)(Syntax.Default), new Tags())
 
-  require(initCs != null && initXs != null && tags != null)
+  require(cs != null && xs != null && tags != null)
 
-  protected var _chars = initCs
-  protected var _syns = initXs
+  protected var _chars = cs
+  protected var _syns = xs
   protected def _tags = tags
-  private[this] var _end = initCs.size
+  private[this] var _end = cs.size
 
   override def length = _end
   override def view (start :Int, until :Int) = new Line(_chars, _syns, tags, start, until-start)
