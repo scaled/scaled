@@ -160,10 +160,12 @@ class Tags {
       if (tclass.isInstance(node.tag) && node.overlaps(start, end) &&
           pred(node.tag.asInstanceOf[T])) {
         pnode.next = node.next
+        node = node.next
         removed = true
+      } else {
+        pnode = node
+        node = node.next
       }
-      pnode = node
-      node = node.next
     }
     // checkInvariant(where)
     removed
@@ -230,6 +232,8 @@ class Tags {
 
   override def equals (other :Any) :Boolean = other.isInstanceOf[Tags] && (
     chaineq(_root, other.asInstanceOf[Tags]._root))
+
+  override def toString :String = tags.mkString("[",", ","]")
 
   private def delete (pred :Any => Boolean, start :Int, end :Int, shift :Int) :Boolean = {
     // val where = s"delete($pred, [$start,$end), shift=$shift)"

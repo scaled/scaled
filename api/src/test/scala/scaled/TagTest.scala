@@ -123,11 +123,22 @@ class TagTest {
     tags.add("exact", 10, 20)
     assertTrue(tags.remove("exact", 10, 20))
 
-    testVisit(tags, Seq((4, 6, Seq("left")),
+    testVisit(tags, Seq(( 4,  6, Seq("left")),
                         (10, 12, Seq("right")),
                         (20, 22, Seq("inner")),
                         (28, 30, Seq("inner")))) // outer and exact fully removed
+  }
 
+  @Test def testRemoveAll () {
+    val tags = new Tags()
+    tags.add("before", 0,  3)
+    tags.add("left",   2,  6)
+    tags.add("right", 10, 14)
+    tags.add("inner",  5, 11)
+    tags.add("after", 14, 20)
+    tags.removeAll(classOf[String], { _ :String => true }, 4, 12)
+    testVisit(tags, Seq(( 0,  3, Seq("before")),
+                        (14, 20, Seq("after")))) // everything but before and after removed
   }
 
   @Test def testSlice () {
@@ -212,7 +223,7 @@ class TagTest {
   private def testVisit (tags :Tags, expect :Seq[(Int,Int,Seq[String])]) {
     val groups = ArrayBuffer[(Int,Int,Seq[String])]()
     tags.visit(classOf[String])((ts, start, end) => groups += ((start, end, ts.map(_.tag))))
-    assertEquals(expect.size, groups.size)
+    assertEquals(s"$expect #= $groups", expect.size, groups.size)
     for ((exp,got) <- expect zip groups) assertEquals(exp, got)
   }
 }
