@@ -153,8 +153,8 @@ class Tags {
     * part of it overlaps the region.
     * @return true if at least one tag was found and removed, false if no changes were made. */
   def removeAll[T] (tclass :Class[T], pred :T => Boolean, start :Int, end :Int) :Boolean = {
-    val where = s"removeAll($tclass, $pred, $start, $end)"
-    checkInvariant(where)
+    // val where = s"removeAll($tclass, $pred, [$start,$end))"
+    // checkInvariant(where)
     var removed = false
     var pnode = _root ; var node = _root.next ; while (node != null && node.start < end) {
       if (tclass.isInstance(node.tag) && node.overlaps(start, end) &&
@@ -165,7 +165,7 @@ class Tags {
       pnode = node
       node = node.next
     }
-    checkInvariant(where)
+    // checkInvariant(where)
     removed
   }
 
@@ -176,8 +176,8 @@ class Tags {
   /** Inserts a gap into the tag collection at `start`. Tags that overlap will be expanded,
     * tags that start at or after `start` will be shifted. */
   def expand (start :Int, length :Int) {
-    val where = s"expand($start, $length)"
-    checkInvariant(where)
+    // val where = s"expand(start=$start, length=$length)"
+    // checkInvariant(where)
     var pnode = _root ; var node = _root.next ; while (node != null) {
       val nstart = node.start ; val nend = node.end
       // if the node starts at or after the expansion point, shift it
@@ -188,7 +188,7 @@ class Tags {
       pnode = pnode.next // TODO: write failing test for 'pnode = node'...
       node = node.next
     }
-    checkInvariant(where)
+    // checkInvariant(where)
   }
 
   /** Deletes tags in the specified region, but does no shifting. */
@@ -204,8 +204,8 @@ class Tags {
 
   /** Slices `[start, end)` from these tags into `into` at `offset`. */
   def sliceInto (start :Int, end :Int, into :Tags, offset :Int) {
-    val where = s"sliceInto($start, $end, $into, $offset)"
-    checkInvariant(where)
+    // val where = s"sliceInto([$start,$end), $into, offset=$offset)"
+    // checkInvariant(where)
     def clip[T] (tag :T, cstart :Int, cend :Int) = if (cend > cstart) into.add(tag, cstart, cend)
     var node = _root.next ; while (node != null && node.start < end) {
       val nstart = node.start ; val nend = node.end
@@ -225,15 +225,15 @@ class Tags {
       // otherwise node starts after region, ignore it
       node = node.next
     }
-    checkInvariant(where)
+    // checkInvariant(where)
   }
 
   override def equals (other :Any) :Boolean = other.isInstanceOf[Tags] && (
     chaineq(_root, other.asInstanceOf[Tags]._root))
 
   private def delete (pred :Any => Boolean, start :Int, end :Int, shift :Int) :Boolean = {
-    val where = s"delete($pred, $start, $end, $shift)"
-    checkInvariant(where)
+    // val where = s"delete($pred, [$start,$end), shift=$shift)"
+    // checkInvariant(where)
     @inline @tailrec def loop (pnode :Node[_], mod :Boolean) :Boolean = {
       val node = pnode.next
       if (node == null) mod
@@ -274,17 +274,17 @@ class Tags {
       }
     }
     val res = loop(_root, false)
-    checkInvariant(where)
+    // checkInvariant(where)
     res
   }
 
-  private def checkInvariant (where :String) {
-    var node = _root.next ; while (node != null) {
-      if (node.next != null && node.start > node.next.start) throw new IllegalStateException(
-        s"Invalid node order: $where -> $node in $tags")
-      node = node.next
-    }
-  }
+  // private def checkInvariant (where :String) {
+  //   var node = _root.next ; while (node != null) {
+  //     if (node.next != null && node.start > node.next.start) throw new IllegalStateException(
+  //       s"Invalid node order: $where -> $node in $tags")
+  //     node = node.next
+  //   }
+  // }
 }
 
 object Tags {
