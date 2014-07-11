@@ -9,11 +9,7 @@ import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Errors
 
-abstract class EnvImpl (
-  val log  :Logger,      val exec  :Executor, val editor :Editor,
-  val view :RBufferView, val mline :ModeLine, val disp   :Dispatcher) extends Env
-
-abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
+abstract class ModeResolver (msvc :MetaService, editor :Editor) {
 
   /** Returns the names of all known modes, major if `major`, minor if not. */
   def modes (major :Boolean) :Set[String] = Set()
@@ -44,9 +40,14 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
     else throw new IllegalArgumentException(s"$mode ($clazz) is not a ${mclass.getSimpleName}.")
   }
 
-  private def resolve[T] (mode :String, view :BufferViewImpl, mline :ModeLine,
-                          disp :DispatcherImpl, args :List[Any], modeClass :Class[T]) :T = {
-    val envargs = new EnvImpl(log, exec, editor, view, mline, disp) {
+  private def resolve[T] (mode :String, view_ :BufferViewImpl, mline_ :ModeLine,
+                          disp_ :DispatcherImpl, args :List[Any], modeClass :Class[T]) :T = {
+    val envargs = new Env {
+      val msvc = ModeResolver.this.msvc
+      val editor = ModeResolver.this.editor
+      val view = view_
+      val mline = mline_
+      val disp = disp_
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
         ModeResolver.this.resolveConfig(mode, defs)
     } :: args
@@ -55,7 +56,7 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
 }
 
 class AppModeResolver (ws :WorkspaceImpl, editor :Editor)
-    extends ModeResolver(ws.app.logger, ws.app.exec, editor) {
+    extends ModeResolver(ws.app.svcMgr, editor) {
 
   override def modes (major :Boolean) = Set() ++ ws.app.pkgMgr.modes(major)
   override def minorModes (tags :Array[String]) = ws.app.pkgMgr.minorModes(tags)

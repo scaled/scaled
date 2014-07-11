@@ -16,11 +16,8 @@ import scaled.util.{Behavior, Close}
   */
 abstract class Env {
 
-  /** For debug logging. */
-  val log :Logger
-
-  /** For executing operations on the UI thread and background threads. */
-  val exec :Executor
+  /** The one service to rule them all. */
+  val msvc :MetaService
 
   /** The editor in which this mode is operating. */
   val editor :Editor
@@ -33,6 +30,12 @@ abstract class Env {
 
   /** Displays mode information to the user. Extensible. */
   val mline :ModeLine
+
+  /** For debug logging. */
+  def log :Logger = msvc.log
+
+  /** For executing operations on the UI thread and background threads. */
+  def exec :Executor = msvc.exec
 
   /** Resolves the config for `mode` using the supplied `defs`. This is an implementation detail
     * that unfortunately has to live out in the open. Please to ignore. */

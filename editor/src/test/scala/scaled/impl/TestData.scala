@@ -53,8 +53,8 @@ object TestData {
 
   val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
 
-  val injector = new ServiceInjector(log)
-  val resolver = new ModeResolver(log, exec, editor) {
+  val injector = new ServiceInjector(log, exec)
+  val resolver = new ModeResolver(injector, editor) {
     override protected def locate (major :Boolean, mode :String) = classOf[TextMode]
     override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
       modeConfig(mode, defs)
@@ -65,8 +65,7 @@ object TestData {
   def modeConfig (mode :String, defs :List[Config.Defs]) = new ConfigImpl(mode, defs, Some(config))
 
   def env (view_ :RBufferView) = new Env {
-    val log = TestData.log
-    val exec = TestData.exec
+    val msvc = injector
     val editor = TestData.editor
     val view = view_
     val disp = null

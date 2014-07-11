@@ -4,13 +4,20 @@
 
 package scaled.impl
 
-import java.lang.reflect.InvocationTargetException
-import scaled._
 import com.google.common.cache.{CacheBuilder, CacheLoader}
+import java.lang.reflect.InvocationTargetException
+import java.nio.file.Path
+import scaled._
 
 // this is factored out so that we can do basic service injection in tests without having
 // the whole package manager enchilada up and running
-class ServiceInjector (log :Logger) extends AbstractService {
+class ServiceInjector (val log :Logger, val exec :Executor)
+    extends AbstractService with MetaService {
+
+  // these are implemented in ServiceManager
+  def metaFile (name: String) :Path = ???
+  def service[T] (clazz: Class[T]) :T = ???
+  def process[P] (thunk: => P) :Pipe[P] = ???
 
   def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
     def fail (t :Throwable) = throw new InstantiationException(
@@ -54,7 +61,7 @@ class ServiceInjector (log :Logger) extends AbstractService {
     throw new InstantiationException(s"Missing implementation: $sclass")
 }
 
-class ServiceManager (app :Scaled) extends ServiceInjector(app.logger) with MetaService {
+class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec) {
 
   private var services = CacheBuilder.newBuilder.build(
     new CacheLoader[Class[_],AbstractService]() {
@@ -73,10 +80,8 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger) with Meta
   private var pluginMgr = new PluginManager(app)
   services.put(pluginMgr.getClass, pluginMgr)
 
-  override def log = app.logger
-  override def exec = app.exec
   override def metaFile (name :String) = app.pkgMgr.metaDir.resolve(name)
-  override def service[T] (clazz :Class[T]) :T = resolveService(clazz).asInstanceOf[T]
+  override def service[T] (clazz :Class[T]) = resolveService(clazz).asInstanceOf[T]
   override def process[P] (thunk : => P) = new Plumbing(exec.bgExec, thunk)
 
   override def resolveService (sclass :Class[_]) = {
