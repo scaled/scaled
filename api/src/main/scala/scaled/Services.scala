@@ -36,8 +36,7 @@ trait MetaService {
     * @throws InstantiationException if there is an error creating the service.  */
   def service[T] (clazz :Class[T]) :T
 
-  /** Resolves and returns the Scaled service identified by `clazz`. `clazz` is a [[Service]]
-    * annotated class, which will be created and initialized if it has not yet been so.
+  /** A `service` variant that uses class tags to allow usage like: `service[Foo]`.
     * @throws InstantiationException if there is an error creating the service.  */
   def service[T] (implicit tag :ClassTag[T]) :T = service(tag.runtimeClass.asInstanceOf[Class[T]])
 
