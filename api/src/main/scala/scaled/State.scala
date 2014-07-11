@@ -6,12 +6,16 @@ package scaled
 
 import reactual.OptValue
 import scala.collection.mutable.{Map => MMap}
+import scala.reflect.ClassTag
 
 /** Provides a read-only view of [[State]]. */
 abstract class StateV {
 
   /** Returns the current state value associated with `key`, if any. */
   def get[T] (key :Class[T]) :Option[T]
+
+  /** A `get` variant that uses class tags to allow usage like: `get[Foo]`. */
+  def get[T] (implicit tag :ClassTag[T]) :Option[T]
 
   /** Returns the current state value associated with `key`.
     * @throws NoSuchElementException if no value is associated with `key`. */
@@ -33,7 +37,12 @@ class State extends StateV {
     }).asInstanceOf[OptValue[T]]
   }
 
+  /** An `apply` variant that uses class tags to allow usage like: `apply[Foo]`. */
+  def apply[T] (implicit tag :ClassTag[T]) :OptValue[T] = apply(
+    tag.runtimeClass.asInstanceOf[Class[T]])
+
   override def get[T] (key :Class[T]) = apply(key).getOption
+  override def get[T] (implicit tag :ClassTag[T]) = apply(tag).getOption
   override def req[T] (key :Class[T]) = apply(key).get
 }
 
