@@ -41,6 +41,7 @@ object TestData {
     }
     def statusMini = mini
     val state = new State()
+    def workspace = ???
     def buffers = Seq()
     def openBuffer (buffer :String) = ???
     def visitFile (file :Store) = ???

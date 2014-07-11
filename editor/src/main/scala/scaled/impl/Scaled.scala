@@ -4,13 +4,11 @@
 
 package scaled.impl
 
-import com.google.common.collect.HashBiMap
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
 import javafx.animation.{KeyFrame, Timeline}
 import javafx.application.{Application, Platform}
 import javafx.event.{ActionEvent, EventHandler}
-import javafx.scene.Scene
 import javafx.stage.Stage
 import javafx.util.Duration
 import reactual.{Signal, Promise}
@@ -51,89 +49,26 @@ class Scaled extends Application {
     }
   }
 
-  val editors = HashBiMap.create[String,EditorPane]()
-
   val server = new Server(this)
   val pkgMgr = new PackageManager(logger)
+  val wspMgr = new WorkspaceManager(this)
   val svcMgr = new ServiceManager(this)
-  val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 
   /** If debug logging is enabled, writes `msg` to console, otherwise noops. */
   val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
                  else (msg :String) => ()
 
-  /** Opens `path` in the editor pane associated with `desktop`. If no such editor pane exists one
-    * is created. */
-  def openInDesktop (path :String, desktop :String) {
-    val epane = editors.get(desktop) match {
-      case null => createEditor(new Stage(), desktop, NoGeom)
-      case epane => epane
-    }
-    epane.visitPath(path)
-  }
-
-  /** Closes `epane`. If that was the last open editor pane, terminates Scaled. */
-  def closeEditor (epane :EditorPane) {
-    try {
-      epane.dispose()
-      epane.stage.close()
-    } catch {
-      case e :Throwable => logger.log(s"Error closing $epane", e)
-    }
-    editors.inverse.remove(epane)
-    if (editors.isEmpty()) Platform.exit()
-  }
-
-  case class Geom (size :Option[(Int,Int)], pos :Option[(Int,Int)])
-  val NoGeom = Geom(None, None)
-
   override def start (stage :Stage) {
-    val geom = Option(System.getProperty("geometry")).map(parseGeometry).getOrElse(NoGeom)
-    val epane = createEditor(stage, System.getProperty("scaled.desktop", "default"), geom)
-    // open a pane/tab for each file passed on the command line
-    getParameters.getRaw foreach epane.visitPath
-
+    // create the starting editor and visit therein the files specified on the command line
+    wspMgr.visit(stage, getParameters.getRaw)
     // start our command server
     server.start()
-
     // now that our main window is created, we can tweak the quit menu shortcut key
     tweakQuitMenuItem()
   }
 
   override def stop () {
     pool.shutdown()
-  }
-
-  private def parseGeometry (geom :String) :Geom = geom.split("[x+]") match {
-    case Array(w, h, x, y) => Geom(Some(w.toInt -> h.toInt), Some(x.toInt -> y.toInt))
-    case Array(w, h)       => Geom(Some(w.toInt -> h.toInt), None)
-    case _                 => Geom(None, None)
-  }
-
-  private def createEditor (stage :Stage, desktop :String, geom :Geom) :EditorPane = {
-    val epane = new EditorPane(this, stage) {
-      override def bufferSize = geom.size getOrElse super.bufferSize
-    }
-    // stuff this editor's desktop id into global editor state
-    epane.state[Editor.Desktop].update(Editor.Desktop(desktop))
-
-    val scene = new Scene(epane)
-    scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
-    stage.setScene(scene)
-
-    // set our stage position based on the values specified in editor config
-    cfgMgr.editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
-      if (x >= 0) stage.setX(x)
-    }
-    cfgMgr.editorConfig.value(EditorConfig.viewTop) onValueNotify { y =>
-      if (y >= 0) stage.setY(y)
-    }
-    // if geometry was specified on the command line, override the value from prefs
-    geom.pos.foreach { pos => stage.setX(pos._1) ; stage.setY(pos._2) }
-
-    stage.show()
-    editors.put(desktop, epane)
-    epane
   }
 
   // tweaks the shortcut on the quit menu to avoid conflict with M-q

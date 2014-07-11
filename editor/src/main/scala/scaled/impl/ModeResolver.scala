@@ -54,19 +54,19 @@ abstract class ModeResolver (log :Logger, exec :Executor, editor :Editor) {
   }
 }
 
-class AppModeResolver (app :Scaled, editor :Editor)
-    extends ModeResolver(app.logger, app.exec, editor) {
+class AppModeResolver (ws :WorkspaceImpl, editor :Editor)
+    extends ModeResolver(ws.app.logger, ws.app.exec, editor) {
 
-  override def modes (major :Boolean) = Set() ++ app.pkgMgr.modes(major)
-  override def minorModes (tags :Array[String]) = app.pkgMgr.minorModes(tags)
+  override def modes (major :Boolean) = Set() ++ ws.app.pkgMgr.modes(major)
+  override def minorModes (tags :Array[String]) = ws.app.pkgMgr.minorModes(tags)
 
   override protected def locate (major :Boolean, mode :String) =
-    app.pkgMgr.mode(major, mode) match {
+    ws.app.pkgMgr.mode(major, mode) match {
       case Some(mode) => mode
       case None       => throw Errors.feedback(s"Unknown mode: $mode")
     }
   override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
-    app.cfgMgr.resolveConfig(mode, defs)
+    ws.cfgMgr.resolveConfig(mode, defs)
   override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
-    app.svcMgr.injectInstance(clazz, args)
+    ws.app.svcMgr.injectInstance(clazz, args)
 }

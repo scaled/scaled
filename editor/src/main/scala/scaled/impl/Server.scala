@@ -8,12 +8,9 @@ import java.net.{DatagramPacket, DatagramSocket}
 import scala.annotation.tailrec
 
 /** Hosts a simple server on localhost:[[Port]]. Currently accepts only a single command:
-  * `open [@desktop] PATH`
-  * which causes `PATH` to be opened in the editor identified by `desktop`.
-  *
-  * The indent of `desktop` is for the shell script to (optionally) pass a unique identifier
-  * indicating the virtual desktop in which the shell script is being invoked, so that Scaled can
-  * open an editor window for that desktop and open `PATH` in that window.
+  * `open PATH`
+  * which causes `PATH` to be opened in the most recently used editor on the currently active
+  * desktop (if Scaled can figure out what desktop is active).
   */
 class Server (app :Scaled) extends Thread {
   setDaemon(true)
@@ -30,18 +27,12 @@ class Server (app :Scaled) extends Thread {
         val pkt = new DatagramPacket(buffer, buffer.length)
         sock.receive(pkt)
         val cmd = new String(pkt.getData, 0, pkt.getLength, "UTF-8").trim
-        cmd match {
-          case OpenRe(id, path) =>
-            val desktop = if (id == null) "default" else id.trim.substring(1)
-            onMainThread { app.openInDesktop(path.trim, desktop) }
-          case _ => app.logger.log(s"Unknown command: '$cmd'")
-        }
+        if (cmd startsWith "open ") onMainThread { app.wspMgr.visit(cmd.substring(5).trim) }
+        else app.logger.log(s"Unknown command: '$cmd'")
       }
 
     } catch {
       case e :Exception => app.logger.log(s"Failed to bind to $Port", e)
     }
   }
-
-  private val OpenRe = """open (@\S+)? *(.*)""".r
 }

@@ -25,25 +25,28 @@ import scaled.util.Errors
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
+class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
+    extends Region with Editor {
 
   /** Used to resolve modes in this editor. */
-  val resolver = new AppModeResolver(app, this)
+  val resolver = new AppModeResolver(ws, this)
 
   /** Called when this editor pane is going away. Cleans up. */
   def dispose () {
     _buffers foreach { _.dispose() }
     _buffers.clear()
     _logcon.close()
+    _wscon.close()
   }
+  private val _wscon = ws.reference(this)
 
   //
   // Editor interface methods
 
-  override def exit () = app.closeEditor(this)
+  override def exit () = ws.close(this)
   override def showURL (url :String) = {
     // getHostSevices.showDocument is very crashy on Mac OS X right now, so avoid it
-    if (System.getProperty("os.name") != "Mac OS X") app.getHostServices.showDocument(url)
+    if (System.getProperty("os.name") != "Mac OS X") ws.app.getHostServices.showDocument(url)
     else Runtime.getRuntime.exec(Array("open", url))
   }
 
@@ -64,7 +67,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     }, false)
     if (!Errors.isFeedback(err)) {
       val trace = Errors.stackTraceToString(err)
-      app.debugLog(trace)
+      ws.app.debugLog(trace)
       recordMessage(trace)
     }
   }
@@ -77,6 +80,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   override def mini = _mini
   override def statusMini = _statusMini
   override val state = new State()
+  override def workspace = ws
   override def buffers = _buffers.map(_.buffer)
 
   override def visitFile (store :Store) = {
@@ -91,8 +95,8 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
     _focus().view
   }
   override def visitConfig (mode :String) = {
-    val view = visitFile(Store(app.cfgMgr.configFile(mode)))
-    app.cfgMgr.configText(mode) match {
+    val view = visitFile(Store(ws.cfgMgr.configFile(mode)))
+    ws.cfgMgr.configText(mode) match {
       case Some(lines) =>
         if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
           view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(Line.apply))
@@ -116,14 +120,11 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   def visitPath (path :String) {
     val p = Paths.get(path)
     visitFile(Store(if (Files.exists(p) || p.isAbsolute) p else cwd.resolve(path)))
+    stageToFront()
+  }
+  def stageToFront () {
     stage.toFront() // move our window to front if it's not there already
     stage.requestFocus() // and request window manager focus
-  }
-
-  /** Returns the width and height (in characters) to assign to new buffers. */
-  def bufferSize :(Int, Int) = {
-    val config = app.cfgMgr.editorConfig
-    (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
   }
 
   //
@@ -148,7 +149,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
         getChildren.remove(_active.pane)
         _active.area.hibernate()
       }
-      stage.setTitle(s"Scaled - ${buf.name}")
+      stage.setTitle(s"Scaled - ${workspace.name} - ${buf.name}")
       _active = buf
 
       val start = System.nanoTime() // TEMP: perf debugging
@@ -194,7 +195,7 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   _focus() = newScratch()
 
   // record all log messages to the *messages* buffer
-  private val _logcon = app.log.onValue(recordMessage)
+  private val _logcon = ws.app.log.onValue(recordMessage)
 
   // we manage layout manually for a variety of nefarious reasons
   override protected def computeMinWidth (height :Double) = _active.pane.minWidth(height)
@@ -264,10 +265,10 @@ class EditorPane (app :Scaled, val stage :Stage) extends Region with Editor {
   private def newScratch () = newBuffer(BufferImpl.scratch(ScratchName), bufferConfig(""))
 
   private def newBuffer (buf :BufferImpl, config :BufferConfig) :OpenBuffer = {
-    val (width, height) = bufferSize
+    val (width, height) = size
 
     // if no mode was specified, have the package manager infer one
-    val mode = config._mode getOrElse app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)
+    val mode = config._mode getOrElse ws.app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)
 
     // create the modeline and add some default data before anyone else sneaks in
     val mline = new ModeLineImpl(this)

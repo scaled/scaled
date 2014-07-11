@@ -47,6 +47,9 @@ trait Editor {
     * potentially obscure important data. */
   def statusMini :Minibuffer
 
+  /** The workspace in which this editor is opened. */
+  def workspace :Workspace
+
   /** A reactive mapping of editor-wide state. */
   def state :State
 

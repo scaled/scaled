@@ -10,7 +10,7 @@ import scaled._
 import scaled.util.Properties
 
 /** Handles the machinery underlying the [[Config]] configuration system. */
-class ConfigManager (log :Logger, metaSvc :MetaService, watchSvc :WatchService) {
+class ConfigManager (log :Logger, root :Path, watchSvc :WatchService) {
 
   final val EditorName = "editor"
 
@@ -31,7 +31,7 @@ class ConfigManager (log :Logger, metaSvc :MetaService, watchSvc :WatchService) 
     else _configs.get(mode).map(_.toProperties)
 
   private final val FileSuff = ".properties"
-  private val _configDir = Filer.requireDir(metaSvc.metaFile("Config"))
+  private val _configDir = Filer.requireDir(root.resolve("Config"))
   private val _configs = MMap[String,ConfigImpl]()
   private val _editor = loadConfig(EditorName, EditorConfig :: Nil)
 
