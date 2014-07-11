@@ -42,11 +42,11 @@ object TestData {
     def statusMini = mini
     val state = new State()
     def buffers = Seq()
-    def openBuffer (buffer :String) = null
-    def visitFile (file :Store) = null
-    def visitConfig (name :String) = null
-    def visitBuffer (buffer :Buffer) = null
-    def createBuffer (config :BufferConfig) = null
+    def openBuffer (buffer :String) = ???
+    def visitFile (file :Store) = ???
+    def visitConfig (name :String) = ???
+    def visitBuffer (buffer :Buffer) = ???
+    def createBuffer (config :BufferConfig) = ???
     def killBuffer (buffer :Buffer) {}
   }
 
