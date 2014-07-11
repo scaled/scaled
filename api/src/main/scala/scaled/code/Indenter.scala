@@ -143,7 +143,8 @@ object Indenter {
       case Loc.None => Loc.None
       // findForward starts looking at `loc` so we have to bump forward a character before making
       // our recursive call
-      case loc => if (ctx.buffer.syntaxAt(loc).isCode && ctx.blocker(loc) == Some(bk)) loc
+      case loc => if (ctx.buffer.syntaxAt(loc).isCode &&
+                      ctx.blocker.require(loc, Syntax.Default) == bk) loc
                   else findCodeForward(ctx, m, ctx.buffer.forward(loc, 1), bk)
     }
 
@@ -156,7 +157,8 @@ object Indenter {
       case Loc.None => Loc.None
       // findBackward starts looking prior to `loc` not at `loc` so we don't need to adjust `loc`
       // before making our recursive call
-      case loc => if (ctx.buffer.syntaxAt(loc).isCode && ctx.blocker(loc) == Some(bk)) loc
+      case loc => if (ctx.buffer.syntaxAt(loc).isCode &&
+                      ctx.blocker.require(loc, Syntax.Default) == bk) loc
                   else findCodeBackward(ctx, m, loc, bk)
     }
 
