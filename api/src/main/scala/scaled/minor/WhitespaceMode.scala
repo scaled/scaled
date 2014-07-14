@@ -26,8 +26,7 @@ object WhitespaceConfig extends Config.Defs {
   val trailingStyle = "whitespaceTrailingFace"
 }
 
-@Minor(name="whitespace",
-       tags=Array("text", "code"),
+@Minor(name="whitespace", tags=Array("text", "code"),
        desc="""A minor mode that provides whitespace manipulation fns and can highlight
                undesirable whitespace.""")
 class WhitespaceMode (env :Env) extends MinorMode(env) {
