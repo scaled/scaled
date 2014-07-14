@@ -30,6 +30,7 @@ class BufferBuilder (fillWidth :Int) {
   def applyTo (view :BufferView) :Buffer = {
     val buf = view.buffer
     buf.replace(buf.start, buf.end, lines)
+    if (buf.end.col > 0) buf.split(buf.end) // tack on a trailing NL if needed
     buf.markClean()
     view.point() = Loc.Zero
     buf
