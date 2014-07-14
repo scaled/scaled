@@ -11,7 +11,7 @@ import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region, VBox}
 import javafx.stage.Stage
-import reactual.{Future, OptValue, Promise, Value}
+import reactual.{Future, OptValue, Promise, Value, ReactionException}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scaled._
 import scaled.major.TextMode
@@ -59,18 +59,22 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _statusLine.setText(msg)
     if (!ephemeral) recordMessage(msg)
   }
-  override def emitError (err :Throwable) {
-    // TODO: color the status label red or something
-    emitStatus(err.getMessage match {
-      case null => err.toString
-      case msg  => msg
-    }, false)
-    if (!Errors.isFeedback(err)) {
-      val trace = Errors.stackTraceToString(err)
-      ws.app.debugLog(trace)
-      recordMessage(trace)
+  override def emitError (err :Throwable) :Unit = err match {
+    // if this is a wrapped reaction exception, unwrap
+    case re :ReactionException => re.getSuppressed foreach(emitError)
+    case _ =>
+      // TODO: color the status label red or something
+      popStatus(err.getMessage match {
+        case null => err.toString
+        case msg  => msg
+      })
+      if (!Errors.isFeedback(err)) {
+        val trace = Errors.stackTraceToString(err)
+        ws.app.debugLog(trace)
+        recordMessage(trace)
+      }
     }
-  }
+
   override def clearStatus () = {
     _statusPopup.clear()
     _statusLine.setText("")
@@ -278,7 +282,10 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     // TODO: move this to LineNumberMode? (and enable col number therein)
     val view = new BufferViewImpl(this, buf, width, height)
     mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
-    val disp = new DispatcherImpl(this, resolver, view, mline, mode, config._args, config._tags)
+    // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but we
+    // don't want non-real buffers (like the minimode buffer) to have global minor modes
+    val tags = "*" :: config._tags
+    val disp = new DispatcherImpl(this, resolver, view, mline, mode, config._args, tags)
 
     // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
     // also set up a listener on it such that if it is written to a new file and that new file has
