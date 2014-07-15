@@ -7,7 +7,8 @@ package scaled.impl
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import com.google.common.collect.HashBiMap
 import java.io.IOException
-import java.nio.file.{Files, Path}
+import java.nio.file.attribute.FileTime
+import java.nio.file.{Files, Path, Paths}
 import java.util.stream.Collectors
 import java.util.{List => JList}
 import javafx.application.Platform
@@ -26,8 +27,13 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   private def log = app.logger
   // the directory in which we store workspace metadata
   private val wsdir = Files.createDirectories(app.pkgMgr.metaDir.resolve("Workspaces"))
-  // a map from desktop name to last used workspace
-  private val lastws = MMap[String,String]() // TODO: read from persistent store
+
+  // a map from workspace name to hint path list
+  private val wshints = Filer.fileDB[Map[String,List[String]]](
+    wsdir.resolve(".hintpaths"),
+    _.map(_.split("\t").toList).map(vs => (vs.head -> vs.tail)).toMap.withDefaultValue(Nil),
+    _.map { case (k, v) => (k :: v).mkString("\t") })
+
   // currently resolved workspaces
   private var wscache = CacheBuilder.newBuilder.build(new CacheLoader[String,WorkspaceImpl]() {
     override def load (name :String) = new WorkspaceImpl(
@@ -37,7 +43,8 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   /** Creates the starting workspace and editor and opens `paths` therein. */
   def visit (stage :Stage, paths :JList[String]) {
     val desktop = curDesktop
-    val epane = workspaceFor(desktop).open(desktop, stage)
+    val path = if (paths.isEmpty) None else Some(paths.get(0))
+    val epane = workspaceFor(desktop, path).open(desktop, stage)
     paths foreach epane.visitPath
   }
 
@@ -45,7 +52,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     * If no such editor pane exists one is created. */
   def visit (path :String) {
     val desktop = curDesktop
-    workspaceFor(desktop).open(desktop).visitPath(path)
+    workspaceFor(desktop, Some(path)).open(desktop).visitPath(path)
   }
 
   def checkExit () {
@@ -53,9 +60,14 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     if (wscache.asMap.values.forall(_.editors.isEmpty)) Platform.exit()
   }
 
+  def addHintPath (wsname :String, path :Path) :Unit =
+    wshints.update(m => m.updated(wsname, (path.toString :: m(wsname))))
+  def removeHintPath (wsname :String, path :Path) :Unit =
+    wshints.update(m => m.updated(wsname, m(wsname).filter(_ != path.toString)))
+
   override def list = try {
     Files.list(wsdir).collect(Collectors.toList[Path]).filter(Files.isDirectory(_)).
-      map(_.getFileName.toString)
+      map(_.getFileName.toString).filterNot(_ startsWith ".")
   } catch {
     case e :IOException => log.log("Failed to list $wsdir", e) ; Nil
   }
@@ -70,8 +82,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   override def open (wsname :String) {
     val root = wsdir.resolve(wsname)
     if (!Files.exists(root)) throw Errors.feedback(s"No workspace named $wsname")
-    val desktop = curDesktop
-    openOn(wsname, desktop).open(desktop).stageToFront()
+    wscache.get(wsname).open(curDesktop).stageToFront()
   }
 
   override def didStartup () {} // unused
@@ -98,20 +109,20 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     }
   }
 
-  private def openOn (wsname :String, desktop :String) :WorkspaceImpl = {
-    lastws.put(desktop, wsname)
-    wscache.get(wsname)
-    // TODO: save lastws to persistent store
-  }
-
-  /** Returns the workspace that should be used for the specified desktop. If a workspace is already
-    * open on that desktop, it is returned. Otherwise, the workspace most recently used on that
-    * desktop is (opened if necessary and) returned. Otherwise the default workspace is (created if
-    * necessary, opened if necessary, and) returned. */
-  private def workspaceFor (desktop :String) :WorkspaceImpl = {
+  // returns the workspace that should be used for the specified desktop:
+  // - if a workspace is already open on that desktop, it is used
+  // - otherwise, the path is used to find a workspace with a matching hint path
+  // - if none is found, the default workspace is used
+  private def workspaceFor (desktop :String, path :Option[String]) :WorkspaceImpl = {
     def inUse = wscache.asMap.values.find(_.editors.containsKey(desktop))
-    def lastUsed = lastws.get(desktop).map(wscache.get)
-    inUse orElse lastUsed getOrElse  {
+    def abs0 (path :String) = abs1(Paths.get(path))
+    def abs1 (path :Path) = if (Files.exists(path)) Some(path.toAbsolutePath.toString) else None
+    def lastOpened (ws :String) = Files.getLastModifiedTime(wsdir.resolve(ws)).toMillis
+    def hintws (path :String) :Option[WorkspaceImpl] = {
+      val ws = wshints().collect { case (w, ps) if (ps.exists(path startsWith _)) => w }
+      if (ws.isEmpty) None else Some(wscache.get(ws.minBy(lastOpened)))
+    }
+    inUse orElse path.flatMap(abs0).flatMap(hintws) getOrElse  {
       Files.createDirectories(wsdir.resolve(Workspace.DefaultName))
       wscache.get(Workspace.DefaultName)
     }
@@ -121,6 +132,9 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
 class WorkspaceImpl (
   val app :Scaled, val mgr :WorkspaceManager, val name :String, val root :Path
 ) extends Workspace {
+
+  // when a workspace is resolved, we touch its root dir to note its last use time
+  Files.setLastModifiedTime(root, FileTime.fromMillis(System.currentTimeMillis))
 
   // each workspace maintains its own configuration repository
   val cfgMgr = app.svcMgr.injectInstance(classOf[ConfigManager], root :: Nil)
@@ -141,6 +155,9 @@ class WorkspaceImpl (
     }
     // TODO: if editors is empty and we have references, complain?
   }
+
+  override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
+  override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
   override def toString = s"ws:$name"
   override protected def log = app.logger

@@ -35,6 +35,14 @@ abstract class Workspace extends Reffed {
   def isDefault = name == Workspace.DefaultName
 
   // TODO: create new editor (with geometry?)
+
+  /** Adds `path` to this workspace's list of hint paths. A hint path is used to trigger the
+    * selection of this workspace when Scaled is first started. If the file being edited is in a
+    * subdirectory of a workspace's hint path, that workspace will be automatically activated. */
+  def addHintPath (path :Path) :Unit
+
+  /** Removes `path` from this workspace's list of hint paths. */
+  def removeHintPath (path :Path) :Unit
 }
 
 /** Static [[Workspace]] stuffs. */
