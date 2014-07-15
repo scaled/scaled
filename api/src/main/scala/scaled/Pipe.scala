@@ -4,6 +4,7 @@
 
 package scaled
 
+import java.util.concurrent.{Executor => JExecutor}
 import reactual.Future
 
 /** Provides a handle via which one can communicate with a concurrent sequential process. A
@@ -34,10 +35,13 @@ import reactual.Future
   *    which the result is made available. If you're asking for something that might actually take
   *    a long time, then this is the appropriate mechanism.
   *
+  * Pipe also implements `Executor` allowing runnables to be queued up for execution in the
+  * process's threading context.
+  *
   * @define SAMECTX `f` will never be invoked immediately, even if the calling thread is currently
   * in this entity's execution context.
   */
-abstract class Pipe[E] {
+abstract class Pipe[E] extends JExecutor {
   import Pipe._
 
   /** Dispatches `f` on the target process (on the appropriate thread). $SAMECTX */

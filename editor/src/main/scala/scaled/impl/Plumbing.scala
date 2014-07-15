@@ -15,7 +15,14 @@ import scaled.{Pipe, Funnel}
   */
 class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Runnable {
 
-  override def tell (op :P => Unit) :Unit = postOp(new Runnable() {
+  override def execute (op :Runnable) = synchronized {
+    _ops.offer(op)
+    val wasActive = _active
+    _active = true
+    if (!wasActive) exec.execute(this)
+  }
+
+  override def tell (op :P => Unit) :Unit = execute(new Runnable() {
     override def run () { op(_process) }
   })
 
@@ -25,7 +32,7 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
         val task = new FutureTask[R](new Callable[R]() {
             override def call = f(_process)
         })
-        postOp(task)
+        execute(task)
         // TODO: allow the timeout to be specified?
         try task.get
         // unwrap exceptions wrapped by Java due to checkedness
@@ -35,7 +42,7 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
 
   override def req[R] (f :P => R) = {
     val p = Promise[R]()
-    postOp(new Runnable() {
+    execute(new Runnable() {
       override def run () = try p succeed f(_process)
                             catch { case t :Throwable => p fail t }
     })
@@ -43,7 +50,7 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
   }
 
   override def funnel [V] (f :V => Unit) = new Funnel[V]() {
-    override def apply (value :V) = postOp(new Runnable() {
+    override def apply (value :V) = execute(new Runnable() {
       override def run () = f(value)
     })
   }
@@ -68,13 +75,6 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
     val top = _ops.poll
     _active = (top != null)
     top
-  }
-
-  private[this] def postOp (op :Runnable) = synchronized {
-    _ops.offer(op)
-    val wasActive = _active
-    _active = true
-    if (!wasActive) exec.execute(this)
   }
 
   private lazy val _process :P = {
