@@ -4,12 +4,60 @@
 
 package scaled.impl
 
+import com.google.common.base.Charsets
 import java.nio.file.{Files, Path}
 import java.util.function.Consumer
 import scala.collection.mutable.{Set => MSet}
 
 /** Helper routines for working with the file system. */
 object Filer {
+
+  /** Maintains a value that has a file backing store. */
+  abstract class FileDB[T] (path :Path) {
+
+    /** Returns the current value (loaded lazily). */
+    def apply () :T = {
+      if (_value == null) read()
+      _value
+    }
+    /** Replaces the current value with `value`, and [[write]]s it. */
+    def update (value :T) {
+      _value = value
+      write()
+    }
+    /** Updates the current value by applying `fn` to it. Then [[write]]s the result. */
+    def update (fn :T => T) :Unit = update(fn(apply()))
+
+    /** Reads the backing file into a new value. Replaces the current value therewith. */
+    def read () {
+      import scala.collection.convert.WrapAsScala._
+      val lines :Iterable[String] = try {
+        if (Files.exists(path)) Files.readAllLines(path) else Seq()
+      } catch {
+        case e :Exception => e.printStackTrace(System.err) ; Seq()
+      }
+      _value = decode(lines)
+    }
+    /** Writes the current value to the backing file. */
+    def write () :Unit = try {
+      import scala.collection.convert.WrapAsJava._
+      if (_value != null) Files.write(path, asJavaIterable(encode(_value)), Charsets.UTF_8)
+    } catch {
+      case e :Exception => e.printStackTrace(System.err)
+    }
+
+    protected def decode (lines :Iterable[String]) :T
+    protected def encode (value :T) :Iterable[String]
+
+    private var _value :T = _
+  }
+
+  /** Creates a [[FileDB]] with the specified encoder and decoder fns. */
+  def fileDB[T] (path :Path, dec :Iterable[String] => T, enc :T => Iterable[String]) =
+    new FileDB[T](path) {
+      protected def decode (lines :Iterable[String]) = dec(lines)
+      protected def encode (value :T) = enc(value)
+    }
 
   /** Ensures that `dir` exists and is a directory.
     * Terminates the editor with an error message on failure. */
