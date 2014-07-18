@@ -88,7 +88,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   override def didStartup () {} // unused
   override def willShutdown () {} // unused
 
-  private val curDesktop :String = System.getProperty("scaled.curdesk", "") match {
+  private def curDesktop :String = System.getProperty("scaled.curdesk", "") match {
     case ""  => "default"
     case bin => try {
       val pb = new ProcessBuilder(bin)
