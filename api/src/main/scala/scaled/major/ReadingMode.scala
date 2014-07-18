@@ -102,6 +102,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     "C-h f" -> "describe-fn",
     "C-h v" -> "describe-var",
     "C-h m" -> "describe-mode",
+    "C-h e" -> "describe-editor",
     "M-A-t" -> "show-tags",
     "M-C-t" -> "show-line-tags",
 
@@ -505,10 +506,42 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
         }
       }
     }
-    bb.addBlank()
 
     val major = disp.modes.last
     val view = editor.bufferConfig(s"*mode:${major.name}*").mode("help").reuse().create()
+    editor.visitBuffer(bb.applyTo(view))
+  }
+
+  @Fn("Describes the current state of the editor. This is mainly for debugging and the curious.")
+  def describeEditor () {
+    val bb = new BufferBuilder(fillColumn)
+    def addState (state :StateV) {
+      val kvs = state.keys.toSeq.map(
+        k => (s"${k.getName}: " -> state.get(k).map(_.toString).getOrElse("")))
+      if (!kvs.isEmpty) {
+        bb.addSection("State")
+        bb.addKeysValues(kvs :_*)
+      }
+    }
+    bb.addHeader("Editor")
+    bb.addKeysValues("Buffers: " -> editor.buffers.size.toString)
+    addState(editor.state)
+
+    val ws = editor.workspace
+    bb.addHeader("Workspace")
+    bb.addKeysValues("Name: " -> ws.name,
+                     "Root: " -> ws.root.toString)
+    addState(ws.state)
+
+    bb.addHeader("Buffers")
+    editor.buffers.foreach { buf =>
+      bb.addSubHeader(buf.name)
+      bb.addKeysValues("Store: " -> buf.store.toString,
+                       "Length: " -> buf.offset(buf.end).toString)
+      addState(buf.state)
+    }
+
+    val view = editor.bufferConfig(s"*editor*").mode("help").reuse().create()
     editor.visitBuffer(bb.applyTo(view))
   }
 
