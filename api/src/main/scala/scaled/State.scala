@@ -20,6 +20,9 @@ abstract class StateV {
   /** Returns the current state value associated with `key`.
     * @throws NoSuchElementException if no value is associated with `key`. */
   def req[T] (key :Class[T]) :T
+
+  /** Returns the keys for all currently defined state. */
+  def keys :Set[Class[_]]
 }
 
 /** Maintains a collection of type-keyed state. `Class` objects serve as the key for a piece of
@@ -40,6 +43,9 @@ class State extends StateV {
   /** An `apply` variant that uses class tags to allow usage like: `apply[Foo]`. */
   def apply[T] (implicit tag :ClassTag[T]) :OptValue[T] = apply(
     tag.runtimeClass.asInstanceOf[Class[T]])
+
+  /** Returns the keys for all currently defined state. */
+  def keys :Set[Class[_]] = _states.keySet.toSet
 
   override def get[T] (key :Class[T]) = apply(key).getOption
   override def get[T] (implicit tag :ClassTag[T]) = apply(tag).getOption
