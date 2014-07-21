@@ -13,8 +13,8 @@ code editing), but rather that they are not "in your face" from a user experienc
 start from the pristine calm of a colorized window of code, and tastefully grow from there.
 
 Scaled is designed to be extensible in any JVM language. This is technically possible already, but
-will be substantially improved before I claim that anyone would actually want to do this. My goal is
-that a programmer using Scaled can comfortably extend the editor in their preferred JVM language
+will be substantially improved before I claim that anyone would actually want to do this. My goal
+is that a programmer using Scaled can comfortably extend the editor in their preferred JVM language
 with no more cognitive dissonance than they already endure when using a third party library written
 in Java. I may never reach perfection in that regard, but it will be a damned sight better than
 extending the editor in elisp (nothing against lisp, use Clojure if that's your bag).
@@ -41,14 +41,14 @@ set the `JAVA_HOME` environment variable to a Java 8 JDK installation before run
 This will download and build all of the core packages that make up Scaled. Scaled packages are
 fetched directly from their DVCS source URLs and built locally during the installation process.
 Depending on the pre-existing state of your local Maven repository, this may involve downloading a
-bunch of existing jars, and it will involve compiling a bunch of code. It might take a minute or two
-on a reasonably speedy development machine.
+bunch of existing jars, and it will involve compiling a bunch of code. It might take a minute or
+two on a reasonably speedy development machine.
 
-Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Application Support/Scaled`
-on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via `spam`, but it's
-cumbersome, instead symlink `SCALED_HOME/Packages/scaled/bin/scaled` into your `~/bin` directory
-(or wherever you like to put things so that they are on your shell path), and then invoke Scaled via
-`scaled`.
+Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Application
+Support/Scaled` on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via
+`spam`, but it's cumbersome, instead symlink `SCALED_HOME/Packages/scaled/bin/scaled` into your
+`~/bin` directory (or wherever you like to put things so that they are on your shell path), and
+then invoke Scaled via `scaled`.
 
 If you have the `nc` program installed (`brew install netcat`), the `scaled` script will use it to
 communicate with an already running instance of Scaled when possible. Thus you can invoke `scaled
@@ -57,8 +57,9 @@ exists, or Scaled will be launched otherwise.
 
 ## Packages
 
-By default, Scaled comes only with basic text editing capabilities. To properly Feel the Magic™, you
-will need to install some packages. You can list the available packages via
+By default, Scaled comes only with basic text editing capabilities. To properly Feel the Magic™,
+you will need to install some packages. You can list the available packages via:
+
 ```
 spam list --all
 ```
@@ -107,9 +108,9 @@ by key binding description.
 
 Chances are, Scaled does not currently solve all of your development needs and make your favorite
 kind of toast. If you find that the fires in your belly are stoked by the idea of an Emacs-like
-extensible editor built atop the JVM, then perhaps you would like to extend Scaled such that it does
-support your desired toast-making capabilities. This is becoming a less crazy prospect day by day as
-the Scaled core stabilizes and the facilities for developing Scaled improve.
+extensible editor built atop the JVM, then perhaps you would like to extend Scaled such that it
+does support your desired toast-making capabilities. This is becoming a less crazy prospect day by
+day as the Scaled core stabilizes and the facilities for developing Scaled improve.
 
 Because Scaled checks itself and all of its extensions out directly from source, you can simply
 start hacking on the code that is checked out in `SCALED_HOME/Packages`. This is not wildly
@@ -118,10 +119,11 @@ them into `SCALED_HOME/Packages`, but that's mainly so that I can arrange the my
 subprojects into a slightly less flat directory structure.
 
 I'll eventually add support to the Scaled Package Manager to make it easier to maintain a "working"
-Scaled installation in the standard location and a "development" Scaled installation elsewhere which
-you hack on, run when testing, and can break without fear of hosing your development setup. That's
-even theoretically possible right now by running `spam -Dscaled.meta=somedir` (or `scaled
--Dscaled.meta=somedir` as -D args are passed through to `spam`) but I'd like to make it even easier.
+Scaled installation in the standard location and a "development" Scaled installation elsewhere
+which you hack on, run when testing, and can break without fear of hosing your development setup.
+That's even theoretically possible right now by running `spam -Dscaled.meta=somedir` (or
+`scaled -Dscaled.meta=somedir` as -D args are passed through to `spam`) but I'd like to make it
+even easier.
 
 There's not much documentation on Scaled's internals yet, but if more than zero people turn up and
 want to help, then I'll gladly move the writing of said documentation up my priority list. The main
