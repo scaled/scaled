@@ -18,6 +18,10 @@ object TextConfig extends Config.Defs {
   val listStyle = "textListFace"
   /** The CSS style applied to highlighted prefixes. */
   val prefixStyle = "textPrefixFace"
+  /** The CSS style applied to links. */
+  val linkStyle = "textLinkFace"
+  /** The CSS style applied to references. */
+  val refStyle = "textRefFace"
 }
 
 @Major(name="text", tags=Array("text"), desc="""

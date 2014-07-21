@@ -22,3 +22,11 @@
 .textPrefixFace {
   -fx-fill: #F2E294;
 }
+
+.textLinkFace {
+  -fx-fill: #FFCC00;
+}
+
+.textRefFace {
+  -fx-fill: #ED4600;
+}
