@@ -130,6 +130,13 @@ abstract class BufferV extends Region {
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def tagsAt[T] (tclass :Class[T], loc :Loc) :List[Tag[T]] = line(loc.row).tagsAt(tclass, loc.col)
 
+  /** Returns the first tag matching `tclass` that overlaps `loc`, or None.
+    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
+  def tagAt[T] (tclass :Class[T], loc :Loc) :Option[T] = {
+    val ts = tagsAt(tclass, loc)
+    if (ts.isEmpty) None else Some(ts.head.tag)
+  }
+
   /** Returns all tags on the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
   def tagsAt (loc :Loc) :List[Tag[_]] = line(loc.row).tagsAt(loc.col)
