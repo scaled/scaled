@@ -4,7 +4,8 @@
 
 package scaled.util
 
-import java.io.{BufferedReader, File, InputStreamReader, OutputStreamWriter, PrintWriter}
+import java.io.{BufferedReader, InputStreamReader, OutputStreamWriter, PrintWriter}
+import java.nio.file.{Path, Paths}
 import scaled._
 
 /** Factory methods &c for [[SubProcess]. */
@@ -17,7 +18,7 @@ object SubProcess {
     /** The environment in which to invoke the command. Defaults to empty. */
     env :Map[String,String] = Map(),
     /** The current working directory for the process. Defaults to Scaled's cwd. */
-    cwd :File = new File(System.getProperty("user.dir"))
+    cwd :Path = Paths.get(System.getProperty("user.dir"))
   )
 
   /** Starts a subprocess with the specified configuration. Output will be directed to `buffer`. If
@@ -91,7 +92,7 @@ abstract class SubProcess (config :SubProcess.Config) extends AutoCloseable {
 
   private lazy val process = {
     val pb = new ProcessBuilder(config.cmd :_*)
-    pb.directory(config.cwd)
+    pb.directory(config.cwd.toFile)
     config.env foreach { case (k, v) => pb.environment.put(k, v) }
     pb.start
   }
