@@ -34,6 +34,7 @@ class WatchManager (log :Logger) extends AbstractService with WatchService {
     }
     def close () {
       key.cancel()
+      log.log(s"Cleared watch: $dir")
       _watches.remove(key)
     }
   }
@@ -59,6 +60,7 @@ class WatchManager (log :Logger) extends AbstractService with WatchService {
       asInstanceOf[Array[WatchEvent.Kind[_]]] // oh Scala, you devil
     val key = dir.register(_service, kinds, SensitivityWatchEventModifier.HIGH)
     val impl = WatchImpl(key, dir, watcher)
+    log.log(s"Created watch: $dir")
     _watches.put(key, impl)
     impl
   }
