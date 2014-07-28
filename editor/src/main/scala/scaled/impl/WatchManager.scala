@@ -48,6 +48,7 @@ class WatchManager (log :Logger) extends AbstractService with WatchService {
   def watchFile (file :Path, watcher :Path => Unit) :Watch = {
     val name = file.getFileName.toString
     watchDir(file.getParent, new Watcher() {
+      override def onCreate (dir :Path, child :String) = if (child == name) watcher(file)
       override def onModify (dir :Path, child :String) = if (child == name) watcher(file)
       override def onDelete (dir :Path, child :String) = if (child == name) watcher(file)
     })
