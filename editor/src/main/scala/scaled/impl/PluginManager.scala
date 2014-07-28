@@ -14,11 +14,14 @@ import scaled._
 class PluginManager (app :Scaled) extends AbstractService with PluginService {
   import scala.collection.convert.WrapAsScala._
 
-  // we need to know when packages are added and removed
-  app.pkgMgr.moduleAdded.onValue { pkg => psets.values.foreach { _.moduleAdded(pkg) }}
-  app.pkgMgr.moduleAdded.onValue { pkg => psets.values.foreach { _.moduleRemoved(pkg) }}
+  private val psets = ArrayBuffer[PluginSetImpl[_]]()
 
-  class PluginSetImpl[T <: AbstractPlugin] (tag :String) extends PluginSet[T](tag) {
+  // we need to know when packages are added and removed
+  app.pkgMgr.moduleAdded.onValue { pkg => psets.foreach { _.moduleAdded(pkg) }}
+  app.pkgMgr.moduleAdded.onValue { pkg => psets.foreach { _.moduleRemoved(pkg) }}
+
+  class PluginSetImpl[T <: AbstractPlugin] (tag :String, args :List[Any])
+      extends PluginSet[T](tag) {
 
     private val _added = Signal[T]()
     private val _removed = Signal[T]()
@@ -28,19 +31,20 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
     private val _plugins = ArrayBuffer[T]()
     def plugins = _plugins
 
+    // add ourselves to the plugin sets list
+    psets += this
     // start out adding all matching plugins from known package modules
     app.pkgMgr.modules foreach moduleAdded
 
     def moduleAdded (mod :ModuleMeta) {
       mod.plugins(tag) foreach { pclass =>
         try {
-          val p = pclass.newInstance.asInstanceOf[T]
+          val p = app.svcMgr.injectInstance(pclass, args).asInstanceOf[T]
           _plugins += p
           _added.emit(p)
         } catch {
-          case t :Throwable =>
-            println(s"Failed to instantiate plugin [tag=$tag, class=$pclass]")
-            t.printStackTrace(System.out)
+          case t :Throwable => app.logger.log(
+            s"Failed to instantiate plugin [tag=$tag, class=$pclass, args=$args]", t)
         }
       }
     }
@@ -49,22 +53,24 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
       val pclasses = mod.plugins(tag)
       var ii = 0 ; while (ii < _plugins.length) {
         if (pclasses(_plugins(ii).getClass)) {
-          _removed.emit(_plugins.remove(ii))
+          val p = _plugins.remove(ii)
+          _removed.emit(p)
+          p.close()
           ii -= 1
         }
         ii += 1
       }
     }
-  }
 
-  private val psets = new ConcurrentHashMap[String,PluginSetImpl[_]]()
-  private val psetComputer = new JFunction[String,PluginSetImpl[_]]() {
-    def apply (tag :String) = new PluginSetImpl(tag)
+    override def close () {
+      psets -= this
+      super.close()
+    }
   }
 
   def didStartup () {} // TODO
   def willShutdown () {} // TODO
 
-  def resolvePlugins[T <: AbstractPlugin] (tag :String) :PluginSet[T] =
-    psets.computeIfAbsent(tag, psetComputer).asInstanceOf[PluginSet[T]]
+  def resolvePlugins[T <: AbstractPlugin] (tag :String, args :List[Any]) :PluginSet[T] =
+    new PluginSetImpl[T](tag, args)
 }
