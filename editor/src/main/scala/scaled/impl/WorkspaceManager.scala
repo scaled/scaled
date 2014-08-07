@@ -75,7 +75,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   override def create (wsname :String) {
     val root = wsdir.resolve(wsname)
     if (Files.exists(root)) throw Errors.feedback(s"Workspace named $wsname already exists.")
-    Files.createDirectories(root)
+    Files.createDirectory(root)
     open(wsname)
   }
 
@@ -123,7 +123,8 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
       if (ws.isEmpty) None else Some(wscache.get(ws.minBy(lastOpened)))
     }
     inUse orElse path.flatMap(abs0).flatMap(hintws) getOrElse  {
-      Files.createDirectories(wsdir.resolve(Workspace.DefaultName))
+      val ddir = wsdir.resolve(Workspace.DefaultName)
+      if (!Files.exists(ddir)) Files.createDirectory(ddir)
       wscache.get(Workspace.DefaultName)
     }
   }
