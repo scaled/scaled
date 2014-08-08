@@ -258,7 +258,7 @@ object Line {
 
     /** Tags `[start,end)` of the being-built line with `tag`. */
     def withTag[T] (tag :T, start :Int = 0, end :Int = _cs.length) :Builder = {
-      _ts.add(tag, start, end)
+      if (end > start) _ts.add(tag, start, end)
       this
     }
 
