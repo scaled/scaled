@@ -7,12 +7,12 @@ package scaled
 import reactual.{Future, Property, OptValue, SignalV, Value, ValueV}
 
 /** Visualizes a single line of text, potentially with style information. */
-abstract class LineView {
+trait LineView {
 
   /** The line being displayed by this view. */
   def line :LineV
 
-  // TODO: style runs, margin decorations
+  // TODO: margin decorations
   // TOOD: access to the JavaFX scene graph Node on which to anchor bits?
 }
 
@@ -20,7 +20,6 @@ abstract class LineView {
   * buffer. This includes:
   * - a series of [LineView] instances visualizing each line of text
   * - the point, which defines the cursor/insertion point and the point end of the point/mark
-  * - the mark, the other end of the point/mark
   * - the scroll position of the view, which indicates which lines of the buffer are visible
   * Anything other than the data model for the buffer itself (which is encapsulated in [Buffer])
   * will be handled by this view.

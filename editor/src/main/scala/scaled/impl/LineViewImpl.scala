@@ -4,71 +4,45 @@
 
 package scaled.impl
 
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
-
 import javafx.geometry.VPos
 import javafx.scene.Node
-import javafx.scene.paint.Color
-import javafx.scene.shape.Rectangle
-import javafx.scene.text.{Text, TextFlow, FontSmoothingType}
-
+import javafx.scene.text.{TextFlow, FontSmoothingType}
+import scala.collection.mutable.ArrayBuffer
 import scaled._
 
-class LineViewImpl (_line :LineV) extends LineView {
+class LineViewImpl (_line :LineV) extends TextFlow with LineView {
 
   override def line = _line
   private var _valid = false
 
-  val node = new TextFlow() {
-    override def layoutChildren () {
-      super.layoutChildren()
-      val cs = getChildren
-      @tailrec def layout (ii :Int) {
-        if (ii >= 0) {
-          cs.get(ii) match {
-            case ft :FillableText => ft.layoutRect()
-            case _ => // nada
-          }
-          layout(ii-1)
-        }
-      }
-      layout(cs.size-1)
-    }
-  }
-  node.setManaged(false)
-  // node.fontProperty.bind(ctrl.fontProperty)
-  // node.fillProperty.bind(textFill)
-  // node.impl_selectionFillProperty().bind(highlightTextFill)
+  // fontProperty.bind(ctrl.fontProperty)
+  // fillProperty.bind(textFill)
+  // impl_selectionFillProperty().bind(highlightTextFill)
 
   /** Returns the x position of character at the specified column.
     * @param charWidth the current width of the (fixed) view font.
     */
   def charX (col :Int, charWidth :Double) :Double = {
     // TODO: handle tabs, other funny business?
-    node.getLayoutX + col*charWidth
+    getLayoutX + col*charWidth
   }
 
   /** Updates this line to reflect the supplied style change. */
-  def onStyle (loc :Loc) {
-    // TODO: only change the spans that are affected by the restyle
-    invalidate()
-  }
+  def onStyle (loc :Loc) :Unit = invalidate()
 
   /** Updates this line's visibility. Lines outside the visible area of the buffer are marked
     * non-visible and defer applying line changes until they are once again visible. */
-  def setVisible (viz :Boolean) :Boolean = {
-    val validated = if (viz && !_valid) { validate() ; true }
-                    else false
-    node.setVisible(viz)
+  def setViz (viz :Boolean) :Boolean = {
+    val validated = if (viz && !_valid) { validate() ; true } else false
+    setVisible(viz)
     validated
   }
 
   /** Marks this line view as invalid, clearing its children. */
   def invalidate () :Unit = if (_valid) {
     _valid = false
-    node.getChildren.clear()
-    if (node.isVisible) validate()
+    getChildren.clear()
+    if (isVisible) validate()
   }
 
   /** Validates this line, rebuilding its visualization. This is called when the line becomes
@@ -104,12 +78,21 @@ class LineViewImpl (_line :LineV) extends LineView {
       def finish () {
         // if there's trailing unstyled text, add that
         if (last < _line.length) add(last, _line.length, Nil)
-        if (!kids.isEmpty) node.getChildren.addAll(kids.toArray :_*)
+        if (!kids.isEmpty) getChildren.addAll(kids.toArray :_*)
       }
     }
     _valid = true // mark ourselves valid now to avoid looping if freakoutery
     val adder = new Adder()
     _line.visitTags(classOf[String])(adder)
     adder.finish()
+  }
+
+  override def layoutChildren () {
+    super.layoutChildren()
+    val iter = getChildren.iterator
+    while (iter.hasNext) iter.next match {
+      case ft :FillableText => ft.layoutRect()
+      case _ => // nada
+    }
   }
 }

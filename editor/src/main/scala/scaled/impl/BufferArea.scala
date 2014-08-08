@@ -23,7 +23,6 @@ import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
 import java.util.concurrent.Callable
-import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scaled._
 
@@ -169,7 +168,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       // TODO: bound the popup into the view
       val line = bview.lines(math.min(pop.pos.y, bview.lines.size-1))
       _ax = line.charX(pop.pos.x, charWidth)
-      _ay = line.node.getLayoutY
+      _ay = line.getLayoutY
       _pos = pop.pos
     }
 
@@ -253,7 +252,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     def updateCursor (point :Loc) {
       // use the line to determine the layout coordinates of the cursor
       val line = bview.lines(point.row)
-      val cx = line.charX(point.col, charWidth) ; val cy = line.node.getLayoutY
+      val cx = line.charX(point.col, charWidth) ; val cy = line.getLayoutY
       cursor.setLayoutX(cx) ; cursor.setLayoutY(cy)
       uncursor.setLayoutX(cx) ; uncursor.setLayoutY(cy)
 
@@ -293,17 +292,14 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       val start = System.nanoTime()
 
       // position our lines at the proper y offset
-      val leftPadding = snappedLeftInset
-      val cs = lineNodes.getChildren
-      @inline @tailrec def loop (y :Double, idx :Int) {
-        if (idx < cs.size) {
-          val line = cs.get(idx)
-          line.setLayoutX(leftPadding)
-          line.setLayoutY(y)
-          loop(y + lineHeight, idx+1)
-        }
+      val x = snappedLeftInset ; var y = snappedTopInset
+      val iter = lineNodes.getChildren.iterator
+      while (iter.hasNext) {
+        val line = iter.next
+        line.setLayoutX(x)
+        line.setLayoutY(y)
+        y += lineHeight
       }
-      loop(snappedTopInset, 0)
 
       // update which lines are visible
       updateVizLines()
@@ -318,8 +314,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
     def updateVizLines () {
       val top = bview.scrollTop()
-      onLines(_.setVisible(_))
-      contentNode.setLayoutY(-top*lineHeight)
+      onLines(_.setViz(_))
+      contentNode.setLayoutY(-bview.lines(top).getLayoutY)
     }
   }
   private val contentNode = new ContentNode()
@@ -348,13 +344,13 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       lineNodes.getChildren.remove(change.row, change.row-change.delta)
       // TODO: let these nodes know they've been removed so they can cleanup?
     } else if (change.delta > 0) {
-      val nodes = bview.lines.slice(change.row, change.row+change.delta).map(_.node)
+      val nodes = bview.lines.slice(change.row, change.row+change.delta)
       lineNodes.getChildren.addAll(change.row, nodes)
     }
     requestLayout()
   }
   // add all the current lines to the buffer
-  lineNodes.getChildren.addAll(bview.lines.map(_.node) :_*)
+  lineNodes.getChildren.addAll(bview.lines :_*)
 
   // request relayout when our view width/height changes
   bview.width onValue { _ => requestLayout() }
