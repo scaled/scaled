@@ -6,19 +6,34 @@ package scaled
 
 /** Defines a popup, displayed over a buffer. */
 case class Popup (
-  /** The text that will be displayed in the popup. */
-  text :Seq[String], // TODO: take Seq[LineV] and support styled text
+  /** The contents of the popup. */
+  lines :Seq[LineV],
   /** Controls the position of the popup and its extent. */
   pos :Popup.Pos,
   /** Indicates that this popup is ephemeral, which means it is automatically cleared the next time
     * the user types a key, just like status messages. Persistent (non-ephemeral) popups must be
     * cleared manually. */
-  isEphemeral :Boolean = true,
+  isEphemeral :Boolean,
   /** Indicates that this popup is displaying an error. Error popups are styled in a more attention
     * getting manner than non-error (informatinonal) popups. */
-  isError :Boolean = false)
+  isError :Boolean) {
 
+  /** Returns a copy of this popup that is persistent, not ephemeral. */
+  def toPersistent :Popup = copy(isEphemeral=false)
+
+  /** Returns a copy of this popup as an error popup. */
+  def toError :Popup = copy(isError=true)
+}
+
+/** [[Popup]] types and whatnot. */
 object Popup {
+
+  /** Creates a popup with `text` as its contents. */
+  def text (text :Seq[String], pos :Popup.Pos) :Popup = lines(text map Line.apply, pos)
+
+  /** Creates a popup with `lines` as its contents. */
+  def lines (lines :Seq[LineV], pos :Popup.Pos) :Popup = apply(lines, pos, true, false)
+
   /** Defines the position and orientation of a popup. */
   sealed trait Pos {
     val x :Int

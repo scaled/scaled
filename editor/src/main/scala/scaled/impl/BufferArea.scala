@@ -159,13 +159,11 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       if (pop.isError) getStyleClass.add("errpop")
       else getStyleClass.remove("errpop")
 
-      pop.text.foreach { line =>
-        val text = new Text(line)
-        text.setTextOrigin(VPos.TOP)
-        getChildren.add(text)
-      }
+      val pbuffer = BufferImpl.scratch("*popup*")
+      pbuffer.insert(pbuffer.start, pop.lines)
+      val pview = new BufferViewImpl(editor, pbuffer, pop.lines.map(_.length).max, pop.lines.size)
+      getChildren.add(new BufferArea(editor, pview, disp))
 
-      // TODO: bound the popup into the view
       val line = bview.lines(math.min(pop.pos.y, bview.lines.size-1))
       _ax = line.charX(pop.pos.x, charWidth)
       _ay = line.getLayoutY

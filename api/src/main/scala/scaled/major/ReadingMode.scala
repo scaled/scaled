@@ -549,7 +549,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def showStyles () {
     val p = view.point()
     val info = Seq(buffer.stylesAt(p).toString)
-    view.popup() = Popup(info, Popup.UpRight(p))
+    view.popup() = Popup.text(info, Popup.UpRight(p))
   }
 
   @Fn("Displays the tags at the point.")
@@ -559,13 +559,13 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       case Nil => List("No tags.")
       case tags => tags.map(_.toString)
     }
-    view.popup() = Popup(info, Popup.UpRight(p))
+    view.popup() = Popup.text(info, Popup.UpRight(p))
   }
 
   @Fn("Displays all tags on the current line.")
   def showLineTags () {
     val p = view.point()
-    view.popup() = Popup(buffer.line(p).tags.map(_.toString), Popup.UpRight(p))
+    view.popup() = Popup.text(buffer.line(p).tags.map(_.toString), Popup.UpRight(p))
   }
 
   //

@@ -206,7 +206,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   @Fn("Displays the syntax at the point.")
   def showSyntax () {
     val info = Seq(buffer.syntaxAt(view.point()).toString)
-    view.popup() = Popup(info, Popup.UpRight(view.point()))
+    view.popup() = Popup.text(info, Popup.UpRight(view.point()))
   }
 
   @Fn("Inserts a newline, then indents according to the code mode's indentation rules.")
