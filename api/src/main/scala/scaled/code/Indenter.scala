@@ -266,7 +266,9 @@ object Indenter {
     val isNotWhitespaceAndNotComment = (c :Char, s :Syntax) => isNotWhitespace(c) && !s.isComment
     final def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
       // seek backward to the first non-whitespace character; skip over comments
-      apply(block, line, pos, buffer.scanBackward(isNotWhitespaceAndNotComment, pos, block.start))
+      val prevPos = buffer.scanBackward(isNotWhitespaceAndNotComment, pos, block.start)
+      // if we hit the start of the buffer while seeking the prev char, abandon ship
+      if (prevPos == Loc.Zero) None else apply(block, line, pos, prevPos)
     }
     /** Applies this indenter to `line` at `pos`.
       * @param prevPos the first non-whitespace, non-comment pos preceding the start of `line`. */
