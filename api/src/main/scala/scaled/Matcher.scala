@@ -167,6 +167,7 @@ object Matcher {
   // Line which operate directly on the _chars array; it's probably not worth it...
 
   abstract class CSMatcher (needle :CharSequence) extends Matcher {
+    if (needle.length == 0) throw new IllegalArgumentException("Must provide non-empty needle.")
 
     def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
       val searchEnd = end-needle.length+1
