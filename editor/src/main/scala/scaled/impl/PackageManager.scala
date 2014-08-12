@@ -126,6 +126,12 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   private val ScaledAPI = Source.parse("git:https://github.com/scaled/scaled.git#api")
   private val ScaledEditor = Source.parse("git:https://github.com/scaled/scaled.git#editor")
 
+  // reroute Pacman logging to *messages*
+  Log.target = new Log.Target() {
+    val slog = PackageManager.this.log
+    override def log (msg :String) = slog.log(msg)
+    override def log (msg :String, exn :Throwable) = slog.log(msg, exn)
+  }
   // wire up our observer
   pkgRepo.observer = new PackageRepo.Observer() {
     def packageAdded (pkg :Package) :Unit = pkg.modules.foreach(moduleAdded)
