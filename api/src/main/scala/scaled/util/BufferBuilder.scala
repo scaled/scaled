@@ -13,7 +13,7 @@ import scaled.major.TextConfig
   * used by `describe-mode` and is useful for similar "generate a buffer describing something"
   * tasks.
   */
-class BufferBuilder (fillWidth :Int) {
+class BufferBuilder (val fillWidth :Int) {
   import TextConfig._
 
   private final val MinFillWidth = 40
