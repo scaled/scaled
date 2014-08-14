@@ -19,6 +19,10 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
   // fillProperty.bind(textFill)
   // impl_selectionFillProperty().bind(highlightTextFill)
 
+  // TODO: this seems like it should alleviate the "shifting" issue when we break up the text on a
+  // line differently due to changing style runs, but it doesn't... sigh
+  // setSnapToPixel(false)
+
   /** Returns the x position of character at the specified column.
     * @param charWidth the current width of the (fixed) view font.
     */
