@@ -20,12 +20,18 @@ class Filler (width :Int) {
   private val accum = ArrayBuffer(new StringBuilder())
 
   /** Appends `line` to this filler. */
-  def append (line :CharSequence) {
-    @inline @tailrec def loop (into :StringBuilder, start  :Int) {
+  def append (line :CharSequence) :Unit = append(line, true)
+
+  /** Appends `line` to this filler.
+    * @param withSpace if true then a space will be inserted before `line` if it is
+    * added to a line with existing text.
+    */
+  def append (line :CharSequence, withSpace :Boolean) {
+    @inline @tailrec def loop (into :StringBuilder, start :Int, withSpace :Boolean) {
       // last break will indicate where we need to rebreak if we overflow
       var lastBreak = start
       // if we're appending to a non-empty line, we want a space before the next append
-      var wantSpace = (into.length > 0)
+      var wantSpace = withSpace && (into.length > 0)
       // println(s"loop('$into' st=$start ll=${line.length} ws=$wantSpace)")
       // now append characters from line until we hit EOL or hit width
       var ii = start ; while (into.length < width && ii < line.length) {
@@ -62,10 +68,10 @@ class Filler (width :Int) {
                    // otherwise trim the trailing text (and the preceding space)
                    else { into.delete(into.length-trim-1, into.length) ; lastBreak }
         accum += new StringBuilder()
-        loop(accum.last, next)
+        loop(accum.last, next, true)
       }
     }
-    loop(accum.last, 0)
+    loop(accum.last, 0, withSpace)
   }
 
   /** The current set of filled lines. */
