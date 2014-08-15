@@ -23,14 +23,14 @@ class Filler (width :Int) {
   def append (line :CharSequence) :Unit = append(line, true)
 
   /** Appends `line` to this filler.
-    * @param withSpace if true then a space will be inserted before `line` if it is
-    * added to a line with existing text.
+    * @param withSpace if true then a space will be inserted before `line` if it is added to a line
+    * with existing text.
     */
   def append (line :CharSequence, withSpace :Boolean) {
     @inline @tailrec def loop (into :StringBuilder, start :Int, withSpace :Boolean) {
       // last break will indicate where we need to rebreak if we overflow
       var lastBreak = start
-      // if we're appending to a non-empty line, we want a space before the next append
+      // if we're appending to a non-empty line, we may want to insert a space
       var wantSpace = withSpace && (into.length > 0)
       // println(s"loop('$into' st=$start ll=${line.length} ws=$wantSpace)")
       // now append characters from line until we hit EOL or hit width
