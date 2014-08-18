@@ -242,9 +242,8 @@ abstract class LineV extends CharSequence {
 object Line {
 
   /** Used to build (immutable) lines with non-default syntax, styles and tags. */
-  class Builder (private var _cs :Array[Char]) {
+  class Builder (private var _cs :Array[Char], private var _ts :Tags) {
     private var _xs = Array.fill(_cs.length)(Syntax.Default)
-    private var _ts = new Tags()
 
     /** Applies `syntax` to `[start,end)` of the being-built line. */
     def withSyntax (syntax :Syntax, start :Int = 0, end :Int = _cs.length) :Builder = {
@@ -280,10 +279,10 @@ object Line {
   def apply (s :String) = builder(s).build()
 
   /** Creates a line builder with `cs` as the line text. */
-  def builder (cs :CharSequence) = new Builder(toCharArray(cs))
+  def builder (cs :CharSequence) = new Builder(toCharArray(cs), new Tags())
 
   /** Creates a line builder with `s` as the line text. */
-  def builder (s :String) = new Builder(s.toCharArray)
+  def builder (s :String) = new Builder(s.toCharArray, new Tags())
 
   /** Creates one or more lines from the supplied text. Newlines are assumed to be equal to
     * [[System.lineSeparator]]. */
