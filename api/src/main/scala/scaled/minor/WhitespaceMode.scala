@@ -111,18 +111,25 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     }
   })
 
-  override def keymap = Seq() // TODO
+  override def keymap = Seq(
+    "C-M-]" -> "trim-buffer-trailing-whitespace"
+  )
   override def configDefs = WhitespaceConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
 
   def trimTrailingWhitespaceAt (row :Int) {
-    val line = buffer.line(row) ; val len = line.length
-    var pos = len-1 ; while (pos >= 0 && isWhitespace(line.charAt(pos))) pos -= 1
-    if (pos < len-1) buffer.delete(Loc(row, pos+1), Loc(row, len))
+    val line = buffer.line(row) ; val len = line.length ; val last = len-1
+    var pos = last ; while (pos >= 0 && isWhitespace(line.charAt(pos))) pos -= 1
+    if (pos < last) buffer.delete(Loc(row, pos+1), Loc(row, len))
   }
 
   @Fn("Trims trailing whitespace from the line at the point.")
-  def trimTrailingWhitespaceFromLine () {
+  def trimLineTrailingWhitespace () {
     trimTrailingWhitespaceAt(view.point().row)
+  }
+
+  @Fn("Trims trailing whitespace from all lines in the buffer.")
+  def trimBufferTrailingWhitespace () {
+    0 until buffer.lines.length foreach(trimTrailingWhitespaceAt)
   }
 }
