@@ -110,11 +110,10 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   }
 
   // returns the workspace that should be used for the specified desktop:
-  // - if a workspace is already open on that desktop, it is used
-  // - otherwise, the path is used to find a workspace with a matching hint path
-  // - if none is found, the default workspace is used
+  // - if a workspace with matching hint path exists, it is used
+  // - otherwise, if a workspace is already open on `desktop`, it is used
+  // - otherwise, the default workspace is used
   private def workspaceFor (desktop :String, path :Option[String]) :WorkspaceImpl = {
-    def inUse = wscache.asMap.values.find(_.editors.containsKey(desktop))
     def abs0 (path :String) = abs1(Paths.get(path))
     def abs1 (path :Path) = if (Files.exists(path)) Some(path.toAbsolutePath.toString) else None
     def lastOpened (ws :String) = Files.getLastModifiedTime(wsdir.resolve(ws)).toMillis
@@ -122,7 +121,8 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
       val ws = wshints().collect { case (w, ps) if (ps.exists(path startsWith _)) => w }
       if (ws.isEmpty) None else Some(wscache.get(ws.minBy(lastOpened)))
     }
-    inUse orElse path.flatMap(abs0).flatMap(hintws) getOrElse  {
+    def inUse = wscache.asMap.values.find(_.editors.containsKey(desktop))
+    path.flatMap(abs0).flatMap(hintws) orElse inUse getOrElse  {
       val ddir = wsdir.resolve(Workspace.DefaultName)
       if (!Files.exists(ddir)) Files.createDirectory(ddir)
       wscache.get(Workspace.DefaultName)
