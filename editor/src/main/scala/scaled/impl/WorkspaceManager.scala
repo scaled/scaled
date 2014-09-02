@@ -114,15 +114,17 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   // - otherwise, if a workspace is already open on `desktop`, it is used
   // - otherwise, the default workspace is used
   private def workspaceFor (desktop :String, path :Option[String]) :WorkspaceImpl = {
-    def abs0 (path :String) = abs1(Paths.get(path))
-    def abs1 (path :Path) = if (Files.exists(path)) Some(path.toAbsolutePath.toString) else None
-    def lastOpened (ws :String) = Files.getLastModifiedTime(wsdir.resolve(ws)).toMillis
-    def hintws (path :String) :Option[WorkspaceImpl] = {
-      val ws = wshints().collect { case (w, ps) if (ps.exists(path startsWith _)) => w }
-      if (ws.isEmpty) None else Some(wscache.get(ws.minBy(lastOpened)))
+    def isOpen (ws :WorkspaceImpl) = ws.editors.containsKey(desktop)
+    def latest (ws :Iterable[WorkspaceImpl]) =
+      if (ws.isEmpty) None else Some(ws.minBy(_.lastOpened))
+    def abs (p :Path) = if (Files.exists(p)) Some(p.toAbsolutePath.toString) else None
+    def byHintPath = path.map(Paths.get(_)).flatMap(abs).flatMap { path =>
+      val hintWSs = wshints() collect {
+        case (w, ps) if (ps.exists(path startsWith _)) => wscache.get(w) }
+      latest(hintWSs.filter(isOpen)) orElse latest(hintWSs)
     }
-    def inUse = wscache.asMap.values.find(_.editors.containsKey(desktop))
-    path.flatMap(abs0).flatMap(hintws) orElse inUse getOrElse  {
+    def latestOpenWS = latest(wscache.asMap.values.filter(isOpen))
+    byHintPath orElse latestOpenWS getOrElse {
       val ddir = wsdir.resolve(Workspace.DefaultName)
       if (!Files.exists(ddir)) Files.createDirectory(ddir)
       wscache.get(Workspace.DefaultName)
@@ -134,14 +136,13 @@ class WorkspaceImpl (
   val app :Scaled, val mgr :WorkspaceManager, val name :String, val root :Path
 ) extends Workspace {
 
-  // when a workspace is resolved, we touch its root dir to note its last use time
-  Files.setLastModifiedTime(root, FileTime.fromMillis(System.currentTimeMillis))
-
   // each workspace maintains its own configuration repository
   val cfgMgr = app.svcMgr.injectInstance(classOf[ConfigManager], root :: Nil)
 
   val editors = HashBiMap.create[String,EditorPane]()
   def editor (desk :String) = Option(editors.get(desk))
+
+  def lastOpened = Files.getLastModifiedTime(root).toMillis
 
   def open (desk :String, stage :Stage) = editor(desk) getOrElse create(stage, desk, geomSysProp)
   def open (desk :String) = editor(desk) getOrElse create(new Stage(), desk, NoGeom)
@@ -189,6 +190,9 @@ class WorkspaceImpl (
     }
     // if geometry was specified on the command line, override the value from prefs
     geom.pos.foreach { pos => stage.setX(pos._1) ; stage.setY(pos._2) }
+
+    // update our last "opened" time when a new editor is created
+    Files.setLastModifiedTime(root, FileTime.fromMillis(System.currentTimeMillis))
 
     stage.show()
     editors.put(desk, epane)
