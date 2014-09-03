@@ -4,8 +4,10 @@
 
 package scaled
 
-import java.io.FileNotFoundException
-import reactual.ValueV
+import java.io.{FileNotFoundException, InputStream}
+import java.nio.file.{Files, Paths}
+import reactual.{PropertyV, ValueV}
+import scaled.util.Reloadable
 
 /** Provides editor configuration to modes. The global configuration and mode configuration will be
   * combined together into an instance of this trait and supplied to a mode when it is constructed.
@@ -149,6 +151,18 @@ object Config {
     protected def stream (path :String) = getClass.getClassLoader.getResourceAsStream(path) match {
       case null => throw new FileNotFoundException(path)
       case strm => strm
+    }
+
+    protected def reloadable[T] (path :String, parser :InputStream => T) :PropertyV[T] = {
+      val rsrc = getClass.getClassLoader.getResource(path)
+      if (rsrc == null) throw new FileNotFoundException(path)
+      // if the resource is not a file for some reason, we can't reload it
+      else if (rsrc.getProtocol != "file") new PropertyV[T] {
+        val v = parser(rsrc.openStream)
+        override def get = v
+        override def apply () = v
+      }
+      else new Reloadable(Paths.get(rsrc.toURI), parser.compose(Files.newInputStream(_)))
     }
   }
 }
