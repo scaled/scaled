@@ -21,6 +21,11 @@ extending the editor in elisp (nothing against lisp, use Clojure if that's your 
 
 ![Hello Scaled screenshot](http://scaled.github.io/images/screenshots/hello-scaled.png)
 
+## Talk about it
+
+A [Scaled Google Group] exists where questions, comments, suggestions and discussion of anything
+else related to Scaled or programmer's editors are welcome.
+
 ## Kick the tires
 
 Scaled is still in the early phases of active development. It is mature enough that I use it
@@ -165,3 +170,4 @@ https://github.com/scaled/scaled
 
 [Emacs reference card]: http://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 [the `spam` shell script]: https://raw.githubusercontent.com/scaled/pacman/master/bin/spam
+[Scaled Google Group]: https://groups.google.com/forum/#!forum/scalable-editor
