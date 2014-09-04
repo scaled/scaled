@@ -85,6 +85,7 @@ class Scaled extends Application {
     }
 
   } catch {
+    case nsme :NoSuchMethodException => // nothing to see here, move it along
     case t :Throwable =>
       println("Failed to tweak Quit menu item")
       t.printStackTrace(System.err)
