@@ -1,6 +1,4 @@
 .root, .tooltip {
-  /** TODO: per-platform default stylesheets? or is there a way to fallback? */
-  -fx-font-family: "Menlo";
   -fx-font-size: 12px;
   -fx-text-fill: white;
 }

@@ -179,6 +179,8 @@ class WorkspaceImpl (
 
     val scene = new Scene(epane)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
+    val os = System.getProperty("os.name").replaceAll(" ", "").toLowerCase
+    scene.getStylesheets().add(getClass.getResource(s"/$os.css").toExternalForm)
     stage.setScene(scene)
 
     // set our stage position based on the values specified in editor config
