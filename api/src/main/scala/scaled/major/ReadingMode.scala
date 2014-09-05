@@ -420,6 +420,24 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
                      Completer.file) onSuccess editor.visitFile
   }
 
+  @Fn("""Reloads the current buffer from its source and restores the current point and scroll
+         position. This is mainly useful when hacking on Scaled as it recreates the buffer from
+         scratch reinitializing the major and minor modes. Note: this only works on clean buffers
+         loaded from files. Modified or ephemeral buffers will refuse to be reloaded.""")
+  def reloadBuffer () {
+    if (buffer.dirty) editor.popStatus("Cannot reload modified buffer.")
+    else if (!buffer.store.exists) editor.popStatus("Cannot reload ephemeral buffers.")
+    else {
+      val file = buffer.store ; val p = view.point()
+      val top = view.scrollTop() ; val left = view.scrollLeft()
+      editor.killBuffer(buffer)
+      val nv = editor.visitFile(file)
+      nv.scrollTop() = top
+      nv.scrollLeft() = left
+      nv.point() = p
+    }
+  }
+
   //
   // EDITOR FNS
 
