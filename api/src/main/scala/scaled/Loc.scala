@@ -99,4 +99,17 @@ object Loc {
     else if (end > loc) start // deletion surrounded our loc
     else if (end.row == loc.row) Loc(start.row, start.col + loc.col-end.col)
     else Loc(loc.row + start.row-end.row, loc.col)
+
+  /** Returns loc's row. Helper for use in non-Scala code. This would be named `row` but scalac
+    * won't generate a static forwarder in that case because it has the same /name/ (though not the
+    * same signature) as [[Loc.row]]. Sigh. */
+  def r (l :Loc) = l.row
+
+  /** Returns loc's col. Helper for use in non-Scala code. This would be named `col` but scalac
+    * won't generate a static forwarder in that case because it has the same /name/ (though not the
+    * same signature) as [[Loc.col]]. Sigh. */
+  def c (l :Loc) = l.col
+
+  /** Returns [[Loc.toString]]. Helper for use in non-Scala code. */
+  def show (l :Loc) = l.toString
 }
