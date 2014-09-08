@@ -191,16 +191,16 @@ class ISearchMode (
   override def keymap = Seq(
     // we don't inherit normal editing commands, so we repeat the few essentials here and then
     // route all non-matching commands back to the main buffer
-    "C-g"   -> "abort",
-    "C-y"   -> "yank",
-    "M-y"   -> "yank-pop",
+    bind("C-g",   "abort"),
+    bind("C-y",   "yank"),
+    bind("M-y",   "yank-pop"),
 
-    "C-s"   -> "next-match",
-    "C-r"   -> "prev-match",
+    bind("C-s",   "next-match"),
+    bind("C-r",   "prev-match"),
 
-    "BS"    -> "prev-search",
-    "DEL"   -> "prev-search",
-    "ENTER" -> "end-search"
+    bind("BS",    "prev-search"),
+    bind("DEL",   "prev-search"),
+    bind("ENTER", "end-search")
     // Type C-j to match end of line.
     // Type C-w to yank next word or character in buffer onto the end of the search string.
     // Type M-s C-e to yank rest of line onto end of search string and search for it.

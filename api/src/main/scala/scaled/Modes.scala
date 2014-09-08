@@ -100,22 +100,7 @@ abstract class Mode (env :Env) {
     */
   def stylesheets :List[String] = Nil
 
-  /** Returns the key bindings defined by this mode: a list of `(trigger sequence -> fn binding)`
-    * mappings.
-    *
-    * Trigger sequences are defined thusly: A single key consists of the key identifier (e.g. 'g',
-    * 'F1', '-',) prefixed by zero or more modifier keys ('C-' for control, 'M-' for meta, 'A-' for
-    * alt, and 'S-' for shift). Key sequences consist of single keys separated by spaces. Examples:
-    *  - `e`: lowercase e
-    *  - `S-s`: upper case S
-    *  - `C-c`: control-c
-    *  - `C-c C-i`: control-c followed by control-i
-    *
-    * The fn bindings are defined by the mode, by using the [[Fn]] annotation on methods. The name
-    * in the keymap corresponds to the de-camel-cased method name (see [[Mode]] docs). When a mode
-    * refers to its own fns, it may provide just the name, but if a mode (or a mode hook) refers to
-    * another mode's fns, it must prefix the name by the name of the mode and a colon (e.g.
-    * "scala:goto-term").
+  /** Returns the [[KeyBinding]]s defined by this mode.
     *
     * Key bindings are applied in a stack-like fashion:
     *  - start with global key bindings
@@ -130,7 +115,7 @@ abstract class Mode (env :Env) {
     * global key bindings), then on down the stack until a match is found, or we fall off the
     * bottom after searching the stock global key bindings.
     */
-  def keymap :Seq[(String, String)]
+  def keymap :Seq[KeyBinding]
 
   /** Called when a mode is deactivated but the buffer to which it was attached will remain active.
     * This will precede the call to [[dispose]]. If a mode is maintaining any transient state in the
@@ -189,6 +174,9 @@ abstract class Mode (env :Env) {
     case null => throw new FileNotFoundException(s"Unable to find stylesheet resource '$path'")
     case rsrc => rsrc.toExternalForm
   }
+
+  /** A helper for creating key bindings. */
+  protected def bind (trigger :String, fn :String) = KeyBinding(trigger, fn)
 
   private[this] val _toClose = Close.bag()
 }

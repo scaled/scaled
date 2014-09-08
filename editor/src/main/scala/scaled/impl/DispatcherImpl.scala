@@ -295,14 +295,11 @@ object DispatcherImpl {
     * @param onInvalidKey a callback to be notified when an invalid trigger sequence is encountered.
     * @param onInvalidFn a callback to be notified when an invalid fn binding is encountered.
     */
-  def parseKeyMap (keymap :Seq[(String,String)], fns :FnBindings, onInvalidKey :String => Unit,
+  def parseKeyMap (keymap :Seq[KeyBinding], fns :FnBindings, onInvalidKey :String => Unit,
                    onInvalidFn :String => Unit) :Map[Seq[KeyPress], FnBinding] = {
-    Map() ++ keymap flatMap {
-      case (key, fn) => (KeyPress.toKeyPresses(onInvalidKey, key), fns.binding(fn)) match {
-        case (_, None)            => onInvalidFn(fn)   ; None
-        case (None, Some(fb))     => None
-        case (Some(kp), Some(fb)) => Some(kp -> fb)
-      }
-    }
+    keymap.flatMap(kb => fns.binding(kb.fn) match {
+      case None     => onInvalidFn(kb.fn) ; None
+      case Some(fb) => KeyPress.toKeyPresses(onInvalidKey, kb.trigger) map(_ -> fb)
+    }).toMap
   }
 }

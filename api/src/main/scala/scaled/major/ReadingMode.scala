@@ -33,81 +33,81 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   override def keymap = Seq(
 
     // mark manipulation commands
-    "C-SPACE" -> "set-mark-command", // TODO: make this push-mark instead?
-    "C-@"     -> "set-mark-command", // needs to be C-S-2? meh.
-    "C-x C-x" -> "exchange-point-and-mark",
+    bind("C-SPACE", "set-mark-command"), // TODO: make this push-mark instead?
+    bind("C-@",     "set-mark-command"), // needs to be C-S-2? meh.
+    bind("C-x C-x", "exchange-point-and-mark"),
 
     // the one non-destructive kill command
-    "M-w" -> "kill-ring-save",
+    bind("M-w", "kill-ring-save"),
 
     // searching commands
-    "C-s" -> "isearch-forward",
-    "C-r" -> "isearch-backward",
+    bind("C-s", "isearch-forward"),
+    bind("C-r", "isearch-backward"),
 
     // motion commands
-    "C-b"   -> "backward-char",
-    "C-f"   -> "forward-char",
-    "LEFT"  -> "backward-char",
-    "RIGHT" -> "forward-char",
+    bind("C-b",   "backward-char"),
+    bind("C-f",   "forward-char"),
+    bind("LEFT",  "backward-char"),
+    bind("RIGHT", "forward-char"),
 
-    "M-b"     -> "backward-word",
-    "M-f"     -> "forward-word",
-    "C-LEFT"  -> "backward-word",
-    "C-RIGHT" -> "forward-word",
+    bind("M-b",     "backward-word"),
+    bind("M-f",     "forward-word"),
+    bind("C-LEFT",  "backward-word"),
+    bind("C-RIGHT", "forward-word"),
 
-    "C-a"  -> "move-beginning-of-line",
-    "C-e"  -> "move-end-of-line",
-    "HOME" -> "move-beginning-of-line",
-    "END"  -> "move-end-of-line",
+    bind("C-a",  "move-beginning-of-line"),
+    bind("C-e",  "move-end-of-line"),
+    bind("HOME", "move-beginning-of-line"),
+    bind("END",  "move-end-of-line"),
 
-    "C-p"  -> "previous-line",
-    "C-n"  -> "next-line",
-    "UP"   -> "previous-line",
-    "DOWN" -> "next-line",
+    bind("C-p",  "previous-line"),
+    bind("C-n",  "next-line"),
+    bind("UP",   "previous-line"),
+    bind("DOWN", "next-line"),
 
-    "C-UP"   -> "previous-paragraph",
-    "C-DOWN" -> "next-paragraph",
+    bind("C-UP",   "previous-paragraph"),
+    bind("C-DOWN", "next-paragraph"),
 
-    "M-<"    -> "beginning-of-buffer",
-    "M->"    -> "end-of-buffer",
-    "C-HOME" -> "beginning-of-buffer",
-    "C-END"  -> "end-of-buffer",
-    "BEGIN"  -> "beginning-of-buffer",
+    bind("M-<",    "beginning-of-buffer"),
+    bind("M->",    "end-of-buffer"),
+    bind("C-HOME", "beginning-of-buffer"),
+    bind("C-END",  "end-of-buffer"),
+    bind("BEGIN",  "beginning-of-buffer"),
     // TEMP: until we sort out meta'd shifted keys
-    "M-S-,"  -> "beginning-of-buffer",
-    "M-S-."  -> "end-of-buffer",
+    bind("M-S-,",  "beginning-of-buffer"),
+    bind("M-S-.",  "end-of-buffer"),
 
-    "M-g"    -> "goto-line",
-    "M-S-g"  -> "goto-offset",
+    bind("M-g",    "goto-line"),
+    bind("M-S-g",  "goto-offset"),
 
     // view commands (scrolling, etc.)
-    "S-UP"   -> "scroll-up", // TODO: extend-mark-backward-line
-    "S-DOWN" -> "scroll-down", // TODO: extend-mark-forward-line
-    "M-v"    -> "scroll-up-page",
-    "C-v"    -> "scroll-down-page",
-    "PGUP"   -> "scroll-up-page",
-    "PGDN"   -> "scroll-down-page",
+    bind("S-UP",   "scroll-up"), // TODO: extend-mark-backward-line
+    bind("S-DOWN", "scroll-down"), // TODO: extend-mark-forward-line
+    bind("M-v",    "scroll-up-page"),
+    bind("C-v",    "scroll-down-page"),
+    bind("PGUP",   "scroll-up-page"),
+    bind("PGDN",   "scroll-down-page"),
 
-    "C-l"    -> "recenter",
+    bind("C-l",    "recenter"),
 
     // buffer commands
-    "C-x b"   -> "switch-to-buffer",
-    "C-x k"   -> "kill-buffer",
-    "C-x C-f" -> "find-file",
+    bind("C-x b",   "switch-to-buffer"),
+    bind("C-x k",   "kill-buffer"),
+    bind("C-x C-f", "find-file"),
 
     // editor commands
-    "C-x C-c" -> "save-buffers-kill-editor",
+    bind("C-x C-c", "save-buffers-kill-editor"),
 
     // help commands
-    "C-h f" -> "describe-fn",
-    "C-h v" -> "describe-var",
-    "C-h m" -> "describe-mode",
-    "C-h e" -> "describe-editor",
-    "M-A-t" -> "show-tags",
-    "M-C-t" -> "show-line-tags",
+    bind("C-h f", "describe-fn"),
+    bind("C-h v", "describe-var"),
+    bind("C-h m", "describe-mode"),
+    bind("C-h e", "describe-editor"),
+    bind("M-A-t", "show-tags"),
+    bind("M-C-t", "show-line-tags"),
 
     // meta commands
-    "M-x" -> "execute-extended-command"
+    bind("M-x", "execute-extended-command")
   )
 
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,

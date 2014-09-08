@@ -35,58 +35,58 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   override def configDefs = EditingConfig :: super.configDefs
   override def keymap = super.keymap ++ Seq(
     // character editing commands
-    "BS"    -> "delete-backward-char", // TODO: make this delete back to mark (if set)
-    "DEL"   -> "delete-forward-char", // ...forward to mark (if set)
-    "C-d"   -> "delete-forward-char", // this should be delete-char and ignore mark
+    bind("BS",  "delete-backward-char"), // TODO: make this delete back to mark (if set)
+    bind("DEL", "delete-forward-char"), // ...forward to mark (if set)
+    bind("C-d", "delete-forward-char"), // this should be delete-char and ignore mark
 
-    "ENTER"   -> "newline",
-    "S-ENTER" -> "newline",
-    "TAB"     -> "indent-for-tab-command",
+    bind("ENTER",   "newline"),
+    bind("S-ENTER", "newline"),
+    bind("TAB",     "indent-for-tab-command"),
     // TODO: open-line, split-line, ...
 
-    "C-t"     -> "transpose-chars",
-    "C-x C-u" -> "upcase-region",
-    "C-x C-l" -> "downcase-region",
-    "M-u"     -> "upcase-word",
-    "M-l"     -> "downcase-word",
-    "M-c"     -> "capitalize-word",
+    bind("C-t",     "transpose-chars"),
+    bind("C-x C-u", "upcase-region"),
+    bind("C-x C-l", "downcase-region"),
+    bind("M-u",     "upcase-word"),
+    bind("M-l",     "downcase-word"),
+    bind("M-c",     "capitalize-word"),
 
-    "C-M-l"   -> "sort-paragraph",
+    bind("C-M-l",   "sort-paragraph"),
     // NONE   -> "sort-lines",
     // NONE   -> "reverse-region",
-    "M-q"     -> "fill-paragraph",
+    bind("M-q",     "fill-paragraph"),
 
     // killing and yanking commands
-    "C-w"     -> "kill-region",
-    "C-M-w"   -> "append-next-kill",
-    "C-k"     -> "kill-line",
-    "C-S-BS"  -> "kill-whole-line",
-    "M-d"     -> "kill-word",
-    "M-DEL"   -> "backward-kill-word",
-    "C-BS"    -> "backward-kill-word",
-    // "M-z"     -> "zap-to-char",
-    // "M-k"     -> "kill-sentence", // do we want?
-    // "C-x DEL" -> "backward-kill-sentence", // do we want?
-    // "C-M-k"   -> "kill-balanced-sexp", // do we want?
+    bind("C-w",     "kill-region"),
+    bind("C-M-w",   "append-next-kill"),
+    bind("C-k",     "kill-line"),
+    bind("C-S-BS",  "kill-whole-line"),
+    bind("M-d",     "kill-word"),
+    bind("M-DEL",   "backward-kill-word"),
+    bind("C-BS",    "backward-kill-word"),
+    // bind("M-z",     "zap-to-char"),
+    // bind("M-k",     "kill-sentence"), // do we want?
+    // bind("C-x DEL", "backward-kill-sentence"), // do we want?
+    // bind("C-M-k",   "kill-balanced-sexp"), // do we want?
 
-    "C-y" -> "yank",
-    "M-y" -> "yank-pop",
+    bind("C-y", "yank"),
+    bind("M-y", "yank-pop"),
 
     // undo commands
-    "C-/"   -> "undo",
-    "C-\\"  -> "redo",
-    "C-x r" -> "redo",
-    "C-x u" -> "undo",
-    "C-_"   -> "undo",
+    bind("C-/",   "undo"),
+    bind("C-\\",  "redo"),
+    bind("C-x r", "redo"),
+    bind("C-x u", "undo"),
+    bind("C-_",   "undo"),
     // TEMP: until we sort out ctrl'd shifted keys
-    "C-S--" -> "undo",
+    bind("C-S--", "undo"),
 
     // replacing commands
     // TODO: "replace-string", "replace-regepx"
 
     // buffer commands
-    "C-x C-s" -> "save-buffer",
-    "C-x C-w" -> "write-file"
+    bind("C-x C-s", "save-buffer"),
+    bind("C-x C-w", "write-file")
   )
 
   /** Deletes the region `[from, to)` from the buffer and adds it to the kill-ring. If `to` is

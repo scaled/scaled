@@ -15,7 +15,7 @@ class LogMode (env :Env) extends ReadingMode(env) {
   buffer.editable = false
 
   override def keymap = super.keymap ++ Seq(
-    "M-k" -> "clear-log"
+    bind("M-k", "clear-log")
   )
 
   @Fn("Clears the contents of this log buffer.")

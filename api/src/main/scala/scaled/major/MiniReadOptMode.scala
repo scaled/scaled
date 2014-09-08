@@ -27,8 +27,8 @@ class MiniReadOptMode (
   miniui.setPrompt(optprompt)
 
   override def keymap = Seq(
-    "C-g" -> "abort",
-    "C-h" -> "show-help"
+    bind("C-g", "abort"),
+    bind("C-h", "show-help")
   )
 
   // disable our default fn; route everything to unknownCommand (our missedFn)

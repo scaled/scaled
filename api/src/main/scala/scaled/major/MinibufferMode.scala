@@ -49,7 +49,7 @@ abstract class MiniUI {
 abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMode(env) {
 
   override def keymap = super.keymap ++ Seq(
-    "C-g" -> "abort"
+    bind("C-g", "abort")
     // TODO: disable other commands (like save-buffer) or factor them out of editing mode? or
     // maybe everythign just fails because we reject minibuffer use while in the minibuffer... it
     // looks like that might be what emacs does
