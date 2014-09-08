@@ -264,15 +264,20 @@ object Indenter {
   /** An indenter that bases its behavior on the end of the previous line. */
   abstract class PrevLineEnd (ctx :Context) extends Indenter(ctx) {
     val isNotWhitespaceAndNotComment = (c :Char, s :Syntax) => isNotWhitespace(c) && !s.isComment
-    final def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
-      // seek backward to the first non-whitespace character; skip over comments
-      val prevPos = buffer.scanBackward(isNotWhitespaceAndNotComment, pos, block.start)
-      // if we hit the start of the buffer while seeking the prev char, abandon ship
-      if (prevPos == Loc.Zero) None else apply(block, line, pos, prevPos)
-    }
+    // seeks backward to the first non-whitespace character before pos;
+    // skips over comments; stops at block.start
+    protected def prevNonWS (block :Block, pos :Loc) =
+      buffer.scanBackward(isNotWhitespaceAndNotComment, pos, block.start)
+
     /** Applies this indenter to `line` at `pos`.
       * @param prevPos the first non-whitespace, non-comment pos preceding the start of `line`. */
     def apply (block :Block, line :LineV, pos :Loc, prevPos :Loc) :Option[Int]
+
+    final def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+      val prevPos = prevNonWS(block, pos)
+      // if we hit the start of the buffer while seeking the prev char, abandon ship
+      if (prevPos == Loc.Zero) None else apply(block, line, pos, prevPos)
+    }
   }
 
   /** Indents the line following one-liner conditionals like `if` and `while`. The conditionals must
