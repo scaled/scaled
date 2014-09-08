@@ -65,22 +65,21 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
-  override def keymap = super.keymap ++ Seq(
-    bind("ENTER",   "newline-and-indent"),
-    bind("S-ENTER", "newline-and-indent"),
-    bind("TAB",     "reindent"),
-    bind("}",       "electric-close-brace"),
+  override def keymap = super.keymap.
+    bind("ENTER",   "newline-and-indent").
+    bind("S-ENTER", "newline-and-indent").
+    bind("TAB",     "reindent").
+    bind("}",       "electric-close-brace").
 
-    bind("S-C-,", "previous-bracket"),
-    bind("S-C-.", "next-bracket"),
-    bind("S-C-/", "bounce-bracket"),
+    bind("S-C-,", "previous-bracket").
+    bind("S-C-.", "next-bracket").
+    bind("S-C-/", "bounce-bracket").
 
-    bind("C-M-\\",  "indent-region"),
-    bind("C-c C-c", "comment-region"),
-    bind("C-c C-u", "uncomment-region"), // TODO: prefix args?
+    bind("C-M-\\",  "indent-region").
+    bind("C-c C-c", "comment-region").
+    bind("C-c C-u", "uncomment-region"). // TODO: prefix args?
 
-    bind("M-A-s", "show-syntax")
-  )
+    bind("M-A-s", "show-syntax");
 
   /** A context provided to our indenters. */
   val indentCtx = new Indenter.Context {

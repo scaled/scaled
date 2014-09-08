@@ -19,7 +19,7 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
   import WorkspaceConfig._
 
   override def configDefs = WorkspaceConfig :: super.configDefs
-  override def keymap = Seq() // TODO
+  // override def keymap = super.keymap. // TODO
 
   @Fn("Creates a new workspace.")
   def createWorkspace () {

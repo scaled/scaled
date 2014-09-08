@@ -26,10 +26,9 @@ class MiniReadOptMode (
   def optprompt = prompt + opts.map(_._1).mkString(" (", ", ", ", C-h)")
   miniui.setPrompt(optprompt)
 
-  override def keymap = Seq(
-    bind("C-g", "abort"),
-    bind("C-h", "show-help")
-  )
+  override def keymap = super.keymap.
+    bind("C-g", "abort").
+    bind("C-h", "show-help");
 
   // disable our default fn; route everything to unknownCommand (our missedFn)
   override def defaultFn = None

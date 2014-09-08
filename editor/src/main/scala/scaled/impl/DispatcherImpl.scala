@@ -56,7 +56,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     resolver.minorModes(major.tags ++ tags) foreach { mode =>
       try addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
       catch {
-        case e :Exception =>
+        case e :Throwable =>
           editor.emitError(e)
           editor.emitStatus(s"Failed to resolve minor mode '$mode'. See *messages* for details.")
       }
@@ -246,7 +246,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private class ModeMeta (val mode :Mode) {
     val fns = new FnBindings(mode, m => editor.emitStatus(m))
     val map = DispatcherImpl.parseKeyMap(
-      mode.keymap, fns,
+      mode.keymap.bindings, fns,
       (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
       (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
 
@@ -295,7 +295,7 @@ object DispatcherImpl {
     * @param onInvalidKey a callback to be notified when an invalid trigger sequence is encountered.
     * @param onInvalidFn a callback to be notified when an invalid fn binding is encountered.
     */
-  def parseKeyMap (keymap :Seq[KeyBinding], fns :FnBindings, onInvalidKey :String => Unit,
+  def parseKeyMap (keymap :Iterable[Key.Binding], fns :FnBindings, onInvalidKey :String => Unit,
                    onInvalidFn :String => Unit) :Map[Seq[KeyPress], FnBinding] = {
     keymap.flatMap(kb => fns.binding(kb.fn) match {
       case None     => onInvalidFn(kb.fn) ; None

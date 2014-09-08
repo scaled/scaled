@@ -85,7 +85,7 @@ abstract class Mode (env :Env) {
   def configDefs :List[Config.Defs] = Nil
 
   /** Returns bindings for all of this mode's vars. */
-  def varBindings :Seq[Config.VarBind[_]] = configDefs.flatMap(_.vars).map(
+  def varBindings :List[Config.VarBind[_]] = configDefs.flatMap(_.vars).map(
     v => Config.VarBind(this, v))
 
   /** Returns the URL for any custom stylesheets associated with this mode. These should be bundled
@@ -100,7 +100,7 @@ abstract class Mode (env :Env) {
     */
   def stylesheets :List[String] = Nil
 
-  /** Returns the [[KeyBinding]]s defined by this mode.
+  /** Returns the [[Key.Binding]]s defined by this mode.
     *
     * Key bindings are applied in a stack-like fashion:
     *  - start with global key bindings
@@ -115,7 +115,7 @@ abstract class Mode (env :Env) {
     * global key bindings), then on down the stack until a match is found, or we fall off the
     * bottom after searching the stock global key bindings.
     */
-  def keymap :Seq[KeyBinding]
+  def keymap :Key.Map = new Key.Map()
 
   /** Called when a mode is deactivated but the buffer to which it was attached will remain active.
     * This will precede the call to [[dispose]]. If a mode is maintaining any transient state in the
@@ -176,7 +176,7 @@ abstract class Mode (env :Env) {
   }
 
   /** A helper for creating key bindings. */
-  protected def bind (trigger :String, fn :String) = KeyBinding(trigger, fn)
+  protected def bind (trigger :String, fn :String) = Key.Binding(trigger, fn)
 
   private[this] val _toClose = Close.bag()
 }

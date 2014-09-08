@@ -27,14 +27,13 @@ class MiniReadMode[T] (
   miniui.setPrompt(prompt)
   setContents(initText)
 
-  override def keymap = super.keymap ++ Seq(
-    bind("UP",    "previous-history-entry"),
-    bind("DOWN",  "next-history-entry"),
-    bind("TAB",   "complete"),
-    bind("S-TAB", "complete"),
+  override def keymap = super.keymap.
+    bind("UP",    "previous-history-entry").
+    bind("DOWN",  "next-history-entry").
+    bind("TAB",   "complete").
+    bind("S-TAB", "complete").
     // TODO: special C-d that updates completions if at eol (but does not complete max prefix)
-    bind("ENTER", "commit-read")
-  )
+    bind("ENTER", "commit-read");
 
   def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
 
