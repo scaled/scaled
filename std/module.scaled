@@ -1,0 +1,2 @@
+# can we get by without it?
+# depend: mvn:org.scala-lang:scala-library:2.11.0
