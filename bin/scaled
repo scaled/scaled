@@ -2,8 +2,10 @@
 #
 # Starts Scaled from the command line; handles talking to running instances
 
+: ${PORT:=32323}
+: ${SPAM:=spam}
+
 # if scaled is already running
-PORT=32323
 LISTENER=`netstat -n -p udp | grep $PORT`
 if [ -z "$LISTENER" ] ; then
     # if we have the curspace tool, pass that to Scaled so that it can do per-desktop stuffs
@@ -13,11 +15,11 @@ if [ -z "$LISTENER" ] ; then
         CURDESK=`which curspace`
     fi
     # find the Scaled package manager
-    if hash spam 2>/dev/null; then
-        exec spam -Dscaled.curdesk=$CURDESK $SCALED_ARGS \
+    if hash $SPAM 2>/dev/null; then
+        exec $SPAM -Dscaled.curdesk=$CURDESK -Dscaled.port=$PORT $SCALED_ARGS \
             run "scaled#editor" scaled.impl.Scaled "$@"
     else
-        echo "Scaled package manager 'spam' must be on your shell search path."
+        echo "Scaled package manager '$SPAM' must be on your shell search path."
     fi
 
 elif hash nc 2>/dev/null; then
