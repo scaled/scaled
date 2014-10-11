@@ -7,5 +7,5 @@ license: New BSD
  module: api
  module: editor
  jcopts: -source 1.8 -target 1.8 -Xlint:all
- scopts: -deprecation -feature
+ scopts: -deprecation -feature -optimize
 testdep: mvn:junit:junit:4.11
