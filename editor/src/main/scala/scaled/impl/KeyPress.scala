@@ -5,8 +5,7 @@
 package scaled.impl
 
 import javafx.scene.input.{KeyCode, KeyEvent}
-
-import scala.collection.mutable.{Set => MSet}
+import scaled._
 
 /** Models a key press and any modifier keys that are held down during the press.  */
 class KeyPress (
@@ -76,22 +75,23 @@ object KeyPress {
       case None => onInvalid(if (str == seq) str else s"$str in $seq") ; None
       case kp => kp
     }
-    val kps = seq.split(" ") map(parse)
-    if (kps contains None) None else Some(kps.toSeq.flatten)
+    val kps = seq.split(" ").mkSeq map parse
+    if (kps contains None) None else Some(Seqs.flatten(kps))
   }
 
   /** Converts a single key press description (e.g. 'a', 'C-c', 'M-S-F2', etc.) into a `KeyPress`
     * instance. Invalid descriptions yield `None`.
     */
   def toKeyPress (desc :String) :Option[KeyPress] = {
-    val modSet = MSet[String]()
+    val msb = Set.builder[String]()
     var remain = desc
     while (remain.length > 1 && remain.charAt(1) == '-') {
-      modSet += remain.substring(0, 1)
+      msb += remain.substring(0, 1)
       remain = remain.substring(2)
     }
+    val modSet = msb.build()
     // validate that there are no spurious modifiers
-    if (!(modSet -- ValidMods).isEmpty) None
+    if (!(modSet &~ ValidMods).isEmpty) None
     else toKeyCode(remain) map { code =>
       new KeyPress(remain, remain, modSet(ShiftId), modSet(CtrlId), modSet(AltId), modSet(MetaId))
     }
@@ -101,7 +101,7 @@ object KeyPress {
   def toKeyCode (key :String) :Option[KeyCode] = IdToCode.get(key)
 
   /** Converts a `KeyCode` into a `KeyPress.id`. */
-  def toKeyId (code :KeyCode) = CodeToId.getOrElse(code, code.name)
+  def toKeyId (code :KeyCode) = CodeToId.get(code) || code.name
 
   private val KeyIds = {
     import KeyCode._
@@ -354,8 +354,8 @@ object KeyPress {
     );
   }
 
-  private val CodeToId = Map[KeyCode,String]() ++ KeyIds
-  private val IdToCode = Map[String,KeyCode]() ++ KeyIds.collect {
+  private val CodeToId = Map[KeyCode,String](KeyIds)
+  private val IdToCode = Map[String,KeyCode](KeyIds.collect {
     case (code, str) if (str != "") => (str, code)
-  }
+  })
 }

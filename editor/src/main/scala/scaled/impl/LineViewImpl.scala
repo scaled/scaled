@@ -73,14 +73,14 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
 
       def apply (cls :Seq[Tag[String]], start :Int, end :Int) {
         // if we skipped over any unstyled text, add it now
-        if (start > last) add(last, start, Nil)
+        if (start > last) add(last, start, Seq.empty)
         add(start, end, cls)
         last = end
       }
 
       def finish () {
         // if there's trailing unstyled text, add that
-        if (last < _line.length) add(last, _line.length, Nil)
+        if (last < _line.length) add(last, _line.length, Seq.empty)
         if (!kids.isEmpty) getChildren.addAll(kids.toArray :_*)
       }
     }

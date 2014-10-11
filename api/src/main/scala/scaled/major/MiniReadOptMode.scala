@@ -4,8 +4,6 @@
 
 package scaled.major
 
-import reactual.Promise
-
 import scaled._
 
 @Major(name="mini-readopt", tags=Array("mini"), desc="""
@@ -28,7 +26,7 @@ class MiniReadOptMode (
 
   override def keymap = super.keymap.
     bind("C-g", "abort").
-    bind("C-h", "show-help");
+    bind("C-h", "show-help")
 
   // disable our default fn; route everything to unknownCommand (our missedFn)
   override def defaultFn = None

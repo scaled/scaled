@@ -4,7 +4,6 @@
 
 package scaled.minor
 
-import scala.annotation.tailrec
 import scala.collection.mutable.{Set => MSet}
 
 import scaled._

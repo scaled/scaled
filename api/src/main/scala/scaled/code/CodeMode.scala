@@ -4,9 +4,6 @@
 
 package scaled.code
 
-import reactual.OptValue
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 import scaled.major.EditingMode
 import scaled.util.Chars

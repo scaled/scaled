@@ -221,7 +221,7 @@ class TagTest {
   }
 
   private def testVisit (tags :Tags, expect :Seq[(Int,Int,Seq[String])]) {
-    val groups = ArrayBuffer[(Int,Int,Seq[String])]()
+    val groups = SeqBuffer[(Int,Int,Seq[String])]()
     tags.visit(classOf[String])((ts, start, end) => groups += ((start, end, ts.map(_.tag))))
     assertEquals(s"$expect #= $groups", expect.size, groups.size)
     for ((exp,got) <- expect zip groups) assertEquals(exp, got)

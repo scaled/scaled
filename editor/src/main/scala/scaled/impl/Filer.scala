@@ -8,6 +8,7 @@ import com.google.common.base.Charsets
 import java.nio.file.{Files, Path}
 import java.util.function.Consumer
 import scala.collection.mutable.{Set => MSet}
+import scaled._
 
 /** Helper routines for working with the file system. */
 object Filer {
@@ -30,7 +31,6 @@ object Filer {
 
     /** Reads the backing file into a new value. Replaces the current value therewith. */
     def read () {
-      import scala.collection.convert.WrapAsScala._
       val lines :Iterable[String] = try {
         if (Files.exists(path)) Files.readAllLines(path) else Seq()
       } catch {
@@ -40,8 +40,7 @@ object Filer {
     }
     /** Writes the current value to the backing file. */
     def write () :Unit = try {
-      import scala.collection.convert.WrapAsJava._
-      if (_value != null) Files.write(path, asJavaIterable(encode(_value)), Charsets.UTF_8)
+      if (_value != null) Files.write(path, encode(_value), Charsets.UTF_8)
     } catch {
       case e :Exception => e.printStackTrace(System.err)
     }

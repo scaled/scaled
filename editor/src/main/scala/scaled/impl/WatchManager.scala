@@ -7,7 +7,6 @@ package scaled.impl
 import com.sun.nio.file.SensitivityWatchEventModifier
 import java.nio.file.{FileSystems, Path, WatchKey, WatchEvent}
 import java.util.concurrent.ConcurrentHashMap
-import scala.annotation.tailrec
 import scaled._
 
 /** Handles watching the filesystem for changes. */
@@ -67,7 +66,6 @@ class WatchManager (log :Logger) extends AbstractService with WatchService {
   }
 
   private def pollWatches () :Unit = try {
-    import scala.collection.convert.WrapAsScala._
     // wait for key to be signalled
     val key = _service.take()
     val watcher = _watches.get(key)

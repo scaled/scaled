@@ -6,13 +6,12 @@ package scaled.util
 
 import org.junit.Assert._
 import org.junit._
-import scala.collection.mutable.ArrayBuffer
-import scaled.Executor
+import scaled._
 
 class ExpecterTest {
 
   class AccumExec extends Executor {
-    private val rs = ArrayBuffer[Runnable]()
+    private val rs = SeqBuffer[Runnable]()
     val uiExec = new java.util.concurrent.Executor() {
       override def execute (op :Runnable) :Unit = rs += op
     }

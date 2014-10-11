@@ -5,7 +5,6 @@
 package scaled
 
 import java.util.concurrent.{Executor => JExecutor}
-import reactual.Future
 
 /** Provides a handle via which one can communicate with a concurrent sequential process. A
   * concurrent sequential process is a collection of code and data which runs sequentially (multiple

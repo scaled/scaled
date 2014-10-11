@@ -5,9 +5,6 @@
 package scaled.code
 
 import java.util.Arrays
-import reactual.OptValue
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 
 /** Tracks a block of code: a region delimited by an open bracket and close bracket. The `start` of

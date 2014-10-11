@@ -4,9 +4,6 @@
 
 package scaled
 
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
-
 /** Tags a segment of a line with a value. This is used for CSS style spans, and also allows modes
   * to tag arbitrary segments of the buffer with data.
   *

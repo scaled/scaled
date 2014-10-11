@@ -5,8 +5,6 @@
 package scaled.impl
 
 import java.util.HashMap
-import reactual.Value
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 
 class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl]) extends Config {
@@ -21,7 +19,7 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     * entries will appear as normal.
     */
   def toProperties :Seq[String] = {
-    val buf = new ArrayBuffer[String]()
+    val buf = Seq.builder[String]()
     buf += s"# Scaled '$name' config vars"
     buf += s"#"
     buf += s"# This file is managed by Scaled. Uncomment and customize the value of any"
@@ -38,7 +36,7 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
       buf += s"$pre${v.name}: $curval"
     }
     buf += "" // add a trailing newline
-    buf
+    buf.build()
   }
 
   /** Returns an init put function used to populate this instance from a file. */
@@ -65,6 +63,6 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
 
   private def lookup[T] (key :Config.Key[T]) = _vals.get(key).asInstanceOf[Value[T]]
 
-  private[this] val _vars = Map[String,Config.Var[_]]() ++ defs.flatMap(_.vars).map(v => v.name -> v)
+  private[this] val _vars = defs.flatMap(_.vars).mapBy(_.name) // String -> Config.Var[_]
   private[this] val _vals = new HashMap[Config.Key[_],Value[_]]()
 }

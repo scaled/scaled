@@ -10,14 +10,12 @@ import java.nio.file.{Files, FileVisitOption, FileVisitResult, SimpleFileVisitor
 import java.util.jar.JarFile
 import org.objectweb.asm.{AnnotationVisitor, ClassReader, ClassVisitor, Opcodes}
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
-import scala.collection.{Set => GSet}
-import scaled.Logger
+import scaled._
 import scaled.pacman._
 
 /** Contains additional metadata for a Scaled package module. This metadata is extracted from
   * annotations on the Java bytecode found in the module code. */
 class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
-  import scala.collection.convert.WrapAsScala._
 
   /** Returns the class loader for our module. */
   def loader :ModuleLoader = mod.loader(repo.resolver)
@@ -31,7 +29,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   /** Loads and returns the class for the service with class name `name`. */
   def service (name :String) :Class[_] = loadClass(services(name))
   /** Loads and returns all plugin classes with tag `tag`. */
-  def plugins (tag :String) :GSet[Class[_]] = plugins.get(tag).map(loadClass)
+  def plugins (tag :String) :Set[Class[_]] = plugins.get(tag).toSet.map(loadClass)
 
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes

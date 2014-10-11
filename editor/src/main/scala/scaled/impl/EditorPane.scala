@@ -11,8 +11,7 @@ import javafx.geometry.{HPos, VPos}
 import javafx.scene.control.Label
 import javafx.scene.layout.{BorderPane, Region, VBox}
 import javafx.stage.Stage
-import reactual.{Future, OptValue, Promise, Value, ReactionException}
-import scala.collection.mutable.{ArrayBuffer, Map => MMap}
+import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.major.TextMode
 import scaled.util.Errors
@@ -143,7 +142,7 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     def dispose () :Unit = disp.dispose()
     override def toString = name
   }
-  private val _buffers = ArrayBuffer[OpenBuffer]()
+  private val _buffers = SeqBuffer[OpenBuffer]()
 
   private var _active :OpenBuffer = _
   private def setBuffer (buf :OpenBuffer) {

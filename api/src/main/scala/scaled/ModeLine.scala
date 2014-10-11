@@ -5,7 +5,6 @@
 package scaled
 
 import javafx.scene.control.Tooltip
-import reactual.{Value, ValueV}
 
 /** Displays mode summary information to the user. The default information includes:
   * ` - BufferName.ext  L#  [majormode]` and modes can augment the modeline with additional text.

@@ -5,7 +5,7 @@
 package scaled.impl
 
 import java.nio.file.{Files, Path}
-import scala.collection.mutable.{Map => MMap}
+import java.util.HashMap
 import scaled._
 import scaled.util.Properties
 
@@ -18,8 +18,10 @@ class ConfigManager (log :Logger, root :Path, watchSvc :WatchService) {
   def editorConfig :Config = _editor
 
   /** Returns the [[Config]] instance for `mode`. */
-  def resolveConfig (mode :String, defs :List[Config.Defs]) :Config =
-    _configs.getOrElseUpdate(mode, loadConfig(mode, defs))
+  def resolveConfig (mode :String, defs :List[Config.Defs]) :Config = _configs.get(mode) match {
+    case null => val cfg = loadConfig(mode, defs) ; _configs.put(mode, cfg) ; cfg
+    case cfg  => cfg
+  }
 
   /** Returns the file that contians mode's configuration. */
   def configFile (mode :String) :Path = _configDir.resolve(mode + FileSuff)
@@ -28,11 +30,11 @@ class ConfigManager (log :Logger, root :Path, watchSvc :WatchService) {
     * config file. */
   def configText (mode :String) :Option[Seq[String]] =
     if (mode == EditorName) Some(_editor.toProperties)
-    else _configs.get(mode).map(_.toProperties)
+    else Option(_configs.get(mode)).map(_.toProperties)
 
   private final val FileSuff = ".properties"
   private val _configDir = Filer.requireDir(root.resolve("Config"))
-  private val _configs = MMap[String,ConfigImpl]()
+  private val _configs = new HashMap[String,ConfigImpl]()
   private val _editor = loadConfig(EditorName, EditorConfig :: Nil)
 
   // listen for changes to files in our config directory and reload configs therefor; note: we
@@ -43,7 +45,7 @@ class ConfigManager (log :Logger, root :Path, watchSvc :WatchService) {
     protected def checkReload (name :String) {
       if (name endsWith FileSuff) {
         val mode = name dropRight FileSuff.length
-        _configs.get(mode) foreach { cfg => readFileInto(mode, cfg) }
+        Option(_configs.get(mode)) foreach { cfg => readFileInto(mode, cfg) }
         if (mode == EditorName) readFileInto(EditorName, _editor)
       }
     }

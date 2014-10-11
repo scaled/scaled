@@ -15,7 +15,7 @@ class RegionTest {
     val r3 = Region(Loc(1, 0), Loc(1, 7))
     val r4 = Region(Loc(2, 1), Loc(3, 15))
     val r5 = Region(Loc(3, 15), Loc(4, 1))
-    val rs = Array(r1, r2, r3, r4, r5)
+    val rs = Seq(r1, r2, r3, r4, r5)
 
     assertEquals(Some(r1), Region.find(rs, Loc(0, 0)))
     assertEquals(Some(r1), Region.find(rs, Loc(0, 3)))
@@ -35,6 +35,6 @@ class RegionTest {
     assertEquals(None, Region.find(rs, Loc(4, 15)))
     assertEquals(None, Region.find(rs, Loc(5, 1)))
 
-    assertEquals(None, Region.find(Array[Region](), Loc(3, 3)))
+    assertEquals(None, Region.find(Seq[Region](), Loc(3, 3)))
   }
 }

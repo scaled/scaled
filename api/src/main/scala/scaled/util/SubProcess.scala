@@ -93,7 +93,7 @@ abstract class SubProcess (config :SubProcess.Config) extends AutoCloseable {
   private lazy val process = {
     val pb = new ProcessBuilder(config.cmd :_*)
     pb.directory(config.cwd.toFile)
-    config.env foreach { case (k, v) => pb.environment.put(k, v) }
+    config.env foreach { (k, v) => pb.environment.put(k, v) }
     pb.start
   }
 

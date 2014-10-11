@@ -8,8 +8,6 @@ import com.sun.javafx.tk.Toolkit
 import javafx.geometry.Insets
 import javafx.scene.control.{Label, Tooltip}
 import javafx.scene.layout.BorderPane
-import reactual.{Future, Promise, ValueV}
-import scala.annotation.tailrec
 import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
 import scaled.util.Errors
@@ -46,7 +44,7 @@ abstract class MiniStatus (editor :EditorPane) extends BorderPane with Minibuffe
       "Command attempted to use minibuffer while in minibuffer")
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
-    val modeArgs = ui :: result :: args.toList
+    val modeArgs = ui :: result :: List.copyOf(args)
     val disp = new DispatcherImpl(editor, editor.resolver, view, ModeLine.Noop,
                                   s"mini-$mode", modeArgs, Nil)
     val area = new BufferArea(editor, view, disp) {

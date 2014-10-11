@@ -5,9 +5,9 @@
 package scaled.impl
 
 import javafx.scene.input.KeyCode
-
-import org.junit._
 import org.junit.Assert._
+import org.junit._
+import scaled._
 
 class KeyPressTest {
   import KeyPress._

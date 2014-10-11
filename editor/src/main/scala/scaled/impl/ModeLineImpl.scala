@@ -7,7 +7,6 @@ package scaled.impl
 import javafx.scene.control.Label
 import javafx.scene.control.Tooltip
 import javafx.scene.layout.HBox
-import reactual.ValueV
 import scaled._
 
 class ModeLineImpl (editor :Editor) extends HBox(8) with ModeLine {

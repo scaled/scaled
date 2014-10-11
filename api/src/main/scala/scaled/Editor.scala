@@ -4,8 +4,6 @@
 
 package scaled
 
-import reactual.{Future, Promise, OptValue}
-
 /** Provides access to data and services encapsulated by the editor. The editor is not quite the
   * entire app, but rather a single window which contains a set of buffers and state geared toward
   * working on one "thing". A user may wish to do everything in one editor, or they may have
@@ -87,14 +85,14 @@ trait Editor {
       * @param mode the name of the major mode to use.
       * @param args arguments to pass to the major mode during constructor injection.
       */
-    def mode (name :String, args :Any*) = copy(_mode=Some(name), _args=args.toList)
+    def mode (name :String, args :Any*) = copy(_mode=Some(name), _args=List.copyOf(args))
 
     /** Configures initial buffer state. */
-    def state (state :State.Init[_]*) = copy(_state=state.toList)
+    def state (state :State.Init[_]*) = copy(_state=List.copyOf(state))
 
     /** Configures additional tags to be used when resolving minor modes for this buffer. These are
       * combined with the tags provided by the major mode. */
-    def tags (tags :String*) = copy(_tags=tags.toList)
+    def tags (tags :String*) = copy(_tags=List.copyOf(tags))
 
     /** Creates the buffer using the current configuration. */
     def create () :BufferView = createBuffer(this)

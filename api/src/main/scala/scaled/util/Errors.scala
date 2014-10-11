@@ -5,8 +5,7 @@
 package scaled.util
 
 import java.io.{PrintWriter, StringWriter}
-import reactual.Future
-import scaled.Editor
+import scaled._
 
 /** Error reporting utilities. */
 object Errors {

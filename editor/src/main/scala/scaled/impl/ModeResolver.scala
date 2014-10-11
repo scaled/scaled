@@ -15,7 +15,7 @@ abstract class ModeResolver (msvc :MetaService, editor :Editor) {
   def modes (major :Boolean) :Set[String] = Set()
 
   /** Returns the names of all minor modes with tags that overlap `tags`. */
-  def minorModes (tags :Array[String]) :Set[String] = Set()
+  def minorModes (tags :Seq[String]) :Set[String] = Set()
 
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
   def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
@@ -59,7 +59,7 @@ class AppModeResolver (ws :WorkspaceImpl, editor :Editor)
     extends ModeResolver(ws.app.svcMgr, editor) {
 
   override def modes (major :Boolean) = Set() ++ ws.app.pkgMgr.modes(major)
-  override def minorModes (tags :Array[String]) = ws.app.pkgMgr.minorModes(tags)
+  override def minorModes (tags :Seq[String]) = ws.app.pkgMgr.minorModes(tags)
 
   override protected def locate (major :Boolean, mode :String) =
     ws.app.pkgMgr.mode(major, mode) match {

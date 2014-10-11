@@ -6,8 +6,7 @@ package scaled.impl
 
 import java.util.ArrayDeque
 import java.util.concurrent.{Callable, Executor, ExecutionException, FutureTask}
-import reactual.{Future, Promise}
-import scaled.{Pipe, Funnel}
+import scaled._
 
 /** Implements the machinery of a concurrent sequential process. A queue of actions is maintained
   * for each process and when a process has actions to be executed, it queues itself up on an

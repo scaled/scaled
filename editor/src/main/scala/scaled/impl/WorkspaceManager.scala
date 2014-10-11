@@ -4,8 +4,8 @@
 
 package scaled.impl
 
-import com.google.common.cache.{CacheBuilder, CacheLoader}
 import com.google.common.collect.HashBiMap
+import com.google.common.collect.HashMultimap
 import java.io.IOException
 import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, Path, Paths}
@@ -14,7 +14,6 @@ import java.util.{List => JList}
 import javafx.application.Platform
 import javafx.scene.Scene
 import javafx.stage.Stage
-import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.io.Source
 import scaled._
 import scaled.pacman.Filez
@@ -22,23 +21,22 @@ import scaled.util.Errors
 
 /** Manages workspaces, and the creation of editors therein. */
 class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceService {
-  import scala.collection.convert.WrapAsScala._
 
   private def log = app.logger
   // the directory in which we store workspace metadata
   private val wsdir = Files.createDirectories(app.pkgMgr.metaDir.resolve("Workspaces"))
 
   // a map from workspace name to hint path list
-  private val wshints = Filer.fileDB[Map[String,List[String]]](
+  private val wshints = Filer.fileDB[HashMultimap[String,String]](
     wsdir.resolve(".hintpaths"),
-    _.map(_.split("\t").toList).map(vs => (vs.head -> vs.tail)).toMap.withDefaultValue(Nil),
-    _.map { case (k, v) => (k :: v).mkString("\t") })
+    _.fold(HashMultimap.create[String,String]()) { (m, s) =>
+      val (w :: ps) = List.from(s.split("\t")) ; ps foreach { m.put(w, _) } ; m
+    },
+    _.asMap.entrySet.foldBuild[String]((b, e) => b += e.getKey+"\t"+e.getValue.mkString("\t")))
 
   // currently resolved workspaces
-  private var wscache = CacheBuilder.newBuilder.build(new CacheLoader[String,WorkspaceImpl]() {
-    override def load (name :String) = new WorkspaceImpl(
-      app, WorkspaceManager.this, name, wsdir.resolve(name))
-  })
+  private var wscache = Mutable.cacheMap { name :String =>
+    new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name)) }
 
   /** Creates the starting workspace and editor and opens `paths` therein. */
   def visit (stage :Stage, paths :JList[String]) {
@@ -61,15 +59,15 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   }
 
   def addHintPath (wsname :String, path :Path) :Unit =
-    wshints.update(m => m.updated(wsname, (path.toString :: m(wsname))))
+    wshints.update(m => { m.put(wsname, path.toString) ; m })
   def removeHintPath (wsname :String, path :Path) :Unit =
-    wshints.update(m => m.updated(wsname, m(wsname).filter(_ != path.toString)))
+    wshints.update(m => { m.remove(wsname, path.toString) ; m })
 
   override def list = try {
     Files.list(wsdir).collect(Collectors.toList[Path]).filter(Files.isDirectory(_)).
-      map(_.getFileName.toString).filterNot(_ startsWith ".")
+      map(_.getFileName.toString).filterNot(_ startsWith ".").toSeq
   } catch {
-    case e :IOException => log.log("Failed to list $wsdir", e) ; Nil
+    case e :IOException => log.log("Failed to list $wsdir", e) ; Seq.empty
   }
 
   override def create (wsname :String) {
@@ -115,11 +113,11 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   // - otherwise, the default workspace is used
   private def workspaceFor (desktop :String, path :Option[String]) :WorkspaceImpl = {
     def isOpen (ws :WorkspaceImpl) = ws.editors.containsKey(desktop)
-    def latest (ws :Iterable[WorkspaceImpl]) =
+    def latest (ws :Unordered[WorkspaceImpl]) =
       if (ws.isEmpty) None else Some(ws.minBy(_.lastOpened))
     def abs (p :Path) = if (Files.exists(p)) Some(p.toAbsolutePath.toString) else None
     def byHintPath = path.map(Paths.get(_)).flatMap(abs).flatMap { path =>
-      val hintWSs = wshints() collect {
+      val hintWSs = wshints().asMap.toMapV collect {
         case (w, ps) if (ps.exists(path startsWith _)) => wscache.get(w) }
       latest(hintWSs.filter(isOpen)) orElse latest(hintWSs)
     }

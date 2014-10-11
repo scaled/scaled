@@ -5,9 +5,7 @@
 package scaled.impl
 
 import java.nio.file.Paths
-import reactual.{OptValue, ReactionException, Signal, SignalV, Value, ValueV}
-import scala.annotation.tailrec
-import scala.collection.mutable.{ArrayBuffer, Map => MMap}
+import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Errors
 
@@ -21,12 +19,12 @@ object BufferImpl {
 
   /** Reads the contents of `store` info a buffer. */
   def apply (store :Store) :BufferImpl = {
-    val lines = ArrayBuffer[Array[Char]]()
+    val buf = new BufferImpl(store)
     // TODO: remove tab hackery when we support tabs
-    store.readLines(ln => lines += ln.replace('\t', ' ').toCharArray)
+    store.readLines(ln => buf.addLine(ln.replace('\t', ' ').toCharArray))
     // TEMP: tack a blank line on the end to simulate a trailing line sep
-    lines += MutableLine.NoChars
-    new BufferImpl(store, lines)
+    buf.addLine(MutableLine.NoChars)
+    buf
   }
 
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
@@ -37,13 +35,13 @@ object BufferImpl {
 }
 
 /** Implements [Buffer] and [RBuffer]. This is where all the excitement happens. */
-class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]]) extends RBuffer {
+class BufferImpl private (initStore :Store) extends RBuffer {
   import Buffer._
 
   // TODO: character encoding
   // TODO: line endings
 
-  private[this] val _lines = initLines.map(new MutableLine(this, _))
+  private[this] val _lines = SeqBuffer[MutableLine]()
   private[this] val _name = Value(initStore.name)
   private[this] val _store = Value(initStore)
   private[this] val _mark = Value(None :Option[Loc])
@@ -107,7 +105,7 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
     val end = _lines(loc.row).insert(loc, line)
     noteInsert(loc, end)
   }
-  override def insert (loc :Loc, region :Seq[LineV]) = region.size match {
+  override def insert (loc :Loc, region :Ordered[LineV]) = region.size match {
     case 0 => loc
     case 1 => insert(loc, region.head)
     case _ =>
@@ -115,11 +113,13 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
       val tail = line(loc).split(loc)
       // merge the first half of the split line with the first line of the region
       line(loc).append(loc, region.head)
-      // merge the last line of the region with the second half of the split line
+      // merge the last line of the region with the second half of the split line and add the
+      // merged last line into the buffer
+      val iidx = loc.row+1
       tail.insert(Loc.Zero, region.last, 0, region.last.length)
-      // finally add the middle lines (unmodified) and the merged last line into the buffer
-      val rest = region.slice(1, region.length-1).map(MutableLine(this, _)) :+ tail
-      _lines.insertAll(loc.row+1, rest)
+      _lines.insert(iidx, tail)
+      // then squeeze the middle lines (unmodified) in between
+      _lines.insert(iidx, region.slice(1, region.length-1).map(MutableLine(this, _)))
       // note the edit, and return the location at the end of the inserted region
       noteInsert(loc, loc + region)
   }
@@ -152,16 +152,17 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
     dline
   }
 
-  override def replace (start :Loc, until :Loc, lines :Seq[LineV]) :Loc = {
+  override def replace (start :Loc, until :Loc, lines :Ordered[LineV]) :Loc = {
     if (until < start) replace(until, start, lines) else {
       // if this is an exact replacement, handle it specially; this is mainly for efficient undoing
       // of transforms; overkill perhaps, but whatever, it's four lines of code
       if (until == start + lines) {
-        val original = new ArrayBuffer[Line]()
+        val orig = Seq.builder[Line](lines.length)
+        val iter = lines.iterator()
         onRows(start, until) { (l, s, c) =>
-          original += l.replace(s, c-s.col, lines(s.row-start.row))
+          orig += l.replace(s, c-s.col, iter.next)
         }
-        noteTransform(start, original)
+        noteTransform(start, orig.build())
       } else {
         delete(start, until)
         insert(start, lines)
@@ -172,14 +173,14 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   override def transform (start :Loc, until :Loc, fn :Char => Char) =
     if (until < start) transform(until, start, fn)
     else {
-      val original = new ArrayBuffer[Line]()
+      val orig = Seq.builder[Line](until.row-start.row)
       def xf (ln :MutableLine, start :Loc, end :Int) = {
-        original += ln.slice(start.col, end)
+        orig += ln.slice(start.col, end)
         ln.transform(fn, start, end)
       }
       if (start.row == until.row) xf(line(start), start, until.col)
       else onRows(start, until)(xf)
-      noteTransform(start, original)
+      noteTransform(start, orig.build())
     }
 
   override def split (loc :Loc) {
@@ -218,6 +219,9 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
   //
   // impl details
 
+  // called by BufferImpl.apply when building a buffer
+  private def addLine (line :Array[Char]) = _lines += new MutableLine(this, line)
+
   /** Applies op to all rows from `start` up to (not including) `until`. `op` is passed `(line,
     * start, endCol)` which is adjusted properly for the first and last line. */
   private def onRows (start :Loc, until :Loc)(op :(MutableLine, Loc, Int) => Unit) {
@@ -240,7 +244,7 @@ class BufferImpl private (initStore :Store, initLines :ArrayBuffer[Array[Char]])
       deleted.map(_.slice(0))
     }
 
-  private def longest (lines :Seq[LineV], start :Int, end :Int) :Int = {
+  private def longest (lines :SeqV[LineV], start :Int, end :Int) :Int = {
     @inline @tailrec def loop (cur :Int, max :Int, maxLen :Int) :Int =
       if (cur >= end) max
       else {

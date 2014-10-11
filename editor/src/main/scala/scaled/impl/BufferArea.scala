@@ -343,12 +343,12 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
       // TODO: let these nodes know they've been removed so they can cleanup?
     } else if (change.delta > 0) {
       val nodes = bview.lines.slice(change.row, change.row+change.delta)
-      lineNodes.getChildren.addAll(change.row, nodes)
+      lineNodes.getChildren.addAll(change.row, nodes.asJList)
     }
     requestLayout()
   }
   // add all the current lines to the buffer
-  lineNodes.getChildren.addAll(bview.lines :_*)
+  lineNodes.getChildren.addAll(bview.lines.asJList)
 
   // request relayout when our view width/height changes
   bview.width onValue { _ => requestLayout() }

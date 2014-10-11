@@ -4,8 +4,6 @@
 
 package scaled.major
 
-import reactual.Promise
-
 import scaled._
 
 @Major(name="mini-yesno", tags=Array("mini"), desc="""

@@ -49,7 +49,7 @@ class Loc private (val rowCol :Long) extends AnyVal {
 
   /** "Adds" `region` to `this` loc. This returns the loc immediately after `region`, assuming
     * `region` exists in a buffer at `this` loc. */
-  def + (region :Seq[LineV]) :Loc = region.size match {
+  def + (region :Ordered[LineV]) :Loc = region.size match {
     case 0 => this
     case 1 => Loc(row, col+region.head.length)
     case n => Loc(row + n-1, region.last.length)

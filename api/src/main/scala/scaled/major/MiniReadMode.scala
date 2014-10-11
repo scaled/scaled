@@ -4,10 +4,6 @@
 
 package scaled.major
 
-import scala.annotation.tailrec
-import scala.collection.immutable.TreeMap
-
-import reactual.Promise
 import scaled._
 
 @Major(name="mini-read", tags=Array("mini"), desc="""

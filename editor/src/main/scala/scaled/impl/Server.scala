@@ -5,7 +5,6 @@
 package scaled.impl
 
 import java.net.{DatagramPacket, DatagramSocket}
-import scala.annotation.tailrec
 
 /** Hosts a simple server on localhost:[[Port]]. Currently accepts only a single command:
   * `open PATH`

@@ -5,7 +5,6 @@
 package scaled
 
 import java.util.regex.{MatchResult, Pattern}
-import scala.annotation.tailrec
 import scaled.util.Chars
 
 /** Handles searching and matching in [[Line]]s. */

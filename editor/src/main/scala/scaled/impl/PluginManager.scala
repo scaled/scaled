@@ -5,16 +5,12 @@
 package scaled.impl
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.{Function => JFunction}
-import reactual.Signal
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 
 /** Implements [[PluginService]] and handles notifications when packages are added and removed. */
 class PluginManager (app :Scaled) extends AbstractService with PluginService {
-  import scala.collection.convert.WrapAsScala._
 
-  private val psets = ArrayBuffer[PluginSetImpl[_]]()
+  private val psets = SeqBuffer[PluginSetImpl[_]]()
 
   // we need to know when packages are added and removed
   app.pkgMgr.moduleAdded.onValue { pkg => psets.foreach { _.moduleAdded(pkg) }}
@@ -28,7 +24,7 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
     def added = _added
     def removed = _removed
 
-    private val _plugins = ArrayBuffer[T]()
+    private val _plugins = SeqBuffer[T]()
     def plugins = _plugins
 
     // add ourselves to the plugin sets list
@@ -53,7 +49,7 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
       val pclasses = mod.plugins(tag)
       var ii = 0 ; while (ii < _plugins.length) {
         if (pclasses(_plugins(ii).getClass)) {
-          val p = _plugins.remove(ii)
+          val p = _plugins.removeAt(ii)
           _removed.emit(p)
           p.close()
           ii -= 1

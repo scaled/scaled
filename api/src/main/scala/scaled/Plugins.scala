@@ -4,8 +4,6 @@
 
 package scaled
 
-import reactual.SignalV
-
 /** Scaled plugins must extend this class and have a name of the form `FooPlugin`. */
 abstract class AbstractPlugin extends AutoCloseable {
 
@@ -33,7 +31,7 @@ abstract class PluginSet[T <: AbstractPlugin] (val tag: String) extends AutoClos
   def removed :SignalV[T]
 
   /** Returns the current plugins in this set. */
-  def plugins :Seq[T]
+  def plugins :SeqV[T]
 
   /** Closes this plugin set and all the plugins therein. */
   override def close () :Unit = plugins.foreach(_.close())

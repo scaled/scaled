@@ -5,7 +5,6 @@
 package scaled
 
 import java.io.FileNotFoundException
-import reactual.Value
 import scaled.util.{Behavior, Close}
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
@@ -68,13 +67,13 @@ abstract class Env {
 abstract class Mode (env :Env) {
 
   /** Returns the name of this mode. */
-  def name :String
+  def name :String = getClass.getName+"?"
 
   /** Returns a brief description of this mode. */
-  def desc :String
+  def desc :String = getClass.getName+"?"
 
   /** Returns the tags that describe this mode. See [[Major.tags]] and [[Minor.tags]]. */
-  def tags :Array[String]
+  def tags :Seq[String] = Seq()
 
   /** This mode's configuration. */
   final val config :Config = env.resolveConfig(name, configDefs)
@@ -191,9 +190,9 @@ abstract class Mode (env :Env) {
   */
 abstract class MajorMode (env :Env) extends Mode(env) {
 
-  override def name = if (info == null) "unknown" else info.name
-  override def desc = if (info == null) "unknown" else info.desc
-  override def tags = if (info == null) Array()   else info.tags
+  override def name = if (info != null) info.name else super.name
+  override def desc = if (info != null) info.desc else super.desc
+  override def tags = if (info != null) info.tags.mkSeq else super.tags
   private lazy val info = getClass.getAnnotation(classOf[Major])
 
   // display our major mode name in the modeline
@@ -219,8 +218,8 @@ abstract class MajorMode (env :Env) extends Mode(env) {
   */
 abstract class MinorMode (env :Env) extends Mode(env) {
 
-  override def name = if (info == null) "unknown" else info.name
-  override def desc = if (info == null) "unknown" else info.desc
-  override def tags = if (info == null) Array()   else info.tags
+  override def name = if (info != null) info.name else super.name
+  override def desc = if (info != null) info.desc else super.desc
+  override def tags = if (info != null) info.tags.mkSeq else super.tags
   private lazy val info = getClass.getAnnotation(classOf[Minor])
 }

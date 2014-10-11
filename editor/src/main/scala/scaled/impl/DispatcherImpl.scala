@@ -6,7 +6,6 @@ package scaled.impl
 
 import java.lang.reflect.InvocationTargetException
 import javafx.scene.input.{KeyCode, KeyEvent}
-import reactual.{Signal, Value, ValueV}
 import scaled._
 
 /** Handles the conversion of key presses into execution of the appropriate fns. This includes
@@ -30,7 +29,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private var _prevFn :String = _
 
   private var _majorMeta :MajorModeMeta = _
-  private val _minors = Value[Seq[MinorMode]](Nil)
+  private val _minors = Value[Seq[MinorMode]](Seq.empty)
   private var _metas = List[ModeMeta]() // the stack of active modes (major last)
   private var _prefixes = Set[Seq[KeyPress]]() // union of cmd prefixes from active modes' keymaps
 
@@ -191,7 +190,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     // rebuild our command prefixes
     _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
     // rebuild and emit our list of active minor modes
-    _minors() = _metas.map(_.mode).collect { case mode :MinorMode => mode }
+    _minors() = _metas.map(_.mode).toSeq.collect { case mode :MinorMode => mode }
   }
 
   private def findFn (fn :String) :Option[FnBinding] = _metas.flatMap(_.fns.binding(fn)).headOption
@@ -251,10 +250,10 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
       (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
 
     // enumerate all prefix sequences (we use these when processing key input)
-    val prefixes :Set[Seq[KeyPress]] = map.keys.map(_.dropRight(1)).filter(!_.isEmpty).toSet
+    val prefixes :Set[Seq[KeyPress]] = map.keySet.map(_.dropRight(1)).filter(!_.isEmpty)
     // TODO: report an error if a key prefix is bound to an fn? WDED?
 
-    def triggers :Iterable[(String,String,String)] = map.map {
+    def triggers :Unordered[(String,String,String)] = map.map {
       case (kps, fn) => (mode.name, kps.mkString(" "), fn.name)
     }
 
@@ -295,7 +294,7 @@ object DispatcherImpl {
     * @param onInvalidKey a callback to be notified when an invalid trigger sequence is encountered.
     * @param onInvalidFn a callback to be notified when an invalid fn binding is encountered.
     */
-  def parseKeyMap (keymap :Iterable[Key.Binding], fns :FnBindings, onInvalidKey :String => Unit,
+  def parseKeyMap (keymap :Ordered[Key.Binding], fns :FnBindings, onInvalidKey :String => Unit,
                    onInvalidFn :String => Unit) :Map[Seq[KeyPress], FnBinding] = {
     keymap.flatMap(kb => fns.binding(kb.fn) match {
       case None     => onInvalidFn(kb.fn) ; None

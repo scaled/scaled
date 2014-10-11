@@ -11,7 +11,6 @@ import javafx.application.{Application, Platform}
 import javafx.event.{ActionEvent, EventHandler}
 import javafx.stage.Stage
 import javafx.util.Duration
-import reactual.{Signal, Promise}
 import scala.collection.JavaConversions._
 import scaled._
 import scaled.util.Errors

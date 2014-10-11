@@ -5,8 +5,7 @@
 package scaled.util
 
 import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
-import scaled.{Line, LineV}
+import scaled._
 
 /** Simplifies the process of "filling" text. Filling is Emacsese for wrapping text at a particular
   * line width. Simply create a filler with your desired width, [[append]] the lines (or sublines)
@@ -17,7 +16,7 @@ import scaled.{Line, LineV}
   */
 class Filler (width :Int) {
 
-  private val accum = ArrayBuffer(new StringBuilder())
+  private val accum = SeqBuffer(new StringBuilder())
 
   /** Appends `line` to this filler. */
   def append (line :CharSequence) :Unit = append(line, true)
@@ -75,7 +74,7 @@ class Filler (width :Int) {
   }
 
   /** The current set of filled lines. */
-  def filled :Seq[StringBuilder] = accum
+  def filled :SeqV[StringBuilder] = accum
 
   /** Converts the accumulated text to a seq of `Line`s. */
   def toLines :Seq[Line] = accum.map(Line.apply)

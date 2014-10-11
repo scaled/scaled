@@ -7,8 +7,6 @@ package scaled
 import java.io.File
 import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.util.stream.Stream
-import scala.annotation.tailrec
-import scala.collection.immutable.TreeSet
 
 /** Represents a computed completion. */
 abstract class Completion[T] {
@@ -27,6 +25,8 @@ abstract class Completion[T] {
     * circumstances this is useful, but if a completer is doing special stuff, it might not be.
     */
   def massageCurrent (cur :String) :String = comps reduce sharedPrefix
+
+  override def toString = s"Completion($comps)"
 
   /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
     * only when both strings have the character in uppercase, lowercase otherwise. */
@@ -63,18 +63,19 @@ object Completion {
     * @param sort if true the values will be sorted lexically, if false they will be displayed in
     * iteration order.
     */
-  def apply[T] (viter :Iterator[T], format :T => String, sort :Boolean) :Completion[T] = {
-    val cb = if (sort) TreeSet.newBuilder[String] else Seq.newBuilder[String]
-    val mb = Map.newBuilder[String,T]
+  def apply[T] (viter :JIterator[T], format :T => String, sort :Boolean) :Completion[T] = {
+    val cb = Seq.builder[String]()
+    val mb = Map.builder[String,T]()
     while (viter.hasNext) {
       val value = viter.next
       val comp = format(value)
       cb += comp
-      mb += (comp -> value)
+      mb += (comp, value)
     }
     // we need to turn our treeset into a seq immediately otherwise the sort ordering will be lost
     // further down the line when it is filtered or grouped or whatnot
-    apply(cb.result.toSeq, mb.result)
+    val cs = cb.build()
+    apply(if (sort) cs.sorted else cs, mb.build())
   }
 
   /** Creates a completion with `cs` and `map`.
@@ -229,22 +230,24 @@ object Completer {
         case prnt => expand(prnt, p.getFileName.toString)
       }
     }
+
     override def pathSeparator = Some(File.separator)
     override protected def fromString (value :String) = {
       val path = Paths.get(value)
       if (Files.exists(path) && Files.isDirectory(path)) None else Some(Store(path))
     }
 
+    override def toString = "FileCompleter"
+
     private def expand (dir :Path, prefix :String) = {
-      import scala.collection.convert.WrapAsScala._
       val edir = massage(dir)
       val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
-      val matches = try Seq() ++ files.iterator.filter(fileFilter(prefix))
-                    finally files.close()
+      val matches = try files.iterator.toSeq.filter(fileFilter(prefix)) finally files.close()
       new Completion[Store] {
         val comps = matches.map(format).sorted
         def apply (comp :String) = fromString(comp)
         override def defval = None // using first completion here would be weird
+        override def toString = s"($dir, $prefix) => $comps"
       }
     }
 

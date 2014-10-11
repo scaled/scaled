@@ -4,7 +4,6 @@
 
 package scaled.impl
 
-import reactual.{Future, Promise, OptValue}
 import scaled._
 import scaled.major.TextMode
 

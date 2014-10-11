@@ -4,7 +4,7 @@
 
 package scaled.util
 
-import scala.collection.mutable.ArrayBuffer
+import scaled._
 
 /** Contains [[AutoCloseable]]-related helpers. */
 object Close {
@@ -14,7 +14,7 @@ object Close {
     */
   class Bag extends AutoCloseable {
 
-    private val _acs = ArrayBuffer[AutoCloseable]()
+    private val _acs = SeqBuffer[AutoCloseable]()
 
     /** Returns true if we have zero closeables in our list. */
     def isEmpty :Boolean = _acs.isEmpty

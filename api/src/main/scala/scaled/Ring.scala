@@ -4,8 +4,6 @@
 
 package scaled
 
-import scala.collection.mutable.ArrayBuffer
-
 /** Manages a ring of blocks of text (and styles). A ring accumulates blocks until the ring is
   * full, at which point adding new blocks causes the oldest block to be replaced. The canonical
   * use of a ring is the kill ring, which tracks killed (cut, in modern parlance) blocks of text
@@ -15,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class Ring (val size :Int) {
 
-  private val _entries = ArrayBuffer[Seq[LineV]]()
+  private val _entries = SeqBuffer[Seq[LineV]]()
   private var _pos = -1 // the position of the most recently added entry
 
   /** Returns the number of elements in this ring. This will always be `<= size`. */
@@ -46,7 +44,7 @@ class Ring (val size :Int) {
   def filterAdd (region :Seq[LineV]) {
     var ii = _entries.indexOf(region)
     while (ii != -1) {
-      _entries.remove(ii)
+      _entries.removeAt(ii)
       if (ii <= _pos) _pos -= 1
       ii = _entries.indexOf(region, ii)
     }

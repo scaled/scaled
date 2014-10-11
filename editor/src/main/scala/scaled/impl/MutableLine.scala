@@ -5,8 +5,6 @@
 package scaled.impl
 
 import java.io.Writer
-import reactual.{Signal, SignalV}
-import scala.annotation.tailrec
 import scaled._
 
 /** [MutableLine] related types and utilities. */

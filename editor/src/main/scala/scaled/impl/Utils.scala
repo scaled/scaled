@@ -9,7 +9,6 @@ import com.sun.javafx.tk.Toolkit
 import java.io.{StringWriter, PrintWriter}
 import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
-import scala.annotation.tailrec
 import scaled._
 
 /** Various utilities used by our controls. */

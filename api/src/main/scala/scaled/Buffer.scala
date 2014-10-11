@@ -4,9 +4,6 @@
 
 package scaled
 
-import reactual.{SignalV, ValueV, OptValue}
-import scala.annotation.tailrec
-
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.
   * Edits that precede the anchor cause it to shift forward or back appropriately. Edits after the
   * anchor do not cause movement. Deleting the text that includes the anchor causes it to move to
@@ -101,7 +98,7 @@ abstract class BufferV extends Region {
   }
 
   /** A read-only view of the lines in this buffer. */
-  def lines :Seq[LineV]
+  def lines :SeqV[LineV]
 
   /** Returns the `idx`th line. Indices are zero based.
     * @throws IndexOutOfBoundsException if `idx` is not a valid line index. */
@@ -172,11 +169,11 @@ abstract class BufferV extends Region {
     if (until < start) region(until, start)
     else if (start.row == until.row) Seq(line(start).slice(start.col, until.col))
     else {
-      val lb = Seq.newBuilder[Line]
+      val lb = Seq.builder[Line]
       lb  += line(start).slice(start.col)
       lb ++= lines.slice(start.row+1, until.row).map(_.slice(0))
       lb  += lines(until.row).slice(0, until.col)
-      lb.result
+      lb.build()
     }
 
   /** Returns a copy of the data in region `r`. $RNLNOTE */
@@ -406,12 +403,12 @@ abstract class Buffer extends BufferV {
     *
     * @return the buffer location just after the end of the inserted region.
     */
-  def insert (loc :Loc, region :Seq[LineV]) :Loc
+  def insert (loc :Loc, region :Ordered[LineV]) :Loc
 
   /** Appends `region` to the end of this buffer.
     * @return the buffer location just after the end of the appended region.
     */
-  def append (region :Seq[LineV]) :Loc = insert(end, region)
+  def append (region :Ordered[LineV]) :Loc = insert(end, region)
 
   /** Deletes `count` characters from the line at `loc`.
     * @return the deleted chars as a line. */
@@ -427,10 +424,10 @@ abstract class Buffer extends BufferV {
   def replace (loc :Loc, count :Int, line :LineV) :Line
   /** Replaces the region between `[start, until)` with `lines`.
     * @return the buffer location just after the replaced region. */
-  def replace (start :Loc, until :Loc, lines :Seq[LineV]) :Loc
+  def replace (start :Loc, until :Loc, lines :Ordered[LineV]) :Loc
   /** Replaces the region `r` with `lines`.
     * @return the buffer location just after the replaced region. */
-  def replace (r :Region, lines :Seq[LineV]) :Loc = replace(r.start, r.end, lines)
+  def replace (r :Region, lines :Ordered[LineV]) :Loc = replace(r.start, r.end, lines)
 
   /** Transforms the characters between `[start, until)` using `fn`.
     * @return the buffer location just after the transformed region. */

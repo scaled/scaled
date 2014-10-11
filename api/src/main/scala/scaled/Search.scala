@@ -4,9 +4,6 @@
 
 package scaled
 
-import reactual.{Future, Promise}
-import scala.annotation.tailrec
-
 /** Encapsulates a search on a buffer. This is tailored to support i-search, but is exposed as a
   * reusable API in case of broader utility.
   */
@@ -32,9 +29,9 @@ abstract class Search (val min :Loc) {
 
   /** Finds all occurrances of the sought text between `min` and `max`. */
   def findAll () :Seq[Loc] = {
-    val matches = Seq.newBuilder[Loc]
+    val matches = Seq.builder[Loc]
     @tailrec @inline def loop (next :Loc) :Seq[Loc] = findForward(next) match {
-      case Loc.None => matches.result
+      case Loc.None => matches.build()
       case loc      => matches += loc ; loop(matchEnd(loc))
     }
     loop(min)
@@ -63,10 +60,10 @@ object Search {
     else apply(buffer, min, max, Matcher.on(sought))
 
   /** Creates a [[Search]] with the specified parameters. */
-  def apply (buffer :BufferV, min :Loc, max :Loc, sought :Seq[LineV]) :Search = sought match {
-    case Seq() => NilSearch
-    case Seq(ln) => apply(buffer, min, max, ln)
-    case lines => throw new UnsupportedOperationException("Multiline searches not yet supported.")
+  def apply (buffer :BufferV, min :Loc, max :Loc, sought :Seq[LineV]) :Search = sought.size match {
+    case 0 => NilSearch
+    case 1 => apply(buffer, min, max, sought.head)
+    case n => throw new UnsupportedOperationException("Multiline searches not yet supported.")
   }
 
   private val NilSearch = new Search(Loc.Zero) {

@@ -6,7 +6,7 @@ package scaled.util
 
 import java.io.InputStream
 import java.nio.file.{Files, Path}
-import reactual.PropertyV
+import scaled._
 
 /** Manages reloading an in memory structure when the file from which it was loaded has changed. The
   * structure is loaded and parsed on demand the first time it is requested, and subsequent requests

@@ -4,8 +4,6 @@
 
 package scaled
 
-import reactual.OptValue
-import scala.collection.mutable.{Map => MMap}
 import scala.reflect.ClassTag
 
 /** Provides a read-only view of [[State]]. */
@@ -31,21 +29,19 @@ abstract class StateV {
   */
 class State extends StateV {
 
-  private val _states = MMap[Class[_],OptValue[_]]()
+  private val _states = Mutable.cacheMap { key :Class[_] => new OptValue[Any](null) {
+    override def emptyFail = throw new NoSuchElementException(s"No state for $key")
+  }}
 
   /** Returns the state value associated with the specified type, if any. */
-  def apply[T] (key :Class[T]) :OptValue[T] = _states.synchronized {
-    _states.getOrElseUpdate(key, new OptValue[T](null.asInstanceOf[T]) {
-      override def emptyFail = throw new NoSuchElementException(s"No state for $key")
-    }).asInstanceOf[OptValue[T]]
-  }
+  def apply[T] (key :Class[T]) :OptValue[T] = _states.get(key).asInstanceOf[OptValue[T]]
 
   /** An `apply` variant that uses class tags to allow usage like: `apply[Foo]`. */
   def apply[T] (implicit tag :ClassTag[T]) :OptValue[T] = apply(
     tag.runtimeClass.asInstanceOf[Class[T]])
 
   /** Returns the keys for all currently defined state. */
-  def keys :Set[Class[_]] = _states.keySet.toSet
+  def keys :Set[Class[_]] = _states.asMap.keySet.toSet
 
   override def get[T] (key :Class[T]) = apply(key).getOption
   override def get[T] (implicit tag :ClassTag[T]) = apply(tag).getOption

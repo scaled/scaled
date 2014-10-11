@@ -5,8 +5,6 @@
 package scaled
 
 import java.util.Arrays
-import reactual.SignalV
-import scala.annotation.tailrec
 
 /** `LineV` related types and utilities. */
 object LineV {
@@ -288,21 +286,13 @@ object Line {
     * [[System.lineSeparator]]. */
   def fromText (text :String) :Seq[Line] =
     // TODO: remove tab hackery when we support tabs
-    text.split(System.lineSeparator, -1).map(_.replace('\t', ' ')).map(apply)
+    text.split(System.lineSeparator, -1).mkSeq.map(_.replace('\t', ' ')).map(apply)
 
   /** Calls [[fromText]] on `text` and tacks on a blank line. */
   def fromTextNL (text :String) = fromText(text) :+ Empty
 
   /** Converts `lines` to a string which will contain line separators between lines. */
-  def toText (lines :Seq[LineV]) :String = {
-    val buf = new StringBuilder()
-    var ii = 0 ; while (ii < lines.length) {
-      if (ii > 0) buf.append(System.lineSeparator)
-      buf.append(lines(ii).asString)
-      ii += 1
-    }
-    buf.toString
-  }
+  def toText (lines :Ordered[LineV]) :String = lines.map(_.asString).mkString(System.lineSeparator)
 
   /** Converts `cs` into an array of `Char`. */
   def toCharArray (cs :CharSequence) :Array[Char] = {

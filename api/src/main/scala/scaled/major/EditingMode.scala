@@ -4,9 +4,6 @@
 
 package scaled.major
 
-import reactual.{Future, Promise}
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 import scaled.util.{Chars, Filler}
 

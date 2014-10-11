@@ -4,8 +4,6 @@
 
 package scaled
 
-import reactual.{Future, Promise}
-
 /** Invokes the minibuffer with specific arguments. Also provides some convenience methods. */
 trait Minibuffer {
 

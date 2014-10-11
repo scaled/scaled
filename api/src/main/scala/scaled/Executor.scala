@@ -5,7 +5,6 @@
 package scaled
 
 import java.util.concurrent.{Executor => JExecutor}
-import reactual.{Future, Promise}
 
 /** Handles invoking execution units on the UI thread and background threads. */
 abstract class Executor {

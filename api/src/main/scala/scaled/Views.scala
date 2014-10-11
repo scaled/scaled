@@ -4,8 +4,6 @@
 
 package scaled
 
-import reactual.{Future, Property, OptValue, SignalV, Value, ValueV}
-
 /** Visualizes a single line of text, potentially with style information. */
 trait LineView {
 
@@ -30,7 +28,7 @@ abstract class BufferView {
   def buffer :Buffer
 
   /** Views for the lines in this buffer. */
-  def lines :Seq[LineView]
+  def lines :SeqV[LineView]
 
   /** The current point (aka the cursor position). */
   def point :Property[Loc]

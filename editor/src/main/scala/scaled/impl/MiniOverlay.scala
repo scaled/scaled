@@ -8,8 +8,6 @@ import com.sun.javafx.tk.Toolkit
 import javafx.geometry.Insets
 import javafx.scene.control.{Label, Tooltip}
 import javafx.scene.layout.BorderPane
-import reactual.{Future, Promise, ValueV}
-import scala.annotation.tailrec
 import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
 import scaled.util.Errors
@@ -50,11 +48,11 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
       if (comps.isEmpty) setBottom(null)
       else {
         val fcomps = formatCompletions(if (comps.length <= MaxComps) comps else {
-          val b = Seq.newBuilder[String]
+          val b = Seq.builder[String]()
           b ++= comps.take(PreComps)
           b += s"...(${comps.length-MaxComps} omitted)..."
           b ++= comps.takeRight(PostComps)
-          b.result
+          b.build()
         })
         cview.buffer.replace(cview.buffer.start, cview.buffer.end, fcomps.map(Line.apply))
         cview.point() = Loc(0, 0)
@@ -74,7 +72,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
       "Command attempted to use minibuffer while in minibuffer")
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
-    val modeArgs = ui :: result :: args.toList
+    val modeArgs = ui :: result :: List.copyOf(args)
     val disp = new DispatcherImpl(editor, editor.resolver, view, ModeLine.Noop,
                                   s"mini-$mode", modeArgs, Nil)
     val area = new BufferArea(editor, view, disp) {
@@ -116,6 +114,6 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
     val availWid = (getMaxWidth / charWidth).toInt - 4
     val cols = availWid / colWid
     if (cols <= 1) comps
-    else comps.grouped(cols).map(_.map(s"%-${colWid}s".format(_)).mkString).toSeq
+    else comps.grouped(cols).map(_.map(s"%-${colWid}s".format(_)).mkString)
   }
 }

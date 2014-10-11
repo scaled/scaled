@@ -136,12 +136,12 @@ class Commenter {
     }
 
     // now prepend the appropriate prefix back onto each filled line and create lines
-    val result = Seq.newBuilder[Line]
+    val result = Seq.builder[Line]
     val filled = filler.filled
     result += firstPre merge Line(filled.head)
     // subsequent lines get the repeatPre
     filled.drop(1) foreach { f => result += Line(f.insert(0, repeatPre)) }
-    result.result
+    result.build()
   }
 
   /** Returns the region `[start, end)` commented out. The default implementation prefixes each line
@@ -151,11 +151,11 @@ class Commenter {
     val minIndent = lin.filter(_.length > 0).map(Indenter.readIndent).min
     val spaces = " " * minIndent
     val prefix = Line(spaces + linePrefix + padding)
-    val lout = Seq.newBuilder[Line]
+    val lout = Seq.builder[Line]
     lin foreach { l =>
       lout += (if (l.length > 0) prefix.merge(l.view(minIndent)) else l)
     }
-    lout.result
+    lout.build()
   }
 
   /** Inserts block comments around the region `[start,end)` in `buffer`.

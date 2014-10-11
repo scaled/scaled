@@ -6,7 +6,6 @@ package scaled
 
 import java.io.{FileNotFoundException, InputStream}
 import java.nio.file.{Files, Paths}
-import reactual.{PropertyV, ValueV}
 import scaled.util.Reloadable
 
 /** Provides editor configuration to modes. The global configuration and mode configuration will be
@@ -111,13 +110,12 @@ object Config {
   abstract class Defs (global :Boolean = false) {
 
     /** All config vars defined by this defs instance. */
-    lazy val vars :Array[Var[_]] = getClass.getDeclaredFields flatMap { f =>
+    lazy val vars :Seq[Var[_]] = getClass.getDeclaredFields.mkSeq foldBuild[Var[_]] { (b, f) =>
       val vara = f.getAnnotation(classOf[scaled.Var])
-      if (vara == null) None
-      else {
+      if (vara != null) {
         f.setAccessible(true)
         val key = f.get(this).asInstanceOf[Key[Object]]
-        Some(new Var[Object](deCamelCase(f.getName), vara.value.replaceAll("\\n\\s+", " "), key))
+        b += new Var[Object](deCamelCase(f.getName), vara.value.replaceAll("\\n\\s+", " "), key)
       }
     }
 

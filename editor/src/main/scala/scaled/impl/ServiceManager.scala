@@ -4,7 +4,6 @@
 
 package scaled.impl
 
-import com.google.common.cache.{CacheBuilder, CacheLoader}
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Path
 import scaled._
@@ -33,13 +32,9 @@ class ServiceInjector (val log :Logger, val exec :Executor)
       // match the args to the ctor parameters; the first arg of the desired type is used and then
       // removed from the arg list, so we can request multiple args of the same type as long as
       // they're in the correct order
-      def minus (args :List[Any], elem :Any) :List[Any] = args match {
-        case Nil => Nil
-        case h :: t => if (elem == h) t else h :: minus(t, elem)
-      }
-      var remargs = args ++ stockArgs
+      var remargs = SeqBuffer[Any]().append(args).append(stockArgs)
       val params = ctor.getParameterTypes.map { p => remargs.find(p.isInstance) match {
-        case Some(arg) => remargs = minus(remargs, arg) ; arg
+        case Some(arg) => remargs.remove(arg) ; arg
         case None      => resolveService(p)
       }}
       ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T]
@@ -63,12 +58,8 @@ class ServiceInjector (val log :Logger, val exec :Executor)
 
 class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec) {
 
-  private var services = CacheBuilder.newBuilder.build(
-    new CacheLoader[Class[_],AbstractService]() {
-      def load (iclass :Class[_]) :AbstractService = {
-        injectInstance(iclass.asInstanceOf[Class[AbstractService]], Nil)
-      }
-    })
+  private var services = Mutable.cacheMap { iclass :Class[_] =>
+    injectInstance(iclass.asInstanceOf[Class[AbstractService]], Nil) }
 
   // we provide MetaService, so stick ourselves in the cache directly; meta!
   services.put(getClass, this)

@@ -4,8 +4,6 @@
 
 package scaled.impl
 
-import scala.collection.mutable.ArrayBuffer
-
 import scaled._
 
 /** Tracks changes to a buffer, aggregating sequences of individual changes into single undoable
@@ -76,7 +74,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
     }
   }
 
-  private def pop (actions :ArrayBuffer[Action]) = {
+  private def pop (actions :SeqBuffer[Action]) = {
     val action = actions.last ; actions.trimEnd(1) ; action
   }
 
@@ -85,20 +83,20 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   // come in during that time are triggered by our undoing, not by user actions
   private def accum = if (_undoing) _redoEdits else _edits
 
-  private def accumTo (edits :ArrayBuffer[Buffer.Edit], actions :ArrayBuffer[Action]) {
+  private def accumTo (edits :SeqBuffer[Buffer.Edit], actions :SeqBuffer[Action]) {
     if (!edits.isEmpty) {
       // if we can't accumulate these edits with the most recent action, add a new action
-      if (actions.isEmpty || !actions.last.accum(edits)) actions += toAction(_point, edits.clone)
+      if (actions.isEmpty || !actions.last.accum(edits)) actions += toAction(_point, edits.toSeq)
       edits.clear()
     }
   }
 
   private def isBreakChar (c :Char) = Character.isWhitespace(c) // TODO: delegate this to the mode
 
-  private val _edits = ArrayBuffer[Buffer.Edit]()
-  private val _actions = ArrayBuffer[Action]()
-  private val _redoEdits = ArrayBuffer[Buffer.Edit]()
-  private val _redoActions = ArrayBuffer[Action]()
+  private val _edits = SeqBuffer[Buffer.Edit]()
+  private val _actions = SeqBuffer[Action]()
+  private val _redoEdits = SeqBuffer[Buffer.Edit]()
+  private val _redoActions = SeqBuffer[Action]()
   private var _point = Loc(0, 0)
   private var _undoing = false
   private var _redoing = false
@@ -113,7 +111,7 @@ object UndoStack {
     /** Undoes the edits in the reverse of the order they were accumulated. */
     def undo () :Unit
     /** Requests to merge `edits` into this action. Returns true on success, false otherwise. */
-    def accum (edits :Seq[Buffer.Edit]) :Boolean
+    def accum (edits :SeqV[Buffer.Edit]) :Boolean
   }
 
   /** Creates the appropriate action for `edits`. */
@@ -124,7 +122,7 @@ object UndoStack {
 
   private class SimpleInsert (p :Loc, private var edit :Buffer.Insert) extends Action(p) {
     def undo () = edit.undo()
-    def accum (edits :Seq[Buffer.Edit]) :Boolean = edits match {
+    def accum (edits :SeqV[Buffer.Edit]) :Boolean = edits match {
       case Seq(ins :Buffer.Insert) if (ins.start == edit.end) => edit = edit.merge(ins) ; true
       case _ => false
     }
@@ -133,7 +131,7 @@ object UndoStack {
 
   private class General (p :Loc, edits :Seq[Buffer.Edit]) extends Action(p) {
     def undo () = edits.reverse.foreach { _.undo() }
-    def accum (edits :Seq[Buffer.Edit]) = false
+    def accum (edits :SeqV[Buffer.Edit]) = false
     override def toString = s"General($p, $edits)"
   }
 }

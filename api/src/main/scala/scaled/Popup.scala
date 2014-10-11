@@ -7,7 +7,7 @@ package scaled
 /** Defines a popup, displayed over a buffer. */
 case class Popup (
   /** The contents of the popup. */
-  lines :Seq[LineV],
+  lines :Ordered[LineV],
   /** Controls the position of the popup and its extent. */
   pos :Popup.Pos,
   /** Indicates that this popup is ephemeral, which means it is automatically cleared the next time
@@ -29,10 +29,10 @@ case class Popup (
 object Popup {
 
   /** Creates a popup with `text` as its contents. */
-  def text (text :Seq[String], pos :Popup.Pos) :Popup = lines(text map Line.apply, pos)
+  def text (text :Ordered[String], pos :Popup.Pos) :Popup = lines(text map Line.apply, pos)
 
   /** Creates a popup with `lines` as its contents. */
-  def lines (lines :Seq[LineV], pos :Popup.Pos) :Popup = apply(lines, pos, true, false)
+  def lines (lines :Ordered[LineV], pos :Popup.Pos) :Popup = apply(lines, pos, true, false)
 
   /** Defines the position and orientation of a popup. */
   sealed trait Pos {

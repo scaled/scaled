@@ -4,9 +4,6 @@
 
 package scaled.major
 
-import reactual.{Future, Promise}
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 import scaled.util.{BufferBuilder, Chars, Paragrapher}
 
@@ -536,7 +533,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
         k => (s"${k.getName}: " -> state.get(k).map(_.toString).getOrElse("")))
       if (!kvs.isEmpty) {
         bb.addSection("State")
-        bb.addKeysValues(kvs :_*)
+        bb.addKeysValues(kvs)
       }
     }
     bb.addHeader("Editor")
@@ -572,7 +569,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def showTags () {
     val p = view.point()
     val info = buffer.tagsAt(p) match {
-      case Nil => List("No tags.")
+      case Nil  => List("No tags.")
       case tags => tags.map(_.toString)
     }
     view.popup() = Popup.text(info, Popup.UpRight(p))

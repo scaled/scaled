@@ -4,7 +4,6 @@
 
 package scaled.util
 
-import scala.collection.mutable.ArrayBuffer
 import scaled._
 import scaled.major.TextConfig
 
@@ -17,10 +16,10 @@ class BufferBuilder (val fillWidth :Int) {
   import TextConfig._
 
   private final val MinFillWidth = 40
-  private val _lines = ArrayBuffer[LineV]()
+  private val _lines = SeqBuffer[LineV]()
 
   /** Returns the lines accumulated to this builder. */
-  def lines :Seq[LineV] = _lines
+  def lines :SeqV[LineV] = _lines
 
   /** Replaces the contents of `view`s buffer with the contents of this builder. The view's point
     * is moved to the start of the buffer and the buffer is marked clean.
@@ -113,13 +112,18 @@ class BufferBuilder (val fillWidth :Int) {
 
   /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
     * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
-  def addKeysValues (kvs :(String,String)*) = {
-    val padWidth = kvs.map(_._1).map(_.length).max
+  def addKeysValues (kvs :(String,String)*) :this.type = {
+    val padWidth = kvs.map(_._1.length).max
     def pad (key :String) = key + (" " * math.max(0, padWidth-key.length))
     kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
+    this
   }
 
-  private def styledLine (text :CharSequence, styles :Seq[String]) =
+  /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
+    * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
+  def addKeysValues (kvs :Seq[(String,String)]) :this.type = addKeysValues(kvs.toScala :_*)
+
+  private def styledLine (text :CharSequence, styles :scala.Seq[String]) =
     ((Line.builder(text) /: styles)(_.withStyle(_))).build()
 
   private def toDashes (text :String, dash :Char) = {

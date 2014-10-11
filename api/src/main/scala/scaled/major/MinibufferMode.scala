@@ -4,7 +4,6 @@
 
 package scaled.major
 
-import reactual.Promise
 import scaled._
 import scaled.util.Errors
 
