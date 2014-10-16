@@ -159,12 +159,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
     val vars = disp.modes.flatMap(m => m.varBindings)
     val comp = Completer.from(vars)(_.v.name)
-    editor.mini.read("Var:", "", config(varHistory), comp) onSuccess { vname =>
-      vars.find(_.v.name == vname) match {
-        case Some(v) => fn(v)
-        case None    => editor.popStatus(s"No such var: $vname")
-      }
-    }
+    editor.mini.read("Var:", "", config(varHistory), comp) onSuccess fn
   }
 
   /** Returns the fill column. By default this is based on the width of the view, but all editing
