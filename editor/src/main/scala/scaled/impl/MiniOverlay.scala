@@ -64,12 +64,18 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
     }
   }
 
-  /** Called when we clear an active minibuffer. */
+  /** Called to check whether we can show this minibuffer.
+    * Should throw a feedback exception (with explanation) if showing is not currently allowed. */
+  def willShow () :Unit
+
+  /** Called when this minibuffer is made visible. */
+  def onShow () :Unit
+
+  /** Called when this minibuffer is cleared. */
   def onClear () :Unit
 
   override def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = try {
-    if (getCenter != null) throw Errors.feedback(
-      "Command attempted to use minibuffer while in minibuffer")
+    willShow() // make sure it's OK to activate ourselves
 
     val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
     val modeArgs = ui :: result :: List.copyOf(args)
@@ -85,6 +91,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
     setCenter(area)
     setVisible(true)
     toFront()
+    onShow()
     area.requestFocus()
     result onComplete { _ =>
       ui.setPrompt("")

@@ -171,19 +171,32 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   _statusLine.getStyleClass.add("status")
   getChildren.add(_statusLine)
 
+  private val _miniActive = Value(false)
+  private def checkMiniShow () = if (_miniActive()) throw Errors.feedback(
+    "Command attempted to use minibuffer while in minibuffer")
+
   private val _mini = new MiniOverlay(this) {
-    override def onClear () = _focus().area.requestFocus() // restore buffer focus on clear
+    override def willShow () = checkMiniShow()
+    override def onShow () {
+      _miniActive() = true
+    }
+    override def onClear () = {
+      _miniActive() = false
+      _focus().area.requestFocus() // restore buffer focus on clear
+    }
   }
   _mini.maxWidthProperty.bind(Bindings.subtract(widthProperty, 20))
   getChildren.add(_mini)
 
   private val _statusMini = new MiniStatus(this) {
+    override def willShow () = checkMiniShow()
     override def onShow () {
-      super.onShow()
+      _miniActive() = true
       _statusLine.setVisible(false)
     }
     override def onClear () {
       _statusLine.setVisible(true)
+      _miniActive() = false
       _focus().area.requestFocus() // restore buffer focus on clear
     }
   }
