@@ -114,7 +114,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   private def workspaceFor (desktop :String, path :Option[String]) :WorkspaceImpl = {
     def isOpen (ws :WorkspaceImpl) = ws.editors.containsKey(desktop)
     def latest (ws :Unordered[WorkspaceImpl]) =
-      if (ws.isEmpty) None else Some(ws.minBy(_.lastOpened))
+      if (ws.isEmpty) None else Some(ws.maxBy(_.lastOpened))
     def abs (p :Path) = if (Files.exists(p)) Some(p.toAbsolutePath.toString) else None
     def byHintPath = path.map(Paths.get(_)).flatMap(abs).flatMap { path =>
       val hintWSs = wshints().asMap.toMapV collect {
