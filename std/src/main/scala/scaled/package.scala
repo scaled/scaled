@@ -12,12 +12,6 @@ package object scaled {
   type uV = scala.annotation.unchecked.uncheckedVariance
   type tailrec = scala.annotation.tailrec
 
-  /** Returns the empty `List`. */
-  @inline final val Nil :List[Nothing] = List.nil
-
-  /** Returns the [[Option]] that contains no value. */
-  @inline final val None :Option[Nothing] = Option.none
-
   // for great Java interop
   type JBoolean   = java.lang.Boolean
   type JByte      = java.lang.Byte

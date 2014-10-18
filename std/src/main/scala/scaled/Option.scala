@@ -7,7 +7,7 @@ package scaled
 import java.util.{NoSuchElementException, Optional}
 
 /** Represents an optional value. An option is also a collection with zero or one elements. */
-abstract class Option[+A] extends Unordered[A] {
+sealed abstract class Option[+A] extends Unordered[A] {
 
   /** Returns the option's value.
     * @throws NoSuchElementException if called on `None`. */
@@ -53,13 +53,10 @@ object Option {
   def some[A] (value :A) :Option[A] = new Some(value)
 
   /** Returns an option which contains no value (is empty). */
-  def none[A] :Option[A] = NONE.asInstanceOf[Option[A]]
+  def none[A] :Option[A] = None.asInstanceOf[Option[A]]
 
   /** Returns an option which contains `value` iff value is not null, [[none]] otherwise. */
   def apply[A] (value :A) :Option[A] = if (value == null) none else some(value)
-
-  /** Unapplies an `Option` for use in pattern matching. */
-  def unapply[A] (opt :Option[A]) :SOption[A] = if (opt eq NONE) SNone else SSome(opt.get)
 
   /** Creates a Scaled `Option` from a Scala `Option`. */
   def from[A] (opt :SOption[A]) :Option[A] = if (opt.isDefined) Option(opt.get) else None
@@ -73,23 +70,6 @@ object Option {
     case n => throw new UnsupportedOperationException(
       s"Too many elements accumulated to Option.Builder: $n")
   }
-
-  private final class None extends Option[Nothing] {
-    override def iterator = Nil.iterator()
-    override def copyInto (target :Array[Any], offset :Int) {}
-    override def size = 0
-    override def get = throw new NoSuchElementException("Called get on empty Option.")
-    override def isDefined = false
-    override def hashCode = 0
-    override def equals (other :Any) = this eq other.asInstanceOf[AnyRef]
-    override def toString = "None"
-    // overrides for performance
-    override def fold[B] (zero :B)(op :(B,Nothing) => B) = zero
-    override def map[B] (f :Nothing => B) = None
-    override def toList = Nil
-    override def toSeq = Seq.empty
-  }
-  private final val NONE = new None()
 
   private final class Some[+A] (value :A) extends Option[A] {
     override def iterator = new JIterator[A @uV] {
@@ -123,5 +103,22 @@ object Some {
   def apply[A] (value :A) :Option[A] = Option.some(value)
 
   /** Unapplies an `Option` for use in pattern matching. */
-  def unapply[A] (opt :Option[A]) :SOption[A] = if (opt eq None) SNone else SSome(opt.get)
+  def unapply[A] (opt :Option[A]) :Option[A] = opt
+}
+
+/** The [[Option]] that contains no value. */
+case object None extends Option[Nothing] {
+  override def iterator = Nil.iterator()
+  override def copyInto (target :Array[Any], offset :Int) {}
+  override def size = 0
+  override def get = throw new NoSuchElementException("Called get on empty Option.")
+  override def isDefined = false
+  override def hashCode = 0
+  override def equals (other :Any) = this eq other.asInstanceOf[AnyRef]
+  override def toString = "None"
+  // overrides for performance
+  override def fold[B] (zero :B)(op :(B,Nothing) => B) = zero
+  override def map[B] (f :Nothing => B) = None
+  override def toList = Nil
+  override def toSeq = Seq.empty
 }

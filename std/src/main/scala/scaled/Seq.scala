@@ -62,7 +62,7 @@ object Seq {
   }
 
   /** Unapplies a seq. */
-  def unapplySeq[A] (seq :Seq[A]) :SOption[IndexedSeq[A]] = SSome(seq.toScala)
+  def unapplySeq[A] (seq :Seq[A]) :Option[Seq[A]] = Some(seq)
 
   /** Returns a [[Seq]] containing `elems`. */
   def copyOf[A] (elems :Collection[A]) :Seq[A] =

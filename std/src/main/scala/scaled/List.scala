@@ -7,7 +7,7 @@ package scaled
 import java.util.{Collection, Comparator, List => JList, NoSuchElementException, Objects}
 
 /** A simple functional list class, built from cons cells as God and John McCarthy intended. */
-abstract class List[+A] extends Ordered[A] {
+sealed abstract class List[+A] extends Ordered[A] {
 
   /** Returns the tail of this list.
     * @throws NoSuchElementException if called on the `nil` list. */
@@ -41,15 +41,19 @@ abstract class List[+A] extends Ordered[A] {
   /** Retypes this list of `A`s as a list of `B`s. Makes life easier in Java. */
   def upcast[B >: A] :List[B] = this
 
+  /** Returns true if this list is equal to `other`.
+    * This is used to implement [[equals]] efficiently. */
+  def equiv (other :List[_]) :Boolean
+  /** Combines the hash code of this list with `code`.
+    * This is used to implement [[hashCode]] efficiently. */
+  def hashCode (code :Int) :Int
+
   override def equals (other :Any) :Boolean = other match {
     case olist :List[_] => equiv(olist)
     case oiter :JIterable[_] => Iterables.equals(this, oiter)
     case _ => false
   }
-  protected def equiv (other :List[_]) :Boolean
-
   override def hashCode :Int = hashCode(1)
-  protected def hashCode (code :Int) :Int
 
   // overrides for performance and type specificity
   override def collect[B] (pf :PartialFunction[A,B]) :List[B] = super.collect(pf).toList
@@ -179,7 +183,7 @@ object List {
   def builder[A] (expectedSize :Int) :Builder[A] = new Builder(expectedSize)
 
   /** Returns the empty list. */
-  def nil[A] :List[A] = NIL.asInstanceOf[List[A]]
+  def nil[A] :List[A] = Nil.asInstanceOf[List[A]]
   /** Returns the empty list. */
   def apply[A] () :List[A] = nil
   /** Creates a list that contains `value`. */
@@ -231,57 +235,47 @@ object List {
     }
     list
   }
-
-  private final class Nil extends List[Any] {
-    override def iterator () = Iterables.EMPTY_ITER.asInstanceOf[JIterator[Any]]
-    override def isEmpty = true
-    override def size = 0
-    override def head = throw new NoSuchElementException("Nil.head()")
-    override def tail = throw new NoSuchElementException("Nil.tail()")
-    override def cons[B >: Any] (elem :B) = new Cons(elem, this)
-    override def headOption = None
-    override def foldRight[B] (zero :B)(op :(Any,B) => B) = zero
-    override protected def equiv (other :List[_]) = (this eq other)
-    override protected def hashCode (code :Int) = code
-  }
-  private val NIL = new Nil()
-
-  private final class Cons[A] (_head :A, _tail :List[A]) extends List[A] {
-    if (_tail == null) throw new IllegalArgumentException("List tail must not be null.")
-
-    override def iterator () = new JIterator[A]() {
-      private var _cur :List[A] = Cons.this
-      override def hasNext = _cur ne NIL
-      override def next = { val cur = _cur ; _cur = cur.tail ; cur.head }
-    }
-
-    override def isEmpty = false
-    override def size = {
-      var size = 0 ; var ll :List[A] = this
-      while (!ll.isEmpty) { size += 1 ; ll = ll.tail }
-      size
-    }
-
-    override def head = _head
-    override def headOption = Some(_head)
-    override def tail = _tail
-    override def cons[B >: A] (elem :B) = new Cons[B](elem, this)
-
-    override def foldRight[B] (zero :B)(op :(A,B) => B) = op(head, tail.foldRight(zero)(op))
-
-    override protected def equiv (other :List[_]) =
-      (this eq other) || (!other.isEmpty && Objects.equals(_head, other.head) &&
-                          _tail.equiv(other.tail))
-
-    override protected def hashCode (code :Int) =
-      _tail.hashCode(31 * code + (if (_head == null) 0 else _head.hashCode))
-  }
 }
 
-/** Provides unapply for `::` (pronounced cons). */
-object :: {
+/** The empty `List`. */
+case object Nil extends List[Nothing] {
+  override def iterator () = Iterables.EMPTY_ITER.asInstanceOf[JIterator[Nothing]]
+  override def isEmpty = true
+  override def size = 0
+  override def cons[B >: Nothing] (elem :B) = new ::(elem, this)
+  override def head = throw new NoSuchElementException("Nil.head()")
+  override def headOption = None
+  override def tail = throw new NoSuchElementException("Nil.tail()")
+  override def foldRight[B] (zero :B)(op :(Nothing,B) => B) = zero
+  override def equiv (other :List[_]) = (this eq other)
+  override def hashCode (code :Int) = code
+}
 
-  /** Unapplies a cons, for use in pattern matching. */
-  def unapply[A] (list :List[A]) :SOption[(A,List[A])] =
-    if (list.isEmpty) SNone else SSome(list.head -> list.tail)
+/** A cons cell: an element (`head`) and a pointer to the rest of the list (`tail`). */
+final case class ::[A] (override val head :A, override val tail :List[A]) extends List[A] {
+  if (tail == null) throw new IllegalArgumentException("List tail must not be null.")
+
+  override def iterator () = new JIterator[A]() {
+    private var _cur :List[A] = ::.this
+    override def hasNext = _cur ne Nil
+    override def next = { val cur = _cur ; _cur = cur.tail ; cur.head }
+  }
+
+  override def isEmpty = false
+  override def size = {
+    var size = 0 ; var ll :List[A] = this
+    while (!ll.isEmpty) { size += 1 ; ll = ll.tail }
+    size
+  }
+
+  override def cons[B >: A] (elem :B) = new ::(elem, this)
+  override def headOption = Some(head)
+  override def foldRight[B] (zero :B)(op :(A,B) => B) = op(head, tail.foldRight(zero)(op))
+
+  override def equiv (other :List[_]) =
+    (this eq other) || (!other.isEmpty && Objects.equals(head, other.head) &&
+                        tail.equiv(other.tail))
+
+  override def hashCode (code :Int) =
+    tail.hashCode(31 * code + (if (head == null) 0 else head.hashCode))
 }
