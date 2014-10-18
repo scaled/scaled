@@ -5,6 +5,7 @@
 package scaled
 
 import java.util.{Collection, Comparator, List => JList, NoSuchElementException, Objects}
+import scala.{collection => sc}
 
 /** A simple functional list class, built from cons cells as God and John McCarthy intended. */
 sealed abstract class List[+A] extends Ordered[A] {
@@ -194,26 +195,20 @@ object List {
     }
     override def append (elems :JIterable[_ <: A]) = append(elems.iterator())
     override def append (elems :Unordered[A]) = append(elems.iterator())
-    override def append (elems :scala.collection.Traversable[A]) = {
-      elems foreach append
-      this
-    }
+    override def append (elems :sc.Traversable[A]) = { elems foreach append ; this }
 
     override def += (value :A) = append(value)
     override def ++= (iter :JIterator[_ <: A]) = append(iter)
     override def ++= (elems :JIterable[_ <: A]) = append(elems)
     override def ++= (elems :Unordered[A]) = append(elems)
-    override def ++= (elems :scala.collection.Traversable[A]) = append(elems)
+    override def ++= (elems :sc.Traversable[A]) = append(elems)
 
-    override def build () :List[A] = {
-      if (_head == null) Nil
-      else {
-        _last.unsafeSetTail(Nil)
-        _last = null
-        val list = _head
-        _head = null
-        list
-      }
+    override def build () :List[A] = if (_head == null) Nil else {
+      _last.unsafeSetTail(Nil)
+      _last = null
+      val list = _head
+      _head = null
+      list
     }
   }
 
@@ -302,9 +297,8 @@ private final class Cons[A] (override val head :A, private[this] var _tail :List
   override def tail = _tail
   override def foldRight[B] (zero :B)(op :(A,B) => B) = op(head, _tail.foldRight(zero)(op))
 
-  override def equiv (other :List[_]) =
-    (this eq other) || (!other.isEmpty && Objects.equals(head, other.head) &&
-                        _tail.equiv(other.tail))
+  override def equiv (other :List[_]) = (this eq other) || (
+    !other.isEmpty && Objects.equals(head, other.head) && _tail.equiv(other.tail))
 
   override def hashCode (code :Int) =
     _tail.hashCode(31 * code + (if (head == null) 0 else head.hashCode))

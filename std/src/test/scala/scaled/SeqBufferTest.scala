@@ -52,11 +52,6 @@ class SeqBufferTest {
     val expect = s1to4.take(2) ++ s1to40 ++ s1to4.drop(2)
     assertEquals(expect, sb)
     sb.clear()
-
-    // 1 to 40 foreach { sb += _ }
-    // assertEquals(s1to40, sb)
-    // assertEquals(sb, s1to40)
-    // sb.clear()
   }
 
   @Test def testRemove () {
