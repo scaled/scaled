@@ -152,7 +152,7 @@ sealed abstract class List[+A] extends Ordered[A] {
 
   override def toList = this
 
-  override def newBuilder[B] (expectedSize :Int) = new List.Builder[B](expectedSize)
+  override def newBuilder[B] (expectedSize :Int) = new List.Builder[B]()
   override def newEmpty[B] = List.nil
 
   override protected def uncheckedSlice (from :Int, until :Int) :Ordered[A] = {
@@ -173,14 +173,52 @@ sealed abstract class List[+A] extends Ordered[A] {
 object List {
 
   /** Used to build [[List]]s. */
-  class Builder[A] (esize :Int) extends SeqBuffer[A](esize) with Ordered.Builder[A] {
-    override def build () :List[A] = List.build(elemsForBuild, size)
+  class Builder[A] extends Ordered.Builder[A] {
+    private var _head :List[A] = null
+    private var _last :Cons[A] = null
+
+    override def append (value :A) = {
+      if (_head == null) {
+        _last = new Cons(value, null)
+        _head = _last
+      } else {
+        val tail = new Cons(value, null)
+        _last.unsafeSetTail(tail)
+        _last = tail
+      }
+      this
+    }
+    override def append (iter :JIterator[_ <: A]) = {
+      while (iter.hasNext) append(iter.next)
+      this
+    }
+    override def append (elems :JIterable[_ <: A]) = append(elems.iterator())
+    override def append (elems :Unordered[A]) = append(elems.iterator())
+    override def append (elems :scala.collection.Traversable[A]) = {
+      elems foreach append
+      this
+    }
+
+    override def += (value :A) = append(value)
+    override def ++= (iter :JIterator[_ <: A]) = append(iter)
+    override def ++= (elems :JIterable[_ <: A]) = append(elems)
+    override def ++= (elems :Unordered[A]) = append(elems)
+    override def ++= (elems :scala.collection.Traversable[A]) = append(elems)
+
+    override def build () :List[A] = {
+      if (_head == null) Nil
+      else {
+        _last.unsafeSetTail(Nil)
+        _last = null
+        val list = _head
+        _head = null
+        list
+      }
+    }
   }
 
   /** Returns a [[List]] builder. */
-  def builder[A] () :Builder[A] = new Builder(4)
-  /** Returns a [[List]] builder prepared to build a list with at least `expectedSize` elements. */
-  def builder[A] (expectedSize :Int) :Builder[A] = new Builder(expectedSize)
+  def builder[A] () :Builder[A] = new Builder()
 
   /** Returns the empty list. */
   def nil[A] :List[A] = Nil.asInstanceOf[List[A]]
@@ -209,7 +247,7 @@ object List {
 
   /** Returns a set containing the elements of `as`. */
   def copyOf[A] (as :Collection[A]) :List[A] =
-    if (as.isEmpty) Nil else new Builder[A](as.size).append(as).build()
+    if (as.isEmpty) Nil else new Builder[A]().append(as).build()
 
   /** Returns a set containing the elements of `as`. */
   def copyOf[A] (as :JList[A]) :List[A] = {
@@ -225,9 +263,6 @@ object List {
     list
   }
 
-  //
-  // implementation
-
   private def build[A] (elems :Array[Any], size :Int) :List[A] = {
     var list = nil[A] ; var ii = size-1 ; while (ii >= 0) {
       list = (elems(ii).asInstanceOf[A] :: list)
@@ -237,26 +272,20 @@ object List {
   }
 }
 
-/** The empty `List`. */
-case object Nil extends List[Nothing] {
-  override def iterator () = Iterables.EMPTY_ITER.asInstanceOf[JIterator[Nothing]]
-  override def isEmpty = true
-  override def size = 0
-  override def cons[B >: Nothing] (elem :B) = new ::(elem, this)
-  override def head = throw new NoSuchElementException("Nil.head()")
-  override def headOption = None
-  override def tail = throw new NoSuchElementException("Nil.tail()")
-  override def foldRight[B] (zero :B)(op :(Nothing,B) => B) = zero
-  override def equiv (other :List[_]) = (this eq other)
-  override def hashCode (code :Int) = code
-}
-
 /** A cons cell: an element (`head`) and a pointer to the rest of the list (`tail`). */
-final case class ::[A] (override val head :A, override val tail :List[A]) extends List[A] {
-  if (tail == null) throw new IllegalArgumentException("List tail must not be null.")
+private final class Cons[A] (override val head :A, private[this] var _tail :List[A])
+    extends List[A] {
+
+  /** DON'T CALL THIS. It's an internal mechanism to set the tail of this list, used by
+    * [[List.Builder]] to enable lists to be built efficiently. It's public because there's no way
+    * for us to make this private that will be enforced by any language other than Scala, so I'd
+    * rather just make it public and document it. */
+  def unsafeSetTail (tail :List[A]) {
+    _tail = tail
+  }
 
   override def iterator () = new JIterator[A]() {
-    private var _cur :List[A] = ::.this
+    private var _cur :List[A] = Cons.this
     override def hasNext = _cur ne Nil
     override def next = { val cur = _cur ; _cur = cur.tail ; cur.head }
   }
@@ -268,14 +297,36 @@ final case class ::[A] (override val head :A, override val tail :List[A]) extend
     size
   }
 
-  override def cons[B >: A] (elem :B) = new ::(elem, this)
+  override def cons[B >: A] (elem :B) = new Cons(elem, this)
   override def headOption = Some(head)
-  override def foldRight[B] (zero :B)(op :(A,B) => B) = op(head, tail.foldRight(zero)(op))
+  override def tail = _tail
+  override def foldRight[B] (zero :B)(op :(A,B) => B) = op(head, _tail.foldRight(zero)(op))
 
   override def equiv (other :List[_]) =
     (this eq other) || (!other.isEmpty && Objects.equals(head, other.head) &&
-                        tail.equiv(other.tail))
+                        _tail.equiv(other.tail))
 
   override def hashCode (code :Int) =
-    tail.hashCode(31 * code + (if (head == null) 0 else head.hashCode))
+    _tail.hashCode(31 * code + (if (head == null) 0 else head.hashCode))
+}
+
+/** The empty `List`. */
+case object Nil extends List[Nothing] {
+  override def iterator () = Iterables.EMPTY_ITER.asInstanceOf[JIterator[Nothing]]
+  override def isEmpty = true
+  override def size = 0
+  override def cons[B >: Nothing] (elem :B) :List[B] = new Cons(elem, this)
+  override def head = throw new NoSuchElementException("Nil.head()")
+  override def headOption = None
+  override def tail = throw new NoSuchElementException("Nil.tail()")
+  override def foldRight[B] (zero :B)(op :(Nothing,B) => B) = zero
+  override def equiv (other :List[_]) = (this eq other)
+  override def hashCode (code :Int) = code
+}
+
+/** Handles idiomatic pattern matching on list (i.e. `match h :: t`)). */
+object :: {
+  /** Unapplies a cons, for use in pattern matching. */
+  def unapply[A] (list :List[A]) :Option[(A,List[A])] =
+    if (list.isEmpty) None else Some((list.head, list.tail))
 }

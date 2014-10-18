@@ -212,7 +212,7 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
 
   /** Converts this collection into a [[List]].
     * If the collection is already a [[List]], `this` is returned. */
-  def toList :List[A] = List.builder[A](sizeHint).append(this).build()
+  def toList :List[A] = List.builder[A]().append(this).build()
 
   /** Converts this collection into a [[Set]].
     * If the collection is already a [[Set]], `this` is returned. */
