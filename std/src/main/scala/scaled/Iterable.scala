@@ -20,13 +20,9 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
 
   /** Returns a collection containing the elements of this collection for which `pf` is defined.
     * The elements of the new collection will have been mapped by `pf`. $ORDER */
-  def collect[B] (pf :PartialFunction[A,B]) :Unordered[B] = {
-    val bb = newBuilder[B]() ; val iter = iterator()
-    while (iter.hasNext) {
-      val res = pf.applyOrElse(iter.next, Unordered.PartialNotApplied)
-      if (res.asInstanceOf[AnyRef] ne Unordered.PartialNotApplied) bb += res.asInstanceOf[B]
-    }
-    bb.build()
+  def collect[B] (pf :PartialFunction[A,B]) :Unordered[B] = foldBuild[B] { (b,a) =>
+    val res = pf.applyOrElse(a, Unordered.PartialNotApplied)
+    if (res.asInstanceOf[AnyRef] ne Unordered.PartialNotApplied) b += res.asInstanceOf[B]
   }
 
   /** Returns a collection containing `this` and `that`. If the underlying collection is
@@ -58,8 +54,7 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
   /** Returns a count of elements that match `pred`. */
   def count (pred :A => Boolean) :Int = {
     var count = 0
-    val iter = iterator()
-    while (iter.hasNext) if (pred(iter.next)) count += 1
+    val iter = iterator() ; while (iter.hasNext) if (pred(iter.next)) count += 1
     count
   }
 
@@ -83,12 +78,8 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
   def groupBy[K] (f :A => K) :Map[K,Unordered[A]] = {
     val bs = new HashMap[K,Builder[A]]()
     val iter = iterator() ; while (iter.hasNext) {
-      val a = iter.next ; val k = f(a)
-      val kb = bs.get(k) match {
-        case null => val b = newBuilder[A]() ; bs.put(k, b) ; b
-        case b    => b
-      }
-      kb += a
+      val a = iter.next
+      Mutable.getOrPut(bs, f(a), newBuilder[A]()) += a
     }
     val mb = Map.builder[K,Unordered[A]]()
     val meiter = bs.entrySet.iterator() ; while (meiter.hasNext) {
@@ -107,14 +98,12 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
 
   /** Applies `op` to each element of this collection, in iteration order. */
   def foreach[U] (op :A => U) :Unit = {
-    val iter = iterator()
-    while (iter.hasNext) op(iter.next)
+    val iter = iterator() ; while (iter.hasNext) op(iter.next)
   }
 
   /** Returns true if `op` returns true for all elements in this collection. */
   def forall[B >: A] (op :B => Boolean) :Boolean = {
-    val iter = iterator()
-    while (iter.hasNext) if (!op(iter.next)) return false
+    val iter = iterator() ; while (iter.hasNext) if (!op(iter.next)) return false
     true
   }
 
@@ -211,8 +200,8 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
 
   /** Reduces this collection, in iteration order, via `op`.
     * @throws NoSuchElementException when called on an empty collection. */
-  def reduce[B >: A] (op :(B,A) => B) :B = {
-    val iter = iterator() ; var acc :B = iter.next
+  def reduce[A1 >: A] (op :(A1,A1) => A1) :A1 = {
+    val iter = iterator() ; var acc :A1 = iter.next
     while (iter.hasNext) acc = op(acc, iter.next)
     acc
   }

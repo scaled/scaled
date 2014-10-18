@@ -82,6 +82,19 @@ class SeqTest extends OrderedTestBase {
     assertEquals(Seq("a", "b", "c", "d"), list.iterator.toSeq)
   }
 
+  @Test def testStartsEndsWith () {
+    val abcde = Seq("a", "b", "c", "d", "e")
+    val abc = Seq("a", "b", "c")
+    val cde = Seq("c", "d", "e")
+    val bcd = Seq("b", "c", "d")
+    assertTrue(abcde.startsWith(abc))
+    assertFalse(abcde.startsWith(bcd))
+    assertTrue(abcde.endsWith(cde))
+    assertFalse(abcde.endsWith(bcd))
+    assertFalse(abc.startsWith(abcde))
+    assertFalse(cde.endsWith(abcde))
+  }
+
   @Test def testUnapply () {
     val one = Seq("one")
     one match {

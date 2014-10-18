@@ -77,10 +77,12 @@ abstract class OrderedTestBase {
     assertFalse(c1 endsWith c4)
   }
 
-  @Test def testExists () {
+  @Test def testExistsForall () {
     val c1 = make(1, 2, 3, 4, 5)
     assertTrue(c1.exists(_ == 3))
     assertFalse(c1.exists(_ == 9))
+    assertTrue(c1.forall(_ < 10))
+    assertFalse(c1.forall(_ < 5))
   }
 
   @Test def testFilter () {
@@ -164,11 +166,24 @@ abstract class OrderedTestBase {
     assertEquals(10, is reduceLeft plus)
   }
 
+  @Test def testScan () {
+    val is = make(1, 2, 3, 4, 5)
+    assertEquals(make(1, 3, 6, 10, 15), is.scan(0)(_ + _))
+  }
+
   @Test def testSize () {
     assertEquals(0, empty.size)
     val ints = make(1, 2, 3, 4, 5)
     assertEquals(5, ints.size)
     assertEquals(4, ints.drop(1).size)
+  }
+
+  @Test def testSpan () {
+    val is = make(1, 2, 3, 4, 5)
+    assertEquals((make(1, 2, 3), make(4, 5)), is.span(_ < 4))
+    assertEquals((empty, is), is.span(_ > 9))
+    assertEquals((is, empty), is.span(_ < 9))
+    assertEquals((empty, empty), empty[Int].span(_ != 4))
   }
 
   @Test def testTake () {
@@ -196,6 +211,11 @@ abstract class OrderedTestBase {
   @Test def testToArray () {
     val as = make("a", "b", "c")
     assertTrue(Arrays.deepEquals(Array("a", "b", "c") :Array[Object], as.toArray :Array[Object]))
+  }
+
+  @Test def testUnzip () {
+    val pairs = make(("a", 1), ("b", 2), ("c", 3))
+    assertEquals((make("a", "b", "c"), make(1, 2, 3)), pairs.unzip)
   }
 
   @Test def testZip () {

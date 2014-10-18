@@ -127,9 +127,31 @@ abstract class Ordered[+A] extends Unordered[A] {
   /** Returns an option containing the last element of this collection, or `None`. */
   def lastOption :Option[A] = if (isEmpty) None else Some(last)
 
+  /** Returns the length of the longest prefix of elements that satisfy `pred`. */
+  def prefixLength (pred :A => Boolean) :Int = {
+    var ii = 0 ; val iter = iterator() ; while (iter.hasNext && pred(iter.next)) ii += 1
+    ii
+  }
+
   /** Reduces this collection, from left to right, via `op`.
     * @throws NoSuchElementException when called on an empty collection. */
-  def reduceLeft[B >: A] (op :(B,A) => B) :B = reduce(op)
+  def reduceLeft[A1 >: A] (op :(A1,A1) => A1) :A1 = reduce(op)
+
+  /** Folds `op` over this collection, in iteration order, collecting the result of each
+    * invocation of `op` into a new collection, which is returned. */
+  def scan[B] (zero :B)(op :(B,A) => B) :Ordered[B] = {
+    var acc = zero ; val bb = newBuilder[B](size)
+    val iter = iterator() ; while (iter.hasNext) { acc = op(acc, iter.next) ; bb += acc }
+    bb.build()
+  }
+
+  /** Returns the slice of this seq in the range `[from, until)`.
+    * @throws IndexOfBoundsException if either end of the slice is out of bounds. */
+  def slice (from :Int, until :Int) :Ordered[A] = {
+    val size = this.size
+    Seq.checkBounds(from, until, size)
+    if (from == until) newEmpty else uncheckedSlice(from, until)
+  }
 
   /** Returns a copy of this collection, sorted via `cmp`. */
   def sorted (cmp :Comparator[_ >: A]) :Ordered[A] = {
@@ -148,12 +170,16 @@ abstract class Ordered[+A] extends Unordered[A] {
   /** Returns a copy of this collection, sorted via `fn` and `cmp`. */
   def sortBy[B] (fn :(A => B))(implicit cmp :Ordering[B]) :Ordered[A] = sorted(cmp on fn)
 
-  /** Returns the slice of this seq in the range `[from, until)`.
-    * @throws IndexOfBoundsException if either end of the slice is out of bounds. */
-  def slice (from :Int, until :Int) :Ordered[A] = {
+  /** Splits this collection into a prefix/suffix pair according to `pred`.
+    * This is precisely `splitAt(prefixLength(pred))`. */
+  def span (pred :A => Boolean) :(Ordered[A], Ordered[A]) = splitAt(prefixLength(pred))
+
+  /** Splits this collection at `index`, returning `([0, index),[index,size))`. */
+  def splitAt (index :Int) :(Ordered[A], Ordered[A]) = {
     val size = this.size
-    Seq.checkBounds(from, until, size)
-    if (from == until) newEmpty else uncheckedSlice(from, until)
+    if (index == 0) (newEmpty, this)
+    else if (index == size) (this, newEmpty)
+    else (uncheckedSlice(0, index), uncheckedSlice(index, size))
   }
 
   /** Returns the first `count` elements of this collection. If this collection is `count` or fewer
@@ -174,9 +200,21 @@ abstract class Ordered[+A] extends Unordered[A] {
     }
 
   /** Takes the longest prefix that satisfies `pred`. */
-  def takeWhile (pred :A => Boolean) :Ordered[A] = {
-    var ii = 0 ; val iter = iterator() ; while (iter.hasNext && pred(iter.next)) ii += 1
-    if (ii == 0) newEmpty else uncheckedSlice(0, ii)
+  def takeWhile (pred :A => Boolean) :Ordered[A] = prefixLength(pred) match {
+    case 0 => newEmpty
+    case p => uncheckedSlice(0, p)
+  }
+
+  /** Converts this collection of pairs into a collection of the left elements, and a collection of
+    * the right elements. */
+  def unzip[A1,A2] (implicit asPair :A => (A1, A2)) :(Ordered[A1],Ordered[A2]) = {
+    val b1 = newBuilder[A1]() ; val b2 = newBuilder[A2]()
+    val iter = iterator() ; while (iter.hasNext) {
+      val (a1, a2) = asPair(iter.next)
+      b1 += a1
+      b2 += a2
+    }
+    (b1.build(), b2.build())
   }
 
   /** Returns a filtered view of this collection. **Note**: the view is lazily computed. This

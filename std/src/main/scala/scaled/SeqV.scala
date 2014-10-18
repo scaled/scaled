@@ -26,6 +26,9 @@ abstract class SeqV[+A] extends Ordered[A] {
   /** Returns true if `this` contains `slice` as a subsequence. */
   def containsSlice[B >: A] (slice :SeqV[B]) :Boolean = indexOfSlice(slice) != -1
 
+  /** Returns true if this sequence ends with `slice`. */
+  def endsWith[B >: A] (slice :SeqV[B]) :Boolean = sliceEquals(slice, size-slice.length)
+
   /** Folds `op` over the elements of this seq, from right to left. */
   def foldRight[B] (zero :B)(op :(A,B) => B) :B = {
     var acc = zero
@@ -35,59 +38,89 @@ abstract class SeqV[+A] extends Ordered[A] {
   /** An alias for [[foldRight]]. */
   @inline final def :\[B] (zero :B)(op :(A,B) => B) :B = foldRight(zero)(op)
 
-  /** Returns the index of the first occurrance of `elem` (per [[Objects.equals]]) in this seq, or
-    * -1 if `elem` is not found in the seq. */
-  def indexOf[B >: A] (elem :B) :Int = {
+  /** Returns the index (>= `from`) of the first occurrence of `elem` (per [[Objects.equals]]) in
+    * this seq, or -1 if `elem` is not found in the seq. */
+  def indexOf[B >: A] (elem :B, from :Int = 0) :Int = {
     val ss = size
-    var ii = 0 ; while (ii < ss) { if (Objects.equals(get(ii), elem)) return ii ; ii += 1 }
+    var ii = from ; while (ii < ss) { if (Objects.equals(get(ii), elem)) return ii ; ii += 1 }
     -1
   }
-
-  /** Returns the index of the first element that satisfies `pred`, or -1. */
-  def indexOf (pred :A => Boolean) :Int = {
-    val ss = size ; var ii = 0 ; while (ii < ss) { if (pred(get(ii))) return ii ; ii += 1 }
-    -1
-  }
-
-  /** Returns the index of the first occurrance of `slice` in this sequence or -1. */
-  def indexOfSlice[B >: A] (slice :SeqV[B]) :Int = {
-    val ll = size-slice.size
-    var ii = 0 ; while (ii < ll) { if (sliceEquals(slice, ii)) return ii ; ii += 1 }
-    -1
-  }
-
-  /** Returns the index of the last occurrance of `elem` (per [[Objects.equals]]) in this seq, or
+  /** Returns the index of the first occurrence of `elem` (per [[Objects.equals]]) in this seq, or
     * -1 if `elem` is not found in the seq. */
-  def lastIndexOf[B >: A] (elem :B) :Int = {
-    var ii = size-1 ; while (ii >= 0) { if (Objects.equals(get(ii), elem)) return ii ; ii -= 1 }
+  def indexOf[B >: A] (elem :B) :Int = indexOf(elem, 0)
+
+  /** Returns the index (>= `from`) of the first element that satisfies `pred`, or -1. */
+  def indexWhere (pred :A => Boolean, from :Int) :Int = {
+    val ss = size ; var ii = from ; while (ii < ss) { if (pred(get(ii))) return ii ; ii += 1 }
     -1
   }
+  /** Returns the index of the first element that satisfies `pred`, or -1. */
+  def indexWhere (pred :A => Boolean) :Int = indexOf(pred, 0)
 
+  /** Returns the index (>= `from`) of the first occurrence of `slice` in this sequence or -1. */
+  def indexOfSlice[B >: A] (slice :SeqV[B], from :Int) :Int = {
+    val ll = size-slice.size
+    var ii = from ; while (ii < ll) { if (sliceEquals(slice, ii)) return ii ; ii += 1 }
+    -1
+  }
+  /** Returns the index of the first occurrence of `slice` in this sequence or -1. */
+  def indexOfSlice[B >: A] (slice :SeqV[B]) :Int = indexOfSlice(slice, 0)
+
+  /** Returns the index (<= `from`) of the last occurrence of `elem` (per [[Objects.equals]]) in
+    * this seq, or -1 if `elem` is not found in the seq. */
+  def lastIndexOf[B >: A] (elem :B, from :Int) :Int = {
+    var ii = from ; while (ii >= 0) { if (Objects.equals(get(ii), elem)) return ii ; ii -= 1 }
+    -1
+  }
+  /** Returns the index of the last occurrence of `elem` (per [[Objects.equals]]) in this seq, or
+    * -1 if `elem` is not found in the seq. */
+  def lastIndexOf[B >: A] (elem :B) :Int = lastIndexOf(elem, size-1)
+
+  /** Returns the index (<= `from`) of the last element that satisfies `pred`, or -1. */
+  def lastIndexWhere (pred :A => Boolean, from :Int) :Int = {
+    var ii = from ; while (ii >= 0) { if (pred(get(ii))) return ii ; ii -= 1 }
+    -1
+  }
   /** Returns the index of the last element that satisfies `pred`, or -1. */
-  def lastIndexOf (pred :A => Boolean) :Int = {
-    var ii = size-1 ; while (ii >= 0) { if (pred(get(ii))) return ii ; ii -= 1 }
-    -1
-  }
+  def lastIndexWhere (pred :A => Boolean) :Int = lastIndexOf(pred, size-1)
 
-  /** Returns the index of the last occurrance of `slice` in this sequence or -1. */
-  def lastIndexOfSlice[B >: A] (slice :SeqV[B]) :Int = {
-    var ii = size-slice.size ; while (ii >= 0) { if (sliceEquals(slice, ii)) return ii ; ii -= 1 }
+  /** Returns the index (<= `from`) of the last occurrence of `slice` in this sequence or -1. */
+  def lastIndexOfSlice[B >: A] (slice :SeqV[B], from :Int) :Int = {
+    var ii = from ; while (ii >= 0) { if (sliceEquals(slice, ii)) return ii ; ii -= 1 }
     -1
   }
+  /** Returns the index of the last occurrence of `slice` in this sequence or -1. */
+  def lastIndexOfSlice[B >: A] (slice :SeqV[B]) :Int = lastIndexOfSlice(slice, size-slice.size)
 
   /** Returns true if this collection contains `slice` starting at `index`. */
   def sliceEquals[B >: A] (slice :SeqV[B], index :Int) :Boolean = {
-    var ii = index ; var ss = 0 ; var ll = slice.size ; while (ss < ll) {
+    val ll = index+slice.size
+    if (index < 0 || ll > size) return false
+    var ss = 0 ; var ii = index ; while (ii < ll) {
       if (!Objects.equals(get(ii), slice.get(ss))) return false
       ii += 1 ; ss += 1
     }
     true
   }
 
-  /** Returns a copy of this seq in reverse order. */
-  def reverse :Seq[A] = {
-    val sb = Seq.builder[A](size)
-    var ii = size-1 ; while (ii >= 0) { sb += get(ii) ; ii -= 1}
+  /** Returns true if this sequence starts with `slice`. */
+  def startsWith[B >: A] (slice :SeqV[B]) :Boolean = sliceEquals(slice, 0)
+
+  /** Reduces this collection, from right to left, via `op`.
+    * @throws NoSuchElementException when called on an empty collection. */
+  def reduceRight[A1 >: A] (op :(A1,A1) => A1) :A1 = {
+    var acc :A1 = last
+    var ii = size-2 ; while (ii >= 0) { acc = op(get(ii), acc) ; ii -= 1 }
+    acc
+  }
+
+  /** Returns this seq in reverse order. */
+  def reverse :Seq[A] = reverseMap(identity)
+
+  /** Returns this seq in reverse order, mapped via `f`. */
+  def reverseMap[B] (f :A => B) :Seq[B] = {
+    val sb = Seq.builder[B](size)
+    var ii = size-1 ; while (ii >= 0) { sb += f(get(ii)) ; ii -= 1 }
     sb.build()
   }
 
@@ -148,6 +181,12 @@ abstract class SeqV[+A] extends Ordered[A] {
 
   override def partition (pred :A => Boolean) :(Seq[A],Seq[A]) =
     super.partition(pred).asInstanceOf[(Seq[A],Seq[A])]
+
+  override def prefixLength (pred :A => Boolean) = {
+    var ii = 0 ; var ll = size ; while (ii < ll && pred(get(ii))) { ii += 1 }
+    ii
+  }
+
   override def map[B] (f :A => B) :Seq[B] = super.map(f).toSeq
   override def sorted (cmp :Comparator[_ >: A]) :Seq[A] = super.sorted(cmp).toSeq
   override def sorted (implicit cmp :Ordering[_ >: A]) :Seq[A] = super.sorted(cmp).toSeq

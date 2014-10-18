@@ -28,13 +28,13 @@ abstract class List[+A] extends Ordered[A] {
   /** An alias for [[foldRight]]. */
   @inline final def :\[B] (zero :B)(op :(A,B) => B) :B = foldRight(zero)(op)
 
-  /** Returns a copy of this list in reverse order. */
-  def reverse :List[A] = {
-    var rev :List[A] = Nil
-    var lst = this ; while (!lst.isEmpty) {
-      rev = lst.head :: rev
-      lst = lst.tail
-    }
+  /** Returns this list in reverse order. */
+  def reverse :List[A] = reverseMap(identity)
+
+  /** Returns this list in reverse order, mapped via `f`. */
+  def reverseMap[B] (f :A => B) :List[B] = {
+    var rev :List[B] = Nil ; var ll = this
+    while (!ll.isEmpty) { rev = f(ll.head) :: rev ; ll = ll.tail }
     rev
   }
 
@@ -70,9 +70,9 @@ abstract class List[+A] extends Ordered[A] {
   override def distinct () :List[A] = super.distinct().toList
 
   override def drop (count :Int) :List[A] = {
-    var list = this ; var ii = 0
-    while (ii < count && !list.isEmpty) { list = list.tail ; ii += 1 }
-    list
+    var ll = this ; var ii = 0
+    while (ii < count && !ll.isEmpty) { ll = ll.tail ; ii += 1 }
+    ll
   }
   override def dropRight (count :Int) :List[A] = {
     if (count <= 0) this
@@ -91,12 +91,8 @@ abstract class List[+A] extends Ordered[A] {
     }
   }
   override def dropWhile (pred :A => Boolean) :List[A] = {
-    var list = this ; var ii = 0
-    while (!list.isEmpty && pred(list.head)) {
-      list = list.tail
-      ii += 1
-    }
-    list
+    var ll = this ; var ii = 0 ; while (!ll.isEmpty && pred(ll.head)) { ll = ll.tail ; ii += 1 }
+    ll
   }
 
   override def endsWith[B >: A] (suffix :Ordered[B]) :Boolean = {
@@ -116,10 +112,7 @@ abstract class List[+A] extends Ordered[A] {
   }
   override def fold[B] (zero :B)(op :(B,A) => B) :B = {
     var acc = zero ; var ll = this
-    while (!ll.isEmpty) {
-      acc = op(acc, ll.head)
-      ll = ll.tail
-    }
+    while (!ll.isEmpty) { acc = op(acc, ll.head) ; ll = ll.tail }
     acc
   }
 
@@ -135,6 +128,12 @@ abstract class List[+A] extends Ordered[A] {
 
   override def partition (pred :A => Boolean) :(List[A],List[A]) =
     super.partition(pred).asInstanceOf[(List[A],List[A])]
+
+  override def prefixLength (pred :A => Boolean) = {
+    var ii = 0 ; var ll = this ; while (!ll.isEmpty && pred(ll.head)) { ii += 1 ; ll = ll.tail }
+    ii
+  }
+
   override def map[B] (f :A => B) :List[B] = super.map(f).toList
   override def sorted (cmp :Comparator[_ >: A]) :List[A] = super.sorted(cmp).toList
   override def sorted (implicit cmp :Ordering[_ >: A]) :List[A] = super.sorted(cmp).toList

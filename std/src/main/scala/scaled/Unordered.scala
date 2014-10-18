@@ -25,6 +25,9 @@ abstract class Unordered[+A] extends Iterable[A] {
   /** Returns true if this collection is empty. */
   def isEmpty :Boolean = (size == 0)
 
+  /** Returns true if this collection is non-empty. */
+  def nonEmpty :Boolean = !isEmpty
+
   override def sizeHint = size
 }
 
