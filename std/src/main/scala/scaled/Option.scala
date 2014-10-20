@@ -16,9 +16,12 @@ sealed abstract class Option[+A] extends Unordered[A] {
   /** Returns true if this option contains a value, false otherwise. */
   def isDefined :Boolean = !isEmpty
 
-  /** Returns `None` is this option is empty, otherwise returns `f(get)`.
+  /** Returns `None` if this option is empty, otherwise `f(get)`.
     * This is monadic bind for the `Option` monad. */
   @inline final def flatMap[B] (f :A => Option[B]) :Option[B] = if (isDefined) f(get) else None
+
+  /** Returns `isEmpty` if this option is empty, otherwise `f(get)`. */
+  @inline final def fold[B] (ifEmpty : =>B)(f :A => B) :B = if (isDefined) f(get) else ifEmpty
 
   /** Returns `get` if this option is defined, `other` if not. Note that `other` is lazy. */
   @inline final def getOrElse[B >: A] (other : =>B) :B = if (isDefined) get else other
