@@ -26,8 +26,7 @@ object WhitespaceConfig extends Config.Defs {
 }
 
 @Minor(name="whitespace", tags=Array("text", "code"),
-       desc="""A minor mode that provides whitespace manipulation fns and can highlight
-               undesirable whitespace.""")
+       desc="""Provides whitespace manipulation fns; highlights undesirable whitespace.""")
 class WhitespaceMode (env :Env) extends MinorMode(env) {
   import WhitespaceConfig._
   import Chars._
