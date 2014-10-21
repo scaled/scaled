@@ -26,9 +26,9 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     buf += s"# This file is managed by Scaled. Uncomment and customize the value of any"
     buf += s"# desired config vars. Other changes will be ignored."
     _vars.values.toSeq.sortBy(_.name) foreach { case cvar :Config.Var[t] =>
-      val cval = resolve(cvar.key).asInstanceOf[ConfigValue[t]]
       buf += "" // preceed each var by a blank link and its description
       buf += s"# ${cvar.descrip}"
+      val cval = resolve(cvar.key)
       val curval = cval.value.get ; val defval = cvar.key.defval(this)
       val (pre, showval) = if (cval.isSet && curval != defval) ("", curval) else ("# ", defval)
       buf += s"$pre${cvar.name}: " + cvar.key.show(showval)
