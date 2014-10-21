@@ -39,29 +39,29 @@ object TestData {
       def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     }
     def statusMini = mini
+    val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
     val state = new State()
     def workspace = ???
     def buffers = Seq()
     def openBuffer (buffer :String) = ???
     def visitFile (file :Store) = ???
-    def visitConfig (name :String) = ???
+    def configScope (buffer :Buffer) = ???
+    def visitConfig (scope :Config.Scope, name :String) = ???
     def visitBuffer (buffer :Buffer) = ???
     def createBuffer (config :BufferConfig) = ???
     def killBuffer (buffer :Buffer) {}
   }
 
-  val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
-
   val injector = new ServiceInjector(log, exec)
   val resolver = new ModeResolver(injector, editor) {
     override protected def locate (major :Boolean, mode :String) = classOf[TextMode]
-    override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
+    override protected def resolveConfig (sc :Config.Scope, mode :String, defs :List[Config.Defs]) =
       modeConfig(mode, defs)
     override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
       injector.injectInstance(clazz, args)
   }
 
-  def modeConfig (mode :String, defs :List[Config.Defs]) = new ConfigImpl(mode, defs, Some(config))
+  def modeConfig (mode :String, defs :List[Config.Defs]) = new ConfigImpl(mode, defs, None)
 
   def env (view_ :RBufferView) = new Env {
     val msvc = injector

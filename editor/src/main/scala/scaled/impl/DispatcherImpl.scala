@@ -43,6 +43,8 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   /** The current configured set of minor modes. */
   val minors :ValueV[Seq[MinorMode]] = _minors
 
+  def configScope :Config.Scope = editor.configScope(view.buffer)
+
   // configure our major mode
   major onValueNotify { major =>
     val hadMajor = (_majorMeta != null)

@@ -6,15 +6,6 @@ package scaled.major
 
 import scaled._
 
-/** Configuration for [[ISearchMode]]. */
-object ISearchConfig extends Config.Defs {
-
-  @Var("The number of entries retained by the recent searches ring.")
-  val isearchRingSize = key(40)
-  /** The ring in which recent searches are stored. */
-  val isearchRing = fnKey(cfg => new Ring(cfg(isearchRingSize)))
-}
-
 @Major(name="mini-isearch", tags=Array("mini"), desc="""
   A minibuffer mode that handles interactive searching, forward and back.
 """)
@@ -27,7 +18,6 @@ class ISearchMode (
   direction :String
 ) extends MinibufferMode(env, promise) {
   import EditorConfig._
-  import ISearchConfig._
 
   @inline protected final def mainBuffer = mainView.buffer
 
@@ -184,7 +174,6 @@ class ISearchMode (
   }
   buffer.edited onEmit queueRefresh
 
-  override def configDefs = ISearchConfig :: super.configDefs
   override def keymap = super.keymap.
     // we don't inherit normal editing commands; we repeat a few essentials here and route all
     // non-matching fns back to the main buffer
@@ -232,7 +221,7 @@ class ISearchMode (
 
   @Fn("Ends this search, leaving the point at the location found.")
   def endSearch () :Unit = {
-    if (curstate ne initState) config(isearchRing).add(curstate.sought)
+    if (curstate ne initState) isearchRing.add(curstate.sought)
     promise.succeed(())
   }
 
@@ -260,7 +249,10 @@ class ISearchMode (
     else setFromHistory(0)
   }
 
-  protected def setFromHistory (idx :Int) :Unit = config(isearchRing).entry(0) match {
+  /** The ring in which recent searches are stored. */
+  protected def isearchRing = Editor.historyRing(editor, "isearch")
+
+  protected def setFromHistory (idx :Int) :Unit = isearchRing.entry(0) match {
     case Some(sought) => setContents(sought)
     case None => editor.popStatus("No previous search string.")
   }

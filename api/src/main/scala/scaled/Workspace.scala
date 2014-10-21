@@ -29,7 +29,9 @@ abstract class Workspace extends Reffed {
   val root :Path
 
   /** State local to this workspace. */
-  val state :State = new State()
+  val state :State = new State(
+    // pre-populate our state with our workspace config scope
+    State.init(Config.Scope("workspace", root, None)))
 
   /** Returns whether this is the default (auto-created) workspace. */
   def isDefault = name == Workspace.DefaultName

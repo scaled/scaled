@@ -134,8 +134,8 @@ class WorkspaceImpl (
   val app :Scaled, val mgr :WorkspaceManager, val name :String, val root :Path
 ) extends Workspace {
 
-  // each workspace maintains its own configuration repository
-  val cfgMgr = app.svcMgr.injectInstance(classOf[ConfigManager], root :: Nil)
+  val cfgMgr = app.svcMgr.injectInstance(classOf[ConfigManager], Nil)
+  val cfgScope = Config.Scope(state, app.state)
 
   val editors = HashBiMap.create[String,EditorPane]()
   def editor (desk :String) = Option(editors.get(desk))
@@ -167,9 +167,9 @@ class WorkspaceImpl (
   }
 
   private def create (stage :Stage, desk :String, geom :Geom) :EditorPane = {
+    val editorConfig = cfgMgr.editorConfig(cfgScope)
     val bufferSize = geom.size getOrElse {
-      val config = cfgMgr.editorConfig
-      (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+      (editorConfig(EditorConfig.viewWidth), editorConfig(EditorConfig.viewHeight))
     }
     val epane = new EditorPane(stage, this, bufferSize)
     // stuff this editor's desktop id into global editor state
@@ -184,10 +184,10 @@ class WorkspaceImpl (
     stage.setScene(scene)
 
     // set our stage position based on the values specified in editor config
-    cfgMgr.editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
+    editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
       if (x >= 0) stage.setX(x)
     }
-    cfgMgr.editorConfig.value(EditorConfig.viewTop) onValueNotify { y =>
+    editorConfig.value(EditorConfig.viewTop) onValueNotify { y =>
       if (y >= 0) stage.setY(y)
     }
     // if geometry was specified on the command line, override the value from prefs

@@ -25,7 +25,7 @@ class ConfigImplTest {
     val props = Seq("# Scaled editor config",
                     "", "# View width", "view-width: 15",
                     "", "# View height", "view-height: 25")
-    Properties.read(TestData.log, "test", props)(impl.init(TestData.log))
+    Properties.read(TestData.log, "test", props)(new impl.Initter(TestData.log))
     assertEquals(15, impl(TestConfig.viewWidth))
     assertEquals(25, impl(TestConfig.viewHeight))
   }

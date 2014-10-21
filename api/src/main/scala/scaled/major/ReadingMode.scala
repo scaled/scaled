@@ -9,10 +9,8 @@ import scaled.util.{BufferBuilder, Chars, Paragrapher}
 
 /** Configuration for [[ReadingMode]]. */
 object ReadingConfig extends Config.Defs {
-  import EditorConfig._
 
-  /** The history ring for goto-line. */
-  val gotoLineHistory = fnKey(cfg => new Ring(cfg(historySize)))
+  // nada for now
 }
 
 /** A base class for major modes which allow text to be read but not edited. Motion and other
@@ -22,7 +20,7 @@ object ReadingConfig extends Config.Defs {
 abstract class ReadingMode (env :Env) extends MajorMode(env) {
   import Chars._
   import ReadingConfig._
-  import EditorConfig._
+  import Editor._
 
   override def missedFn  :Option[String] = Some("unknown-command")
 
@@ -159,7 +157,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
     val vars = disp.modes.flatMap(m => m.varBindings)
     val comp = Completer.from(vars)(_.v.name)
-    editor.mini.read("Var:", "", config(varHistory), comp) onSuccess fn
+    editor.mini.read("Var:", "", varHistory(editor), comp) onSuccess fn
   }
 
   /** Returns the fill column. By default this is based on the width of the view, but all editing
@@ -172,7 +170,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
          The point and mark remain unchanged.""")
   def killRingSave () = withRegion { (start, end) =>
-    config(killRing) add buffer.region(start, end)
+    killRing(editor) add buffer.region(start, end)
     editor.emitStatus("Region added to kill ring.")
   }
 
@@ -331,7 +329,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
          it will be set to the point prior to moving to the new line. """)
   def gotoLine () {
-    editor.mini.read("Goto line:", "", config(gotoLineHistory), Completer.none) onSuccess { lstr =>
+    editor.mini.read("Goto line:", "", gotoLineHistory, Completer.none) onSuccess { lstr =>
       val line = try { lstr.toInt } catch {
         case e :Throwable => 1 // this is what emacs does, seems fine to me
       }
@@ -345,8 +343,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          the requested line. If the mark is inactive, it will be set to the point prior to moving
          to the new line. """)
   def gotoOffset () {
-    val hist = config(gotoLineHistory)
-    editor.mini.read("Goto offset:", "", hist, Completer.none) onSuccess { offStr =>
+    editor.mini.read("Goto offset:", "", gotoLineHistory, Completer.none) onSuccess { offStr =>
       val offset = try { offStr.toInt } catch {
         case e :Throwable => 0 // this is what emacs does, seems fine to me
       }
@@ -384,7 +381,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     val defb = editor.buffers.drop(1).headOption getOrElse fstb
     val defp = s" (default ${defb.name})"
     val comp = Completer.buffer(editor, Some(defb), Set(fstb))
-    editor.mini.read(s"Switch to buffer$defp:", "", config(bufferHistory),
+    editor.mini.read(s"Switch to buffer$defp:", "", bufferHistory(editor),
                      comp) onSuccess editor.visitBuffer
   }
 
@@ -393,7 +390,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     val current = editor.buffers.head
     val prompt = s"Kill buffer (default ${current.name}):"
     val comp = Completer.buffer(editor, Some(current))
-    editor.mini.read(prompt, "", config(bufferHistory), comp) onSuccess editor.killBuffer
+    editor.mini.read(prompt, "", bufferHistory(editor), comp) onSuccess editor.killBuffer
 
     // TODO: document our process when we have one:
 
@@ -406,7 +403,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Reads a filename from the minibuffer and visits it in a buffer.""")
   def findFile () {
-    editor.mini.read("Find file:", buffer.store.parent, config(fileHistory),
+    editor.mini.read("Find file:", buffer.store.parent, fileHistory(editor),
                      Completer.file) onSuccess editor.visitFile
   }
 
@@ -463,7 +460,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Displays the documentation for a fn.")
   def describeFn () {
-    editor.mini.read("Fn:", "", config(fnHistory), Completer.from(disp.fns, true)) onSuccess { fn =>
+    editor.mini.read("Fn:", "", fnHistory(editor), Completer.from(disp.fns, true)) onSuccess { fn =>
       disp.describeFn(fn) match {
         case Some(descrip) => editor.popStatus(s"Fn: $fn", descrip)
         case None => editor.popStatus(s"No such fn: $fn")
@@ -482,7 +479,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def setVar () {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
-      editor.mini.read(prompt, b.current, config(setVarHistory), Completer.none) onSuccess { nv =>
+      editor.mini.read(prompt, b.current, setVarHistory(editor), Completer.none) onSuccess { nv =>
         try b.update(nv) catch {
           case e :Exception => editor.popStatus(s"Unable to parse '$nv':", e.toString)
         }
@@ -524,8 +521,8 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def describeEditor () {
     val bb = new BufferBuilder(fillColumn)
     def addState (state :StateV) {
-      val kvs = state.keys.toSeq.map(
-        k => (s"${k.getName}: " -> state.get(k).map(_.toString).getOrElse("")))
+      val kvs = state.keys.toSeq.flatMap(
+        k => state.get(k).map(_.toString).map(v => (s"${k.getName}: " -> v)))
       if (!kvs.isEmpty) {
         bb.addSection("State")
         bb.addKeysValues(kvs)
@@ -586,7 +583,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
-    editor.mini.read("M-x", "", config(fnHistory), Completer.from(disp.fns, true)) onSuccess { fn =>
+    editor.mini.read("M-x", "", fnHistory(editor), Completer.from(disp.fns, true)) onSuccess { fn =>
       if (!disp.invoke(fn)) editor.popStatus(s"Unknown fn: $fn")
     }
   }
@@ -594,17 +591,28 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
     val comp = Completer.from(disp.minorModes, true)
-    editor.mini.read("Mode:", "", config(modeHistory), comp) onSuccess disp.toggleMode
+    editor.mini.read("Mode:", "", modeHistory(editor), comp) onSuccess disp.toggleMode
   }
 
   @Fn("Opens the configuration file for the specified mode in a buffer.")
   def editModeConfig () {
-    val comp = Completer.from(disp.majorModes ++ disp.minorModes, true)
-    editor.mini.read("Mode:", name, config(modeHistory), comp) onSuccess editor.visitConfig
+    val mcomp = Completer.from(disp.majorModes ++ disp.minorModes, true)
+    editor.mini.read("Mode:", name, modeHistory(editor), mcomp) onSuccess editConfig
   }
 
   @Fn("Opens the configuration file for the Scaled editor in a buffer.")
-  def editEditorConfig () {
-    editor.visitConfig("editor")
+  def editEditorConfig () :Unit = editConfig("editor")
+
+  /** The history ring used for config var values. */
+  protected def gotoLineHistory = historyRing(editor, "goto-line")
+  /** The history ring used for config scope names. */
+  protected def configScopeHistory = historyRing(editor, "config-scope")
+
+  private def editConfig (mode :String) {
+    val scopes = editor.configScope(buffer).toList
+    editor.mini.read("Scope:", scopes.head.name, configScopeHistory,
+                     Completer.from(scopes)(_.name)) onSuccess { scope =>
+      editor.visitConfig(scope, mode)
+    }
   }
 }

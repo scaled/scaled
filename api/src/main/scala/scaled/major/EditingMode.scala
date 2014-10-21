@@ -25,6 +25,7 @@ object EditingConfig extends Config.Defs {
   */
 abstract class EditingMode (env :Env) extends ReadingMode(env) {
   import Chars._
+  import Editor._
   import EditorConfig._
 
   override def defaultFn :Option[String] = Some("self-insert-command")
@@ -100,11 +101,11 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       val region = buffer.delete(from, to)
       // if the previous fn was any sort of kill fn, we append instead of add
       if ((disp.prevFn != null) && isKillFn(disp.prevFn)) {
-        if (isBackwardKill(disp.curFn)) config(killRing) prepend region
-        else                            config(killRing) append  region
+        if (isBackwardKill(disp.curFn)) killRing(editor) prepend region
+        else                            killRing(editor) append  region
       }
       // otherwise create a new kill ring entry
-      else config(killRing) add region
+      else killRing(editor) add region
     }
     from lesser to
   }
@@ -384,7 +385,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
          moved to the end if the inserted text.""")
   def yank () {
-    config(killRing).entry(0) match {
+    killRing(editor).entry(0) match {
       case None => editor.popStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point()
@@ -397,7 +398,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     if (!yanks(disp.prevFn)) editor.popStatus(s"Previous command was not a yank (${disp.prevFn}).")
     else {
       yankCount = if (disp.prevFn == "yank-pop") yankCount + 1 else 1
-      config(killRing).entry(yankCount) match {
+      killRing(editor).entry(yankCount) match {
         case None => editor.popStatus("Kill ring is empty.")
         case Some(region) =>
           // since the last command was a yank, the mark must be set
@@ -432,7 +433,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * If search terms are obtained, `repFn` is invoked with them.
     */
   def getReplaceArgs (prefix :String, repFn :(String, String) => Unit) {
-    val history = config(replaceHistory)
+    val history = replaceHistory(editor)
     val defrep = history.entries match {
       case 0 => None
       case 1 => Some(Line.toText(history.entry(0).get) -> "")
@@ -565,7 +566,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          in the specified directory.""")
   def writeFile () {
     val bufwd = buffer.store.parent
-    editor.mini.read("Write file:", bufwd, config(fileHistory), Completer.file) onSuccess { store =>
+    editor.mini.read("Write file:", bufwd, fileHistory(editor), Completer.file) onSuccess { store =>
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
       (if (!editor.buffers.exists(_.store == store)) Future.success(true)

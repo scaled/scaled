@@ -27,11 +27,12 @@ abstract class StateV {
   * state which maps to a reactive value which optionally holds an instance of the class. This is
   * used to maintain per-editor and per-buffer state maps.
   */
-class State extends StateV {
+class State (inits :State.Init[_]*) extends StateV {
 
   private val _states = Mutable.cacheMap { key :Class[_] => new OptValue[Any](null) {
     override def emptyFail = throw new NoSuchElementException(s"No state for $key")
   }}
+  inits foreach { _.apply(this) }
 
   /** Returns the state value associated with the specified type, if any. */
   def apply[T] (key :Class[T]) :OptValue[T] = _states.get(key).asInstanceOf[OptValue[T]]

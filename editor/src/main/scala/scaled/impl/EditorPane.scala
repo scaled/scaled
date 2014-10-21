@@ -83,8 +83,12 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   override def mini = _mini
   override def statusMini = _statusMini
   override val state = new State()
+  override val config = ws.cfgMgr.editorConfig(Config.Scope(state, workspace.state, ws.app.state))
   override def workspace = ws
   override def buffers = _buffers.map(_.buffer)
+
+  override def configScope (buffer :Buffer) =
+    Config.Scope(buffer.state, state, workspace.state, ws.app.state)
 
   override def visitFile (store :Store) = {
     _focus() = _buffers.find(_.buffer.store == store) getOrElse {
@@ -97,9 +101,9 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _focus() = requireBuffer(buffer)
     _focus().view
   }
-  override def visitConfig (mode :String) = {
-    val view = visitFile(Store(ws.cfgMgr.configFile(mode)))
-    ws.cfgMgr.configText(mode) match {
+  override def visitConfig (scope :Config.Scope, mode :String) = {
+    val view = visitFile(Store(ws.cfgMgr.configFile(scope, mode)))
+    ws.cfgMgr.configText(scope, mode) match {
       case Some(lines) =>
         if (lines != view.buffer.region(view.buffer.start, view.buffer.end).map(_.asString)) {
           view.buffer.replace(view.buffer.start, view.buffer.end, lines.map(Line.apply))

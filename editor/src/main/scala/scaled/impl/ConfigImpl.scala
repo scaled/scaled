@@ -4,13 +4,14 @@
 
 package scaled.impl
 
-import java.util.HashMap
+import java.util.{HashMap, HashSet}
 import scaled._
 
-class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl]) extends Config {
+class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl])
+    extends Config {
 
-  override def value[T] (key :Config.Key[T]) = resolve(key)
-  override def update[T] (key :Config.Key[T], value :T) = resolve(key).update(value)
+  override def value[T] (key :Config.Key[T]) = resolve(key).value
+  override def update[T] (key :Config.Key[T], value :T) = resolve(key).value() = value
 
   override def toString = s"$name / $parent"
 
@@ -24,45 +25,62 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     buf += s"#"
     buf += s"# This file is managed by Scaled. Uncomment and customize the value of any"
     buf += s"# desired config vars. Other changes will be ignored."
-    _vars.values.toSeq.sortBy(_.name) foreach { v =>
+    def show[T] (cvar :Config.Var[T]) {
+      val cval = resolve(cvar.key).asInstanceOf[ConfigValue[T]]
       buf += "" // preceed each var by a blank link and its description
-      buf += s"# ${v.descrip}"
-      val defval = v.key.show(v.key.defval(this))
-      val rv = lookup(v.key)
-      // TODO: oh type system, you fail me so
-      val curval = if (rv == null) defval
-                   else v.key.asInstanceOf[Config.Key[Object]].show(rv.get.asInstanceOf[Object])
-      val pre = if (curval == defval) "# " else ""
-      buf += s"$pre${v.name}: $curval"
+      buf += s"# ${cvar.descrip}"
+      val curval = cval.value.get ; val defval = cvar.key.defval(this)
+      val (pre, showval) = if (cval.isSet && curval != defval) ("", curval) else ("# ", defval)
+      buf += s"$pre${cvar.name}: " + cvar.key.show(showval)
     }
+    for (v <- _vars.values.toSeq.sortBy(_.name)) show(v)
     buf += "" // add a trailing newline
     buf.build()
   }
 
-  /** Returns an init put function used to populate this instance from a file. */
-  def init (log :Logger) :(String, String) => Unit = (key, value) => _vars.get(key) match {
-    case None => log.log(s"$name config contains unknown/stale setting '$key: $value'.")
-    case Some(cvar) => try {
-      resolve(cvar.key)() = cvar.key.converter.read(value)
-    } catch {
-      case e :Exception => log.log(s"$name config contains invalid setting: '$key: $value': $e")
+  /** Used to (re)initialize this config from a file. Call [[apply]] for every key value pair
+    * loaded from the file, then call [[complete]]. */
+  class Initter (log :Logger) extends ((String, String) => Unit) {
+    private val initted = new HashSet[String]()
+    def apply (key :String, value :String) = _vars.get(key) match {
+      case None => log.log(s"$name config contains unknown/stale setting '$key: $value'.")
+      case Some(cvar) => try {
+        resolve(cvar.key).init(cvar.key.converter.read(value))
+        initted.add(key)
+      } catch {
+        case e :Exception => log.log(s"$name config contains invalid setting: '$key: $value': $e")
+      }
+    }
+    def complete () {
+      // reset any key that was not explicitly initialized from file data
+      _vars foreach { (key, cvar) => if (!initted.contains(key)) _vals.get(cvar.key) match {
+        case null => // no problem!
+        case cval => cval.reset()
+      }}
     }
   }
 
-  private def resolve[T] (key :Config.Key[T]) :Value[T] = lookup(key) match {
-    case null =>
-      if (parent.isEmpty == key.global) {
-        val nv = new Value[T](key.defval(this))
-        _vals.put(key, nv)
-        nv
-      } else parent.map(_.resolve(key)).getOrElse {
-        throw new IllegalStateException(s"Global config asked to resolve local key: $key")
-      }
-    case v => v
+  private def resolve[T] (key :Config.Key[T]) :ConfigValue[T] =
+    Mutable.getOrPut(_vals, key, new ConfigValue(key)).asInstanceOf[ConfigValue[T]]
+
+  private class ConfigValue[T] (key :Config.Key[T]) {
+    var conn :Connection = _
+    val value = Value[T](null.asInstanceOf[T])
+    reset()
+
+    def isSet :Boolean = conn == null
+    def init (newval :T) {
+      value() = newval
+      if (conn != null) { conn.close() ; conn = null }
+    }
+    def reset () :Unit = parent match {
+      case None => value.update(key.defval(ConfigImpl.this))
+      case Some(p) =>
+        if (conn != null) conn.close()
+        conn = p.resolve(key).value.onValueNotify(value.update)
+    }
   }
 
-  private def lookup[T] (key :Config.Key[T]) = _vals.get(key).asInstanceOf[Value[T]]
-
   private[this] val _vars = defs.flatMap(_.vars).mapBy(_.name) // String -> Config.Var[_]
-  private[this] val _vals = new HashMap[Config.Key[_],Value[_]]()
+  private[this] val _vals = new HashMap[Config.Key[_],ConfigValue[_]]()
 }

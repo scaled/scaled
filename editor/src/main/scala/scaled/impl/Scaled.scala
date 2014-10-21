@@ -53,6 +53,8 @@ class Scaled extends Application {
   val wspMgr = new WorkspaceManager(this)
   val svcMgr = new ServiceManager(this)
 
+  val state = new State(State.init(Config.Scope("global", pkgMgr.metaDir, None)))
+
   /** If debug logging is enabled, writes `msg` to console, otherwise noops. */
   val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
                  else (msg :String) => ()

@@ -28,7 +28,7 @@ abstract class ModeResolver (msvc :MetaService, editor :Editor) {
     resolve(mode, view, mline, disp, major :: args, requireMinor(mode))
 
   protected def locate (major :Boolean, mode :String) :Class[_]
-  protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
+  protected def resolveConfig (scope :Config.Scope, mode :String, defs :List[Config.Defs]) :Config
   protected def injectInstance[T] (clazz :Class[T], args :List[Any]) :T
 
   private def requireMajor (mode :String) = reqType(mode, classOf[MajorMode])
@@ -40,16 +40,16 @@ abstract class ModeResolver (msvc :MetaService, editor :Editor) {
     else throw new IllegalArgumentException(s"$mode ($clazz) is not a ${mclass.getSimpleName}.")
   }
 
-  private def resolve[T] (mode :String, view_ :BufferViewImpl, mline_ :ModeLine,
-                          disp_ :DispatcherImpl, args :List[Any], modeClass :Class[T]) :T = {
+  private def resolve[T] (mode :String, vw :BufferViewImpl, mln :ModeLine, dsp :DispatcherImpl,
+                          args :List[Any], modeClass :Class[T]) :T = {
     val envargs = new Env {
       val msvc = ModeResolver.this.msvc
       val editor = ModeResolver.this.editor
-      val view = view_
-      val mline = mline_
-      val disp = disp_
+      val view = vw
+      val mline = mln
+      val disp = dsp
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
-        ModeResolver.this.resolveConfig(mode, defs)
+        ModeResolver.this.resolveConfig(dsp.configScope, mode, defs)
     } :: args
     injectInstance(modeClass, envargs)
   }
@@ -66,8 +66,8 @@ class AppModeResolver (ws :WorkspaceImpl, editor :Editor)
       case Some(mode) => mode
       case None       => throw Errors.feedback(s"Unknown mode: $mode")
     }
-  override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
-    ws.cfgMgr.resolveConfig(mode, defs)
+  override protected def resolveConfig (scope :Config.Scope, mode :String, defs :List[Config.Defs]) =
+    ws.cfgMgr.resolveConfig(scope, mode, defs)
   override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
     ws.app.svcMgr.injectInstance(clazz, args)
 }
