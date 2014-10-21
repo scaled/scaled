@@ -27,8 +27,10 @@ elif hash nc 2>/dev/null; then
     for ARG in $* ; do
         if [ -f $ARG ]; then
             FILE=`echo $(cd $(dirname $ARG); pwd)/$(basename $ARG)`
+        elif [[ $ARG == /* ]] ; then
+            FILE=$ARG        # absolute path
         else
-            FILE=$ARG
+            FILE=`pwd`/$ARG  # relative path, prepend CWD
         fi
         echo open $FILE | nc -c -u localhost $PORT
     done
