@@ -26,6 +26,13 @@ object TestData {
   }
 
   val editor = new Editor {
+    val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
+    def workspace = ???
+    def buffers = Seq()
+    val mini = new Minibuffer() {
+      def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
+    }
+    def statusMini = mini
     def exit () {}
     def showURL (url :String) {}
     def popStatus (msg :String, subtext :String) {
@@ -35,14 +42,6 @@ object TestData {
     def emitStatus (msg :String, ephemeral :Boolean) :Unit = println(msg)
     def emitError (err :Throwable) = err.printStackTrace(System.err)
     def clearStatus () {}
-    def mini = new Minibuffer() {
-      def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
-    }
-    def statusMini = mini
-    val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
-    val state = new State()
-    def workspace = ???
-    def buffers = Seq()
     def openBuffer (buffer :String) = ???
     def visitFile (file :Store) = ???
     def configScope (buffer :Buffer) = ???

@@ -15,20 +15,31 @@ import java.util.HashMap
   */
 trait Editor {
 
+  /** A reactive mapping of editor-wide state. */
+  val state :State = new State()
+
+  /** The workspace in which this editor is opened. */
+  def workspace :Workspace
+
+  /** Provides editor-wide config data. Keys are defined in [[EditorConfig]]. */
+  def config :Config
+
+  /** Returns all open buffers. The buffers will be returned in order of most recent activation. */
+  def buffers :Seq[Buffer]
+
+  /** Provides access to the overlay popup minibuffer. Prefer this for most interactions. */
+  def mini :Minibuffer
+
+  /** Provides access to the status-line minibuffer. Use this only when the minibuffer interaction
+    * requires the user to see the contents of the main buffer, and hence the popup minibuffer would
+    * potentially obscure important data. */
+  def statusMini :Minibuffer
+
   /** Closes this editor. If this is the only open editor, the Scaled process will exit. */
   def exit () :Unit
 
   /** Displays the supplied URL in the user's preferred web browser. */
   def showURL (url :String) :Unit
-
-  /** Briefly displays a status message to the user in a popup.
-    * The status message will also be appeneded to an editor-wide messages list. */
-  def popStatus (msg :String, subtext :String = "") :Unit
-
-  /** Briefly displays a status message to the user.
-    * @param ephemeral if false, the status message will also be appended to an editor-wide
-    * messages list; if true, it disappears forever in a poof of quantum decoherence. */
-  def emitStatus (msg :String, ephemeral :Boolean = false) :Unit
 
   /** Reports an unexpected error to the user.
     * The message will also be appended to an editor-wide messages list. */
@@ -39,25 +50,14 @@ trait Editor {
     * status message. */
   def clearStatus () :Unit
 
-  /** Provides access to the overlay popup minibuffer. Prefer this for most interactions. */
-  def mini :Minibuffer
+  /** Briefly displays a status message to the user in a popup.
+    * The status message will also be appeneded to an editor-wide messages list. */
+  def popStatus (msg :String, subtext :String = "") :Unit
 
-  /** Provides access to the status-line minibuffer. Use this only when the minibuffer interaction
-    * requires the user to see the contents of the main buffer, and hence the popup minibuffer would
-    * potentially obscure important data. */
-  def statusMini :Minibuffer
-
-  /** The workspace in which this editor is opened. */
-  def workspace :Workspace
-
-  /** Provides editor-wide config data. Keys are defined in [[EditorConfig]]. */
-  def config :Config
-
-  /** A reactive mapping of editor-wide state. */
-  def state :State
-
-  /** Returns all open buffers. The buffers will be returned in order of most recent activation. */
-  def buffers :Seq[Buffer]
+  /** Briefly displays a status message to the user.
+    * @param ephemeral if false, the status message will also be appended to an editor-wide
+    * messages list; if true, it disappears forever in a poof of quantum decoherence. */
+  def emitStatus (msg :String, ephemeral :Boolean = false) :Unit
 
   /** Returns the top-most config scope for `buffer`. */
   def configScope (buffer :Buffer) :Config.Scope

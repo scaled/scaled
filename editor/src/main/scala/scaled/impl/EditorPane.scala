@@ -42,6 +42,12 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   //
   // Editor interface methods
 
+  override val config = ws.cfgMgr.editorConfig(Config.Scope(state, workspace.state, ws.app.state))
+  override def workspace = ws
+  override def buffers = _buffers.map(_.buffer)
+  override def mini = _mini
+  override def statusMini = _statusMini
+
   override def exit () = ws.close(this)
   override def showURL (url :String) = {
     // getHostSevices.showDocument is very crashy on Mac OS X right now, so avoid it
@@ -79,13 +85,6 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _statusLine.setText("")
     _active.view.clearEphemeralPopup()
   }
-
-  override def mini = _mini
-  override def statusMini = _statusMini
-  override val state = new State()
-  override val config = ws.cfgMgr.editorConfig(Config.Scope(state, workspace.state, ws.app.state))
-  override def workspace = ws
-  override def buffers = _buffers.map(_.buffer)
 
   override def configScope (buffer :Buffer) =
     Config.Scope(buffer.state, state, workspace.state, ws.app.state)
