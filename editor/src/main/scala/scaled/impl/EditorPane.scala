@@ -241,12 +241,15 @@ class EditorPane (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
       _mini, 0, vh/4, vw, 3*vh/4, 0, null, false, false, HPos.CENTER, VPos.TOP)
   }
 
+  private def isScratch (name :String) = (name startsWith "*") && (name endsWith "*")
+
   private def createEmptyBuffer (name :String, args :List[State.Init[_]]) = {
     val parent = _buffers.headOption match {
       case None     => cwd
       case Some(ob) => Paths.get(ob.buffer.store.parent)
     }
-    val buf = BufferImpl(Store(parent.resolve(name)))
+    val buf = if (isScratch(name)) BufferImpl.scratch(name)
+              else BufferImpl(Store(parent.resolve(name)))
     args foreach { _.apply(buf.state) }
     buf
   }
