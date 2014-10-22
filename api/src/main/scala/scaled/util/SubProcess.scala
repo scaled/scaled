@@ -24,7 +24,7 @@ object SubProcess {
   /** Starts a subprocess with the specified configuration. Output will be directed to `buffer`. If
     * the subprocess fails to start, the starting exception will be captured, recorded to `buffer`
     * and then rethrown. */
-  def apply (config :Config, editor :Editor, exec :Executor, buffer :Buffer) :SubProcess = try {
+  def apply (config :Config, exec :Executor, buffer :Buffer) :SubProcess = try {
     new SubProcess(config) {
       protected def onOutput (text :String, isErr :Boolean) {
         exec.runOnUI(buffer.append(Line.fromTextNL(text)))
