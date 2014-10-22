@@ -15,6 +15,9 @@ import java.util.HashMap
   */
 trait Editor {
 
+  /** An event bus for editor-wide event dispatch. */
+  val events :EventBus = new EventBus()
+
   /** A reactive mapping of editor-wide state. */
   val state :State = new State()
 

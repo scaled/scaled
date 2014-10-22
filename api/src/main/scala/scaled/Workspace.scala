@@ -7,10 +7,10 @@ package scaled
 import java.nio.file.Path
 import scaled.util.Reffed
 
-/** Coordinates metadata and operations for a workspace. A workspace defines an environment tailored
-  * to working on a particular software artifact. Each workspace is like a separate Scaled
-  * installation, customized specially for the desired task. Multiple editor windows may be open for
-  * a single workspace.
+/** Coordinates metadata and operations for a workspace. A workspace defines an environment
+  * tailored to working on a particular software artifact. Each workspace is like a separate Scaled
+  * installation, customized specially for the desired task. Multiple editor windows may be open
+  * for a single workspace.
   *
   * The core editor uses workspaces as a configuration grouping, i.e. one can customize modes, etc.
   * specially for a particular workspace.
@@ -27,6 +27,9 @@ abstract class Workspace extends Reffed {
 
   /** The root directory in which metadata is stored for this workspace. */
   val root :Path
+
+  /** An event bus for workspace-scoped event dispatch. */
+  val events :EventBus = new EventBus()
 
   /** State local to this workspace. */
   val state :State = new State(
