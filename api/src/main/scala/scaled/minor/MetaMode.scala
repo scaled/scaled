@@ -5,7 +5,8 @@
 package scaled.minor
 
 import scaled._
-import scaled.util.BufferBuilder
+import scaled.util.{BufferBuilder, SubProcess}
+import java.nio.file.Paths
 
 /** Defines fns that are not related to the current buffer, but rather for interation with the
   * editor environment or other global things. */
@@ -27,10 +28,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
     bind("C-h v", "describe-var").
     bind("C-h m", "describe-mode").
     bind("C-h e", "describe-editor").
-    bind("M-A-t", "show-tags").
-    bind("M-C-t", "show-line-tags").
 
-    // meta commands
+    // misc commands
     bind("M-x", "execute-extended-command");
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
@@ -201,12 +200,24 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   //
-  // META FNS
+  // MISC FNS
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
     editor.mini.read("M-x", "", fnHistory(editor), Completer.from(disp.fns, true)) onSuccess { fn =>
       if (!disp.invoke(fn)) editor.popStatus(s"Unknown fn: $fn")
+    }
+  }
+
+  @Fn("""Invokes a shell command and displays its output.
+         The cwd will be the directory that contains the currently visited buffer.""")
+  def shellCommand () {
+    editor.mini.read("Command", "", shellCommandHistory, Completer.none) onSuccess { cmd =>
+      def parseCmd (cmd :String) = cmd.split(" ") // TODO: handle quoted args
+      val cfg = SubProcess.Config(parseCmd(cmd), cwd=Paths.get(buffer.store.parent))
+      val view = editor.bufferConfig(s"*exec:${cfg.cmd(0)}*").mode("text").reuse().create()
+      SubProcess(cfg, env.exec, view.buffer)
+      editor.visitBuffer(view.buffer)
     }
   }
 
@@ -226,6 +237,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   def editEditorConfig () :Unit = editConfig("editor")
 
   private def configScopeHistory = historyRing(editor, "config-scope")
+  private def shellCommandHistory = historyRing(editor, "shell-command")
 
   private def editConfig (mode :String) {
     val scopes = editor.configScope(buffer).toList
