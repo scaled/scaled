@@ -66,22 +66,20 @@ object KeyPress {
     toKeyId(kev.getCode), kev.getCharacter,
     kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
 
-  /** Parses a key press sequence (e.g. `C-c C-j`, `a`, `M-.`) into [[KeyPress]]es. If any key press
-    * in the sequence is invalid, `None` will be returned. All invalid key presses will be reported
-    * to `onInvalid` (as `kp in seq`) before returning `None`.
-    */
-  def toKeyPresses (onInvalid :String => Unit, seq :String) :Option[Seq[KeyPress]] = {
-    def parse (str :String) = toKeyPress(str) match {
-      case None => onInvalid(if (str == seq) str else s"$str in $seq") ; None
-      case kp => kp
-    }
-    val kps = seq.split(" ").mkSeq map parse
-    if (kps contains None) None else Some(Seqs.flatten(kps))
+  /** Parses a key press sequence (e.g. `C-c C-j`, `a`, `M-.`) into [[KeyPress]]es. If any key
+    * press in the sequence is invalid, `Left` will be returned with the text of the invalid key
+    * press(es). */
+  def toKeyPresses (seq :String) :Either[Seq[String],Seq[KeyPress]] = {
+    val errs = Seq.builder[String]() ; val kps = Seq.builder[KeyPress]()
+    seq.split(" ").mkSeq foreach { str => toKeyPress(str) match {
+      case None     => errs += (if (str == seq) str else s"$str in $seq")
+      case Some(kp) => kps  += kp
+    }}
+    if (!errs.isEmpty) Left(errs.build()) else Right(kps.build())
   }
 
   /** Converts a single key press description (e.g. 'a', 'C-c', 'M-S-F2', etc.) into a `KeyPress`
-    * instance. Invalid descriptions yield `None`.
-    */
+    * instance. Invalid descriptions yield `None`. */
   def toKeyPress (desc :String) :Option[KeyPress] = {
     val msb = Set.builder[String]()
     var remain = desc

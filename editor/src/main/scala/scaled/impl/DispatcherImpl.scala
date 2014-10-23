@@ -140,7 +140,6 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   override def prevFn = _prevFn
 
   override def fns = (Set[String]() /: _metas) { _ ++ _.fns.bindings.map(_.name) }
-  override def triggers = (Seq[(String,String,String)]() /: _metas) { _ ++ _.triggers }
   override def describeFn (fn :String) = findFn(fn) map(_.descrip)
   override def majorModes = resolver.modes(true)
   override def minorModes = resolver.modes(false)
@@ -163,12 +162,13 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   }
 
   override def press (trigger :String) {
-    KeyPress.toKeyPresses(err => editor.popStatus(s"Invalid trigger: $err"), trigger) match {
-      case Some(kps) => resolve(kps, _metas) match {
+    KeyPress.toKeyPresses(trigger) match {
+      case Right(kps) => resolve(kps, _metas) match {
         case Some(fn) => invoke("press", fn, kps.last.text)
         case None     => invokeMissed(trigger)
       }
-      case None => editor.popStatus(s"Unable to simulate press of $trigger")
+      case Left(errs) => editor.popStatus(
+        s"Invalid keys in '$trigger': ${errs.mkString(", ")}")
     }
   }
 
@@ -245,19 +245,36 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   }
 
   private class ModeMeta (val mode :Mode) {
+    def name = mode.name
     val fns = new FnBindings(mode, m => editor.emitStatus(m))
-    val map = DispatcherImpl.parseKeyMap(
-      mode.keymap.bindings, fns,
-      (key :String) => editor.emitStatus(s"Unknown key in keymap [mode=${mode.name}, key=$key]"),
-      (fn :String) => editor.emitStatus(s"Unknown fn in keymap [mode=${mode.name}, fn=$fn]"))
+    val map :Map[Seq[KeyPress],FnBinding] = {
+      // if fn has a "mode:" prefix, resolve fn via that named mode rather than via this mode
+      val fnMap = Map(_metas.map(m => m.name -> m.fns))
+      def binding (fn :String) = fn.indexOf(":") match {
+        case -1 => fns.binding(fn) orLeft s"Unknown fn in '$name-mode' keymap: '$fn'"
+        case ii => val tmode = fn.substring(0, ii) ; fnMap.get(tmode) match {
+          case None =>
+            Left(s"Unknown target mode in '$name-mode' key binding: '$tmode' in '$fn'")
+          case Some(fns) =>
+            val tfn = fn.substring(ii+1)
+            fns.binding(tfn) orLeft s"Unknown fn in '$name-mode' key binding: '$tfn' in '$fn'"
+        }
+      }
+      val mb = Map.builder[Seq[KeyPress],FnBinding]()
+      for (kb <- mode.keymap.bindings) KeyPress.toKeyPresses(kb.trigger) match {
+        case Left(kerrs) => editor.emitStatus(
+          s"Invalid key(s) in '$name-mode' keymap: '${kerrs.mkString(", ")}'")
+        case Right (kps) => binding(kb.fn) match {
+          case Left(err) => editor.emitStatus(err)
+          case Right(fb) => mb.put(kps, fb)
+        }
+      }
+      mb.build()
+    }
 
     // enumerate all prefix sequences (we use these when processing key input)
     val prefixes :Set[Seq[KeyPress]] = map.keySet.map(_.dropRight(1)).filter(!_.isEmpty)
     // TODO: report an error if a key prefix is bound to an fn? WDED?
-
-    def triggers :Unordered[(String,String,String)] = map.map {
-      case (kps, fn) => (mode.name, kps.mkString(" "), fn.name)
-    }
 
     // add this mode's stylesheet (if any) to the editor
     private def addSheets (sheets :List[String]) :Unit = if (!sheets.isEmpty) {
@@ -283,24 +300,5 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private class MajorModeMeta (mode :MajorMode) extends ModeMeta(mode) {
     val defaultFn :Option[FnBinding] = mode.defaultFn.flatMap(fns.binding)
     val missedFn :Option[FnBinding] = mode.missedFn.flatMap(fns.binding)
-  }
-}
-
-/** [[DispatcherImpl]] utilities. */
-object DispatcherImpl {
-
-  /** Parses a keymap description, resolving the trigger sequences into `Seq[KeyPress]` and the fn
-    * bindings to `FnBinding` from `fns`. Invalid mappings are omitted from the results after
-    * notifying one or both of the supplied invalidity callbacks.
-    *
-    * @param onInvalidKey a callback to be notified when an invalid trigger sequence is encountered.
-    * @param onInvalidFn a callback to be notified when an invalid fn binding is encountered.
-    */
-  def parseKeyMap (keymap :Ordered[Key.Binding], fns :FnBindings, onInvalidKey :String => Unit,
-                   onInvalidFn :String => Unit) :Map[Seq[KeyPress], FnBinding] = {
-    keymap.flatMap(kb => fns.binding(kb.fn) match {
-      case None     => onInvalidFn(kb.fn) ; None
-      case Some(fb) => KeyPress.toKeyPresses(onInvalidKey, kb.trigger) map(_ -> fb)
-    }).toMap
   }
 }
