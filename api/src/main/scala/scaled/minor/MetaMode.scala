@@ -138,17 +138,17 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
-    val keysByMode = disp.triggers.groupBy(_._1)
     val bb = new BufferBuilder(this.view.width()-1)
     disp.modes foreach { m =>
       bb.addHeader(s"${m.name}-mode:")
       bb.addFilled(m.desc)
       bb.add(s"(tags: ${m.tags.mkString(" ")})")
 
-      keysByMode.get(m.name) map { keys =>
+      val keys = m.keymap.bindings
+      if (!keys.isEmpty) {
         bb.addSubHeader("Key sequence    Binding")
-        keys.sorted foreach {
-          case (m, t, fn) => bb.add("%-15s %s".format(t, fn))
+        keys.sortBy(_.trigger) foreach {
+          case Key.Binding(t, fn) => bb.add("%-15s %s".format(t, fn))
         }
       }
 

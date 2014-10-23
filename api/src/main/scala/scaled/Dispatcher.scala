@@ -28,9 +28,6 @@ abstract class Dispatcher {
   /** Returns the names of all available fns. */
   def fns :Set[String]
 
-  /** Returns `(defining mode, key sequence, fn name)` for all registered key bindings. */
-  def triggers :Seq[(String,String,String)]
-
   /** Returns the documentation for `fn` if such fn exists. */
   def describeFn (fn :String) :Option[String]
 
