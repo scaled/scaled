@@ -35,6 +35,14 @@ sealed abstract class Option[+A] extends Unordered[A] {
   /** Returns `get` if this option is defined, `other` if not. Note that `other` is **strict**. */
   @inline final def or[B >: A] (other :B) :B = if (isDefined) get else other
 
+  /** Returns `Right(get)` if this option is defined, `Left(left)` if not. */
+  @inline final def orLeft[B] (left : =>B) :Either[B,A] =
+    if (isDefined) Right(get) else Left(left)
+
+  /** Returns `Left(get)` if this option is defined, `Right(right)` if not. */
+  @inline final def orRight[B] (right : =>B) :Either[A,B] =
+    if (isDefined) Left(get) else Right(right)
+
   /** Converts this Scaled `Option` to a Scala `Option`. */
   def toScala :SOption[A] = if (isDefined) SSome(get) else SNone
 
