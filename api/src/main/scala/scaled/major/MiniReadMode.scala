@@ -83,13 +83,13 @@ class MiniReadMode[T] (
   @Fn("Puts the previous history entry into the minibuffer.")
   def previousHistoryEntry () {
     val prevAge = historyAge+1
-    if (prevAge >= history.entries) editor.popStatus("Beginning of history; no preceding item")
+    if (prevAge >= history.entries) window.popStatus("Beginning of history; no preceding item")
     else showHistory(prevAge)
   }
 
   @Fn("Puts the next history entry into the minibuffer.")
   def nextHistoryEntry () {
-    if (historyAge == -1) editor.popStatus("End of history")
+    if (historyAge == -1) window.popStatus("End of history")
     else showHistory(historyAge-1)
   }
 

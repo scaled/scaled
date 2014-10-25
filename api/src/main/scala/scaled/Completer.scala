@@ -174,21 +174,21 @@ object Completer {
   }
 
   /** Returns a completer on buffer name. */
-  def buffer (editor :Editor, defbuf :Option[Buffer]) :Completer[Buffer] =
-    buffer(editor, defbuf, Set())
+  def buffer (wspace :Workspace, defbuf :Option[Buffer]) :Completer[Buffer] =
+    buffer(wspace, defbuf, Set())
 
   /** Returns a completer on buffer name. This behaves specially in that the empty completion omits
     * transient buffers (buffers named `*foo*`).
     * @param except a set of buffers to exclude from completion.
     */
-  def buffer (editor :Editor, defbuf :Option[Buffer], except :Set[Buffer]) :Completer[Buffer] =
+  def buffer (wspace :Workspace, defbuf :Option[Buffer], except :Set[Buffer]) :Completer[Buffer] =
     new Completer[Buffer] {
-      def complete (prefix :String) = sortedCompletion(editor.buffers.filter { b =>
+      def complete (prefix :String) = sortedCompletion(wspace.buffers.filter { b =>
         val want = if (prefix == "") !(b.name startsWith "*") else startsWithI(prefix)(b.name)
         want && !except(b)
       } , _.name)
       override protected def fromString (name :String) =
-        if (name == "") defbuf else Some(editor.bufferConfig(name).reuse().create().buffer)
+        if (name == "") defbuf else Some(wspace.createBuffer(name, reuse=true))
     }
 
   /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */

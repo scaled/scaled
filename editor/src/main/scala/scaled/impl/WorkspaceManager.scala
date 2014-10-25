@@ -38,24 +38,29 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   private var wscache = Mutable.cacheMap { name :String =>
     new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name)) }
 
-  /** Creates the starting workspace and editor and opens `paths` therein. */
+  /** Visits `paths` in the appropriate workspace windows, creating them as needed.
+    * The first window created will inherit the supplied default stage. */
   def visit (stage :Stage, paths :JList[String]) {
-    val desktop = curDesktop
-    val path = if (paths.isEmpty) None else Some(paths.get(0))
-    val epane = workspaceFor(desktop, path).open(desktop, stage)
-    paths foreach epane.visitPath
+    val ws2paths = (paths map(Paths.get(_).normalize) groupBy workspaceFor).toSeq
+    // the first workspace (chosen arbitrarily) gets the default stage
+    ws2paths.take(1) foreach { case (ws, paths) =>
+      paths foreach { ws.open(stage).visitPath _ }
+    }
+    // the remaining workspaces (if any) create new stages
+    ws2paths.drop(1) foreach { case (ws, paths) =>
+      paths foreach { ws.open().visitPath _ }
+    }
   }
 
-  /** Visits `path` in the editor on the desktop detected to be current.
-    * If no such editor pane exists one is created. */
+  /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
   def visit (path :String) {
-    val desktop = curDesktop
-    workspaceFor(desktop, Some(path)).open(desktop).visitPath(path)
+    val p = Paths.get(path).normalize
+    workspaceFor(p).open().visitPath(p)
   }
 
   def checkExit () {
-    // if no workspaces have editors open, it's time to go
-    if (wscache.asMap.values.forall(_.editors.isEmpty)) Platform.exit()
+    // if no workspaces have windows open, it's time to go
+    if (wscache.asMap.values.forall(_.windows.isEmpty)) Platform.exit()
   }
 
   def addHintPath (wsname :String, path :Path) :Unit =
@@ -80,49 +85,22 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   override def open (wsname :String) {
     val root = wsdir.resolve(wsname)
     if (!Files.exists(root)) throw Errors.feedback(s"No workspace named $wsname")
-    wscache.get(wsname).open(curDesktop).stageToFront()
+    wscache.get(wsname).open().stageToFront()
   }
 
   override def didStartup () {} // unused
   override def willShutdown () {} // unused
 
-  private def curDesktop :String = System.getProperty("scaled.curdesk", "") match {
-    case ""  => "default"
-    case bin => try {
-      val pb = new ProcessBuilder(bin)
-      pb.redirectErrorStream(true)
-      val proc = pb.start()
-      val lines = Source.fromInputStream(proc.getInputStream).getLines.toList
-      proc.waitFor match {
-        case 0 => lines.head
-        case n =>
-          log.log("Failed to read current desktop ($bin failed $n)")
-          lines foreach log.log
-          "default"
-      }
-    } catch {
-      case e :Exception =>
-        log.log("Failed to read current desktop ($bin failed)", e)
-        "default"
-    }
-  }
-
-  // returns the workspace that should be used for the specified desktop:
-  // - if a workspace with matching hint path exists, it is used
-  // - otherwise, if a workspace is already open on `desktop`, it is used
-  // - otherwise, the default workspace is used
-  private def workspaceFor (desktop :String, path :Option[String]) :WorkspaceImpl = {
-    def isOpen (ws :WorkspaceImpl) = ws.editors.containsKey(desktop)
+  // returns the workspace that should be used for the specified path (which should be absolute and
+  // normalized): if a workspace with matching hint path exists, it is used, otherwise the default
+  // workspace is used
+  private def workspaceFor (path :Path) :WorkspaceImpl = {
+    def isOpen (ws :WorkspaceImpl) = !ws.windows.isEmpty
     def latest (ws :Unordered[WorkspaceImpl]) =
       if (ws.isEmpty) None else Some(ws.maxBy(_.lastOpened))
-    def abs (p :Path) = if (Files.exists(p)) Some(p.toAbsolutePath.toString) else None
-    def byHintPath = path.map(Paths.get(_)).flatMap(abs).flatMap { path =>
-      val hintWSs = wshints().asMap.toMapV collect {
-        case (w, ps) if (ps.exists(path startsWith _)) => wscache.get(w) }
-      latest(hintWSs.filter(isOpen)) orElse latest(hintWSs)
-    }
-    def latestOpenWS = latest(wscache.asMap.values.filter(isOpen))
-    byHintPath orElse latestOpenWS getOrElse {
+    val hintWSs = wshints().asMap.toMapV collect {
+      case (w, ps) if (ps.exists(path startsWith _)) => wscache.get(w) }
+    latest(hintWSs.filter(isOpen)) orElse latest(hintWSs) getOrElse {
       val ddir = wsdir.resolve(Workspace.DefaultName)
       if (!Files.exists(ddir)) Files.createDirectory(ddir)
       wscache.get(Workspace.DefaultName)
@@ -134,26 +112,65 @@ class WorkspaceImpl (
   val app :Scaled, val mgr :WorkspaceManager, val name :String, val root :Path
 ) extends Workspace {
 
-  val cfgMgr = app.svcMgr.injectInstance(classOf[ConfigManager], Nil)
-  val cfgScope = Config.Scope(state, app.state)
-
-  val editors = HashBiMap.create[String,EditorPane]()
-  def editor (desk :String) = Option(editors.get(desk))
+  val windows = SeqBuffer[WindowImpl]()
+  val buffers = SeqBuffer[BufferImpl]()
+  private def addBuffer (buf :BufferImpl) :BufferImpl = { buffers += buf ; buf }
 
   def lastOpened = Files.getLastModifiedTime(root).toMillis
 
-  def open (desk :String, stage :Stage) = editor(desk) getOrElse create(stage, desk, geomSysProp)
-  def open (desk :String) = editor(desk) getOrElse create(new Stage(), desk, NoGeom)
+  def open (stage :Stage) = windows.headOption || createWindow(stage, geomSysProp)
+  def open () = windows.headOption || createWindow(new Stage(), NoGeom)
 
-  def close (epane :EditorPane) {
-    editors.inverse.remove(epane)
+  def close (win :WindowImpl) {
+    windows.remove(win) // TODO: event
     try {
-      epane.dispose()
-      epane.stage.close()
+      win.dispose() // this may cause us to hibernate
+      win.stage.close()
     } catch {
-      case e :Throwable => log.log(s"Error closing $epane", e)
+      case e :Throwable => log.log(s"Error closing $win", e)
     }
-    // TODO: if editors is empty and we have references, complain?
+  }
+
+  /** Records a message to this workspace's `*messages*` buffer. */
+  def recordMessage (msg :String) {
+    // we may get a recordMessage call while we're creating the *messages* buffer, so to avoid
+    // the infinite loop of doom in that case, we buffer messages during that process
+    if (_pendingMessages != null) _pendingMessages = msg :: _pendingMessages
+    else {
+      // create or recreate the *messages* buffer as needed
+      val mb = buffers.find(_.name == MessagesName) || newMessages()
+      mb.append(Line.fromText(msg + System.lineSeparator))
+    }
+  }
+
+  def focusedBuffer (buffer :BufferImpl) {
+    buffers -= buffer
+    buffers prepend buffer
+  }
+
+  override def editor = app
+  override val config = app.cfgMgr.editorConfig(Config.Scope(state, app.state))
+
+  override def createBuffer (name :String, state :List[State.Init[_]],
+                             reuse :Boolean) :BufferImpl = {
+    def isScratch (name :String) = (name startsWith "*") && (name endsWith "*")
+    def create (name :String) = {
+      val parent = buffers.headOption.map(b => Paths.get(b.store.parent)) || cwd
+      val buf = if (isScratch(name)) BufferImpl.scratch(name)
+                else BufferImpl(Store(parent.resolve(name)))
+      state foreach { _.apply(buf.state) }
+      addBuffer(buf)
+    }
+    buffers.find(_.name == name) match {
+      case None     => create(name)
+      case Some(ob) => if (reuse) ob else create(freshName(name))
+    }
+  }
+  override def openBuffer (store :Store) =
+    buffers.find(_.store == store) || addBuffer(BufferImpl(store))
+  override def killBuffer (buffer :Buffer) = {
+    if (buffers.remove(buffer)) buffer.asInstanceOf[BufferImpl].killed.emit(())
+    else log.log(s"Requested to kill unknown buffer [ws=$this, buf=$buffer]")
   }
 
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
@@ -163,19 +180,33 @@ class WorkspaceImpl (
   override protected def log = app.logger
   override protected def hibernate () {
     super.hibernate()
+    buffers.clear()
     mgr.checkExit()
   }
 
-  private def create (stage :Stage, desk :String, geom :Geom) :EditorPane = {
-    val editorConfig = cfgMgr.editorConfig(cfgScope)
-    val bufferSize = geom.size getOrElse {
-      (editorConfig(EditorConfig.viewWidth), editorConfig(EditorConfig.viewHeight))
-    }
-    val epane = new EditorPane(stage, this, bufferSize)
-    // stuff this editor's desktop id into global editor state
-    epane.state[Editor.Desktop].update(Editor.Desktop(desk))
+  private final val ScratchName = "*scratch*"
+  def newScratch () = createBuffer(ScratchName, Nil, true) // TODO: call this getScratch and reuse
 
-    val scene = new Scene(epane)
+  private final val MessagesName = "*messages*"
+  private def newMessages () = {
+    _pendingMessages = Nil
+    val mbuf = createBuffer(MessagesName, State.inits(Mode.Hint("log")), true)
+    _pendingMessages foreach { msg =>
+      mbuf.append(Line.fromText(msg + System.lineSeparator))
+    }
+    _pendingMessages = null
+    mbuf
+  }
+  private var _pendingMessages :List[String] = null
+
+  private def createWindow (stage :Stage, geom :Geom) :WindowImpl = {
+    val bufferSize = geom.size getOrElse {
+      (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
+    }
+    val win = new WindowImpl(stage, this, bufferSize)
+    // TODO: willCreateWindow
+
+    val scene = new Scene(win)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     val os = System.getProperty("os.name").replaceAll(" ", "").toLowerCase
     val oscss = getClass.getResource(s"/$os.css")
@@ -184,10 +215,10 @@ class WorkspaceImpl (
     stage.setScene(scene)
 
     // set our stage position based on the values specified in editor config
-    editorConfig.value(EditorConfig.viewLeft) onValueNotify { x =>
+    config.value(EditorConfig.viewLeft) onValueNotify { x =>
       if (x >= 0) stage.setX(x)
     }
-    editorConfig.value(EditorConfig.viewTop) onValueNotify { y =>
+    config.value(EditorConfig.viewTop) onValueNotify { y =>
       if (y >= 0) stage.setY(y)
     }
     // if geometry was specified on the command line, override the value from prefs
@@ -197,8 +228,19 @@ class WorkspaceImpl (
     Files.setLastModifiedTime(root, FileTime.fromMillis(System.currentTimeMillis))
 
     stage.show()
-    editors.put(desk, epane)
-    epane
+
+    // if we're opening the first window in this workspace, start routing log messages to our
+    // *messages* buffer
+    if (windows.isEmpty) toClose += app.log.onValue(recordMessage)
+
+    windows += win // TODO: didCreateWindow
+    win
+  }
+
+  private def freshName (name :String, n :Int = 1) :String = {
+    val revName = s"$name<$n>"
+    if (buffers.exists(_.name == revName)) freshName(name, n+1)
+    else revName
   }
 
   // TODO: move to Editor.Geom? might use in Workspace.createEditor()

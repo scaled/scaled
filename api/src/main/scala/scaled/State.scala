@@ -63,4 +63,11 @@ object State {
 
   /** Creates a state instance for a value with its class as key. */
   def init[T] (value :T) = new Init(value.getClass.asInstanceOf[Class[T]], value)
+
+  /** Creates a state instance for a list of values, each with its class as key. */
+  def inits (values :Any*) :List[State.Init[_]] = {
+    val lb = List.builder[State.Init[_]]()
+    values foreach { lb += init(_) }
+    lb.build()
+  }
 }

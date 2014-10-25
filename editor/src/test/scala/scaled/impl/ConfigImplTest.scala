@@ -21,17 +21,17 @@ class ConfigImplTest {
   }
 
   @Test def testReadInit () {
-    val impl = new ConfigImpl("editor", TestConfig :: Nil, None)
+    val impl = new ConfigImpl("editor", null, null, TestConfig :: Nil, None)
     val props = Seq("# Scaled editor config",
                     "", "# View width", "view-width: 15",
                     "", "# View height", "view-height: 25")
-    Properties.read(TestData.log, "test", props)(new impl.Initter(TestData.log))
+    impl.read(TestData.log, Properties.read(TestData.log, "test", props))
     assertEquals(15, impl(TestConfig.viewWidth))
     assertEquals(25, impl(TestConfig.viewHeight))
   }
 
   @Test def testWrite () {
-    val impl = new ConfigImpl("editor", TestConfig :: Nil, None)
+    val impl = new ConfigImpl("editor", null, null, TestConfig :: Nil, None)
 
     val allDefaults = Seq(
       "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",

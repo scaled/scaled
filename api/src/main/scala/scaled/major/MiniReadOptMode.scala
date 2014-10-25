@@ -33,7 +33,7 @@ class MiniReadOptMode (
 
   override def unknownCommand (trigger :String) = {
     if (optMap.contains(trigger)) promise.succeed(trigger)
-    else editor.popStatus("Type C-h for help.")
+    else window.popStatus("Type C-h for help.")
   }
 
   @Fn("Displays the option descriptions in the minibuffer completion area.")

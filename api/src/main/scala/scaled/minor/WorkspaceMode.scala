@@ -12,17 +12,17 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
 
   @Fn("Creates a new workspace.")
   def createWorkspace () {
-    editor.mini.read(s"Name:", "", nameHistory, Completer.none) onSuccess(wsvc.create)
+    window.mini.read(s"Name:", "", nameHistory, Completer.none) onSuccess(wsvc.create)
   }
 
   @Fn("Opens an existing workspace.")
   def openWorkspace () {
     val comp = Completer.from(wsvc.list, true)
-    editor.mini.read(s"Name:", "", nameHistory, comp) onSuccess(wsvc.open)
+    window.mini.read(s"Name:", "", nameHistory, comp) onSuccess(wsvc.open)
   }
 
   /** The history ring for workspace names. */
-  protected def nameHistory = Editor.historyRing(editor, "workspace-name")
+  protected def nameHistory = Workspace.historyRing(wspace, "workspace-name")
 
   private val wsvc = env.msvc.service[WorkspaceService]
 }

@@ -26,9 +26,8 @@ import java.util.concurrent.Callable
 import scala.collection.JavaConversions._
 import scaled._
 
-/** Brings everything together into one all singing, all dancing, text editing extravaganza. */
-class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
-    extends Region {
+/** Displays a buffer and passes events through to a dispatcher. */
+class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends Region {
 
   getStyleClass.add("buffer")
 
@@ -161,8 +160,8 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
       val pbuffer = BufferImpl.scratch("*popup*")
       pbuffer.insert(pbuffer.start, pop.lines)
-      val pview = new BufferViewImpl(editor, pbuffer, pop.lines.map(_.length).max, pop.lines.size)
-      getChildren.add(new BufferArea(editor, pview, disp))
+      val pview = new BufferViewImpl(pbuffer, pop.lines.map(_.length).max, pop.lines.size)
+      getChildren.add(new BufferArea(pview, disp))
 
       val line = bview.lines(math.min(pop.pos.y, bview.lines.size-1))
       _ax = line.charX(pop.pos.x, charWidth)
@@ -215,7 +214,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     }
   }
   private val popup = new PopWin()
-  bview.popup.onValueNotify { _ match {
+  bview.popup onValueNotify { _ match {
     case None      => popup.clear()
     case Some(pop) => popup.display(pop)
   }}
@@ -245,7 +244,7 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
     })
     // move our lines when scrollTop/Left change
     bview.scrollTop onEmit updateVizLines
-    bview.scrollLeft.onValue { left => contentNode.setLayoutX(-left*charWidth) }
+    bview.scrollLeft onValue { left => contentNode.setLayoutX(-left*charWidth) }
 
     def updateCursor (point :Loc) {
       // use the line to determine the layout coordinates of the cursor
@@ -325,18 +324,9 @@ class BufferArea (editor :Editor, bview :BufferViewImpl, disp :DispatcherImpl)
 
   // move the cursor when the point is updated
   bview.point onValueNotify contentNode.updateCursor
-  // refresh the character shown on the cursor whenever a buffer edit "intersects" the point
-  // (TODO: this seems error prone, is there a better way?)
-  bview.buffer.edited.onValue { edit =>
-    // the point may be temporarily invalid while edits are being undone, so NOOP in that case
-    // because the correct point will be restored after the undo is completed
-    val point = bview.point()
-    val pointValid = point.row < bview.buffer.lines.size
-    if (pointValid && edit.contains(point)) contentNode.updateCursor(point)
-  }
 
   // listen for addition and removal of lines
-  bview.changed.onValue { change =>
+  bview.changed onValue { change =>
     // println(s"Lines @${change.row} ${change.delta}")
     if (change.delta < 0) {
       lineNodes.getChildren.remove(change.row, change.row-change.delta)

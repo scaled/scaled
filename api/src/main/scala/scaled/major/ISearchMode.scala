@@ -21,8 +21,8 @@ class ISearchMode (
 
   @inline protected final def mainBuffer = mainView.buffer
 
-  case class State (sought :Seq[LineV], matchesF :Future[Seq[Loc]], start :Loc, end :Loc,
-                    fwd :Boolean, fail :Boolean, wrap :Boolean) extends Region {
+  case class IState (sought :Seq[LineV], matchesF :Future[Seq[Loc]], start :Loc, end :Loc,
+                     fwd :Boolean, fail :Boolean, wrap :Boolean) extends Region {
 
     private var matches :Option[Seq[Loc]] = None
     private def setMatches (matches :Seq[Loc]) {
@@ -59,7 +59,7 @@ class ISearchMode (
       * @param prev the previously active state, which will be unapplied (efficiently such that if
       * this state and the previous have the same configuration, no change is made).
       */
-    def apply (prev :State) {
+    def apply (prev :IState) {
       if (prev.sought ne sought) {
         if (matches.isDefined) showMatches(matches.get, sought)
         setContents(sought)
@@ -79,8 +79,8 @@ class ISearchMode (
       val search = mkSearch(esought)
       val allMatches = env.exec.runAsync(search.findAll())
       (if (fwd) search.findForward(start) else search.findBackward(end)) match {
-        case Loc.None => State(esought, allMatches, start, end,  fwd, true,  wrap)
-        case s        => State(esought, allMatches, s, s+esought, fwd, false, wrap)
+        case Loc.None => IState(esought, allMatches, start, end,  fwd, true,  wrap)
+        case s        => IState(esought, allMatches, s, s+esought, fwd, false, wrap)
       }
     }
 
@@ -105,15 +105,15 @@ class ISearchMode (
     override def toString = {
       val ms = matches.map(_.size).getOrElse(-1) ; val d = if (fwd) "fwd" else "rev"
       val f = if (fail) "fail" else "succ" ; val w = if (wrap) "wrap" else "nowrap"
-      s"State($sought, $ms, [$start, $end), $d, $f, $w)"
+      s"IState($sought, $ms, [$start, $end), $d, $f, $w)"
     }
 
     protected def mkSearch (sought :Seq[LineV]) = Search(
       mainBuffer, mainBuffer.start, mainBuffer.end, sought)
 
     protected def advance (next :Loc, fwd :Boolean, wrap :Boolean) =
-      if (next == Loc.None) State(sought, matchesF, start, end,        fwd, true,  wrap)
-      else                  State(sought, matchesF, next, next+sought, fwd, false, wrap)
+      if (next == Loc.None) IState(sought, matchesF, start, end,        fwd, true,  wrap)
+      else                  IState(sought, matchesF, next, next+sought, fwd, false, wrap)
   }
 
   // tracks the styles added for a complete set of matches
@@ -143,21 +143,21 @@ class ISearchMode (
     // completes immediately because that would cause State to check whether it's the curstate, but
     // we haven't initialized _states yet so curstate can't be called; we could complete the initial
     // state asynchronously but there's no particular benefit to doing so
-    State(Seq(Line.Empty), Promise(), p, p, direction == "forward", false, false)
+    IState(Seq(Line.Empty), Promise(), p, p, direction == "forward", false, false)
   }
   miniui.setPrompt(initState.prompt)
   private var _states = List(initState)
   private def curstate = _states.head
 
   // every change pushes a new state on the stack
-  private def pushState (state :State) {
+  private def pushState (state :IState) {
     state.apply(curstate)
     _states = state :: _states
   }
   // DEL pops back to previous states
   private def popState () :Unit = _states match {
     case cur :: prev :: t => prev.apply(cur) ; _states = prev :: t
-    case _ => editor.popStatus("Can't pop empty isearch state stack!")
+    case _ => window.popStatus("Can't pop empty isearch state stack!")
   }
 
   // machinery for handling coalesced search term refreshing
@@ -228,7 +228,7 @@ class ISearchMode (
   @Fn("Cancels the last change to the isearch, reverting to the previous search.")
   def prevSearch () {
     if (_states.tail != Nil) popState()
-    else editor.popStatus("No previous search.")
+    else window.popStatus("No previous search.")
   }
 
   @Fn("""Moves forward to the next occurrance of the current matched text, if any.
@@ -250,10 +250,10 @@ class ISearchMode (
   }
 
   /** The ring in which recent searches are stored. */
-  protected def isearchRing = Editor.historyRing(editor, "isearch")
+  protected def isearchRing = Workspace.historyRing(wspace, "isearch")
 
   protected def setFromHistory (idx :Int) :Unit = isearchRing.entry(0) match {
     case Some(sought) => setContents(sought)
-    case None => editor.popStatus("No previous search string.")
+    case None => window.popStatus("No previous search string.")
   }
 }

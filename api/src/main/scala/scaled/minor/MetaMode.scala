@@ -12,7 +12,7 @@ import java.nio.file.Paths
   * editor environment or other global things. */
 @Minor(name="meta", tags=Array("*"), desc="""Provides global meta fns.""")
 class MetaMode (env :Env) extends MinorMode(env) {
-  import Editor._
+  import Workspace._
 
   override def keymap = super.keymap.
     // buffer commands
@@ -21,7 +21,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
     bind("C-x C-f", "find-file").
 
     // editor commands
-    bind("C-x C-c", "save-buffers-kill-editor").
+    bind("C-x C-c", "save-buffers-close-window").
 
     // help commands
     bind("C-h f", "describe-fn").
@@ -36,7 +36,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   def withConfigVar (fn :Config.VarBind[_] => Unit) {
     val vars = disp.modes.flatMap(m => m.varBindings)
     val comp = Completer.from(vars)(_.v.name)
-    editor.mini.read("Var:", "", varHistory(editor), comp) onSuccess fn
+    window.mini.read("Var:", "", varHistory(wspace), comp) onSuccess fn
   }
 
   //
@@ -44,20 +44,20 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
   def switchToBuffer () {
-    val fstb = editor.buffers.head
-    val defb = editor.buffers.drop(1).headOption getOrElse fstb
+    val fstb = wspace.buffers.head
+    val defb = wspace.buffers.drop(1).headOption getOrElse fstb
     val defp = s" (default ${defb.name})"
-    val comp = Completer.buffer(editor, Some(defb), Set(fstb))
-    editor.mini.read(s"Switch to buffer$defp:", "", bufferHistory(editor),
-                     comp) onSuccess editor.visitBuffer
+    val comp = Completer.buffer(wspace, Some(defb), Set(fstb))
+    window.mini.read(s"Switch to buffer$defp:", "", bufferHistory(wspace),
+                     comp) onSuccess frame.visit
   }
 
   @Fn("""Reads a buffer name from the minibuffer and kills (closes) it.""")
   def killBuffer () {
-    val current = editor.buffers.head
+    val current = wspace.buffers.head
     val prompt = s"Kill buffer (default ${current.name}):"
-    val comp = Completer.buffer(editor, Some(current))
-    editor.mini.read(prompt, "", bufferHistory(editor), comp) onSuccess editor.killBuffer
+    val comp = Completer.buffer(wspace, Some(current))
+    window.mini.read(prompt, "", bufferHistory(wspace), comp) onSuccess wspace.killBuffer
 
     // TODO: document our process when we have one:
 
@@ -70,30 +70,31 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Reads a filename from the minibuffer and visits it in a buffer.""")
   def findFile () {
-    editor.mini.read("Find file:", buffer.store.parent, fileHistory(editor),
-                     Completer.file) onSuccess editor.visitFile
+    window.mini.read("Find file:", buffer.store.parent, fileHistory(wspace),
+                     Completer.file) onSuccess frame.visitFile
   }
 
   //
   // EDITOR FNS
 
-  @Fn("""Offers to save any unsaved buffers, then kills this editor.""")
-  def saveBuffersKillEditor () {
+  @Fn("""Offers to save any unsaved buffers, then closes this window.
+         If this is the last open window, the editor will edit.""")
+  def saveBuffersCloseWindow () {
     val opts = Seq(
       "y"   -> "save the current buffer",
       "n"   -> "skip the current buffer (abandon changes)",
       "q"   -> "skip all remaining buffers",
       "!"   -> "save all remaining buffers",
-      "."   -> "save *only* the current buffer, then exit",
-      "C-g" -> "cancel this kill-editor command"
+      "."   -> "save *only* the current buffer, then close",
+      "C-g" -> "cancel this close-window command"
       // TODO: C-r to view this buffer?
       // TODO: d to diff this buffer against the file system version
     )
     def saveLoop (dirty :List[Buffer]) :Unit = dirty match {
-      case Nil => editor.exit()
+      case Nil => window.close()
       case buf :: tail =>
         val prompt = s"${buf.store} is modified. Save?"
-        editor.mini.readOpt(prompt, opts) onSuccess(_ match {
+        window.mini.readOpt(prompt, opts) onSuccess(_ match {
           case "y" => buf.save() ; saveLoop(tail)
           case "n" => saveLoop(tail)
           case "q" => saveLoop(Nil)
@@ -101,7 +102,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
           case "." => buf.save() ; saveLoop(Nil)
         })
     }
-    saveLoop(editor.buffers.filter(_.needsSave).toList)
+    saveLoop(wspace.buffers.filter(_.needsSave).toList)
   }
 
   //
@@ -109,17 +110,17 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Displays the documentation for a fn.")
   def describeFn () {
-    editor.mini.read("Fn:", "", fnHistory(editor), Completer.from(disp.fns, true)) onSuccess { fn =>
+    window.mini.read("Fn:", "", fnHistory(wspace), Completer.from(disp.fns, true)) onSuccess { fn =>
       disp.describeFn(fn) match {
-        case Some(descrip) => editor.popStatus(s"Fn: $fn", descrip)
-        case None => editor.popStatus(s"No such fn: $fn")
+        case Some(descrip) => window.popStatus(s"Fn: $fn", descrip)
+        case None => window.popStatus(s"No such fn: $fn")
       }
     }
   }
 
   @Fn("Displays the documentation for a config var as well as its current value.")
   def describeVar () {
-    withConfigVar(b => editor.popStatus(
+    withConfigVar(b => window.popStatus(
       s"Mode: ${b.m.name}\nVar: ${b.v.name} (currently: ${b.current})", b.v.descrip))
   }
 
@@ -128,9 +129,9 @@ class MetaMode (env :Env) extends MinorMode(env) {
   def setVar () {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
-      editor.mini.read(prompt, b.current, setVarHistory(editor), Completer.none) onSuccess { nv =>
+      window.mini.read(prompt, b.current, setVarHistory(wspace), Completer.none) onSuccess { nv =>
         try b.update(nv) catch {
-          case e :Exception => editor.popStatus(s"Unable to parse '$nv':", e.toString)
+          case e :Exception => window.popStatus(s"Unable to parse '$nv':", e.toString)
         }
       }
     }
@@ -162,8 +163,9 @@ class MetaMode (env :Env) extends MinorMode(env) {
     }
 
     val major = disp.modes.last
-    val view = editor.bufferConfig(s"*mode:${major.name}*").mode("help").reuse().create()
-    editor.visitBuffer(bb.applyTo(view))
+    val hbuf = wspace.createBuffer(s"*mode:${major.name}*", reuse=true,
+                                   state=State.inits(Mode.Hint("help")))
+    frame.visit(bb.applyTo(hbuf))
   }
 
   @Fn("Describes the current state of the editor. This is mainly for debugging and the curious.")
@@ -178,25 +180,24 @@ class MetaMode (env :Env) extends MinorMode(env) {
       }
     }
     bb.addHeader("Editor")
-    bb.addKeysValues("Buffers: " -> editor.buffers.size.toString)
     addState(editor.state)
 
-    val ws = editor.workspace
     bb.addHeader("Workspace")
-    bb.addKeysValues("Name: " -> ws.name,
-                     "Root: " -> ws.root.toString)
-    addState(ws.state)
+    bb.addKeysValues("Name: " -> wspace.name,
+                     "Root: " -> wspace.root.toString,
+                     "Buffers: " -> wspace.buffers.size.toString)
+    addState(wspace.state)
 
     bb.addHeader("Buffers")
-    editor.buffers.foreach { buf =>
+    wspace.buffers.foreach { buf =>
       bb.addSubHeader(buf.name)
       bb.addKeysValues("Store: " -> buf.store.toString,
                        "Length: " -> buf.offset(buf.end).toString)
       addState(buf.state)
     }
 
-    val view = editor.bufferConfig(s"*editor*").mode("help").reuse().create()
-    editor.visitBuffer(bb.applyTo(view))
+    val hbuf = wspace.createBuffer(s"*editor*", reuse=true, state=State.inits(Mode.Hint("help")))
+    frame.visit(bb.applyTo(hbuf))
   }
 
   //
@@ -204,46 +205,52 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
-    editor.mini.read("M-x", "", fnHistory(editor), Completer.from(disp.fns, true)) onSuccess { fn =>
-      if (!disp.invoke(fn)) editor.popStatus(s"Unknown fn: $fn")
+    window.mini.read("M-x", "", fnHistory(wspace), Completer.from(disp.fns, true)) onSuccess { fn =>
+      if (!disp.invoke(fn)) window.popStatus(s"Unknown fn: $fn")
     }
   }
 
   @Fn("""Invokes a shell command and displays its output.
          The cwd will be the directory that contains the currently visited buffer.""")
   def shellCommand () {
-    editor.mini.read("Command", "", shellCommandHistory, Completer.none) onSuccess { cmd =>
+    window.mini.read("Command", "", shellCommandHistory, Completer.none) onSuccess { cmd =>
       def parseCmd (cmd :String) = cmd.split(" ") // TODO: handle quoted args
       val cfg = SubProcess.Config(parseCmd(cmd), cwd=Paths.get(buffer.store.parent))
-      val view = editor.bufferConfig(s"*exec:${cfg.cmd(0)}*").mode("text").reuse().create()
-      SubProcess(cfg, env.exec, view.buffer)
-      editor.visitBuffer(view.buffer)
+      val ebuf = wspace.createBuffer(s"*exec:${cfg.cmd(0)}*", reuse=true,
+                                     state=State.inits(Mode.Hint("text")))
+      SubProcess(cfg, env.exec, ebuf)
+      frame.visit(ebuf)
     }
   }
 
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
     val comp = Completer.from(disp.minorModes, true)
-    editor.mini.read("Mode:", "", modeHistory(editor), comp) onSuccess disp.toggleMode
+    window.mini.read("Mode:", "", modeHistory(wspace), comp) onSuccess disp.toggleMode
   }
 
   @Fn("Opens the configuration file for the specified mode in a buffer.")
   def editModeConfig () {
-    val mcomp = Completer.from(disp.majorModes ++ disp.minorModes, true)
-    editor.mini.read("Mode:", name, modeHistory(editor), mcomp) onSuccess editConfig
+    val comp = Completer.from(disp.modes)(_.name)
+    window.mini.read("Mode:", name, modeHistory(wspace), comp) map(_.config) onSuccess(editConfig)
   }
 
   @Fn("Opens the configuration file for the Scaled editor in a buffer.")
-  def editEditorConfig () :Unit = editConfig("editor")
+  def editEditorConfig () :Unit = editConfig(wspace.config)
 
-  private def configScopeHistory = historyRing(editor, "config-scope")
-  private def shellCommandHistory = historyRing(editor, "shell-command")
+  private def configScopeHistory = historyRing(wspace, "config-scope")
+  private def shellCommandHistory = historyRing(wspace, "shell-command")
 
-  private def editConfig (mode :String) {
-    val scopes = editor.configScope(buffer).toList
-    editor.mini.read("Scope:", scopes.head.name, configScopeHistory,
-                     Completer.from(scopes)(_.name)) onSuccess { scope =>
-      editor.visitConfig(scope, mode)
+  private def editConfig (config :Config) {
+    val scopes = config.scope.toList ; val comp = Completer.from(scopes)(_.name)
+    window.mini.read("Scope:", scopes.head.name, configScopeHistory, comp) onSuccess { scope =>
+      val target = config.atScope(scope)
+      val cbuf = wspace.openBuffer(Store(target.file))
+      val content = target.toProperties
+      if (content != cbuf.region(cbuf.start, cbuf.end).map(_.asString)) {
+        cbuf.replace(cbuf.start, cbuf.end, content.map(Line.apply))
+      }
+      frame.visit(cbuf)
     }
   }
 }

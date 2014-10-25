@@ -18,8 +18,11 @@ abstract class Env {
   /** The one service to rule them all. */
   val msvc :MetaService
 
-  /** The editor in which this mode is operating. */
-  val editor :Editor
+  /** The frame that contains our buffer view. */
+  val frame :Window#Frame
+
+  /** The window that contains our frame. */
+  val window :Window
 
   /** The view in which this mode is operating. */
   val view :RBufferView
@@ -135,12 +138,15 @@ abstract class Mode (env :Env) {
   def dispose () {
     try _toClose.close()
     catch {
-      case e :Exception => editor.emitError(e)
+      case e :Exception => window.emitError(e)
     }
   }
 
   // a view methods to make life easier for modes
-  @inline protected final def editor = env.editor
+  @inline protected final def frame = env.frame
+  @inline protected final def window = env.window
+  @inline protected final def wspace = env.window.workspace
+  @inline protected final def editor = env.window.workspace.editor
   @inline protected final def view = env.view
   @inline protected final def buffer = env.view.buffer
   @inline protected final def disp = env.disp
@@ -178,6 +184,27 @@ abstract class Mode (env :Env) {
   protected def bind (trigger :String, fn :String) = Key.Binding(trigger, fn)
 
   private[this] val _toClose = Close.bag()
+}
+
+/** [[Mode]] related statics. */
+object Mode {
+
+  /** Explicitly configures the major mode and conveys any extra arguments thereto. This should be
+    * placed into buffer state when creating a buffer. */
+  case class Hint (name :String, args :Any*)
+
+  /** Supplies additional tags to be used when resolving minor modes for a buffer. This should be
+    * placed into buffer state when creating a buffer. */
+  case class Tags (tags :String*)
+
+  /** Extracts the mode name hint from `state`, or falls back to `orElse`. */
+  def nameHint (state :State, orElse : => String) :String = state.get[Hint].map(_.name) || orElse
+
+  /** Extracts the mode args hint from `state`, or falls back to `Nil`. */
+  def argsHint (state :State) :List[Any] = state.get[Hint].map(h => List.copyOf(h.args)) || Nil
+
+  /** Extracts the mode tags hint from `state`, or falls back to `Nil`. */
+  def tagsHint (state :State) :List[String] = state.get[Tags].map(t => List.copyOf(t.tags)) || Nil
 }
 
 /** Provides the foundation for a major editing mode. A major editing mode customizes the behavior

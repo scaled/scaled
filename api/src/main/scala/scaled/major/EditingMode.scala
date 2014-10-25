@@ -25,7 +25,7 @@ object EditingConfig extends Config.Defs {
   */
 abstract class EditingMode (env :Env) extends ReadingMode(env) {
   import Chars._
-  import Editor._
+  import Workspace._
   import EditorConfig._
 
   override def defaultFn :Option[String] = Some("self-insert-command")
@@ -101,11 +101,11 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       val region = buffer.delete(from, to)
       // if the previous fn was any sort of kill fn, we append instead of add
       if ((disp.prevFn != null) && isKillFn(disp.prevFn)) {
-        if (isBackwardKill(disp.curFn)) killRing(editor) prepend region
-        else                            killRing(editor) append  region
+        if (isBackwardKill(disp.curFn)) editor.killRing prepend region
+        else                            editor.killRing append  region
       }
       // otherwise create a new kill ring entry
-      else killRing(editor) add region
+      else editor.killRing add region
     }
     from lesser to
   }
@@ -157,7 +157,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     val lines = buffer.region(r)
     val sorted = lines.sorted(LineV.ordering)
     if (lines != sorted) buffer.replace(r, sorted)
-    else editor.popStatus("Region already sorted.")
+    else window.popStatus("Region already sorted.")
   }
 
   /** Reverses the lines in the region `[start, end)`. */
@@ -179,7 +179,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     orig foreach(filler.append)
     val filled = filler.toLines
     if (filled != orig) buffer.replace(r, filled)
-    else editor.emitStatus("Region already filled.")
+    else window.emitStatus("Region already filled.")
   }
 
   /** Returns true if we should auto-fill, false if not. The default implementation checks that
@@ -226,7 +226,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def deleteBackwardChar () {
     val vp = view.point()
     val prev = buffer.backward(vp, 1)
-    if (prev == vp) editor.emitStatus("Beginning of buffer.")
+    if (prev == vp) window.emitStatus("Beginning of buffer.")
     else buffer.delete(prev, vp)
   }
 
@@ -234,7 +234,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def deleteForwardChar () {
     val del = view.point()
     val next = buffer.forward(del, 1)
-    if (del == next) editor.emitStatus("End of buffer.")
+    if (del == next) window.emitStatus("End of buffer.")
     else buffer.delete(del, next)
   }
 
@@ -262,7 +262,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     // if the point is past the last char, act as if it's on the last char
     val tp = if (lineLen > 0 && p.col >= lineLen) p.atCol(lineLen-1) else p
     // if we're at the start of the buffer, this command is meaningless
-    if (tp == Loc.Zero) editor.emitStatus("Beginning of buffer.")
+    if (tp == Loc.Zero) window.emitStatus("Beginning of buffer.")
     // if the point is in column zero...
     else if (tp.col == 0) {
       val prev = tp.row - 1
@@ -277,7 +277,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       // unless the current line has no characters...
       else buffer.lineLength(prev) match {
         // if the previous line is also an empty line, we got nothing
-        case 0 =>  editor.popStatus("Nothing to transpose.")
+        case 0 =>  window.popStatus("Nothing to transpose.")
         // otherwise pull the last character of the previous line into this one
         case len =>
           val last = Loc(prev, len-1)
@@ -352,7 +352,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   @Fn("""Causes the following command, if it kills, to append to the previous kill rather than
          creating a new kill-ring entry.""")
   def appendNextKill () {
-    editor.emitStatus("If next command is a kill, it will append.")
+    window.emitStatus("If next command is a kill, it will append.")
     // kill() will note that the prevFn is append-next-kill and append appropriately
   }
 
@@ -385,8 +385,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
          moved to the end if the inserted text.""")
   def yank () {
-    killRing(editor).entry(0) match {
-      case None => editor.popStatus("Kill ring is empty.")
+    editor.killRing.entry(0) match {
+      case None => window.popStatus("Kill ring is empty.")
       case Some(region) =>
         buffer.mark = view.point()
         buffer.insert(view.point(), region)
@@ -395,11 +395,11 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Replaces the just-yanked stretch of killed text with a different stretch.""")
   def yankPop () {
-    if (!yanks(disp.prevFn)) editor.popStatus(s"Previous command was not a yank (${disp.prevFn}).")
+    if (!yanks(disp.prevFn)) window.popStatus(s"Previous command was not a yank (${disp.prevFn}).")
     else {
       yankCount = if (disp.prevFn == "yank-pop") yankCount + 1 else 1
-      killRing(editor).entry(yankCount) match {
-        case None => editor.popStatus("Kill ring is empty.")
+      editor.killRing.entry(yankCount) match {
+        case None => window.popStatus("Kill ring is empty.")
         case Some(region) =>
           // since the last command was a yank, the mark must be set
           val mark = buffer.mark.get
@@ -416,13 +416,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("Undoes the last change to the buffer.")
   def undo () = buffer.undoer.undo() match {
-    case None    => editor.popStatus("Nothing to undo.")
+    case None    => window.popStatus("Nothing to undo.")
     case Some(p) => view.point() = p
   }
 
   @Fn("Redoes the last undone to the buffer.")
   def redo () = buffer.undoer.redo() match {
-    case None    => editor.popStatus("Nothing to redo.")
+    case None    => window.popStatus("Nothing to redo.")
     case Some(p) => view.point() = p
   }
 
@@ -433,7 +433,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * If search terms are obtained, `repFn` is invoked with them.
     */
   def getReplaceArgs (prefix :String, repFn :(String, String) => Unit) {
-    val history = replaceHistory(editor)
+    val history = replaceHistory(wspace)
     val defrep = history.entries match {
       case 0 => None
       case 1 => Some(Line.toText(history.entry(0).get) -> "")
@@ -443,14 +443,14 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       case Some((from, to)) => s" default ($from -> $to)"
       case _ => ""
     }
-    editor.mini.read(s"$prefix$defprompt:", "", history, Completer.none) onSuccess { from =>
+    window.mini.read(s"$prefix$defprompt:", "", history, Completer.none) onSuccess { from =>
       if (from == "") defrep match {
         case Some((from, to)) => repFn(from, to)
-        case                _ => editor.emitStatus("Aborted")
+        case                _ => window.emitStatus("Aborted")
       }
       else {
         val prompt = s"$prefix '$from' with:"
-        editor.mini.read(prompt, "", history, Completer.none) onSuccess { to =>
+        window.mini.read(prompt, "", history, Completer.none) onSuccess { to =>
           // normally MiniReadMode won't add a blank response to the history, but in the case of
           // a blank 'to' replacement, we do want to add it to the history
           if (to == "") history.add(Line.fromText(to))
@@ -472,7 +472,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       else count
     }
     val total = loop(start, preCount)
-    editor.emitStatus(s"Replaced $total occurrence(s).")
+    window.emitStatus(s"Replaced $total occurrence(s).")
   }
 
   /** Processes a query replace of `fromM` with `to` from `start`. If no more matches exist, the
@@ -491,7 +491,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
       "!"  -> "replace all remaining matches",
       "q"  -> "exit, skipping all remaining matches"
     )
-    def done (count :Int) :Unit = editor.emitStatus(s"Replaced $count occurrence(s).")
+    def done (count :Int) :Unit = window.emitStatus(s"Replaced $count occurrence(s).")
     def clear (loc :Loc) = buffer.removeStyle(activeMatchStyle, loc, search.matchEnd(loc))
     def loop (from :Loc, count :Int) {
       val next = search.findForward(from)
@@ -500,7 +500,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
         buffer.addStyle(activeMatchStyle, next, search.matchEnd(next))
         view.point() = next
         val nextEnd = search.matchEnd(next)
-        editor.statusMini.readOpt(prompt, opts).onComplete(_ => clear(next)).onSuccess(_ match {
+        window.statusMini.readOpt(prompt, opts).onComplete(_ => clear(next)).onSuccess(_ match {
           case "y"|" "  => loop(search.replace(buffer, next, to), count+1)
           case "n"|"BS" => loop(nextEnd, count)
           case "q"      => done(count)
@@ -552,12 +552,12 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Saves current buffer to the currently visited file, if modified.""")
   def saveBuffer () {
-    if (!buffer.dirty) editor.emitStatus("No changes need to be saved.")
+    if (!buffer.dirty) window.emitStatus("No changes need to be saved.")
     else {
       // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
       // what else does emacs do?
       buffer.save()
-      editor.emitStatus(s"Wrote: ${buffer.name}")
+      window.emitStatus(s"Wrote: ${buffer.name}")
     }
   }
 
@@ -566,20 +566,20 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          in the specified directory.""")
   def writeFile () {
     val bufwd = buffer.store.parent
-    editor.mini.read("Write file:", bufwd, fileHistory(editor), Completer.file) onSuccess { store =>
+    window.mini.read("Write file:", bufwd, fileHistory(wspace), Completer.file) onSuccess { store =>
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
-      (if (!editor.buffers.exists(_.store == store)) Future.success(true)
-       else editor.mini.readYN(s"A buffer is visiting '${store.name}'; proceed?")) onSuccess {
-        case false => editor.popStatus("Canceled.")
+      (if (!wspace.buffers.exists(_.store == store)) Future.success(true)
+       else window.mini.readYN(s"A buffer is visiting '${store.name}'; proceed?")) onSuccess {
+        case false => window.popStatus("Canceled.")
         case true =>
           // require confirmation if the target file already exists
           (if (!store.exists) Future.success(true)
-           else editor.mini.readYN(s"File '$store' exists; overwrite?")) onSuccess {
-             case false => editor.popStatus("Canceled.")
+           else window.mini.readYN(s"File '$store' exists; overwrite?")) onSuccess {
+             case false => window.popStatus("Canceled.")
              case true =>
                buffer.saveTo(store)
-               editor.popStatus(s"Wrote: ${buffer.name}", s"into: ${store.parent}")
+               window.popStatus(s"Wrote: ${buffer.name}", s"into: ${store.parent}")
            }
        }
     }

@@ -179,7 +179,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       case ii => p.atCol(ii)
     }
     if (commenter.inComment(buffer, wp)) super.fillParagraph()
-    else editor.popStatus("Code modes only fill comments, not code.")
+    else window.popStatus("Code modes only fill comments, not code.")
   }
   override def refillLinesIn (start :Loc, end :Loc) = {
     val cend = trimEnd(end)
@@ -241,7 +241,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          enclosing block can be found.""")
   def previousBracket () {
     curBlock.getOption match {
-      case None    => editor.popStatus("No enclosing block can be found.")
+      case None    => window.popStatus("No enclosing block can be found.")
       case Some(b) => view.point() = b.start
     }
   }
@@ -251,10 +251,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          block's close bracket.""")
   def nextBracket () {
     curBlock.getOption match {
-      case None    => editor.popStatus("No enclosing block can be found.")
+      case None    => window.popStatus("No enclosing block can be found.")
       case Some(b) => if (view.point() != b.end.nextC) view.point() = b.end.nextC
                       else blocker(buffer.forward(b.end, 2)) match {
-                        case None => editor.popStatus("No enclosing block can be found.")
+                        case None => window.popStatus("No enclosing block can be found.")
                         case Some(b) => view.point() = b.end.nextC
                       }
     }
@@ -271,7 +271,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          point inside the block.""")
   def bounceBracket () {
     curBlock.getOption match {
-      case None => editor.popStatus("No enclosing block can be found.")
+      case None => window.popStatus("No enclosing block can be found.")
       case Some(b) =>
         val p = view.point()
         // if we're at the start of the block, move to the end of the block
@@ -311,7 +311,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       else if (commenter.blockOpen != "") {
         commenter.blockComment(buffer, start, end)
       }
-      else editor.popStatus("This code mode does not define block comment delimiters.")
+      else window.popStatus("This code mode does not define block comment delimiters.")
     }
   }
 

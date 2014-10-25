@@ -36,10 +36,40 @@ abstract class Workspace extends Reffed {
     // pre-populate our state with our workspace config scope
     State.init(Config.Scope("workspace", root, None)))
 
+  /** The global editor in which this workspace is contained. */
+  def editor :Editor
+
+  /** Global configuration (potentially customized for this workspace).
+    * Keys are defined in [[EditorConfig]]. */
+  def config :Config
+
   /** Returns whether this is the default (auto-created) workspace. */
   def isDefault = name == Workspace.DefaultName
 
-  // TODO: create new editor (with geometry?)
+  /** Returns all windows owned by this workspace. */
+  def windows :SeqV[Window]
+
+  /** Returns all buffers open in this workspace, in order of most recent activation. */
+  def buffers :SeqV[Buffer]
+
+  /** Creates a buffer named `name` and with the specified initial `state`.
+    * @param reuse requests reuse of an existing buffer with the same name. If a buffer named
+    * `name` exists, it will be returned directly (as is, so be careful you're not getting an
+    * unexpected buffer in this case). Otherwise in the event of name collision, a fresh buffer
+    * name will be generated from `name` by appending <N> to the name with increasing values of N
+    * until an unused name is obtained. */
+  def createBuffer (name :String, state :List[State.Init[_]] = Nil, reuse :Boolean = false) :Buffer
+
+  /** Opens a buffer for `file` in this workspace. If a buffer is already open for `file` it will
+    * be returned instead. */
+  def openBuffer (file :Store) :Buffer
+
+  /** Requests to kill (close) the specified buffer. Any view of this buffer in any window or frame
+    * (in this workspace) will be closed. The buffer may not actually be killed due to buffer kill
+    * hooks which can abort the kill. */
+  def killBuffer (buffer :Buffer) :Unit
+
+  // TODO: create new window (with geometry?)
 
   /** Adds `path` to this workspace's list of hint paths. A hint path is used to trigger the
     * selection of this workspace when Scaled is first started. If the file being edited is in a
@@ -55,6 +85,28 @@ object Workspace {
 
   /** The name of the default workspace. */
   val DefaultName = "Default"
+
+  /** The history ring for file names (find-file, write-file, etc.). */
+  def fileHistory (ws :Workspace) = historyRing(ws, "file")
+  /** The history ring for buffer names (switch-to-buffer, kill-buffer, etc.). */
+  def bufferHistory (ws :Workspace) = historyRing(ws, "buffer")
+  /** The history ring for replace fns (replace-string, replace-regexp, query-replace, etc.). */
+  def replaceHistory (ws :Workspace) = historyRing(ws, "replace")
+  /** The history ring used for mode names. */
+  def modeHistory (ws :Workspace) = historyRing(ws, "mode")
+  /** The history ring used for fns. */
+  def fnHistory (ws :Workspace) = historyRing(ws, "fn")
+  /** The history ring used for config var names. */
+  def varHistory (ws :Workspace) = historyRing(ws, "var")
+  /** The history ring used for config var values. */
+  def setVarHistory (ws :Workspace) = historyRing(ws, "set-var")
+
+  /** Returns the (editor-wide) history ring with the specified name. The ring will be created
+    * on-demand. Note the history ring names above, which are used by Scaled. */
+  def historyRing (ws :Workspace, name :String) = Mutable.getOrPut(
+    Rings(ws.state), name, new Ring(ws.config(EditorConfig.historySize)) {
+      override def toString = s"$name-history"
+    })
 }
 
 /** Provides workspace services. */

@@ -12,7 +12,7 @@ import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
 import scaled.util.Errors
 
-abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuffer {
+abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuffer {
 
   getStyleClass.addAll("overpop", "mini")
   setVisible(false)
@@ -24,8 +24,8 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
   BorderPane.setMargin(plabel, new Insets(0, 0, 5, 0))
   setTop(plabel)
 
-  val cview = new BufferViewImpl(editor, BufferImpl.scratch("*completions*"), 40, 0)
-  val carea = new BufferArea(editor, cview, null) {
+  val cview = new BufferViewImpl(BufferImpl.scratch("*completions*"), 40, 0)
+  val carea = new BufferArea(cview, null) {
     override protected def wasResized (widthChars :Int, heightChars :Int) {
       // we don't save our layout width/height back into our view width/height here because we
       // don't want the completion area to prefer ever larger sizes across uses; the active
@@ -77,22 +77,24 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
   override def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = try {
     willShow() // make sure it's OK to activate ourselves
 
-    val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
+    val buffer = BufferImpl.scratch("*minibuffer*")
+    val view = new BufferViewImpl(buffer, 40, 1)
     val modeArgs = ui :: result :: List.copyOf(args)
-    val disp = new DispatcherImpl(editor, editor.resolver, view, ModeLine.Noop,
-                                  s"mini-$mode", modeArgs, Nil)
-    val area = new BufferArea(editor, view, disp) {
-      override protected def wasResized (widthChars :Int, heightChars :Int) {
-        // only persist width; height is unfortunately delivered bogus values due to JavaFX
-        // preferred size retardery
-        view.width() = widthChars;
+    val disp = new DispatcherImpl(window, window.resolver(null, buffer), view, ModeLine.Noop,
+                                  s"mini-$mode", modeArgs, Nil) {
+      override protected def createBufferArea () = new BufferArea(view, this) {
+        override protected def wasResized (widthChars :Int, heightChars :Int) {
+          // only persist width; height is unfortunately delivered bogus values due to JavaFX
+          // preferred size retardery
+          view.width() = widthChars;
+        }
       }
     }
-    setCenter(area)
+    setCenter(disp.area)
     setVisible(true)
     toFront()
     onShow()
-    area.requestFocus()
+    disp.area.requestFocus()
     result onComplete { _ =>
       ui.setPrompt("")
       ui.showCompletions(Seq())
@@ -106,7 +108,7 @@ abstract class MiniOverlay (editor :EditorPane) extends BorderPane with Minibuff
   } catch {
     case e :Exception =>
       result.fail(e)
-      editor.emitError(e)
+      window.emitError(e)
       result
   }
 

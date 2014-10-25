@@ -4,6 +4,8 @@
 
 package scaled
 
+import java.util.HashMap
+
 /** Manages a ring of blocks of text (and styles). A ring accumulates blocks until the ring is
   * full, at which point adding new blocks causes the oldest block to be replaced. The canonical
   * use of a ring is the kill ring, which tracks killed (cut, in modern parlance) blocks of text
@@ -107,4 +109,12 @@ class KillRing (size :Int) extends Ring(size) {
     clip.putString(lastSaved)
     clipboard.setContent(clip)
   }
+}
+
+/** A class used to store a mapping from names to rings in state. */
+final class Rings extends HashMap[String,Ring]()
+
+object Rings {
+  /** Returns (creating if needed) the [[Rings]] instance in `state`. */
+  def apply (state :State) :Rings = state[Rings].getOrElseUpdate(new Rings())
 }

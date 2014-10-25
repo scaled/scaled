@@ -54,6 +54,10 @@ class BufferImpl private (initStore :Store) extends RBuffer {
 
   val undoStack = new UndoStack(this)
 
+  /** A signal emitted when this buffer is killed. Triggers any views currently displaying said
+    * buffer to go away. */
+  val killed = Signal[Unit]()
+
   //
   // from Buffer and RBuffer API
 

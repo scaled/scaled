@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import java.nio.file.{Path, Paths}
 import scaled._
 import scaled.major.TextMode
 
@@ -25,50 +26,68 @@ object TestData {
     val bgExec = uiExec
   }
 
-  val editor = new Editor {
-    val config = new ConfigImpl("scaled", EditorConfig :: Nil, None)
-    def workspace = ???
-    def buffers = Seq()
-    val mini = new Minibuffer() {
-      def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
-    }
-    def statusMini = mini
-    def exit () {}
-    def showURL (url :String) {}
+  val cwd = Paths.get("")
+  val testScope = Config.Scope("test", cwd, None)
+
+  val window :Window = new Window {
+    val geometry = Geometry(100, 40, 10, 10)
+    val frames = Seq()
+    def focus = ???
+    def workspace = TestData.workspace
+    def close () {}
+    def emitError (err :Throwable) = err.printStackTrace(System.err)
     def popStatus (msg :String, subtext :String) {
       println(msg)
       if (subtext != null) println(subtext)
     }
     def emitStatus (msg :String, ephemeral :Boolean) :Unit = println(msg)
-    def emitError (err :Throwable) = err.printStackTrace(System.err)
     def clearStatus () {}
-    def openBuffer (buffer :String) = ???
-    def visitFile (file :Store) = ???
-    def configScope (buffer :Buffer) = ???
-    def visitConfig (scope :Config.Scope, name :String) = ???
-    def visitBuffer (buffer :Buffer) = ???
-    def createBuffer (config :BufferConfig) = ???
+    val mini = new Minibuffer() {
+      def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
+    }
+    def statusMini = mini
+  }
+
+  val workspace :Workspace = new Workspace {
+    val name = "default"
+    val root = Paths.get("")
+    def editor = TestData.editor
+    def config = editor.config
+    val windows = Seq(window)
+    val buffers = Seq()
+    def createBuffer (name :String, state :List[State.Init[_]], reuse :Boolean) = buffer(name, "")
+    def openBuffer (store :Store) = BufferImpl(store)
     def killBuffer (buffer :Buffer) {}
+    def addHintPath (path :Path) {}
+    def removeHintPath (path :Path) {}
+    protected def log = TestData.log
+  }
+
+  val editor = new Editor {
+    val config = new ConfigImpl("editor", cwd, testScope, EditorConfig :: Nil, None)
+    def showURL (url :String) {}
   }
 
   val injector = new ServiceInjector(log, exec)
-  val resolver = new ModeResolver(injector, editor) {
+  val resolver = new ModeResolver(injector, null, null) {
     override protected def locate (major :Boolean, mode :String) = classOf[TextMode]
-    override protected def resolveConfig (sc :Config.Scope, mode :String, defs :List[Config.Defs]) =
-      modeConfig(mode, defs)
+    override def configScope = testScope
+    override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
+      new ConfigImpl(mode, cwd, testScope, defs, None)
     override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
       injector.injectInstance(clazz, args)
   }
 
-  def modeConfig (mode :String, defs :List[Config.Defs]) = new ConfigImpl(mode, defs, None)
-
   def env (view_ :RBufferView) = new Env {
     val msvc = injector
-    val editor = TestData.editor
+    val frame = null
+    val window = TestData.window
     val view = view_
     val disp = null
     val mline = ModeLine.Noop
-    def resolveConfig (mode :String, defs :List[Config.Defs]) = modeConfig(mode, defs)
+    def configScope = testScope
+    def resolveConfig (mode :String, defs :List[Config.Defs]) =
+      new ConfigImpl(mode, cwd, testScope, defs, None)
   }
 
   /** Creates a test buffer. For testing! */

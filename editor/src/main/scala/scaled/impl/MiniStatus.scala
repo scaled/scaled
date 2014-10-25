@@ -12,7 +12,7 @@ import scaled._
 import scaled.major.{MiniUI, MinibufferMode}
 import scaled.util.Errors
 
-abstract class MiniStatus (editor :EditorPane) extends BorderPane with Minibuffer {
+abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffer {
 
   getStyleClass.addAll("status")
   setVisible(false)
@@ -43,22 +43,16 @@ abstract class MiniStatus (editor :EditorPane) extends BorderPane with Minibuffe
   override def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = try {
     willShow() // make sure it's OK to activate ourselves
 
-    val view = new BufferViewImpl(editor, BufferImpl.scratch("*minibuffer*"), 40, 1)
+    val buffer = BufferImpl.scratch("*minibuffer*")
+    val view = new BufferViewImpl(buffer, 40, 1)
     val modeArgs = ui :: result :: List.copyOf(args)
-    val disp = new DispatcherImpl(editor, editor.resolver, view, ModeLine.Noop,
+    val disp = new DispatcherImpl(window, window.resolver(null, buffer), view, ModeLine.Noop,
                                   s"mini-$mode", modeArgs, Nil)
-    val area = new BufferArea(editor, view, disp) {
-      override protected def wasResized (widthChars :Int, heightChars :Int) {
-        // only persist width; height is unfortunately delivered bogus values due to JavaFX
-        // preferred size retardery
-        view.width() = widthChars;
-      }
-    }
-    setCenter(area)
+    setCenter(disp.area)
     setVisible(true)
     toFront()
     onShow()
-    area.requestFocus()
+    disp.area.requestFocus()
     result onComplete { _ =>
       ui.setPrompt("")
       ui.showCompletions(Seq())
@@ -72,7 +66,7 @@ abstract class MiniStatus (editor :EditorPane) extends BorderPane with Minibuffe
   } catch {
     case e :Exception =>
       result.fail(e)
-      editor.emitError(e)
+      window.emitError(e)
       result
   }
 }

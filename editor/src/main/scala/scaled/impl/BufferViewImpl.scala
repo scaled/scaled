@@ -5,15 +5,12 @@
 package scaled.impl
 
 import scaled._
-
-// TODO: should the point be automatically adjusted when text is inserted into the buffer before
-// the point?
+import scaled.util.Close
 
 /** Implements [[BufferView]] and [[RBufferView]]. This class mainly defines the model, and
   * [[BufferArea]] etc. actually visualize the model and handle UX.
   */
-class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei :Int)
-    extends RBufferView(initWid, initHei) {
+class BufferViewImpl (_buffer :BufferImpl, iwid :Int, ihei :Int) extends RBufferView(iwid, ihei) {
 
   private val _lines = new SeqBuffer[LineViewImpl](_buffer.lines.size)
   _buffer.lines foreach { _lines += new LineViewImpl(_) }
@@ -21,8 +18,15 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
   private val _changed = Signal[BufferView.Change]()
   override def changed = _changed
 
+  private val _toClose = Close.bag()
+
   def clearEphemeralPopup () {
     if (popup.isDefined && popup().isEphemeral) popup.clear()
+  }
+
+  /** Disconnects this view from its underlying buffer. */
+  def dispose () {
+    _toClose.close()
   }
 
   // narrow the return types of these guys for our internal friends
@@ -30,7 +34,7 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
   override def lines :SeqV[LineViewImpl] = _lines
 
   // when the buffer is edited: add, remove and update lines
-  _buffer.edited.onValue { _ match {
+  _toClose += _buffer.edited.onValue { _ match {
     case Buffer.Insert(start, end) =>
       // the first line changed, the rest are new
       _lines(start.row).invalidate()
@@ -57,6 +61,17 @@ class BufferViewImpl (editor :Editor, _buffer :BufferImpl, initWid :Int, initHei
     case Buffer.Transform(start, end, _) =>
       start.row to end.row foreach { row => _lines(row).invalidate() }
   }}
+
   // pass style changes onto the line views
-  _buffer.lineStyled.onValue { loc => _lines(loc.row).onStyle(loc) }
+  _toClose += _buffer.lineStyled.onValue { loc => _lines(loc.row).onStyle(loc) }
+
+  // force a refresh of the point whenever a buffer edit "intersects" the point
+  // (TODO: this seems error prone, is there a better way?)
+  _toClose += _buffer.edited.onValue { edit =>
+    // the point may be temporarily invalid while edits are being undone, so NOOP in that case
+    // because the correct point will be restored after the undo is completed
+    val cp = point()
+    val pointValid = cp.row < _lines.size
+    if (pointValid && edit.contains(cp)) point.updateForce(cp)
+  }
 }

@@ -23,6 +23,7 @@ class StatusPopup extends VBox {
 
   getStyleClass.add("overpop")
   getChildren.addAll(_text, _subtext)
+  setVisible(false)
 
   def showStatus (msg :String, subtext :String) {
     toFront()

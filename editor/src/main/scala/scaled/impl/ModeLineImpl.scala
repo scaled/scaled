@@ -9,7 +9,7 @@ import javafx.scene.control.Tooltip
 import javafx.scene.layout.HBox
 import scaled._
 
-class ModeLineImpl (editor :Editor) extends HBox(8) with ModeLine {
+class ModeLineImpl extends HBox(8) with ModeLine {
   getStyleClass.add("modeLine")
   setMaxWidth(Double.MaxValue)
 

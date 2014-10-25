@@ -20,7 +20,6 @@ object ReadingConfig extends Config.Defs {
 abstract class ReadingMode (env :Env) extends MajorMode(env) {
   import Chars._
   import ReadingConfig._
-  import Editor._
 
   override def missedFn  :Option[String] = Some("unknown-command")
 
@@ -110,7 +109,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     * message is emitted that indicates that the current region is not set and `fn` is not
     * invoked. */
   def withRegion (fn :(Loc, Loc) => Unit) :Unit = buffer.mark match {
-    case None => editor.popStatus("The mark is not set now, so there is no region.")
+    case None => window.popStatus("The mark is not set now, so there is no region.")
     case Some(mp) => val p = view.point() ; if (mp < p) fn(mp, p) else fn(p, mp)
   }
 
@@ -133,7 +132,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
       case ii => buffer.line(p).syntaxAt(ii)
     }
     mkParagrapher(syn).paragraphAt(p) match {
-      case None => editor.popStatus("Unable to find a paragraph.")
+      case None => window.popStatus("Unable to find a paragraph.")
       case Some(r) => fn(r.start, r.end)
     }
   }
@@ -148,8 +147,8 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("""Saves the text between the point and the mark as if killed, but doesn't kill it.
          The point and mark remain unchanged.""")
   def killRingSave () = withRegion { (start, end) =>
-    killRing(editor) add buffer.region(start, end)
-    editor.emitStatus("Region added to kill ring.")
+    editor.killRing add buffer.region(start, end)
+    window.emitStatus("Region added to kill ring.")
   }
 
   //
@@ -173,12 +172,12 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          C-g when search is successful aborts and moves point to starting point.
          """)
   def isearchForward () {
-    editor.statusMini("isearch", Promise[Boolean](), view, disp, "forward")
+    window.statusMini("isearch", Promise[Boolean](), view, disp, "forward")
   }
 
   @Fn("Searches incrementally backward. See the command isearch-forward for more info.")
   def isearchBackward () {
-    editor.statusMini("isearch", Promise[Boolean](), view, disp, "backward")
+    window.statusMini("isearch", Promise[Boolean](), view, disp, "backward")
   }
 
   //
@@ -188,7 +187,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def setMarkCommand () {
     // TODO: push old mark onto local (buffer?) and global mark ring?
     buffer.mark = view.point()
-    editor.emitStatus("Mark set.")
+    window.emitStatus("Mark set.")
   }
 
   @Fn("Sets the mark to the current point and moves the point to the previous mark.")
@@ -198,7 +197,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
         buffer.mark = view.point()
         view.point() = m
       case None =>
-        editor.popStatus("No mark set in this buffer.")
+        window.popStatus("No mark set in this buffer.")
     }
   }
 
@@ -211,14 +210,14 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     // if we're at the end of the current line, move to the next line
     view.point() = buffer.forward(old, 1)
     // if the point didn't change, that means we tried to move past the end of the buffer
-    if (old == view.point()) editor.emitStatus("End of buffer.")
+    if (old == view.point()) window.emitStatus("End of buffer.")
   }
 
   @Fn("Moves the point backward one character.")
   def backwardChar () {
     val old = view.point()
     view.point() = buffer.backward(old, 1)
-    if (old == view.point()) editor.emitStatus("Beginning of buffer.")
+    if (old == view.point()) window.emitStatus("Beginning of buffer.")
   }
 
   @Fn("Moves the point forward one word.")
@@ -245,7 +244,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     // ones and back into a long one, a longer desired column may be preserved
     val oldDesiredColumn = desiredColumn
     view.point() = Loc(old.row+1, oldDesiredColumn)
-    if (old == view.point()) editor.emitStatus("End of buffer.") // TODO: with beep?
+    if (old == view.point()) window.emitStatus("End of buffer.") // TODO: with beep?
     // if the line to which we moved was short, desiredColumn will have been overwritten with
     // a too small value; so we restore it now
     desiredColumn = oldDesiredColumn
@@ -257,7 +256,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     // see nextLine() for a description of what we're doing here with desiredColumn
     val oldDesiredColumn = desiredColumn
     view.point() = Loc(old.row-1, oldDesiredColumn)
-    if (old == view.point()) editor.emitStatus("Beginning of buffer.") // TODO: with beep?
+    if (old == view.point()) window.emitStatus("Beginning of buffer.") // TODO: with beep?
     desiredColumn = oldDesiredColumn
   }
 
@@ -307,7 +306,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
          it will be set to the point prior to moving to the new line. """)
   def gotoLine () {
-    editor.mini.read("Goto line:", "", gotoLineHistory, Completer.none) onSuccess { lstr =>
+    window.mini.read("Goto line:", "", gotoLineHistory, Completer.none) onSuccess { lstr =>
       val line = try { lstr.toInt } catch {
         case e :Throwable => 1 // this is what emacs does, seems fine to me
       }
@@ -321,7 +320,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          the requested line. If the mark is inactive, it will be set to the point prior to moving
          to the new line. """)
   def gotoOffset () {
-    editor.mini.read("Goto offset:", "", gotoLineHistory, Completer.none) onSuccess { offStr =>
+    window.mini.read("Goto offset:", "", gotoLineHistory, Completer.none) onSuccess { offStr =>
       val offset = try { offStr.toInt } catch {
         case e :Throwable => 0 // this is what emacs does, seems fine to me
       }
@@ -358,13 +357,13 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          scratch reinitializing the major and minor modes. Note: this only works on clean buffers
          loaded from files. Modified or ephemeral buffers will refuse to be reloaded.""")
   def reloadBuffer () {
-    if (buffer.dirty) editor.popStatus("Cannot reload modified buffer.")
-    else if (!buffer.store.exists) editor.popStatus("Cannot reload ephemeral buffers.")
+    if (buffer.dirty) window.popStatus("Cannot reload modified buffer.")
+    else if (!buffer.store.exists) window.popStatus("Cannot reload ephemeral buffers.")
     else {
       val file = buffer.store ; val p = view.point()
       val top = view.scrollTop() ; val left = view.scrollLeft()
-      editor.killBuffer(buffer)
-      val nv = editor.visitFile(file)
+      wspace.killBuffer(buffer)
+      val nv = frame.visitFile(file)
       nv.scrollTop() = top
       nv.scrollLeft() = left
       nv.point() = p
@@ -402,9 +401,9 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("Reports that a key sequence is unknown.")
   def unknownCommand (trigger :String) {
-    editor.popStatus(s"$trigger is undefined.")
+    window.popStatus(s"$trigger is undefined.")
   }
 
   /** The history ring used for config var values. */
-  protected def gotoLineHistory = historyRing(editor, "goto-line")
+  protected def gotoLineHistory = Workspace.historyRing(wspace, "goto-line")
 }

@@ -29,6 +29,23 @@ trait Config {
 
   /** Updates the value for `key` in the current buffer only. */
   def update[T] (key :Config.Key[T], value :T) :Unit
+
+  /** The scope at which this instance was resolved. */
+  def scope :Config.Scope
+
+  /** Returns the file that backs this config object. */
+  def file :Path
+
+  /** Converts this config to a `properties` file. Config vars that have not been changed from
+    * their default values will have commented out entries indicating the default values, and
+    * configured entries will appear as normal.
+    */
+  def toProperties :Seq[String]
+
+  /** Returns `this` config if [[scope]] == `scope`, or passes the buck up our parent chain.
+    * @throws IllegalArgumentException if no parent matches the specified scope.
+    */
+  def atScope (scope :Config.Scope) :Config
 }
 
 object Config {

@@ -55,7 +55,7 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
 
   @Fn("""Aborts the current minibuffer action.""")
   def abort () {
-    editor.emitStatus("Quit")
+    window.emitStatus("Quit")
     promise.fail(Errors.feedback("Aborted"))
   }
 

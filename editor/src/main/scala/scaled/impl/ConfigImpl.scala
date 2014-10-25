@@ -5,21 +5,18 @@
 package scaled.impl
 
 import java.util.{HashMap, HashSet}
+import java.nio.file.{Path, Files}
 import scaled._
+import scaled.util.Properties
 
-class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigImpl])
+class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
+                  defs :List[Config.Defs], parent :Option[ConfigImpl])
     extends Config {
 
   override def value[T] (key :Config.Key[T]) = resolve(key).value
   override def update[T] (key :Config.Key[T], value :T) = resolve(key).value() = value
 
-  override def toString = s"$name / $parent"
-
-  /** Converts this config to a `properties` file. Config vars that have not been changed from their
-    * default values will have commented out entries indicating the default values, and configured
-    * entries will appear as normal.
-    */
-  def toProperties :Seq[String] = {
+  override def toProperties :Seq[String] = {
     val buf = Seq.builder[String]()
     buf += s"# Scaled '$name' config vars"
     buf += s"#"
@@ -37,11 +34,24 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
     buf.build()
   }
 
-  /** Used to (re)initialize this config from a file. Call [[apply]] for every key value pair
-    * loaded from the file, then call [[complete]]. */
-  class Initter (log :Logger) extends ((String, String) => Unit) {
-    private val initted = new HashSet[String]()
-    def apply (key :String, value :String) = _vars.get(key) match {
+  override def atScope (scope :Config.Scope) = if (this.scope == scope) this else parent match {
+    case None => throw new IllegalArgumentException(s"No parent at $scope")
+    case Some(p) => p.atScope(scope)
+  }
+
+  override def toString = s"$name / $parent"
+
+  /** Reads this config's source file into `this`. Any properties that were set in this instance
+    * but were no longer set in the source file are reset to inherited/default. */
+  def read (log :Logger) :this.type = {
+    read(log, accFn => if (Files.exists(file)) Properties.read(log, file)(accFn))
+    this
+  }
+
+  // handles the machinery of reading, factored out to enable testing... bleh
+  def read (log :Logger, fn :((String,String) => Unit) => Unit) {
+    val initted = new HashSet[String]()
+    fn { (key, value) => _vars.get(key) match {
       case None => log.log(s"$name config contains unknown/stale setting '$key: $value'.")
       case Some(cvar) => try {
         resolve(cvar.key).init(cvar.key.converter.read(value))
@@ -49,14 +59,12 @@ class ConfigImpl (name :String, defs :List[Config.Defs], parent :Option[ConfigIm
       } catch {
         case e :Exception => log.log(s"$name config contains invalid setting: '$key: $value': $e")
       }
-    }
-    def complete () {
-      // reset any key that was not explicitly initialized from file data
-      _vars foreach { (key, cvar) => if (!initted.contains(key)) _vals.get(cvar.key) match {
-        case null => // no problem!
-        case cval => cval.reset()
-      }}
-    }
+    }}
+    // reset any key that was not explicitly initialized from file data
+    _vars foreach { (key, cvar) => if (!initted.contains(key)) _vals.get(cvar.key) match {
+      case null => // no problem!
+      case cval => cval.reset()
+    }}
   }
 
   private def resolve[T] (key :Config.Key[T]) :ConfigValue[T] =

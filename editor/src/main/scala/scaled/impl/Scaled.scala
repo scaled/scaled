@@ -15,7 +15,7 @@ import scala.collection.JavaConversions._
 import scaled._
 import scaled.util.Errors
 
-class Scaled extends Application {
+class Scaled extends Application with Editor {
 
   private val pool = Executors.newFixedThreadPool(4) // TODO: config
 
@@ -52,8 +52,10 @@ class Scaled extends Application {
   val pkgMgr = new PackageManager(logger)
   val wspMgr = new WorkspaceManager(this)
   val svcMgr = new ServiceManager(this)
+  val cfgMgr = svcMgr.injectInstance(classOf[ConfigManager], Nil)
 
-  val state = new State(State.init(Config.Scope("global", pkgMgr.metaDir, None)))
+  val configScope = Config.Scope("global", pkgMgr.metaDir, None)
+  state[Config.Scope]() = configScope
 
   /** If debug logging is enabled, writes `msg` to console, otherwise noops. */
   val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
@@ -72,9 +74,19 @@ class Scaled extends Application {
     pool.shutdown()
   }
 
+  //
+  // Editor API
+
+  override def config = cfgMgr.editorConfig(configScope)
+  override def showURL (url :String) = {
+    // getHostSevices.showDocument is very crashy on Mac OS X right now, so avoid it
+    if (System.getProperty("os.name") != "Mac OS X") getHostServices.showDocument(url)
+    else Runtime.getRuntime.exec(Array("open", url))
+  }
+
   // tweaks the shortcut on the quit menu to avoid conflict with M-q
   private def tweakQuitMenuItem () :Unit = try {
-    import com.sun.glass._
+    import com.sun.glass.{events => gevents, ui}
     val app = ui.Application.GetApplication
     val getAppleMenu = app.getClass.getMethod("getAppleMenu")
     if (getAppleMenu != null) {
@@ -82,7 +94,7 @@ class Scaled extends Application {
       val menu = getAppleMenu.invoke(app).asInstanceOf[ui.Menu]
       val items = menu.getItems
       val quit = items.get(items.size-1).asInstanceOf[ui.MenuItem]
-      quit.setShortcut('q', events.KeyEvent.MODIFIER_COMMAND|events.KeyEvent.MODIFIER_SHIFT)
+      quit.setShortcut('q', gevents.KeyEvent.MODIFIER_COMMAND|gevents.KeyEvent.MODIFIER_SHIFT)
     }
 
   } catch {

@@ -9,7 +9,7 @@ import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Errors
 
-abstract class ModeResolver (msvc :MetaService, editor :Editor) {
+abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Frame) {
 
   /** Returns the names of all known modes, major if `major`, minor if not. */
   def modes (major :Boolean) :Set[String] = Set()
@@ -28,7 +28,8 @@ abstract class ModeResolver (msvc :MetaService, editor :Editor) {
     resolve(mode, view, mline, disp, major :: args, requireMinor(mode))
 
   protected def locate (major :Boolean, mode :String) :Class[_]
-  protected def resolveConfig (scope :Config.Scope, mode :String, defs :List[Config.Defs]) :Config
+  protected def configScope :Config.Scope
+  protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
   protected def injectInstance[T] (clazz :Class[T], args :List[Any]) :T
 
   private def requireMajor (mode :String) = reqType(mode, classOf[MajorMode])
@@ -44,30 +45,15 @@ abstract class ModeResolver (msvc :MetaService, editor :Editor) {
                           args :List[Any], modeClass :Class[T]) :T = {
     val envargs = new Env {
       val msvc = ModeResolver.this.msvc
-      val editor = ModeResolver.this.editor
+      val frame = ModeResolver.this.frame
+      val window = ModeResolver.this.window
       val view = vw
       val mline = mln
       val disp = dsp
+      def configScope = ModeResolver.this.configScope
       def resolveConfig (mode :String, defs :List[Config.Defs]) =
-        ModeResolver.this.resolveConfig(dsp.configScope, mode, defs)
+        ModeResolver.this.resolveConfig(mode, defs)
     } :: args
     injectInstance(modeClass, envargs)
   }
-}
-
-class AppModeResolver (ws :WorkspaceImpl, editor :Editor)
-    extends ModeResolver(ws.app.svcMgr, editor) {
-
-  override def modes (major :Boolean) = Set() ++ ws.app.pkgMgr.modes(major)
-  override def minorModes (tags :Seq[String]) = ws.app.pkgMgr.minorModes(tags)
-
-  override protected def locate (major :Boolean, mode :String) =
-    ws.app.pkgMgr.mode(major, mode) match {
-      case Some(mode) => mode
-      case None       => throw Errors.feedback(s"Unknown mode: $mode")
-    }
-  override protected def resolveConfig (scope :Config.Scope, mode :String, defs :List[Config.Defs]) =
-    ws.cfgMgr.resolveConfig(scope, mode, defs)
-  override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
-    ws.app.svcMgr.injectInstance(clazz, args)
 }

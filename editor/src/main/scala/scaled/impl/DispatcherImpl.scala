@@ -16,7 +16,7 @@ import scaled._
   * @param majorMode the major mode, which defines our primary key mappings.
   * Minor modes are added (and removed) dynamically, but a dispatcher's major mode never changes.
   */
-class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferViewImpl,
+class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferViewImpl,
                       mline :ModeLine, majorMode :String, modeArgs :List[Any], tags :List[String])
     extends Dispatcher {
 
@@ -37,13 +37,14 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
   private var _dispatchTyped = false
   private var _escapeNext = false
 
+  /** The buffer area for which we're dispatching events. */
+  val area = createBufferArea()
+
   /** The major mode with which we interact. */
   val major = Value[MajorMode](resolver.resolveMajor(majorMode, view, mline, this, modeArgs))
 
   /** The current configured set of minor modes. */
   val minors :ValueV[Seq[MinorMode]] = _minors
-
-  def configScope :Config.Scope = editor.configScope(view.buffer)
 
   // configure our major mode
   major onValueNotify { major =>
@@ -58,13 +59,13 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
       try addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
       catch {
         case e :Throwable =>
-          editor.emitError(e)
-          editor.emitStatus(s"Failed to resolve minor mode '$mode'. See *messages* for details.")
+          window.emitError(e)
+          window.emitStatus(s"Failed to resolve minor mode '$mode'. See *messages* for details.")
       }
     }
     modesChanged()
     // if we were replacing an existing major mode, give feedback to the user
-    if (hadMajor) editor.popStatus("${major.name} activated.")
+    if (hadMajor) window.popStatus("${major.name} activated.")
   }
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
@@ -127,8 +128,9 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     kev.consume()
   }
 
-  /* Disposes the major mode associated with this dispatcher and any active minor modes. */
+  /* Called when this dispatcher and all of its associated machinery should go away. */
   def dispose () {
+    view.dispose()
     _metas foreach(_.dispose(true))
     _metas = Nil // render ourselves useless
     _prefixes = Set()
@@ -150,7 +152,7 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     _metas map(_.mode) find(_.name == mode) match {
       case Some(minor :MinorMode) =>
         removeMode(minor)
-        editor.popStatus(s"$mode mode deactivated.")
+        window.popStatus(s"$mode mode deactivated.")
       case _ =>
         addMode(true)(resolver.resolveMinor(mode, view, mline, this, major(), Nil))
     }
@@ -167,16 +169,19 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
         case Some(fn) => invoke("press", fn, kps.last.text)
         case None     => invokeMissed(trigger)
       }
-      case Left(errs) => editor.popStatus(
+      case Left(errs) => window.popStatus(
         s"Invalid keys in '$trigger': ${errs.mkString(", ")}")
     }
   }
+
+  /** Factored out because we need some custom fiddling in places. Blah. */
+  protected def createBufferArea () = new BufferArea(view, this)
 
   private def addMode (interactive :Boolean)(mode :MinorMode) {
     _metas = new ModeMeta(mode) :: _metas
     if (interactive) {
       modesChanged()
-      editor.popStatus(s"${mode.name} mode activated.")
+      window.popStatus(s"${mode.name} mode activated.")
     }
   }
 
@@ -208,13 +213,13 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
 
     // prepare to invoke our fn
     _curFn = fn.name
-    editor.clearStatus()
+    window.clearStatus()
     view.buffer.undoStack.delimitAction(view.point())
     _willInvoke.emit(fn.name)
 
     try fn.invoke(typed)
     catch {
-      case e :InvocationTargetException => editor.emitError(e.getCause)
+      case e :InvocationTargetException => window.emitError(e.getCause)
     }
 
     // finish up after invoking our fn
@@ -241,12 +246,12 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     * Thus if a user types a command prefix, we wait for the rest of the command, but we also
     * eventually provide some feedback as to what's going on in case they did it unwittingly. */
   private def deferDisplayPrefix (trigger :Seq[KeyPress]) {
-    editor.emitStatus(trigger.mkString(" "), true)
+    window.emitStatus(trigger.mkString(" "), true)
   }
 
   private class ModeMeta (val mode :Mode) {
     def name = mode.name
-    val fns = new FnBindings(mode, m => editor.emitStatus(m))
+    val fns = new FnBindings(mode, m => window.emitStatus(m))
     val map :Map[Seq[KeyPress],FnBinding] = {
       // if fn has a "mode:" prefix, resolve fn via that named mode rather than via this mode
       val fnMap = Map(_metas.map(m => m.name -> m.fns))
@@ -262,10 +267,10 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
       }
       val mb = Map.builder[Seq[KeyPress],FnBinding]()
       for (kb <- mode.keymap.bindings) KeyPress.toKeyPresses(kb.trigger) match {
-        case Left(kerrs) => editor.emitStatus(
+        case Left(kerrs) => window.emitStatus(
           s"Invalid key(s) in '$name-mode' keymap: '${kerrs.mkString(", ")}'")
         case Right (kps) => binding(kb.fn) match {
-          case Left(err) => editor.emitStatus(err)
+          case Left(err) => window.emitStatus(err)
           case Right(fb) => mb.put(kps, fb)
         }
       }
@@ -276,10 +281,10 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     val prefixes :Set[Seq[KeyPress]] = map.keySet.map(_.dropRight(1)).filter(!_.isEmpty)
     // TODO: report an error if a key prefix is bound to an fn? WDED?
 
-    // add this mode's stylesheet (if any) to the editor
+    // add this mode's stylesheet (if any) to the window
     private def addSheets (sheets :List[String]) :Unit = if (!sheets.isEmpty) {
       addSheets(sheets.tail)
-      editor.getStylesheets.add(sheets.head)
+      area.getStylesheets.add(sheets.head)
     }
     // TODO: we want to remove the global user stylesheets, add these mode sheets, and then readd
     // the global user sheets (so that the global user sheets are always last)
@@ -288,8 +293,8 @@ class DispatcherImpl (editor :EditorPane, resolver :ModeResolver, view :BufferVi
     def dispose (bufferDisposing :Boolean) {
       // if the buffer is not going away...
       if (!bufferDisposing) {
-        // remove this mode's stylesheet (if any) from the editor
-        mode.stylesheets.foreach { ss => editor.getStylesheets.remove(ss) }
+        // remove this mode's stylesheet (if any) from the window
+        mode.stylesheets.foreach { ss => area.getStylesheets.remove(ss) }
         // tell the mode that it's being deactivated before we dispose it
         mode.deactivate()
       }

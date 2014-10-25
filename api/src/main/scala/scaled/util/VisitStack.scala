@@ -28,12 +28,12 @@ class VisitStack (name :String) {
   }
 
   /** Pops the last `(store, loc)` from the stack and visits it. */
-  def pop (editor :Editor) {
-    if (_stack.isEmpty) editor.emitStatus(s"$name stack is empty.")
+  def pop (window :Window) {
+    if (_stack.isEmpty) window.emitStatus(s"$name stack is empty.")
     else {
       val (store, loc) = _stack.last
       _stack.remove(_stack.size-1)
-      editor.visitFile(store).point() = loc
+      window.focus.visitFile(store).point() = loc
     }
   }
 

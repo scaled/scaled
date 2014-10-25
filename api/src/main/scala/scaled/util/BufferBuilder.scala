@@ -21,18 +21,14 @@ class BufferBuilder (val fillWidth :Int) {
   /** Returns the lines accumulated to this builder. */
   def lines :SeqV[LineV] = _lines
 
-  /** Replaces the contents of `view`s buffer with the contents of this builder. The view's point
-    * is moved to the start of the buffer and the buffer is marked clean.
-    * @return the buffer to which the builder was applied, for easy chaining to a call to
-    * [[Editor.visitBuffer]].
+  /** Replaces the contents of `buffer` buffer with the contents of this builder.
+    * @return `buffer`, for easy chaining to a call to `visitBuffer`.
     */
-  def applyTo (view :BufferView) :Buffer = {
-    val buf = view.buffer
-    buf.replace(buf.start, buf.end, lines)
-    if (buf.end.col > 0) buf.split(buf.end) // tack on a trailing NL if needed
-    buf.markClean()
-    view.point() = Loc.Zero
-    buf
+  def applyTo (buffer :Buffer) :Buffer = {
+    buffer.replace(buffer.start, buffer.end, lines)
+    if (buffer.end.col > 0) buffer.split(buffer.end) // tack on a trailing NL if needed
+    buffer.markClean()
+    buffer
   }
 
   /** Appends `line` to the buffer. */
