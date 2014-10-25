@@ -22,7 +22,7 @@ abstract class Behavior extends AutoCloseable {
     * with which our mode is associated is being disposed as well. If the buffer is to remain, we
     * expect the mode to deactivate us explicitly before we're closed by virtue of being an
     * auto-closeable registered with the mode. */
-  override def close () :Unit = setActive(true)
+  override def close () :Unit = setActive(false)
 
   /** Wires up all reactions in this method and performs any other activation processing. Be sure to
     * use [[note]] to note all connections created when wiring up reactions. */
