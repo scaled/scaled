@@ -30,6 +30,9 @@ object BufferImpl {
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
   def scratch (name :String) :BufferImpl = apply(new TextStore(name, cwd.toString, ""))
 
+  /** Used to track the view state for a buffer when it's not visible. */
+  case class ViewState (point :Loc, scrollTop :Int, scrollLeft :Int)
+
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()
 }
@@ -37,6 +40,7 @@ object BufferImpl {
 /** Implements [Buffer] and [RBuffer]. This is where all the excitement happens. */
 class BufferImpl private (initStore :Store) extends RBuffer {
   import Buffer._
+  import BufferImpl._
 
   // TODO: character encoding
   // TODO: line endings
@@ -57,6 +61,11 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   /** A signal emitted when this buffer is killed. Triggers any views currently displaying said
     * buffer to go away. */
   val killed = Signal[Unit]()
+
+  /** Contains the state of the most recent view of this buffer. When a view goes away, it writes
+    * its current state to the buffer, and if the buffer is loaded into a new view, it restores the
+    * most recently saved state. */
+  var viewState :ViewState = ViewState(Loc.Zero, 0, 0)
 
   //
   // from Buffer and RBuffer API

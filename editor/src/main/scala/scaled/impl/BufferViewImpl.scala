@@ -27,11 +27,19 @@ class BufferViewImpl (_buffer :BufferImpl, iwid :Int, ihei :Int) extends RBuffer
   /** Disconnects this view from its underlying buffer. */
   def dispose () {
     _toClose.close()
+    // write our view state back to the buffer
+    _buffer.viewState = BufferImpl.ViewState(point(), scrollTop(), scrollLeft())
   }
 
   // narrow the return types of these guys for our internal friends
   override def buffer :BufferImpl = _buffer
   override def lines :SeqV[LineViewImpl] = _lines
+
+  // configure this view based on the buffer's latest view state
+  { val vs = _buffer.viewState
+    point() = vs.point
+    scrollTop() = vs.scrollTop
+    scrollLeft() = vs.scrollLeft }
 
   // when the buffer is edited: add, remove and update lines
   _toClose += _buffer.edited.onValue { _ match {
