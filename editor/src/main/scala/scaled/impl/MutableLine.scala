@@ -52,12 +52,21 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
   protected var _syns = xs
   protected def _tags = tags
   private[this] var _end = cs.size
+  private[this] var _lineTags :List[Any] = Nil
 
   override def length = _end
   override def view (start :Int, until :Int) = new Line(_chars, _syns, tags, start, until-start)
   override def slice (start :Int, until :Int) = new Line(
     _chars.slice(start, until), _syns.slice(start, until), tags.slice(start, until))
   override protected def _offset = 0
+
+  override def lineTag[T] (tclass :Class[T], dflt :T) :T = {
+    var ts = _lineTags ; while (!ts.isEmpty) {
+      if (ts.head.getClass == tclass) return ts.head.asInstanceOf[T]
+      ts = ts.tail
+    }
+    dflt
+  }
 
   override def write (out :Writer) = out.write(_chars, 0, _end)
 
@@ -168,6 +177,12 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     if (tags.removeAll(tclass, pred, start.col, until) && tclass == classOf[String]) {
       buffer.noteLineStyled(start)
     }
+  }
+
+  /** Sets the line tag for `tclass` to `tag`. */
+  def setLineTag[T] (tclass :Class[T], tag :T) {
+    // TODO: custom filter that generates no garbage if no tag exists?
+    _lineTags = tag :: _lineTags.filter(_.getClass != tclass)
   }
 
   /** Sets the syntax of chars in `[loc,last)` to `syntax`. */

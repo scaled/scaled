@@ -129,10 +129,11 @@ abstract class BufferV extends Region {
 
   /** Returns the first tag matching `tclass` that overlaps `loc`, or None.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def tagAt[T] (tclass :Class[T], loc :Loc) :Option[T] = {
-    val ts = tagsAt(tclass, loc)
-    if (ts.isEmpty) None else Some(ts.head.tag)
-  }
+  def tagAt[T] (tclass :Class[T], loc :Loc) :Option[T] =
+    line(loc.row).tagAt(tclass, loc.col, null.asInstanceOf[T]) match {
+      case null => None
+      case tval => Some(tval)
+    }
 
   /** Returns all tags on the character at `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
@@ -465,6 +466,11 @@ abstract class Buffer extends BufferV {
     * Unlike [[removeTag]] this removes entire tags, it does not split overlappers. */
   def removeTags[T] (tclass :Class[T], pred :T => Boolean, r :Region) :Unit =
     removeTags(tclass, pred, r.start, r.end)
+
+  /** Sets the `tclass` tag for the `idx`th line to `tag`. Any existing tag will be overwritten. */
+  def setLineTag[T] (tclass :Class[T], idx :Int, tag :T) :Unit
+  /** Sets the `tclass` tag for the `loc`th line to `tag`. Any existing tag will be overwritten. */
+  def setLineTag[T] (tclass :Class[T], loc :Loc, tag :T) :Unit = setLineTag(tclass, loc.row, tag)
 
   /** Adds CSS style class `style` to the characters between `[start, until)`. */
   def addStyle (style :String, start :Loc, until :Loc) = addTag(style.intern, start, until)

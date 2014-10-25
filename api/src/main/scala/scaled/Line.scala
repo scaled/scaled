@@ -68,6 +68,9 @@ abstract class LineV extends CharSequence {
   /** Returns all tags which match `tclass` and overlap `pos`. */
   def tagsAt[T] (tclass :Class[T], pos :Int) :List[Tag[T]] = _tags.tagsAt(tclass, pos)
 
+  /** Returns the first tag which matches `tclass` and overlaps `pos`, or `dflt`. */
+  def tagAt[T] (tclass :Class[T], pos :Int, dflt :T) :T = _tags.tagAt(tclass, pos, dflt)
+
   /** Returns all tags which overlap `pos`. */
   def tagsAt (pos :Int) :List[Tag[_]] = _tags.tagsAt(pos)
 
@@ -79,6 +82,15 @@ abstract class LineV extends CharSequence {
     * region(s) will be visited separately with all overlapping tags passed as a list. */
   def visitTags[T] (tclass :Class[T])(viz :(Seq[Tag[T]], Int, Int) => Unit) :Unit =
     _tags.visit(tclass)(viz)
+
+  /** Returns the line tag which matches `tclass`, or `dflt`. A line tag differs from a normal tag
+    * in that it "tags" the entire line. There may also only be a single instance of a tag, per
+    * class. See [[Buffer.setLineTag]].
+    *
+    * Line tags are not copied when a line is sliced or otherwise duplicated. Their chief purpose
+    * is for modes to store ephemeral state directly in a buffer without having to maintain a
+    * parallel data structure. */
+  def lineTag[T] (tclass :Class[T], dflt :T) :T = dflt
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
