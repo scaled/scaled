@@ -28,57 +28,60 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     extends Region with Window {
 
   class FrameImpl extends BorderPane with Frame {
-    var disp :DispatcherImpl = _
     var onKill :Connection = _
+    var disp :DispatcherImpl = _
+    def view = disp.area.bview
 
     def focus () {
-      val buf = disp.area.bview.buffer
+      val buf = view.buffer
       stage.setTitle(s"Scaled - ${ws.name} - ${buf.name}")
       disp.area.requestFocus()
       ws.focusedBuffer(buf) // move the focused buffer to the head of the buffers
     }
 
-    def setBuffer (buf :BufferImpl) :BufferViewImpl = {
-      val Geometry(width, height, _, _) = geometry
+    def setBuffer (buf :BufferImpl) :BufferViewImpl =
+      // if we're already displaying this buffer, just keep it
+      if (disp != null && buf == view.buffer) view else {
+        val Geometry(width, height, _, _) = geometry
 
-      // create the modeline and add some default data before anyone else sneaks in
-      val mline = new ModeLineImpl()
-      mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), "* indicates unsaved changes")
-      mline.addDatum(buf.nameV, "Name of the current buffer")
+        // create the modeline and add some default data before anyone else sneaks in
+        val mline = new ModeLineImpl()
+        mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), "* indicates unsaved changes")
+        mline.addDatum(buf.nameV, "Name of the current buffer")
 
-      val view = new BufferViewImpl(buf, width, height)
-      // TODO: move this to LineNumberMode? (and enable col number therein)
-      mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
-      // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but we
-      // don't want non-real buffers (like the minimode buffer) to have global minor modes
-      val tags = "*" :: Mode.tagsHint(buf.state)
+        val view = new BufferViewImpl(buf, width, height)
+        // TODO: move this to LineNumberMode? (and enable col number therein)
+        mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
+        // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but we
+        // don't want non-real buffers (like the minimode buffer) to have global minor modes
+        val tags = "*" :: Mode.tagsHint(buf.state)
 
-      // listen for buffer death and repopulate this frame as needed
-      if (onKill != null) onKill.close()
-      onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.newScratch()) }
+        // listen for buffer death and repopulate this frame as needed
+        if (onKill != null) onKill.close()
+        onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.newScratch()) }
 
-      if (disp != null) disp.dispose()
-      disp = new DispatcherImpl(
-        WindowImpl.this, resolver(this, buf), view, mline,
-        // if no mode was specified, have the package manager infer one
-        Mode.nameHint(buf.state, ws.app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)),
-        Mode.argsHint(buf.state), tags)
+        if (disp != null) disp.dispose()
+        disp = new DispatcherImpl(
+          WindowImpl.this, resolver(this, buf), view, mline,
+          // if no mode was specified, have the package manager infer one
+          Mode.nameHint(buf.state, ws.app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)),
+          Mode.argsHint(buf.state), tags)
 
-      // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
-      // also set up a listener on it such that if it is written to a new file and that new file
-      // has a name that conflicts with an existing buffer, we name<2> it then as well
+        // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
+        // also set up a listener on it such that if it is written to a new file and that new file
+        // has a name that conflicts with an existing buffer, we name<2> it then as well
 
-      setCenter(disp.area)
-      setBottom(mline)
-      focus()
+        setCenter(disp.area)
+        setBottom(mline)
+        focus()
 
-      // if this buffer is for a non-existent file and is empty, report that we're looking at a
-      // "new file" to avoid confusion if the user expected to open a real file but typoed; it's
-      // what emacs does and who are we to question five decades of hard won experience
-      if (buf.store.file.isDefined && !buf.store.exists) emitStatus("(New file)")
+        // if this buffer is for a non-existent file and is empty, report that we're looking at a
+        // "new file" to avoid confusion if the user expected to open a real file but typoed; it's
+        // what emacs does and who are we to question five decades of hard won experience
+        if (buf.store.file.isDefined && !buf.store.exists) emitStatus("(New file)")
 
-      view
-    }
+        view
+      }
 
     override def geometry = WindowImpl.this.geometry // TODO
     override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl])
@@ -155,7 +158,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   override def clearStatus () = {
     _statusPopup.clear()
     _statusLine.setText("")
-    _focus.get.disp.area.bview.clearEphemeralPopup()
+    _focus.get.view.clearEphemeralPopup()
   }
 
   // used internally to open files passed on the command line or via remote cmd
