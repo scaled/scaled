@@ -109,9 +109,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   def dispose () {
     _frames foreach { _.disp.dispose() }
     _frames.clear()
-    _wscon.close()
   }
-  private val _wscon = ws.reference(this)
   private val _frames = SeqBuffer[FrameImpl]()
   private val _frame = new FrameImpl() // TEMP: for now we have only one frame
   _frames += _frame

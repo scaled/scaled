@@ -357,6 +357,11 @@ abstract class BufferV extends Region {
   */
 abstract class Buffer extends BufferV {
 
+  /** Requests that this buffer be killed. Any pre-kill hooks will be executed, and assuming none
+    * of the hooks abort the kill process, the buffer will be unloaded from its corresponding
+    * workspace and any live views of the buffer will be closed. */
+  def kill () :Unit
+
   /** Saves this buffer to its current store. If the buffer is not dirty, NOOPs. */
   def save () {
     // the caller should check dirty and provide feedback, but let's nip funny biz in the bud
@@ -558,6 +563,9 @@ abstract class RBuffer extends Buffer {
 
   /** A signal that is emitted when this buffer is about to be saved. */
   def willSave :SignalV[Buffer]
+
+  /** A signal emitted when this buffer has been killed. */
+  def killed :SignalV[Buffer]
 
   /** A signal emitted when this buffer is edited. */
   def edited :SignalV[Buffer.Edit]

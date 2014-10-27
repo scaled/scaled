@@ -17,12 +17,12 @@ import javafx.stage.Stage
 import scala.io.Source
 import scaled._
 import scaled.pacman.Filez
-import scaled.util.Errors
+import scaled.util.{Close, Errors}
 
 /** Manages workspaces, and the creation of editors therein. */
 class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceService {
+  import app.{logger => log}
 
-  private def log = app.logger
   // the directory in which we store workspace metadata
   private val wsdir = Files.createDirectories(app.pkgMgr.metaDir.resolve("Workspaces"))
 
@@ -36,9 +36,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
 
   // currently resolved workspaces
   private var wscache = Mutable.cacheMap { name :String => {
-    val ws = new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name))
-    app.workspaceOpened.emit(ws)
-    ws
+    new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name))
   }}
 
   /** Visits `paths` in the appropriate workspace windows, creating them as needed.
@@ -122,9 +120,9 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   }
 }
 
-class WorkspaceImpl (
-  val app :Scaled, val mgr :WorkspaceManager, val name :String, val root :Path
-) extends Workspace {
+class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
+                     val name :String, val root :Path) extends Workspace {
+  import app.{logger => log}
 
   val windows = SeqBuffer[WindowImpl]()
   val buffers = SeqBuffer[BufferImpl]()
@@ -135,12 +133,20 @@ class WorkspaceImpl (
   def open () = windows.headOption || createWindow(new Stage(), NoGeom)
 
   def close (win :WindowImpl) {
-    windows.remove(win) // TODO: event
+    windows.remove(win) // TODO: didClosedWindow signal?
     try {
       win.dispose() // this may cause us to hibernate
       win.stage.close()
     } catch {
       case e :Throwable => log.log(s"Error closing $win", e)
+    }
+
+    // if we just closed our last window, "hibernate" (we're not actually a reffed, but we're doing
+    // a largely similar thing; we just want to control our lifecycle more carefully)
+    if (windows.isEmpty) {
+      toClose.close()
+      buffers.clear() // TODO: dispose?
+      mgr.checkExit()
     }
   }
 
@@ -181,21 +187,11 @@ class WorkspaceImpl (
   }
   override def openBuffer (store :Store) =
     buffers.find(_.store == store) || addBuffer(BufferImpl(store))
-  override def killBuffer (buffer :Buffer) = {
-    if (buffers.remove(buffer)) buffer.asInstanceOf[BufferImpl].killed.emit(())
-    else log.log(s"Requested to kill unknown buffer [ws=$this, buf=$buffer]")
-  }
 
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
   override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
   override def toString = s"ws:$name"
-  override protected def log = app.logger
-  override protected def hibernate () {
-    super.hibernate()
-    buffers.clear()
-    mgr.checkExit()
-  }
 
   private final val ScratchName = "*scratch*"
   def newScratch () = createBuffer(ScratchName, Nil, true) // TODO: call this getScratch and reuse
@@ -215,6 +211,7 @@ class WorkspaceImpl (
   private def addBuffer (buf :BufferImpl) :BufferImpl = {
     buffers += buf
     bufferOpened.emit(buf)
+    buf.killed.onValue(b => buffers.remove(b))
     buf
   }
 
@@ -246,11 +243,15 @@ class WorkspaceImpl (
     // update our last "opened" time when a new editor is created
     Files.setLastModifiedTime(root, FileTime.fromMillis(System.currentTimeMillis))
 
-    // if we're opening the first window in this workspace, start routing log messages to our
-    // *messages* buffer
-    if (windows.isEmpty) toClose += app.log.onValue(recordMessage)
+    // if we're opening the first window in this workspace...
+    if (windows.isEmpty) {
+      // start routing log messages to our *messages* buffer
+      toClose += app.log.onValue(recordMessage)
+      // and emit a workspaceOpened event
+      app.workspaceOpened.emit(this)
+    }
 
-    windows += win // TODO: didCreateWindow
+    windows += win // TODO: didOpenWindow signal?
     win
   }
 

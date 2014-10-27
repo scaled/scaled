@@ -52,15 +52,12 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   private[this] val _editable = Value(true)
   private[this] val _dirty = Value(false)
   private[this] val _willSave = Signal[Buffer]()
+  private[this] val _killed = Signal[Buffer]()
   private[this] val _edited = Signal[Edit]()
   private[this] val _lineStyled = Signal[Loc]()
   private[this] var _maxRow = longest(_lines, 0, _lines.length)
 
   val undoStack = new UndoStack(this)
-
-  /** A signal emitted when this buffer is killed. Triggers any views currently displaying said
-    * buffer to go away. */
-  val killed = Signal[Unit]()
 
   /** Contains the state of the most recent view of this buffer. When a view goes away, it writes
     * its current state to the buffer, and if the buffer is loaded into a new view, it restores the
@@ -72,6 +69,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
 
   override def nameV = _name
   override def storeV = _store
+  override def killed = _killed
   override def markV = _mark
   override def mark_= (loc :Loc) = _mark() = Some(bound(loc))
   override def clearMark () = _mark() = None
@@ -87,6 +85,9 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   override def willSave = _willSave
   override def line (idx :Int) :MutableLine = _lines(idx)
   override def line (loc :Loc) :MutableLine = _lines(loc.row)
+
+  // TODO: run buffer kill hooks
+  override def kill () = killed.emit(this)
 
   override def saveTo (store :Store) {
     if (store.readOnly) throw Errors.feedback(s"Cannot save to read-only file: $store")

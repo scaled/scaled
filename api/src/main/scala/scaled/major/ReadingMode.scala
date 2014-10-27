@@ -362,7 +362,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     else {
       val file = buffer.store ; val p = view.point()
       val top = view.scrollTop() ; val left = view.scrollLeft()
-      wspace.killBuffer(buffer)
+      buffer.kill()
       val nv = frame.visitFile(file)
       nv.scrollTop() = top
       nv.scrollLeft() = left

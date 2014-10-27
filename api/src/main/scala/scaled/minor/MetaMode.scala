@@ -57,7 +57,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
     val current = wspace.buffers.head
     val prompt = s"Kill buffer (default ${current.name}):"
     val comp = Completer.buffer(wspace, Some(current))
-    window.mini.read(prompt, "", bufferHistory(wspace), comp) onSuccess wspace.killBuffer
+    window.mini.read(prompt, "", bufferHistory(wspace), comp) onSuccess(_.kill())
 
     // TODO: document our process when we have one:
 

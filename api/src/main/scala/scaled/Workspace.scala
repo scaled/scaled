@@ -5,7 +5,7 @@
 package scaled
 
 import java.nio.file.Path
-import scaled.util.Reffed
+import scaled.util.Close
 
 /** Coordinates metadata and operations for a workspace. A workspace defines an environment
   * tailored to working on a particular software artifact. Each workspace is like a separate Scaled
@@ -20,7 +20,7 @@ import scaled.util.Reffed
   * dependencies specially for projects that are added to the workspace, and to provide
   * workspace-wide searching and navigation functionality.
   */
-abstract class Workspace extends Reffed {
+abstract class Workspace {
 
   /** The user supplied name for this workspace. */
   val name :String
@@ -36,8 +36,14 @@ abstract class Workspace extends Reffed {
     // pre-populate our state with our workspace config scope
     State.init(Config.Scope("workspace", root, None)))
 
+  /** A bag of closeables that will be closed when this workspace hibernates. When all of a
+    * workspace's windows are closed, it hibernates, i.e. unloads everything it can from memory.
+    * Entities can participate in the workspace lifecycle by coming to life when
+    * [Editor.workspaceOpened] is emitted and then registering to be closed via this bag. */
+  val toClose = Close.bag()
+
   /** A signal emitted when a buffer is opened. */
-  val bufferOpened = Signal[Buffer]()
+  val bufferOpened = Signal[RBuffer]()
 
   /** The global editor in which this workspace is contained. */
   def editor :Editor
@@ -66,11 +72,6 @@ abstract class Workspace extends Reffed {
   /** Opens a buffer for `file` in this workspace. If a buffer is already open for `file` it will
     * be returned instead. */
   def openBuffer (file :Store) :Buffer
-
-  /** Requests to kill (close) the specified buffer. Any view of this buffer in any window or frame
-    * (in this workspace) will be closed. The buffer may not actually be killed due to buffer kill
-    * hooks which can abort the kill. */
-  def killBuffer (buffer :Buffer) :Unit
 
   // TODO: create new window (with geometry?)
 
