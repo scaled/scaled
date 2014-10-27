@@ -13,8 +13,8 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
   private val psets = SeqBuffer[PluginSetImpl[_]]()
 
   // we need to know when packages are added and removed
-  app.pkgMgr.moduleAdded.onValue { pkg => psets.foreach { _.moduleAdded(pkg) }}
-  app.pkgMgr.moduleAdded.onValue { pkg => psets.foreach { _.moduleRemoved(pkg) }}
+  app.pkgMgr.moduleAdded.onValue   { pkg => psets.foreach { _.moduleAdded(pkg) }}
+  app.pkgMgr.moduleRemoved.onValue { pkg => psets.foreach { _.moduleRemoved(pkg) }}
 
   class PluginSetImpl[T <: AbstractPlugin] (tag :String, args :List[Any])
       extends PluginSet[T](tag) {

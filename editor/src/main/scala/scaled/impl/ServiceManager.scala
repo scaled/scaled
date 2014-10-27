@@ -71,6 +71,14 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec)
   private var pluginMgr = new PluginManager(app)
   services.put(pluginMgr.getClass, pluginMgr)
 
+  // iterates over all known services and resolves any that are marked `autoLoad`; this is called
+  // after the editor is fully initialized but before it loads its starting buffers; we can't do
+  // this during our constructor because of initialization inter-depends with plugin manager
+  def resolveAutoLoads () :Unit = app.pkgMgr.modules foreach autoLoadSvcs
+  private def autoLoadSvcs (mm :ModuleMeta) = mm.autoSvcs.map(mm.loadClass).foreach(resolveService)
+  // also auto-load services in packages added after startup
+  app.pkgMgr.moduleAdded.onValue(autoLoadSvcs)
+
   override def metaFile (name :String) = app.pkgMgr.metaDir.resolve(name)
   override def service[T] (clazz :Class[T]) = resolveService(clazz).asInstanceOf[T]
   override def process[P] (thunk : => P) = new Plumbing(exec.bgExec, thunk)
@@ -85,5 +93,5 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec)
   }
   // TODO: when to unload resolved services?
 
-  override protected def stockArgs :List[AnyRef] = List(log, exec)
+  override protected def stockArgs :List[AnyRef] = List(log, exec, app)
 }

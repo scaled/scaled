@@ -62,6 +62,9 @@ class Scaled extends Application with Editor {
                  else (msg :String) => ()
 
   override def start (stage :Stage) {
+    // we have to defer resolution of auto-load services until the above constructors have
+    // completed; always there are a twisty maze of initialization dependencies
+    svcMgr.resolveAutoLoads()
     // create the starting editor and visit therein the files specified on the command line
     wspMgr.visit(stage, getParameters.getRaw)
     // start our command server

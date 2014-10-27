@@ -35,10 +35,26 @@ public @interface Service {
      * interface which delegates its implementation to another class. In the latter case, this
      * should indicate the name of the implementing class.
      *
-     * The name is relative to the package of the service interface, so if a service interface
-     * {@code foo.bar.BazService} is implemented by {@code foo.bar.BazServiceImpl} one would
-     * specify just {@code BazServiceImpl}. If it were implemented by {@code
-     * foo.bar.impl.BazServiceImpl} one would specify {@code impl.BazServiceImpl}.
+     * <p>The name is relative to the package of the service interface, so if a service interface
+     * {@code foo.bar.BazService} is implemented by {@code foo.bar.BazServiceImpl} one would specify
+     * just {@code BazServiceImpl}. If it were implemented by {@code foo.bar.impl.BazServiceImpl}
+     * one would specify {@code impl.BazServiceImpl}.</p>
      */
     String impl () default "";
+
+    /**
+     * Indicates that this service should be resolved immediately at editor startup. NOTE: don't use
+     * this unless absolutely necessary. This slows down editor startup, so you had better be pretty
+     * confident that your service is needed immediately rather than on demand. Further, your
+     * service should do as little as possible upon resolution, and defer everything it can until it
+     * is actually used by a mode or other service.
+     *
+     * <p>An example use case is the project service, which has to inject itself into the buffer
+     * loading process so that it can populate a config root before any modes are resolved on the
+     * buffer, enabling per-project configuration. The project service does nothing at resolution
+     * time other than to register a hook to be called when a new workspace is created, and that
+     * hook registers a per-workspace hook which does project resolution when a buffer is
+     * created.</p>
+     */
+    boolean autoLoad () default false;
 }

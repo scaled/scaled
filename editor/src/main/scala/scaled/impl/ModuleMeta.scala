@@ -34,6 +34,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes
   val services = MMap[String,String]() // svc classname -> impl classname for this package's svcs
+  val autoSvcs = SeqBuffer[String]() // svc classname iff autoLoad=true
 
   val plugins   = HashMultimap.create[String,String]() // plugin tag -> classname(s)
   val patterns  = HashMultimap.create[String,String]() // major mode -> mode's file patterns
@@ -136,6 +137,8 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
         val impl = attrs.get("impl")
         val pre = _cname.substring(0, _cname.lastIndexOf(".")+1)
         services.put(_cname, if (impl.isEmpty) _cname else pre+impl.iterator.next)
+        val autoLoad = attrs.get("autoLoad")
+        if (!autoLoad.isEmpty && autoLoad.iterator.next == "true") autoSvcs += _cname
       }
     }
   })
