@@ -100,4 +100,12 @@ class SeqBufferTest {
     }
     assertTrue("remove(2, 5) should have thrown IOOBE", threw)
   }
+
+  @Test def testUnapplySeqV () {
+    val as :SeqV[String] = SeqBuffer("one", "two", "three")
+    as match {
+      case Seq(h, _*) => assertEquals("one", h)
+      case _ => fail()
+    }
+  }
 }

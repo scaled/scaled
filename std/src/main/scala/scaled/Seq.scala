@@ -61,8 +61,8 @@ object Seq {
     new Seq(buffer, buffer.length)
   }
 
-  /** Unapplies a seq. */
-  def unapplySeq[A] (seq :Seq[A]) :Option[Seq[A]] = Some(seq)
+  /** Unapplies a seq (or view). */
+  def unapplySeq[A] (seq :SeqV[A]) :Option[SeqV[A]] = Some(seq)
 
   /** Returns a [[Seq]] containing `elems`. */
   def copyOf[A] (elems :Collection[A]) :Seq[A] =
