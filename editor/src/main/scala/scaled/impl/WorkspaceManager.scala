@@ -35,8 +35,11 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     _.asMap.entrySet.foldBuild[String]((b, e) => b += e.getKey+"\t"+e.getValue.mkString("\t")))
 
   // currently resolved workspaces
-  private var wscache = Mutable.cacheMap { name :String =>
-    new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name)) }
+  private var wscache = Mutable.cacheMap { name :String => {
+    val ws = new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name))
+    app.workspaceOpened.emit(ws)
+    ws
+  }}
 
   /** Visits `paths` in the appropriate workspace windows, creating them as needed.
     * The first window created will inherit the supplied default stage. */
@@ -50,6 +53,8 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     ws2paths.drop(1) foreach { case (ws, paths) =>
       paths foreach { ws.open().visitPath _ }
     }
+    // if we have no arguments, open the default workspace with a scratch buffer
+    if (ws2paths.isEmpty) defaultWS.open(stage).visitScratch()
   }
 
   /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
@@ -98,6 +103,12 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   override def didStartup () {} // unused
   override def willShutdown () {} // unused
 
+  private def defaultWS = {
+    val ddir = wsdir.resolve(Workspace.DefaultName)
+    if (!Files.exists(ddir)) Files.createDirectory(ddir)
+    wscache.get(Workspace.DefaultName)
+  }
+
   // returns the workspace that should be used for the specified path (which should be absolute and
   // normalized): if a workspace with matching hint path exists, it is used, otherwise the default
   // workspace is used
@@ -107,11 +118,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
       if (ws.isEmpty) None else Some(ws.maxBy(_.lastOpened))
     val hintWSs = wshints().asMap.toMapV collect {
       case (w, ps) if (ps.exists(path startsWith _)) => wscache.get(w) }
-    latest(hintWSs.filter(isOpen)) orElse latest(hintWSs) getOrElse {
-      val ddir = wsdir.resolve(Workspace.DefaultName)
-      if (!Files.exists(ddir)) Files.createDirectory(ddir)
-      wscache.get(Workspace.DefaultName)
-    }
+    latest(hintWSs.filter(isOpen)) orElse latest(hintWSs) getOrElse defaultWS
   }
 }
 
@@ -121,7 +128,6 @@ class WorkspaceImpl (
 
   val windows = SeqBuffer[WindowImpl]()
   val buffers = SeqBuffer[BufferImpl]()
-  private def addBuffer (buf :BufferImpl) :BufferImpl = { buffers += buf ; buf }
 
   def lastOpened = Files.getLastModifiedTime(root).toMillis
 
@@ -206,6 +212,12 @@ class WorkspaceImpl (
   }
   private var _pendingMessages :List[String] = null
 
+  private def addBuffer (buf :BufferImpl) :BufferImpl = {
+    buffers += buf
+    bufferOpened.emit(buf)
+    buf
+  }
+
   private def createWindow (stage :Stage, geom :Geom) :WindowImpl = {
     val bufferSize = geom.size getOrElse {
       (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
@@ -233,8 +245,6 @@ class WorkspaceImpl (
 
     // update our last "opened" time when a new editor is created
     Files.setLastModifiedTime(root, FileTime.fromMillis(System.currentTimeMillis))
-
-    stage.show()
 
     // if we're opening the first window in this workspace, start routing log messages to our
     // *messages* buffer

@@ -21,6 +21,9 @@ trait Editor {
   /** A reactive mapping of editor-wide state. */
   val state :State = new State()
 
+  /** A signal emitted when a workspace is opened. */
+  val workspaceOpened = Signal[Workspace]()
+
   /** Provides global config data. Keys are defined in [[EditorConfig]]. */
   def config :Config
 

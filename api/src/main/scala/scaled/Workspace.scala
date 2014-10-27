@@ -36,6 +36,9 @@ abstract class Workspace extends Reffed {
     // pre-populate our state with our workspace config scope
     State.init(Config.Scope("workspace", root, None)))
 
+  /** A signal emitted when a buffer is opened. */
+  val bufferOpened = Signal[Buffer]()
+
   /** The global editor in which this workspace is contained. */
   def editor :Editor
 

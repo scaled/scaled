@@ -116,7 +116,6 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   private val _frame = new FrameImpl() // TEMP: for now we have only one frame
   _frames += _frame
   getChildren().add(_frame)
-  _frame.setBuffer(ws.newScratch())
 
   //
   // Window interface methods
@@ -166,7 +165,12 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _frame.visitFile(Store(path))
     stageToFront()
   }
+  def visitScratch () {
+    _frame.setBuffer(ws.newScratch())
+    stageToFront()
+  }
   def stageToFront () {
+    stage.show()
     stage.toFront() // move our window to front if it's not there already
     stage.requestFocus() // and request window manager focus
   }
@@ -218,7 +222,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
 
   // we manage focus specially, via this reactive value
   private val _focus = Value[FrameImpl](_frame)
-  _focus onValueNotify onFocusChange
+  _focus onValue onFocusChange
 
   private def onFocusChange (frame :FrameImpl) {
     frame.focus()
