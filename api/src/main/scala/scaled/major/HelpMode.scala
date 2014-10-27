@@ -9,7 +9,7 @@ import scaled._
 @Major(name="help", tags=Array("help"), desc="""
   A major mode for displaying help text. Motion commands are available but editing commands are not.
 """)
-class HelpMode (env :Env) extends ReadingMode(env) {
+class HelpMode (env :Env) extends ReadOnlyTextMode(env) {
 
-  // TODO: things?
+  // TODO: other things?
 }
