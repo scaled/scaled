@@ -145,16 +145,18 @@ object Config {
       case strm => strm
     }
 
-    protected def reloadable[T] (path :String, parser :InputStream => T) :PropertyV[T] = {
+    protected def reloadable[T] (path :String)( parser :Path => T) :PropertyV[T] =
+      new Reloadable(rsrcPath(path), parser)
+    protected def reloadable[T] (paths :Seq[String])(parser :Seq[Path] => T) :PropertyV[T] =
+      new Reloadable(paths map rsrcPath, parser)
+
+    private def rsrcPath (path :String) :Path = {
       val rsrc = getClass.getClassLoader.getResource(path)
       if (rsrc == null) throw new FileNotFoundException(path)
       // if the resource is not a file for some reason, we can't reload it
-      else if (rsrc.getProtocol != "file") new PropertyV[T] {
-        val v = parser(rsrc.openStream)
-        override def get = v
-        override def apply () = v
-      }
-      else new Reloadable(Paths.get(rsrc.toURI), parser.compose(Files.newInputStream(_)))
+      else if (rsrc.getProtocol != "file") throw new IllegalStateException(
+        s"Cannot reload non-file: resource '$path'")
+      else Paths.get(rsrc.toURI)
     }
   }
 
