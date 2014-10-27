@@ -120,12 +120,12 @@ object UndoStack {
     case                      _ => new General(point, edits)
   }
 
-  private class SimpleInsert (p :Loc, private var edit :Buffer.Insert) extends Action(p) {
+  private class SimpleInsert (p :Loc, private[this] var edit :Buffer.Insert) extends Action(p) {
     def undo () = edit.undo()
-    def accum (edits :SeqV[Buffer.Edit]) :Boolean = edits match {
-      case Seq(ins :Buffer.Insert) if (ins.start == edit.end) => edit = edit.merge(ins) ; true
+    def accum (edits :SeqV[Buffer.Edit]) :Boolean = (edits.size == 1) && (edits.head match {
+      case ins :Buffer.Insert if (ins.start == edit.end) => edit = edit.merge(ins) ; true
       case _ => false
-    }
+    })
     override def toString = s"SimpleInsert($p, $edit)"
   }
 
