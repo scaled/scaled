@@ -87,6 +87,11 @@ object Config {
     override def read (value :String) = value
     override def toString = "String"
   }
+  object StringsC extends Converter[Seq[String]] {
+    override def show (value :Seq[String]) = value.mkString(", ")
+    override def read (value :String) = Seq.from(value.split(","))
+    override def toString = "Strings"
+  }
 
   /** Contains metadata for a particular configuration var. */
   case class Var[T] (name :String, descrip :String, key :Key[T]) {
@@ -131,7 +136,11 @@ object Config {
     protected def key (default :String) = new Config.Key[String](global, StringC) {
       override def defval (config :Config) = default
     }
-    // TODO: other primitive types? lists? sets? maps?
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :Seq[String]) = new Config.Key[Seq[String]](global, StringsC) {
+      override def defval (config :Config) = default
+    }
+    // TODO: other types: sets? maps?
 
     /** Creates a config key described by `desc` that defaults to the current value of the
       * dependent config value identified by `default`. */
