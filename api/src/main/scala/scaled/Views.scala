@@ -92,7 +92,7 @@ abstract class RBufferView (initWidth :Int, initHeight :Int) extends BufferView 
   /** The current point (aka the cursor position). */
   val point :Value[Loc] = new Value(Loc(0, 0)) {
     override def update (loc :Loc) :Loc = super.update(buffer.bound(loc))
-    override def updateForce (loc :Loc) :Loc = super.update(buffer.bound(loc))
+    override def updateForce (loc :Loc) :Loc = super.updateForce(buffer.bound(loc))
   }
 
   /** The width of the buffer view, in characters. */
