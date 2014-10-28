@@ -39,9 +39,8 @@ abstract class Env {
   /** For executing operations on the UI thread and background threads. */
   def exec :Executor = msvc.exec
 
-  /** Resolves the config for `mode` using the supplied `defs`. This is an implementation detail
-    * that unfortunately has to live out in the open. Please to ignore. */
-  def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
+  /** Returns the config scope for use by the modes resolved with this environment. */
+  def configScope :Config.Scope
 }
 
 /** Defines the attributes of an editor mode (major or minor). An editing mode has two main
@@ -79,7 +78,8 @@ abstract class Mode (env :Env) {
   def tags :Seq[String] = Seq()
 
   /** This mode's configuration. */
-  final val config :Config = env.resolveConfig(name, configDefs)
+  final val config :Config = env.msvc.service[ConfigService].resolveModeConfig(
+    env.configScope, name, configDefs)
 
   /** Returns the configuration definitions objects that are used by this mode. If a mode defines
     * configurables in a configuration definitions object, it should override this method and

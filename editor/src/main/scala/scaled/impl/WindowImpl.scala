@@ -99,8 +99,6 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
       }
     override protected def configScope =
       Config.Scope(buf.state, state, ws.state, ws.app.state)
-    override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
-      ws.app.cfgMgr.resolveConfig(configScope, mode, defs)
     override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
       ws.app.svcMgr.injectInstance(clazz, args)
   }

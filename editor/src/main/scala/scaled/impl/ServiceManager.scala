@@ -10,14 +10,13 @@ import scaled._
 
 // this is factored out so that we can do basic service injection in tests without having
 // the whole package manager enchilada up and running
-class ServiceInjector (val log :Logger, val exec :Executor)
+class ServiceInjector (val log :Logger, val exec :Executor, editor :Editor)
     extends AbstractService with MetaService {
 
-  // these are implemented in ServiceManager
-  def metaFile (name: String) :Path = ???
-  def service[T] (clazz: Class[T]) :T = ???
-  def process[P] (thunk: => P) :Pipe[P] = ???
+  def metaFile (name: String) :Path = ??? // implemented by ServiceManager
 
+  def service[T] (clazz :Class[T]) :T = resolveService(clazz).asInstanceOf[T]
+  def process[P] (thunk: => P) :Pipe[P] = new Plumbing(exec.bgExec, thunk)
   def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
     def fail (t :Throwable) = throw new InstantiationException(
       s"Unable to inject $clazz [args=$args]").initCause(t)
@@ -47,8 +46,8 @@ class ServiceInjector (val log :Logger, val exec :Executor)
   override def didStartup () {} // unused
   override def willShutdown () {} // unused
 
-  /** Provides stock injectables (e.g. logger and executor). */
-  protected def stockArgs :List[AnyRef] = Nil
+  /** Provides stock injectables (editor, logger, and executor). */
+  protected def stockArgs :List[AnyRef] = List(log, exec, editor)
 
   /** Resolves `sclass` as a Scaled service and returns its implementation.
     * @throws InstantiationException if no such service exists. */
@@ -56,7 +55,7 @@ class ServiceInjector (val log :Logger, val exec :Executor)
     throw new InstantiationException(s"Missing implementation: $sclass")
 }
 
-class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec) {
+class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec, app) {
 
   private var services = Mutable.cacheMap { iclass :Class[_] =>
     injectInstance(iclass.asInstanceOf[Class[AbstractService]], Nil) }
@@ -80,8 +79,6 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec)
   app.pkgMgr.moduleAdded.onValue(autoLoadSvcs)
 
   override def metaFile (name :String) = app.pkgMgr.metaDir.resolve(name)
-  override def service[T] (clazz :Class[T]) = resolveService(clazz).asInstanceOf[T]
-  override def process[P] (thunk : => P) = new Plumbing(exec.bgExec, thunk)
 
   override def resolveService (sclass :Class[_]) = {
     if (!sclass.getName.endsWith("Service")) throw new InstantiationException(
@@ -92,6 +89,4 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec)
     }
   }
   // TODO: when to unload resolved services?
-
-  override protected def stockArgs :List[AnyRef] = List(log, exec, app)
 }

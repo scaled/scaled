@@ -29,7 +29,6 @@ abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Fr
 
   protected def locate (major :Boolean, mode :String) :Class[_]
   protected def configScope :Config.Scope
-  protected def resolveConfig (mode :String, defs :List[Config.Defs]) :Config
   protected def injectInstance[T] (clazz :Class[T], args :List[Any]) :T
 
   private def requireMajor (mode :String) = reqType(mode, classOf[MajorMode])
@@ -51,8 +50,6 @@ abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Fr
       val mline = mln
       val disp = dsp
       def configScope = ModeResolver.this.configScope
-      def resolveConfig (mode :String, defs :List[Config.Defs]) =
-        ModeResolver.this.resolveConfig(mode, defs)
     } :: args
     injectInstance(modeClass, envargs)
   }

@@ -9,17 +9,26 @@ import java.util.HashMap
 import scaled._
 
 /** Handles the machinery underlying the [[Config]] configuration system. */
-class ConfigManager (log :Logger, watchSvc :WatchService) {
+class ConfigManager (editor :Editor, log :Logger, watchSvc :WatchService)
+    extends AbstractService with ConfigService {
   import Config._
 
   final val EditorName = "editor"
+  private def globalScope = editor.config.scope
 
   /** Returns the editor config for the specified scope. */
   def editorConfig (scope :Scope) :Config = repo(scope).editorConfig
 
-  /** Returns the [[Config]] instance for `mode`. */
-  def resolveConfig (scope :Scope, mode :String, defs :List[Config.Defs]) :Config =
-    repo(scope).modeConfig(mode, defs)
+  override def resolveModeConfig (scope :Scope, name :String, defs :List[Defs]) =
+    repo(scope).modeConfig(name, defs)
+
+  override def serviceConfigs = repo(globalScope).serviceConfigs
+  override def resolveServiceConfig (name :String, defs :List[Defs]) =
+    repo(globalScope).serviceConfig(name, defs)
+
+  // unused; TODO: ?
+  override def didStartup () {}
+  override def willShutdown () {}
 
   private def repo (scope :Scope) :ConfigRepo = Mutable.getOrPut(
     _repos, scope, new ConfigRepo(scope, scope.next.map(repo)))
@@ -31,6 +40,7 @@ class ConfigManager (log :Logger, watchSvc :WatchService) {
   private class ConfigRepo (scope :Scope, parent :Option[ConfigRepo]) {
     private val _configDir = Filer.requireDir(scope.root.resolve("Config"))
     private val _modeConfigs = new HashMap[String,ConfigImpl]()
+    private val _serviceConfigs = new HashMap[String,ConfigImpl]()
     private val _editor = loadConfig(EditorName, EditorConfig :: Nil, _.editorConfig)
 
     // listen for changes to files in our config directory and reload configs therefor; note: we
@@ -50,8 +60,11 @@ class ConfigManager (log :Logger, watchSvc :WatchService) {
     })
 
     def editorConfig :ConfigImpl = _editor
-    def modeConfig (mode :String, defs :List[Config.Defs]) :ConfigImpl = Mutable.getOrPut(
-      _modeConfigs, mode, loadConfig(s"$mode-mode", defs, _.modeConfig(mode, defs)))
+    def modeConfig (name :String, defs :List[Config.Defs]) :ConfigImpl = Mutable.getOrPut(
+      _modeConfigs, name, loadConfig(s"$name-mode", defs, _.modeConfig(name, defs)))
+    def serviceConfigs = _serviceConfigs.toMapV.toSeq
+    def serviceConfig (name :String, defs :List[Config.Defs]) :ConfigImpl = Mutable.getOrPut(
+      _serviceConfigs, name, loadConfig(s"$name-service", defs, _.serviceConfig(name, defs)))
 
     private def loadConfig (name :String, defs :List[Config.Defs],
                             parentFn :ConfigRepo => ConfigImpl) :ConfigImpl = {

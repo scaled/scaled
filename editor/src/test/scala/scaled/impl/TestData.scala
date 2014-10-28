@@ -68,12 +68,16 @@ object TestData {
     def showURL (url :String) {}
   }
 
-  val injector = new ServiceInjector(log, exec)
+  val injector = new ServiceInjector(log, exec, editor) {
+    private val stockSvcs = Map[Class[_],Class[_]](
+      classOf[ConfigService] -> classOf[ConfigManager],
+      classOf[WatchService]  -> classOf[WatchManager])
+    override protected def resolveService (sclass :Class[_]) = stockSvcs.get(sclass).fold(
+      super.resolveService(sclass))(injectInstance(_, Nil).asInstanceOf[AbstractService])
+  }
   val resolver = new ModeResolver(injector, null, null) {
     override protected def locate (major :Boolean, mode :String) = classOf[TextMode]
     override def configScope = testScope
-    override protected def resolveConfig (mode :String, defs :List[Config.Defs]) =
-      new ConfigImpl(mode, cwd, testScope, defs, None)
     override protected def injectInstance[T] (clazz :Class[T], args :List[Any]) =
       injector.injectInstance(clazz, args)
   }

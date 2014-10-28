@@ -229,17 +229,24 @@ class MetaMode (env :Env) extends MinorMode(env) {
     window.mini.read("Mode:", "", modeHistory(wspace), comp) onSuccess disp.toggleMode
   }
 
+  @Fn("Opens the configuration file for the Scaled editor in a buffer.")
+  def editEditorConfig () :Unit = editConfig(wspace.config)
+
   @Fn("Opens the configuration file for the specified mode in a buffer.")
   def editModeConfig () {
     val comp = Completer.from(disp.modes)(_.name)
     window.mini.read("Mode:", name, modeHistory(wspace), comp) map(_.config) onSuccess(editConfig)
   }
 
-  @Fn("Opens the configuration file for the Scaled editor in a buffer.")
-  def editEditorConfig () :Unit = editConfig(wspace.config)
+  @Fn("Opens the configuration file for the specified service in a buffer.")
+  def editServiceConfig () {
+    val comp = Completer.from(env.msvc.service[ConfigService].serviceConfigs)(_._1)
+    window.mini.read("Service:", "", serviceHistory, comp) map(_._2) onSuccess(editConfig)
+  }
 
   private def configScopeHistory = historyRing(wspace, "config-scope")
   private def shellCommandHistory = historyRing(wspace, "shell-command")
+  private def serviceHistory = historyRing(wspace, "service")
 
   private def editConfig (config :Config) {
     val scopes = config.scope.toList ; val comp = Completer.from(scopes)(_.name)
