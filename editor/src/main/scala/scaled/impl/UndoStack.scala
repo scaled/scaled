@@ -86,7 +86,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   private def accumTo (edits :SeqBuffer[Buffer.Edit], actions :SeqBuffer[Action]) {
     if (!edits.isEmpty) {
       // if we can't accumulate these edits with the most recent action, add a new action
-      if (actions.isEmpty || !actions.last.accum(edits)) actions += toAction(_point, edits.toSeq)
+      if (actions.isEmpty || !actions.last.accum(edits)) actions += toAction(_point, edits)
       edits.clear()
     }
   }
@@ -115,9 +115,9 @@ object UndoStack {
   }
 
   /** Creates the appropriate action for `edits`. */
-  def toAction (point :Loc, edits :Seq[Buffer.Edit]) :Action = edits match {
-    case Seq(le :Buffer.Insert) => new SimpleInsert(point, le)
-    case                      _ => new General(point, edits)
+  def toAction (point :Loc, edits :SeqV[Buffer.Edit]) :Action = edits.head match {
+    case ins :Buffer.Insert if (edits.size == 1) => new SimpleInsert(point, ins)
+    case _                                       => new General(point, edits.toSeq)
   }
 
   private class SimpleInsert (p :Loc, private[this] var edit :Buffer.Insert) extends Action(p) {
