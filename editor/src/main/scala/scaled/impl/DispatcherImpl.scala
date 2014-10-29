@@ -92,9 +92,10 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
             if (_prefixes(_trigger)) deferDisplayPrefix(_trigger)
             // otherwise resolve the fn bound to this trigger (if any)
             else resolve(_trigger, _metas) match {
-              case Some(fn) => invoke("pressed", fn, _trigger.last.text)
-              // if we don't find one, wait until the associated key typed event comes in
-              case None     => _dispatchTyped = true
+              case Some(fn) if (!fn.wantsTyped) => invoke("pressed", fn, _trigger.last.text)
+              // if we don't find one (or if the fn we found wants the typed character),
+              // wait until the associated key typed event comes in
+              case _ => _dispatchTyped = true
             }
           }
         }
