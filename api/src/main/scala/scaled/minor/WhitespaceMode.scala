@@ -95,7 +95,10 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
       // responding to buffer modifications, but doing it in did-invoke ensures that our changes
       // are bundled up with the original fns with regard to the undo stack
       note(disp.didInvoke onEmit {
-        _trimLines foreach trimTrailingWhitespaceAt
+        // we don't trim whitespace from the row that contains the point;
+        // the user is working on that row and that whitespace might be meaningful
+        val p = view.point()
+        _trimLines foreach { row => if (p.row != row) trimTrailingWhitespaceAt(row) }
         _trimLines.clear()
       })
     }
