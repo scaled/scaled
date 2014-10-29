@@ -64,8 +64,7 @@ object CodeConfig extends Config.Defs {
   val blockErrorStyle = "blockErrorFace"
 }
 
-/** A base class for major modes which edit program code.
-  */
+/** A base class for major modes which edit program code. */
 abstract class CodeMode (env :Env) extends EditingMode(env) {
   import CodeConfig._
   import Chars._
