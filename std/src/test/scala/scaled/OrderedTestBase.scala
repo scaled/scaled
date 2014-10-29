@@ -138,6 +138,15 @@ abstract class OrderedTestBase {
     assertEquals(5, empty.last)
   }
 
+  @Test def testLengthCompare () {
+    assertTrue(make(1, 2, 3).lengthCompare(2) > 0)
+    assertEquals(0, make(1, 2, 3).lengthCompare(3))
+    assertTrue(make(1, 2, 3).lengthCompare(4) < 0)
+    assertTrue(empty.lengthCompare(-1) > 0)
+    assertEquals(0, empty.lengthCompare(0))
+    assertTrue(empty.lengthCompare(1) < 0)
+  }
+
   @Test def testMap () {
     assertEquals(make(3, 3, 5, 4), make("one", "two", "three", "four").map(_.length))
   }

@@ -16,6 +16,9 @@ abstract class Ordered[+A] extends Unordered[A] {
     * because sometimes you feel like a nut, and sometimes you don't.*/
   def length :Int = size
 
+  /** Returns [[Integer.compare]] on `(length, n)`, but potentially more efficiently. */
+  def lengthCompare (n :Int) = Integer.compare(length, n)
+
   /** Finds the first element for which `pf` is defined and applies `pf` to it. */
   def collectFirst[B] (pf :PartialFunction[A,B]) :Option[B] = {
     val iter = iterator() ; while (iter.hasNext) {

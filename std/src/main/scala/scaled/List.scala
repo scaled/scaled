@@ -291,6 +291,15 @@ private final class Cons[A] (override val head :A, private[this] var _tail :List
     while (!ll.isEmpty) { size += 1 ; ll = ll.tail }
     size
   }
+  override def lengthCompare (n :Int) :Int = {
+    var nn = n ; var ll :List[A] = this
+    while (nn > 0) {
+      if (ll.isEmpty) return -1
+      nn -= 1
+      ll = ll.tail
+    }
+    if (ll.isEmpty) 0 else 1
+  }
 
   override def cons[B >: A] (elem :B) = new Cons(elem, this)
   override def headOption = Some(head)
