@@ -58,7 +58,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
 
         // listen for buffer death and repopulate this frame as needed
         if (onKill != null) onKill.close()
-        onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.newScratch()) }
+        onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch()) }
 
         if (disp != null) disp.dispose()
         disp = new DispatcherImpl(
@@ -162,7 +162,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     stageToFront()
   }
   def visitScratch () {
-    _frame.setBuffer(ws.newScratch())
+    _frame.setBuffer(ws.getScratch())
     stageToFront()
   }
   def stageToFront () {

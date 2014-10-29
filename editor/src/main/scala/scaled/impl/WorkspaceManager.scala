@@ -126,6 +126,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   val windows = SeqBuffer[WindowImpl]()
   val buffers = SeqBuffer[BufferImpl]()
+  getScratch() // create our scratch buffer
 
   def lastOpened = Files.getLastModifiedTime(root).toMillis
 
@@ -157,7 +158,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     if (_pendingMessages != null) _pendingMessages = msg :: _pendingMessages
     else {
       // create or recreate the *messages* buffer as needed
-      val mb = buffers.find(_.name == MessagesName) || newMessages()
+      val mb = buffers.find(_.name == MessagesName) || getMessages()
       mb.append(Line.fromText(msg + System.lineSeparator))
     }
   }
@@ -194,10 +195,10 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def toString = s"ws:$name"
 
   private final val ScratchName = "*scratch*"
-  def newScratch () = createBuffer(ScratchName, Nil, true) // TODO: call this getScratch and reuse
+  def getScratch () = createBuffer(ScratchName, Nil, true)
 
   private final val MessagesName = "*messages*"
-  private def newMessages () = {
+  private def getMessages () = {
     _pendingMessages = Nil
     val mbuf = createBuffer(MessagesName, State.inits(Mode.Hint("log")), true)
     _pendingMessages foreach { msg =>
