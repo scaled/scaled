@@ -20,8 +20,12 @@ object CodeConfig extends Config.Defs {
   val debugIndent = key(false)
 
   @Var("""Whether to automatically insert a close brace `}` when an open brace `{` is typed at
-          the end of a line.""")
+          the end of a line. See `electric-open-brace` for details.""")
   val autoCloseBrace = key(true)
+
+  @Var("""When enabled, inserting a (single or double) quote will insert a matching close quote
+          and position the point between the quotes. See `electric-quote` for more details.""")
+  val autoCloseQuote = key(true)
 
   @Var("""Whether to auto expand a block when enter is pressed between a pair of open and close
           braces (`{}`). Expansion means properly indenting the close brace on the next line and
@@ -73,6 +77,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     bind("ENTER",   "electric-newline").
     bind("S-ENTER", "electric-newline").
     bind("{",       "electric-open-brace").
+    bind("\"",      "electric-quote").
+    bind("'",       "electric-quote").
 
     bind("S-C-,", "previous-bracket").
     bind("S-C-.", "next-bracket").
@@ -242,6 +248,24 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     if (p.col == buffer.line(p).length && config(autoCloseBrace)) {
       selfInsertCommand("}")
       view.point() = p
+    }
+  }
+
+  @Fn("""Inserts a (single or double) quote and a matching close quote. Leaves the point between
+         the quotes.
+         If the point is currently on the to-be-inserted quote, nothing is inserted and the point
+         is simply moved past the quote. This avoids undesirable behavior if the user's fingers
+         insist on typing the close quote even though it was already inserted for them.""")
+  def electricQuote (typed :String) {
+    val p = view.point()
+    // if we're currently on the desired quote, just pretend like we typed it and move forward
+    if (buffer.charAt(p) == typed.charAt(0)) view.point() = p.nextC
+    else {
+      selfInsertCommand(typed)
+      val inP = view.point()
+      // TODO: skip over non-whitespace?
+      selfInsertCommand(typed)
+      view.point() = inP
     }
   }
 
