@@ -16,12 +16,18 @@ object CodeConfig extends Config.Defs {
   @Var("Whether to attempt to auto-detect indentWidth for buffers with existing code.")
   val autoDetectIndent = key(true)
 
-  @Var("""When true, a } that immediately follows a { will be expanded into a properly indented
-          block containing a single blank line, on which the point will be positioned.""")
-  val electricBrace = key(true)
-
   @Var("Enables debug logging for indentation logic.")
   val debugIndent = key(false)
+
+  @Var("""Whether to automatically insert a close brace `}` when an open brace `{` is typed at
+          the end of a line.""")
+  val autoCloseBrace = key(true)
+
+  @Var("""Whether to auto expand a block when enter is pressed between a pair of open and close
+          braces (`{}`). Expansion means properly indenting the close brace on the next line and
+          then inserting a blank line between the open and close brace and positioning the point
+          properly indented on that line.""")
+  val autoExpandBlock = key(true)
 
   /** The CSS style applied to `builtin` syntax. */
   val builtinStyle = "codeBuiltinFace"
@@ -63,10 +69,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap.
-    bind("ENTER",   "newline-and-indent").
-    bind("S-ENTER", "newline-and-indent").
     bind("TAB",     "reindent").
-    bind("}",       "electric-close-brace").
+    bind("ENTER",   "electric-newline").
+    bind("S-ENTER", "electric-newline").
+    bind("{",       "electric-open-brace").
 
     bind("S-C-,", "previous-bracket").
     bind("S-C-.", "next-bracket").
@@ -205,33 +211,37 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     view.popup() = Popup.text(info, Popup.UpRight(view.point()))
   }
 
-  @Fn("Inserts a newline, then indents according to the code mode's indentation rules.")
-  def newlineAndIndent () {
-    newline()
-    reindentAtPoint()
-  }
-
   @Fn("""Recomputes the current line's indentation based on the code mode's indentation rules and
          adjusts its indentation accordingly.""")
   def reindent () {
     reindentAtPoint()
   }
 
-  @Fn("""Inserts a brace, indenting it automatically to the proper position. If eletric-close-brace
-         is true and the preceding character is '{', a blank line is inserted prior to the '}' and
-         the point is left on the blank line, at the proper indentation.""")
-  def electricCloseBrace () {
+  @Fn("""Inserts a newline and performs any other configured automatic actions. This includes
+         indenting the cursor according to the mode's indentation rules, processing
+         `auto-expand-block` (if enabled) and any other newline-triggered actions.""")
+  def electricNewline () {
     val p = view.point()
-    if (!config(electricBrace) || buffer.charAt(p.prevC) != '{') {
-      selfInsertCommand("}")
-      reindentAtPoint()
-    } else {
+    val expandBlock = config(autoExpandBlock) && (
+      buffer.charAt(p.prevC) == '{') && (buffer.charAt(p) == '}')
+    newline()
+    if (expandBlock) {
+      val bp = view.point()
       newline()
-      newline()
-      selfInsertCommand("}")
-      reindent(view.point())
-      view.point() = view.point().prevL
       reindentAtPoint()
+      view.point() = bp
+    }
+    reindentAtPoint()
+  }
+
+  @Fn("""Inserts an open brace, and if the `auto-close-brace` configuration is true, inserts a close
+         brace following the open brace, leaving the cursor positioned after the open brace.""")
+  def electricOpenBrace () {
+    selfInsertCommand("{")
+    val p = view.point()
+    if (p.col == buffer.line(p).length && config(autoCloseBrace)) {
+      selfInsertCommand("}")
+      view.point() = p
     }
   }
 
