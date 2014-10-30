@@ -247,15 +247,17 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     bview.scrollLeft onValue { left => contentNode.setLayoutX(-left*charWidth) }
 
     def updateCursor (point :Loc) {
+      val line = bview.buffer.line(point)
+      val lineCount = bview.buffer.lines.length
+
       // use the line to determine the layout coordinates of the cursor
-      val line = bview.lines(point.row)
-      val cx = line.charX(point.col, charWidth) ; val cy = line.getLayoutY
+      val linev = bview.lines(point.row)
+      val cx = linev.charX(point.col, charWidth) ; val cy = linev.getLayoutY
       cursor.setLayoutX(cx) ; cursor.setLayoutY(cy)
       uncursor.setLayoutX(cx) ; uncursor.setLayoutY(cy)
 
       // set the cursor "text" to the character under the point (if any)
-      val cchar = if (point.row >= bview.buffer.lines.length) "" else {
-        val line = bview.buffer.line(point)
+      val cchar = if (point.row >= lineCount) "" else {
         if (point.col >= line.length) ""
         else String.valueOf(line.charAt(point.col))
       }
@@ -265,16 +267,16 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       val scrollTop = bview.scrollTop() ; val height = bview.height()
       // only force a recenter if we're beyond the hard top max (the point at which none of our
       // lines are visible on screen); this could happen if the buffer shrinks a bunch
-      val hardTopMax = math.max(0, bview.buffer.lines.length-1)
+      val hardTopMax = math.max(0, lineCount-1)
       if (point.row < scrollTop || point.row >= scrollTop + height || scrollTop > hardTopMax) {
         // if we do adjust due to hard top max overflow, adjust back to soft top max, which
         // means putting a whole screen full of lines in view, not just one
-        val softTopMax = math.max(0, bview.buffer.lines.length-height+1)
+        val softTopMax = math.max(0, lineCount-height+1)
         bview.scrollTop() = math.min(softTopMax, math.max(0, point.row-height/2))
       }
 
       val scrollLeft = bview.scrollLeft() ; val width = bview.width()
-      val scrollLeftMax = math.max(0, bview.buffer.line(point).length-width+1)
+      val scrollLeftMax = math.max(0, line.length-width+1)
       if (point.col < scrollLeft || point.col >= scrollLeft + width || scrollLeft > scrollLeftMax)
         bview.scrollLeft() = math.min(scrollLeftMax, math.max(0, point.col-width+1))
 
