@@ -262,7 +262,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       cursorText.setText(cchar)
 
       // if the cursor is out of view, scroll it back to the center of the screen
-      val (scrollTop, height) = (bview.scrollTop(), bview.height())
+      val scrollTop = bview.scrollTop() ; val height = bview.height()
       // only force a recenter if we're beyond the hard top max (the point at which none of our
       // lines are visible on screen); this could happen if the buffer shrinks a bunch
       val hardTopMax = math.max(0, bview.buffer.lines.length-1)
@@ -273,8 +273,8 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
         bview.scrollTop() = math.min(softTopMax, math.max(0, point.row-height/2))
       }
 
-      val (scrollLeft, width) = (bview.scrollLeft(), bview.width())
-      val scrollLeftMax = math.max(0, bview.buffer.maxLineLength-width+1)
+      val scrollLeft = bview.scrollLeft() ; val width = bview.width()
+      val scrollLeftMax = math.max(0, bview.buffer.line(point).length-width+1)
       if (point.col < scrollLeft || point.col >= scrollLeft + width || scrollLeft > scrollLeftMax)
         bview.scrollLeft() = math.min(scrollLeftMax, math.max(0, point.col-width+1))
 
