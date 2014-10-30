@@ -55,7 +55,6 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   private[this] val _killed = Signal[Buffer]()
   private[this] val _edited = Signal[Edit]()
   private[this] val _lineStyled = Signal[Loc]()
-  private[this] var _maxRow = longest(_lines, 0, _lines.length)
 
   val undoStack = new UndoStack(this)
 
@@ -77,7 +76,6 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   override def edited = _edited
   override def lineStyled = _lineStyled
   override def lines = _lines
-  override def maxLineLength = lines(_maxRow).length
   // refine `dirtyV` return type to ease life for internal friends
   override def dirtyV :Value[Boolean] = _dirty
   override def editableV = _editable
@@ -261,17 +259,6 @@ class BufferImpl private (initStore :Store) extends RBuffer {
       deleted.map(_.slice(0))
     }
 
-  private def longest (lines :SeqV[LineV], start :Int, end :Int) :Int = {
-    @inline @tailrec def loop (cur :Int, max :Int, maxLen :Int) :Int =
-      if (cur >= end) max
-      else {
-        val curLen = lines(cur).length
-        if (curLen > maxLen) loop(cur+1, cur, curLen)
-        else loop(cur+1, max, maxLen)
-      }
-    loop(start, 0, 0)
-  }
-
   private def emit (edit :Edit) :Loc = {
     // println(edit)
     _dirty() = true
@@ -279,15 +266,9 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     edit.end
   }
   private def noteInsert (start :Loc, end :Loc) = {
-    // shift max row, then check inserted lines for new longest line
-    if (_maxRow >= start.row) _maxRow += (end.row - start.row)
-    val editMaxRow = longest(_lines, start.row, end.row+1)
-    // TODO: if the insertion is in the max row, it might have split the max row into two non-max
-    // rows, in which case we have to rescan the whole buffer; sigh...
-    if (lines(editMaxRow).length > maxLineLength) _maxRow = editMaxRow
     // if the insert preceded the mark, adjust it; note that the mark behaves differently than the
-    // point in that an insert *at* the mark does not shift the mark, whereas an insert at the point
-    // does shift the point
+    // point in that an insert *at* the mark does not shift the mark, whereas an insert at the
+    // point does shift the point
     if (_mark.get.isDefined && _mark.get.get > start) {
       mark = Loc.adjustForInsert(_mark.get.get, start, end)
     }
@@ -295,10 +276,6 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   }
   private def noteDelete (start :Loc, deleted :Seq[Line]) = {
     val edit = new Delete(start, deleted, this)
-    // if our max row was later in the buffer than the deleted region, shift it
-    if (_maxRow > edit.end.row) _maxRow -= (edit.end.row - edit.start.row)
-    // otherwise if our old max row was in the deleted region, rescan buffer for new longest
-    else if (_maxRow >= start.row) _maxRow = longest(_lines, 0, _lines.length)
     // if the delete preceded the mark, adjust it
     if (_mark.get.isDefined) mark = Loc.adjustForDelete(_mark.get.get, start, end)
     emit(edit)
