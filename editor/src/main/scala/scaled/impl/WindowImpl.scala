@@ -161,8 +161,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _frame.visitFile(Store(path))
     stageToFront()
   }
-  def visitScratch () {
-    _frame.setBuffer(ws.getScratch())
+  def visitScratchIfEmpty () {
+    if (_frame.disp == null) _frame.setBuffer(ws.getScratch())
     stageToFront()
   }
   def stageToFront () {

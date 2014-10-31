@@ -52,7 +52,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
       paths foreach { ws.open().visitPath _ }
     }
     // if we have no arguments, open the default workspace with a scratch buffer
-    if (ws2paths.isEmpty) defaultWS.open(stage).visitScratch()
+    if (ws2paths.isEmpty) defaultWS.open(stage).visitScratchIfEmpty()
   }
 
   /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
@@ -95,7 +95,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   override def open (wsname :String) {
     val root = wsdir.resolve(wsname)
     if (!Files.exists(root)) throw Errors.feedback(s"No workspace named $wsname")
-    wscache.get(wsname).open().stageToFront()
+    wscache.get(wsname).open().visitScratchIfEmpty()
   }
 
   override def didStartup () {} // unused
