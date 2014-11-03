@@ -16,10 +16,10 @@ abstract class Indenter (ctx :Indenter.Context) {
     * @param line the line to be indented.
     * @param pos position of the first non-whitespace character on `line`.
     *
-    * @return `Some(col)` indicating the column to which `line` should be indented, or `None` if
-    * this strategy is not appropriate for `line`.
+    * @return the column to which `line` should be indented, or `Indenter.NA` if this strategy is
+    * not appropriate for `line`.
     */
-  def apply (block :Block, line :LineV, pos :Loc) :Option[Int]
+  def apply (block :Block, line :LineV, pos :Loc) :Int
 
   /** Returns an indentation `steps` steps inset from `anchor`.
     * @param anchor the indentation of the anchor line (in characters, not steps).
@@ -41,6 +41,9 @@ abstract class Indenter (ctx :Indenter.Context) {
 
 object Indenter {
   import Chars._
+
+  /** A sentinel value returned by [[Indenter.apply]] when an indenter is inapplicable. */
+  final val NA = -1
 
   /** Provides context to Indenters. */
   abstract class Context {
@@ -222,11 +225,11 @@ object Indenter {
       */
     protected def readBlockIndent (pos :Loc) = readIndentSkipArglist(buffer, pos)
 
-    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+    def apply (block :Block, line :LineV, pos :Loc) :Int = {
       val bstart = block.start
       val openNonWS = buffer.line(bstart).indexOf(isNotWhitespace, bstart.col+1)
       val openIsEOL = openNonWS == -1
-      val indent = buffer.charAt(bstart) match {
+      buffer.charAt(bstart) match {
         // align to the first non-whitespace character following the bracket (for non-danglers)
         case '[' if (!openIsEOL) =>
           debug(s"Aligning to firstNonWs after square bracket ($block $openNonWS)")
@@ -255,7 +258,6 @@ object Indenter {
             indentFrom(blockIndent, 1)
           }
       }
-      Some(indent)
     }
   }
 
@@ -269,12 +271,12 @@ object Indenter {
 
     /** Applies this indenter to `line` at `pos`.
       * @param prevPos the first non-whitespace, non-comment pos preceding the start of `line`. */
-    def apply (block :Block, line :LineV, pos :Loc, prevPos :Loc) :Option[Int]
+    def apply (block :Block, line :LineV, pos :Loc, prevPos :Loc) :Int
 
-    final def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+    final def apply (block :Block, line :LineV, pos :Loc) :Int = {
       val prevPos = prevNonWS(block, pos)
       // if we hit the start of the buffer while seeking the prev char, abandon ship
-      if (prevPos == Loc.Zero) None else apply(block, line, pos, prevPos)
+      if (prevPos == Loc.Zero) NA else apply(block, line, pos, prevPos)
     }
   }
 
@@ -294,22 +296,22 @@ object Indenter {
     */
   class OneLinerWithArgs (ctx :Context, blocker :Blocker, tokens :Set[String])
       extends Indenter(ctx) {
-    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+    def apply (block :Block, line :LineV, pos :Loc) :Int = {
       // seek backward to the first non-whitespace character
       val pc = buffer.scanBackward(isNotWhitespace, pos, block.start)
       // if it's not on the preceding line, or it's not a ')', we're inapplicable
-      if (pc.row != pos.row-1 || buffer.charAt(pc) != ')') None
+      if (pc.row != pos.row-1 || buffer.charAt(pc) != ')') NA
       else {
         // find the open paren, and check that the token preceding it is in `tokens`
         blocker.apply(pc.nextC, Syntax.Default) flatMap { b =>
-          prevToken(buffer.line(b.start), b.start.col) flatMap { token =>
-            if (!tokens(token)) None
+          prevToken(buffer.line(b.start), b.start.col) map { token =>
+            if (!tokens(token)) NA
             else {
               debug(s"Indenting one liner + args '$token' @ $b")
-              Some(indentFrom(readIndent(buffer, b.start), 1))
+              indentFrom(readIndent(buffer, b.start), 1)
             }
           }
-        }
+        } getOrElse NA
       }
     }
   }
@@ -319,18 +321,18 @@ object Indenter {
     * conditional one liners, like `if`, `while`, etc.
     */
   class OneLinerNoArgs (ctx :Context, tokens :Set[String]) extends Indenter(ctx) {
-    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
+    def apply (block :Block, line :LineV, pos :Loc) :Int = {
       // check whether the line immediately preceding this one ends with one of our tokens
-      if (pos.row == 0) None
+      if (pos.row == 0) NA
       else {
         val pline = buffer.line(pos.row-1)
-        prevToken(pline, pline.length) flatMap { token =>
-          if (!tokens(token)) None
+        prevToken(pline, pline.length) map { token =>
+          if (!tokens(token)) NA
           else {
             debug(s"Indenting one liner (no args) '$token' @ $pos")
-            Some(indentFrom(readIndent(pline), 1))
+            indentFrom(readIndent(pline), 1)
           }
-        }
+        } getOrElse NA
       }
     }
   }
@@ -388,8 +390,8 @@ object Indenter {
       * This will only be used to match the keyword at the start of a line. */
     protected val lastM :Matcher
 
-    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
-      if (!line.matches(lastM, pos.col) && !line.matches(middleM, pos.col)) None
+    def apply (block :Block, line :LineV, pos :Loc) :Int = {
+      if (!line.matches(lastM, pos.col) && !line.matches(middleM, pos.col)) NA
       else indentToAnchor(block, pos, firstMiddleM)
     }
   }
@@ -409,8 +411,8 @@ object Indenter {
       * This will only be used to match the keyword at the start of a line. */
     protected val secondM :Matcher
 
-    def apply (block :Block, line :LineV, pos :Loc) :Option[Int] = {
-      if (!line.matches(secondM, pos.col)) None
+    def apply (block :Block, line :LineV, pos :Loc) :Int = {
+      if (!line.matches(secondM, pos.col)) NA
       else indentToAnchor(block, pos, anchorM)
     }
   }
@@ -420,10 +422,10 @@ object Indenter {
     */
   abstract class AnchorAlign (ctx :Context) extends Indenter(ctx) {
 
-    protected def indentToAnchor (block :Block, pos :Loc, anchorM :Matcher) :Option[Int] =
+    protected def indentToAnchor (block :Block, pos :Loc, anchorM :Matcher) :Int =
       findCodeBackward(anchorM, pos, block) match {
-        case Loc.None => None
-        case      loc => debug(s"Aligning to '$anchorM' @ $loc") ; Some(loc.col)
+        case Loc.None => NA
+        case      loc => debug(s"Aligning to '$anchorM' @ $loc") ; loc.col
       }
   }
 }

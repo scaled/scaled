@@ -138,12 +138,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val line = buffer.line(row)
     val start = Loc(row, line.firstNonWS)
     val block = blocker.require(start, Syntax.Default)
-    @tailrec @inline def loop (ins :List[Indenter]) :Int =
-      if (ins.isEmpty) 0 else {
-        val opt = ins.head(block, line, start)
-        if (opt.isDefined) opt.get else loop(ins.tail)
-      }
-    loop(indenters)
+    var ins = indenters ; while (!ins.isEmpty) {
+      val col = ins.head(block, line, start)
+      if (col != Indenter.NA) return col
+      ins = ins.tail
+    }
+    0
   }
 
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. If the
