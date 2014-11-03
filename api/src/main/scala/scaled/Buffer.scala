@@ -116,9 +116,10 @@ abstract class BufferV extends Region {
     * the buffer or before its start. */
   def lineLength (loc :Loc) :Int = lineLength(loc.row)
 
-  /** Returns the character at `loc`.
-    * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
-  def charAt (loc :Loc) :Char = line(loc.row).charAt(loc.col)
+  /** Returns the character at `loc`. Returns `0` if `loc.row` is out of the buffer bounds. */
+  def charAt (loc :Loc) :Char =
+    if (loc.row < 0 || loc.row >= lines.size) 0
+    else line(loc.row).charAt(loc.col)
 
   /** Returns all tags which match `tclass` and overlap `loc`.
     * @throws IndexOutOfBoundsException if `loc.row` is not a valid line index. */
