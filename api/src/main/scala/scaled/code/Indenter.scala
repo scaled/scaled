@@ -266,8 +266,10 @@ object Indenter {
     val isNotWhitespaceAndNotComment = (c :Char, s :Syntax) => isNotWhitespace(c) && !s.isComment
     // seeks backward to the first non-whitespace character before pos;
     // skips over comments; stops at block.start
-    protected def prevNonWS (block :Block, pos :Loc) =
-      buffer.scanBackward(isNotWhitespaceAndNotComment, pos, block.start)
+    protected def prevNonWS (block :Block, pos :Loc) = {
+      val posBlock = if (block contains pos) block else ctx.blocker.require(pos, Syntax.Default)
+      buffer.scanBackward(isNotWhitespaceAndNotComment, pos, posBlock.start)
+    }
 
     /** Applies this indenter to `line` at `pos`.
       * @param prevPos the first non-whitespace, non-comment pos preceding the start of `line`. */
@@ -294,8 +296,7 @@ object Indenter {
     *
     * Use `OneLinerNoArgs` for non-conditional one liners, like `else`, `do`, etc.
     */
-  class OneLinerWithArgs (ctx :Context, blocker :Blocker, tokens :Set[String])
-      extends Indenter(ctx) {
+  class OneLinerWithArgs (ctx :Context, tokens :Set[String]) extends Indenter(ctx) {
     def apply (block :Block, line :LineV, pos :Loc) :Int = {
       // seek backward to the first non-whitespace character
       val pc = buffer.scanBackward(isNotWhitespace, pos, block.start)
@@ -303,7 +304,7 @@ object Indenter {
       if (pc.row != pos.row-1 || buffer.charAt(pc) != ')') NA
       else {
         // find the open paren, and check that the token preceding it is in `tokens`
-        blocker.apply(pc.nextC, Syntax.Default) flatMap { b =>
+        ctx.blocker.apply(pc.nextC, Syntax.Default) flatMap { b =>
           prevToken(buffer.line(b.start), b.start.col) map { token =>
             if (!tokens(token)) NA
             else {
