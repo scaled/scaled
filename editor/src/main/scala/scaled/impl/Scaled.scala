@@ -80,6 +80,7 @@ class Scaled extends Application with Editor {
   //
   // Editor API
 
+  override val workspaceOpened = Utils.safeSignal[Workspace](logger)
   override def config = cfgMgr.editorConfig(configScope)
   override def showURL (url :String) = {
     // getHostSevices.showDocument is very crashy on Mac OS X right now, so avoid it

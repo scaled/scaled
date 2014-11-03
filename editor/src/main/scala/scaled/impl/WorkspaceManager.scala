@@ -26,7 +26,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   // the directory in which we store workspace metadata
   private val wsdir = Files.createDirectories(app.pkgMgr.metaDir.resolve("Workspaces"))
 
-  // a map from workspace name to hint path list
+    // a map from workspace name to hint path list
   private val wshints = Filer.fileDB[HashMultimap[String,String]](
     wsdir.resolve(".hintpaths"),
     _.fold(HashMultimap.create[String,String]()) { (m, s) =>
@@ -126,7 +126,6 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   val windows = SeqBuffer[WindowImpl]()
   val buffers = SeqBuffer[BufferImpl]()
-  getScratch() // create our scratch buffer
 
   def lastOpened = Files.getLastModifiedTime(root).toMillis
 
@@ -170,6 +169,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   override def editor = app
   override val config = app.cfgMgr.editorConfig(Config.Scope(state, app.state))
+  override val bufferOpened = Utils.safeSignal[RBuffer](app.logger)
 
   override def createBuffer (name :String, state :List[State.Init[_]],
                              reuse :Boolean) :BufferImpl = {
@@ -273,4 +273,6 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
       case _                 => NoGeom
     }
   }
+
+  getScratch() // create our scratch buffer
 }

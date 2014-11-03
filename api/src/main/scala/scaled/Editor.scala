@@ -21,9 +21,6 @@ trait Editor {
   /** A reactive mapping of editor-wide state. */
   val state :State = new State()
 
-  /** A signal emitted when a workspace is opened. */
-  val workspaceOpened = Signal[Workspace]()
-
   /** Provides global config data. Keys are defined in [[EditorConfig]]. */
   def config :Config
 
@@ -33,6 +30,11 @@ trait Editor {
   /** The ring in which killed blocks of text are stored. */
   def killRing = Mutable.getOrPut(
     Rings(state), "kill", new KillRing(config(EditorConfig.killRingSize)))
+
+  // TODO: def workspaces :SeqV[Workspace]?
+
+  /** A signal emitted when a workspace is opened. */
+  def workspaceOpened :SignalV[Workspace]
 }
 
 /** Defines global configurables. */

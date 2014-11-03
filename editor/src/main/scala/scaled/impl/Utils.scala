@@ -11,7 +11,7 @@ import javafx.scene.text.Font
 import javafx.scene.text.TextBoundsType
 import scaled._
 
-/** Various utilities used by our controls. */
+/** Various utilities used by the Scaled implementation code. */
 object Utils {
 
   def computeTextWidth (font :Font, text :String) :Double = {
@@ -27,6 +27,14 @@ object Utils {
       TextLayout.BOUNDS_CENTER);
     else layout.setBoundsType(0)
     layout.getBounds.getHeight
+  }
+
+  def safeSignal[T] (log :Logger) :Signal[T] = new Signal[T]() {
+    override def emit (value :T) :Unit = try {
+      super.emit(value)
+    } catch {
+      case t :Throwable => log.log(s"Signal.emit failure [value=$value]", t)
+    }
   }
 
   private val layout = Toolkit.getToolkit.getTextLayoutFactory.createLayout()

@@ -55,6 +55,7 @@ object TestData {
     def config = editor.config
     val windows = Seq(window)
     val buffers = Seq()
+    val bufferOpened = Signal[RBuffer]()
     def createBuffer (name :String, state :List[State.Init[_]], reuse :Boolean) = buffer(name, "")
     def openBuffer (store :Store) = BufferImpl(store)
     def killBuffer (buffer :Buffer) {}
@@ -65,6 +66,7 @@ object TestData {
 
   val editor = new Editor {
     val config = new ConfigImpl("editor", cwd, testScope, EditorConfig :: Nil, None)
+    val workspaceOpened = Signal[Workspace]()
     def showURL (url :String) {}
   }
 

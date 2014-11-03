@@ -42,9 +42,6 @@ abstract class Workspace {
     * [Editor.workspaceOpened] is emitted and then registering to be closed via this bag. */
   val toClose = Close.bag()
 
-  /** A signal emitted when a buffer is opened. */
-  val bufferOpened = Signal[RBuffer]()
-
   /** The global editor in which this workspace is contained. */
   def editor :Editor
 
@@ -60,6 +57,9 @@ abstract class Workspace {
 
   /** Returns all buffers open in this workspace, in order of most recent activation. */
   def buffers :SeqV[Buffer]
+
+  /** A signal emitted when a buffer is opened. */
+  def bufferOpened :SignalV[RBuffer]
 
   /** Creates a buffer named `name` and with the specified initial `state`.
     * @param reuse requests reuse of an existing buffer with the same name. If a buffer named
