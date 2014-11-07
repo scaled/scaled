@@ -4,7 +4,6 @@
 
 package scaled.impl
 
-import java.nio.file.Paths
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Errors
