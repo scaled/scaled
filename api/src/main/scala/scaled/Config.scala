@@ -164,7 +164,7 @@ object Config {
       if (rsrc == null) throw new FileNotFoundException(path)
       // if the resource is not a file for some reason, we can't reload it
       else if (rsrc.getProtocol != "file") throw new IllegalStateException(
-        s"Cannot reload non-file: resource '$path'")
+        s"Cannot reload non-file resource: '$rsrc'")
       else Paths.get(rsrc.toURI)
     }
   }
