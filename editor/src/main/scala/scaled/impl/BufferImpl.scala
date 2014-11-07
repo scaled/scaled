@@ -227,8 +227,8 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     else onRows(start, until)(_.removeTags(tclass, pred, _, _))
   }
 
-  override def setLineTag[T] (tclass :Class[T], idx :Int, tag :T) =
-    line(idx).setLineTag(tclass, tag)
+  override def setLineTag[T <: Line.Tag] (idx :Int, tag :T) = line(idx).setLineTag(tag)
+  override def clearLineTag (idx :Int, key :Any) = line(idx).clearLineTag(key)
 
   //
   // impl details

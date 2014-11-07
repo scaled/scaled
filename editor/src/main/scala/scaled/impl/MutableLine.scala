@@ -5,6 +5,7 @@
 package scaled.impl
 
 import java.io.Writer
+import java.util.Arrays
 import scaled._
 
 /** [MutableLine] related types and utilities. */
@@ -52,7 +53,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
   protected var _syns = xs
   protected def _tags = tags
   private[this] var _end = cs.size
-  private[this] var _lineTags :List[Any] = Nil
+  private[this] var _lineTags = new Array[Line.Tag](4)
 
   override def length = _end
   override def view (start :Int, until :Int) = new Line(_chars, _syns, tags, start, until-start)
@@ -60,14 +61,21 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     _chars.slice(start, until), _syns.slice(start, until), tags.slice(start, until))
   override protected def _offset = 0
 
-  override def lineTag[T] (tclass :Class[T], dflt :T) :T = {
-    var ts = _lineTags ; while (!ts.isEmpty) {
-      if (ts.head.getClass == tclass) return ts.head.asInstanceOf[T]
-      ts = ts.tail
+  override def lineTag[T <: Line.Tag] (dflt :T) :T = {
+    val key = dflt.key ; val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
+      val tag = lt(ii) ; if (tag != null && tag.key == key) return tag.asInstanceOf[T]
+      ii += 1
     }
     dflt
   }
-  override def lineTags = _lineTags
+  override def lineTags = {
+    val lb = List.builder[Line.Tag]()
+    val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
+      val tag = lt(ii) ; if (tag != null) lb += tag
+      ii += 1
+    }
+    lb.build()
+  }
 
   override def write (out :Writer) = out.write(_chars, 0, _end)
 
@@ -85,6 +93,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     _chars(loc.col) = c
     _syns(loc.col) = syntax
     _end += 1
+    clearEphLineTags()
   }
 
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
@@ -92,6 +101,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     prepInsert(loc.col, count)
     line.sliceInto(offset, offset+count, _chars, _syns, tags, loc.col)
     _end += count
+    clearEphLineTags()
     loc + (0, count)
   }
 
@@ -114,6 +124,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
       System.arraycopy(_syns  , last, _syns  , pos, _end-last)
       tags.delete(pos, last)
       _end -= length
+      clearEphLineTags()
       deleted
     }
   }
@@ -141,6 +152,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     if (delete > 0) tags.clear(pos, lastDeleted)
     line.sliceInto(0, added, _chars, _syns, tags, pos)
     _end += deltaLength
+    clearEphLineTags()
     replaced
   }
 
@@ -181,9 +193,30 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
   }
 
   /** Sets the line tag for `tclass` to `tag`. */
-  def setLineTag[T] (tclass :Class[T], tag :T) {
-    // TODO: custom filter that generates no garbage if no tag exists?
-    _lineTags = tag :: _lineTags.filter(_.getClass != tclass)
+  def setLineTag[T <: Line.Tag] (tag :T) {
+    val key = tag.key ; val lt = _lineTags
+    var idx = -1 ; var ii = 0 ; while (ii < lt.length) {
+      val etag = lt(ii)
+      if (etag == null) { if (idx == -1) idx = ii }
+      else if (etag.key == key) { lt(ii) = tag ; return }
+      ii += 1
+    }
+    if (idx >= 0) lt(idx) = tag
+    else { // expand tags array
+      val nlt = Arrays.copyOf(lt, lt.length*2)
+      nlt(lt.length) = tag
+      _lineTags = nlt
+    }
+  }
+
+  /** Clears any line tag which matches `key`. */
+  def clearLineTag (key :Any) {
+    val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
+      val tag = lt(ii) ; if (tag != null && tag.key == key) {
+        lt(ii) = null
+        return
+      }
+    }
   }
 
   /** Sets the syntax of chars in `[loc,last)` to `syntax`. */
@@ -221,5 +254,13 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     }
     // we always shift our tags
     _tags.expand(pos, length)
+  }
+
+  private def clearEphLineTags () {
+    val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
+      val tag = lt(ii)
+      if (tag != null && tag.clearOnEdit) lt(ii) = null
+      ii += 1
+    }
   }
 }

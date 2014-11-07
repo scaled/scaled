@@ -90,10 +90,10 @@ abstract class LineV extends CharSequence {
     * Line tags are not copied when a line is sliced or otherwise duplicated. Their chief purpose
     * is for modes to store ephemeral state directly in a buffer without having to maintain a
     * parallel data structure. */
-  def lineTag[T] (tclass :Class[T], dflt :T) :T
+  def lineTag[T <: Line.Tag] (dflt :T) :T
 
   /** Returns all line tags applied to this line. */
-  def lineTags :List[Any]
+  def lineTags :List[Line.Tag]
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
@@ -282,6 +282,17 @@ object Line {
     }
   }
 
+  /** A class that must be extended by all line tags. */
+  abstract class Tag {
+    /** Returns the key that is used to compare two line tags for equivalence. By default this is
+      * the class of the tag, but tags which use a hierarchy of classes will need to return the tag
+      * of their root class. */
+    def key :Any = getClass
+
+    /** Returns true if this tag should be cleared any time the line is edited. */
+    def clearOnEdit :Boolean = false
+  }
+
   /** An empty line. */
   final val Empty = apply("")
 
@@ -336,7 +347,7 @@ class Line (_cs :Array[Char], _xs :Array[Syntax], _ts :Tags,
                                                else slice(start, until)
   override def slice (start :Int, until :Int) = new Line(_cs, _xs, _ts, _offset+start, until-start)
 
-  override def lineTag[T] (tclass :Class[T], dflt :T) = dflt
+  override def lineTag[T <: Line.Tag] (dflt :T) = dflt
   override def lineTags = Nil
 
   override protected def _chars = _cs

@@ -470,10 +470,14 @@ abstract class Buffer extends BufferV {
   def removeTags[T] (tclass :Class[T], pred :T => Boolean, r :Region) :Unit =
     removeTags(tclass, pred, r.start, r.end)
 
-  /** Sets the `tclass` tag for the `idx`th line to `tag`. Any existing tag will be overwritten. */
-  def setLineTag[T] (tclass :Class[T], idx :Int, tag :T) :Unit
-  /** Sets the `tclass` tag for the `loc`th line to `tag`. Any existing tag will be overwritten. */
-  def setLineTag[T] (tclass :Class[T], loc :Loc, tag :T) :Unit = setLineTag(tclass, loc.row, tag)
+  /** Adds `tag` to the `idx`th line. Any existing tag with the same key will be replaced. */
+  def setLineTag[T <: Line.Tag] (idx :Int, tag :T) :Unit
+  /** Adds `tag` to the `loc`th line. Any existing tag with the same key will be replaced. */
+  def setLineTag[T <: Line.Tag] (loc :Loc, tag :T) :Unit = setLineTag(loc.row, tag)
+  /** Clears any line tag matching `key` from the `idx`th line. */
+  def clearLineTag (idx :Int, key :Any) :Unit
+  /** Clears any line tag matching `key` from the `idx`th line. */
+  def clearLineTag (loc :Loc, key :Any) :Unit = clearLineTag(loc.row, key)
 
   /** Adds CSS style class `style` to the characters between `[start, until)`. */
   def addStyle (style :String, start :Loc, until :Loc) = addTag(style.intern, start, until)
