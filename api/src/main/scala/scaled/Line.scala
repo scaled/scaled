@@ -175,7 +175,7 @@ abstract class LineV extends CharSequence {
   /** Returns the first offset into this line at which `m` matches, starting from `from`.
     * -1 is returned if no match is found. */
   def indexOf (m :Matcher, from :Int = 0) :Int = {
-    val offset = _offset ; val n = m.search(_chars, offset+from, offset+length)
+    val offset = _offset ; val n = m.search(_chars, offset, offset+length, offset+from)
     if (n == -1) n else n - offset
   }
 

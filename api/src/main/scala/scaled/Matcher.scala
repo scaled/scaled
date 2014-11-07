@@ -10,9 +10,9 @@ import scaled.util.Chars
 /** Handles searching and matching in [[Line]]s. */
 abstract class Matcher {
 
-  /** Searches forward for a match in `[begin,end)` of `haystack` starting at `begin`.
+  /** Searches forward for a match in `[begin,end)` of `haystack` starting at `from`.
     * @return the index at which a match occurred or -1. */
-  def search (haystack :Array[Char], begin :Int, end :Int) :Int
+  def search (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int
 
   /** Searches backward for a match in `[begin,end)` of `haystack` starting at `from`.
     * @return the index at which a match occurred or -1. */
@@ -63,11 +63,11 @@ class RegexpMatcher (pattern :String) extends Matcher {
     * This is only valid after a successful match.*/
   def group (number :Int) :String = result.group(number)
 
-  override def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
+  override def search (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
     if (end <= begin) -1
     else {
       prep(haystack, begin, end)
-      if (!m.find) -1 else m.start
+      if (!m.find(from)) -1 else m.start
     }
   }
 
@@ -168,9 +168,9 @@ object Matcher {
   abstract class CSMatcher (needle :CharSequence) extends Matcher {
     if (needle.length == 0) throw new IllegalArgumentException("Must provide non-empty needle.")
 
-    def search (haystack :Array[Char], begin :Int, end :Int) :Int = {
+    def search (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
       val searchEnd = end-needle.length+1
-      if (searchEnd < begin) -1 else search(needle, haystack, begin, searchEnd, 1)
+      if (searchEnd < from) -1 else search(needle, haystack, from, searchEnd, 1)
     }
 
     def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
