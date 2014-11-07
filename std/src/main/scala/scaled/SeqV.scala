@@ -188,6 +188,7 @@ abstract class SeqV[+A] extends Ordered[A] {
   }
 
   override def map[B] (f :A => B) :Seq[B] = super.map(f).toSeq
+  override def scan[B] (zero :B)(op :(B,A) => B) :Seq[B] = super.scan(zero)(op).toSeq
   override def sorted (cmp :Comparator[_ >: A]) :Seq[A] = super.sorted(cmp).toSeq
   override def sorted (implicit cmp :Ordering[_ >: A]) :Seq[A] = super.sorted(cmp).toSeq
   override def sortBy[B] (fn :(A => B), cmp :Comparator[B]) :Seq[A] = super.sortBy(fn, cmp).toSeq

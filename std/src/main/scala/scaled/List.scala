@@ -140,6 +140,7 @@ sealed abstract class List[+A] extends Ordered[A] {
   }
 
   override def map[B] (f :A => B) :List[B] = super.map(f).toList
+  override def scan[B] (zero :B)(op :(B,A) => B) :List[B] = super.scan(zero)(op).toList
   override def sorted (cmp :Comparator[_ >: A]) :List[A] = super.sorted(cmp).toList
   override def sorted (implicit cmp :Ordering[_ >: A]) :List[A] = super.sorted(cmp).toList
   override def sortBy[B] (fn :(A => B), cmp :Comparator[B]) :List[A] = super.sortBy(fn, cmp).toList
