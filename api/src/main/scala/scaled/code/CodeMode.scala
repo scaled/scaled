@@ -250,7 +250,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
   }
 
-  @Fn("""Inserts a (single or double) quote and a matching close quote. Leaves the point between
+  @Fn("""Inserts a (single or double) quote and, if the point is currently on whitespace and in
+         code syntax (not string or comment), a matching close quote. Leaves the point between
          the quotes.
          If the point is currently on the to-be-inserted quote, nothing is inserted and the point
          is simply moved past the quote. This avoids undesirable behavior if the user's fingers
@@ -258,7 +259,11 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def electricQuote (typed :String) {
     val p = view.point()
     // if we're currently on the desired quote, just pretend like we typed it and move forward
-    if (buffer.charAt(p) == typed.charAt(0)) view.point() = p.nextC
+    val c = buffer.charAt(p) ; val s = buffer.syntaxNear(p)
+    if (c == typed.charAt(0)) view.point() = p.nextC
+    // if we're not looking at whitespace or not in code mode, no magic
+    else if (!isWhitespace(c) || !s.isCode) selfInsertCommand(typed)
+    // otherwise auto-pair the quote and leave the point betwixt
     else {
       selfInsertCommand(typed)
       val inP = view.point()
