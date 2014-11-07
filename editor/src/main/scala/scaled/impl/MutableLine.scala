@@ -67,6 +67,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     }
     dflt
   }
+  override def lineTags = _lineTags
 
   override def write (out :Writer) = out.write(_chars, 0, _end)
 

@@ -393,7 +393,12 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("Displays all tags on the current line.")
   def showLineTags () {
     val p = view.point()
-    view.popup() = Popup.text(buffer.line(p).tags.map(_.toString), Popup.UpRight(p))
+    val line = buffer.line(p)
+    val info = (line.lineTags ++ line.tags) match {
+      case Nil  => List("No tags.")
+      case tags => tags.map(_.toString)
+    }
+    view.popup() = Popup.text(info, Popup.UpRight(p))
   }
 
   //

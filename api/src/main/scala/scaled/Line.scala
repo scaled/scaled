@@ -90,7 +90,10 @@ abstract class LineV extends CharSequence {
     * Line tags are not copied when a line is sliced or otherwise duplicated. Their chief purpose
     * is for modes to store ephemeral state directly in a buffer without having to maintain a
     * parallel data structure. */
-  def lineTag[T] (tclass :Class[T], dflt :T) :T = dflt
+  def lineTag[T] (tclass :Class[T], dflt :T) :T
+
+  /** Returns all line tags applied to this line. */
+  def lineTags :List[Any]
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
@@ -332,6 +335,9 @@ class Line (_cs :Array[Char], _xs :Array[Syntax], _ts :Tags,
   override def view (start :Int, until :Int) = if (start == 0 && until == length) this
                                                else slice(start, until)
   override def slice (start :Int, until :Int) = new Line(_cs, _xs, _ts, _offset+start, until-start)
+
+  override def lineTag[T] (tclass :Class[T], dflt :T) = dflt
+  override def lineTags = Nil
 
   override protected def _chars = _cs
   override protected def _syns  = _xs
