@@ -67,19 +67,23 @@ class RegexpMatcher (pattern :String) extends Matcher {
     if (end <= begin) -1
     else {
       prep(haystack, begin, end)
-      if (!m.find(from)) -1 else m.start
+      // we can't call m.find(from) because that resets the matcher, wiping out the line
+      // boundaries we set in prep(), so instead we have to call find() in a loop and ignore any
+      // results that are before from; sigh...
+      while (m.find()) {
+        val pos = m.start
+        if (pos >= from) return pos
+      }
+      -1
     }
   }
 
   def searchBackward (haystack :Array[Char], begin :Int, end :Int, from :Int) :Int = {
     prep(haystack, begin, end)
-    var last = -1 ; var next = begin
-    while (next <= from && m.find(next)) {
-      if (m.start < from) {
-        result = m.toMatchResult
-        last = m.start
-      }
-      next = m.end
+    var last = -1
+    while (m.find()) if (m.start < from) {
+      result = m.toMatchResult
+      last = m.start
     }
     last
   }
@@ -98,7 +102,12 @@ class RegexpMatcher (pattern :String) extends Matcher {
     sb.delete(0, m.start) // sigh...
     val repl = Line.fromText(sb.toString)
     buffer.replace(at, end, repl)
-    at + repl
+    // we do a small bit of hackery here: if the regexp we're matching is simply '$' then we bump
+    // our end position past the end of this line to avoid repeated matches if we're doing a
+    // replaceAll on '$'; perhaps there's a more disciplined way to do this, but I've not come up
+    // with one that also accounts for multiline matches and the myriad other moving parts
+    val after = at + repl
+    if (pattern == "$") buffer.forward(after, 1) else after
   }
 
   override def show = pattern
