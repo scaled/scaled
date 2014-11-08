@@ -13,9 +13,6 @@ object CodeConfig extends Config.Defs {
   @Var("The number of characters to indent when in a nested scope.")
   val indentWidth = key(4)
 
-  @Var("Whether to attempt to auto-detect indentWidth for buffers with existing code.")
-  val autoDetectIndent = key(true)
-
   @Var("Enables debug logging for indentation logic.")
   val debugIndent = key(false)
 
@@ -89,18 +86,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
     bind("M-A-s", "show-syntax");
 
-  /** A context provided to our indenters. */
-  val indentCtx = new Indenter.Context {
-    def buffer = CodeMode.this.buffer
-    def blocker = CodeMode.this.blocker
-    def debug = config(CodeConfig.debugIndent)
-    def indentWidth = if (config(CodeConfig.autoDetectIndent) && detectedIndent > 0) detectedIndent
-                      else config(CodeConfig.indentWidth)
-    private lazy val detectedIndent = CodeMode.this.detectIndent
-  }
-
-  /** The list of indenters used to indent code for this mode. */
-  val indenters :List[Indenter]
+  /** Handles indentation for this buffer. */
+  lazy val indenter :Indenter = createIndenter()
+  protected def createIndenter () = new Indenter(config)
 
   /** A helper class for dealing with comments. */
   val commenter :Commenter
@@ -133,18 +121,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   /** Computes the indentation for the line at `row`. */
-  def computeIndent (row :Int) :Int = {
-    // find the position of the first non-whitespace character on the line
-    val line = buffer.line(row)
-    val start = Loc(row, line.firstNonWS)
-    val block = blocker.require(start, Syntax.Default)
-    var ins = indenters ; while (!ins.isEmpty) {
-      val col = ins.head(block, line, start)
-      if (col != Indenter.NA) return col
-      ins = ins.tail
-    }
-    0
-  }
+  def computeIndent (row :Int) :Int = indenter(row)
 
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. If the
     * point is in the whitespace at the start of the indented line, it will be moved to the first
@@ -166,13 +143,6 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def reindentAtPoint () {
     reindent(view.point())
   }
-
-  /** Requests that the indent-level of the buffer be auto-detected. Modes can implement this with
-    * [[Indenter.Detecter]] in combination with their own language specific understanding. `0` (the
-    * default) indicates that we should use the configured indentation value (i.e. auto-detection
-    * is not supported or that a reliable indentation value could not be detected).
-    */
-  def detectIndent :Int = 0
 
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
   override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(buffer, p)
