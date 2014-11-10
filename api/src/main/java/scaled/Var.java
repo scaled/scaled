@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * Defines a configuration var. Modes define configuration vars which can subsequently be
  * customized by the user in a mode configuration file, or interactively.
  */
-@Target(ElementType.METHOD)
+@Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Var {
 
