@@ -38,7 +38,7 @@ trait Editor {
 }
 
 /** Defines global configurables. */
-object EditorConfig extends Config.Defs(true) {
+object EditorConfig extends Config.Defs {
 
   @Var("""The default x position of editor views, in pixels.
           -1 indicates that the view should be centered in the screen.""")

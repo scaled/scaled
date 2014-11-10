@@ -53,7 +53,7 @@ object Config {
   /** A key that identifies a single configuration setting.
     * @param global whether this config is editor global or local to a major or minor mode.
     */
-  abstract class Key[T] (val global :Boolean, val converter :Converter[T]) {
+  abstract class Key[T] (val converter :Converter[T]) {
 
     /** The value to use if this setting is not customized by the user. */
     def defval (config :Config) :T
@@ -63,7 +63,7 @@ object Config {
     /** Converts `value` from a string using this key's converter. */
     def read (value :String) = converter.read(value)
 
-    override def toString () = (if (global) "global" else "local") + "/" + converter
+    override def toString () = converter.toString
   }
 
   /** Converts values to and from strings. */
@@ -81,6 +81,17 @@ object Config {
     override def read (value :String) =
       (value equalsIgnoreCase "true") || (value equalsIgnoreCase "t")
     override def toString = "Boolean"
+  }
+  object JBoolC extends Converter[JBoolean] {
+    override def show (value :JBoolean) = value.toString
+    override def read (value :String) =
+      (value equalsIgnoreCase "true") || (value equalsIgnoreCase "t")
+    override def toString = "Boolean"
+  }
+  object JIntC extends Converter[JInteger] {
+    override def show (value :JInteger) = value.toString
+    override def read (value :String) = value.toInt
+    override def toString = "Int"
   }
   object StringC extends Converter[String] {
     override def show (value :String) = value
@@ -109,10 +120,8 @@ object Config {
     def update (value :String) = v.update(m.config, value)
   }
 
-  /** The base class for a collection of config definitions. The (global) editor config object
-    * ([[EditorConfig]]) extends this as well as each individual mode's config definition object.
-    */
-  abstract class Defs (global :Boolean = false) {
+  /** The base class for a collection of config definitions. */
+  abstract class Defs () {
 
     /** All config vars defined by this defs instance. */
     lazy val vars :Seq[Var[_]] = getClass.getDeclaredFields.mkSeq foldBuild[Var[_]] { (b, f) =>
@@ -125,26 +134,36 @@ object Config {
     }
 
     /** Creates a config key described by `desc` with default value `default`. */
-    protected def key (default :Boolean) = new Config.Key[Boolean](global, BoolC) {
-        override def defval (config :Config) = default
-      }
-    /** Creates a config key described by `desc` with default value `default`. */
-    protected def key (default :Int) = new Config.Key[Int](global, IntC) {
-        override def defval (config :Config) = default
-      }
-    /** Creates a config key described by `desc` with default value `default`. */
-    protected def key (default :String) = new Config.Key[String](global, StringC) {
+    protected def key (default :Boolean) = new Config.Key(BoolC) {
       override def defval (config :Config) = default
     }
     /** Creates a config key described by `desc` with default value `default`. */
-    protected def key (default :Seq[String]) = new Config.Key[Seq[String]](global, StringsC) {
+    protected def key (default :Int) = new Config.Key(IntC) {
+      override def defval (config :Config) = default
+    }
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :String) = new Config.Key[String](StringC) {
+      override def defval (config :Config) = default
+    }
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :Seq[String]) = new Config.Key[Seq[String]](StringsC) {
       override def defval (config :Config) = default
     }
     // TODO: other types: sets? maps?
 
+    // some specializations for Java interop
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :JBoolean) = new Config.Key(JBoolC) {
+      override def defval (config :Config) = default
+    }
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :JInteger) = new Config.Key(JIntC) {
+      override def defval (config :Config) = default
+    }
+
     /** Creates a config key described by `desc` that defaults to the current value of the
       * dependent config value identified by `default`. */
-    protected def key[T] (default :Config.Key[T]) = new Config.Key[T](global, default.converter) {
+    protected def key[T] (default :Config.Key[T]) = new Config.Key[T](default.converter) {
       override def defval (config :Config) = config(default)
     }
 
