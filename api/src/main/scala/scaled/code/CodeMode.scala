@@ -130,13 +130,15 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     */
   def reindent (pos :Loc) {
     val indent = computeIndent(pos.row)
-    // shift the line, if needed
-    val delta = indent - Indenter.readIndent(buffer, pos)
-    if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
-    else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
-    // if the point is now in the whitespace preceding the indent, move it to line-start
-    val p = view.point()
-    if (p.row == pos.row && p.col < indent) view.point() = Loc(p.row, indent)
+    if (indent >= 0) {
+      // shift the line, if needed
+      val delta = indent - Indenter.readIndent(buffer, pos)
+      if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
+      else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
+      // if the point is now in the whitespace preceding the indent, move it to line-start
+      val p = view.point()
+      if (p.row == pos.row && p.col < indent) view.point() = Loc(p.row, indent)
+    } else window.emitStatus(s"Indenter has lost the plot [indent=$indent]. Ignoring.")
   }
 
   /** Reindents the line at the point. */
