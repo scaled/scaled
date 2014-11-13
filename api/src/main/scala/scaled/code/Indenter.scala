@@ -29,46 +29,6 @@ class Indenter (val config :Config) {
 object Indenter {
   import Chars._
 
-  /** An indenter that indents lines based on incrementally computed indentation state. */
-  abstract class ByState (val buffer :Buffer, cfg :Config) extends Indenter(cfg) {
-
-    override def apply (row :Int) :Int = {
-      val line = buffer.line(row) ; val first = line.firstNonWS
-      val lstate = state(stater, buffer, row)
-      computeIndent(lstate, lstate.indent(config, true), line, first)
-    }
-
-    /** Computes the indent for `line`. The default implementation simply returns `base`.
-      * @parma state the indentation state prior to processing `line`.
-      * @param base the base indent for `line` based on braces, parens, etc.
-      * @param line the line whose indentation is being computed.
-      * @param first the position of the first non-non-whitespace character on `line`.
-      * @return the column to which `line` should be indented.
-      */
-    protected def computeIndent (state :State, base :Int, line :LineV, first :Int) :Int = base
-
-    protected lazy val stater = createStater()
-    protected def createStater () :Stater
-  }
-
-  /** An indenter that indents lines based on blocks and expressions. */
-  class ByBlock (buf :Buffer, cfg :Config) extends ByState(buf, cfg) {
-
-    override def apply (row :Int) :Int = {
-      val line = buffer.line(row) ; val first = line.firstNonWS
-      state(stater, buffer, row) match {
-        // if this character closes the block on the top of the stack, use state for the next line
-        // to indent the block close character
-        case bs :BlockS if (bs.isClose(line.charAt(first)) && bs.col == -1) =>
-          val nstate = state(stater, buffer, row+1)
-          nstate.indent(config, true)
-        case lstate => computeIndent(lstate, lstate.indent(config, true), line, first)
-      }
-    }
-
-    override protected def createStater () = new BlockStater()
-  }
-
   /** Tracks buffer elements that change the indentation state. These include things like `BlockS`
     * (a block of code, often nested in curly braces), `ExprS` (an expression that spans multiplie
     * lines), `ContdS` (a continued statement).
@@ -112,6 +72,52 @@ object Indenter {
     protected def show :String
   }
 
+  /** An indenter that indents lines based on incrementally computed indentation state. */
+  abstract class ByState (val buffer :Buffer, cfg :Config) extends Indenter(cfg) {
+
+    override def apply (row :Int) :Int = {
+      val line = buffer.line(row) ; val first = line.firstNonWS
+      val lstate = state(stater, buffer, row)
+      computeIndent(lstate, lstate.indent(config, true), line, first)
+    }
+
+    /** Computes the indent for `line`. The default implementation simply returns `base`.
+      * @parma state the indentation state prior to processing `line`.
+      * @param base the base indent for `line` based on braces, parens, etc.
+      * @param line the line whose indentation is being computed.
+      * @param first the position of the first non-non-whitespace character on `line`.
+      * @return the column to which `line` should be indented.
+      */
+    protected def computeIndent (state :State, base :Int, line :LineV, first :Int) :Int = base
+
+    protected lazy val stater = createStater()
+    protected def createStater () :Stater
+  }
+
+  /** An indenter that indents lines based on blocks and expressions. */
+  class ByBlock (buf :Buffer, cfg :Config) extends ByState(buf, cfg) {
+
+    override def apply (row :Int) :Int = {
+      val line = buffer.line(row) ; val first = line.firstNonWS
+      state(stater, buffer, row) match {
+        // if this character closes the block on the top of the stack, handle it specially because
+        // the close bracket is not indented as if it were inside the block
+        case bs :BlockS if (bs.isClose(line.charAt(first)) && bs.col == -1) =>
+          computeCloseIndent(bs, line, first)
+        case st => computeIndent(st, st.indent(config, true), line, first)
+      }
+    }
+
+    protected def computeCloseIndent (bs :BlockS, line :LineV, first :Int) :Int = {
+      // by default we just indent based on the state above block state on the stack, but other
+      // languages may customize this if they need, for example, to go further up the state stack
+      // or to do other special funny business
+      bs.next.indent(config, false)
+    }
+
+    override protected def createStater () = new BlockStater()
+  }
+
   /** The state at the start of a buffer: nothing. */
   val EmptyS :State = new State(null) {
     override def indent (cfg :Config, top :Boolean) = 0
@@ -133,9 +139,10 @@ object Indenter {
   /** Indicates that we're nested in a bracketed section of code (block or expr). */
   class BlockS (close :Char, val col :Int, next :State) extends State(next) {
     def isClose (close :Char) :Boolean = this.close == close
-    override def indent (cfg :Config, top :Boolean) :Int =
-      // indent one column past our bracket char
-      if (col != -1) col+1 else super.indent(cfg)
+    override def indent (cfg :Config, top :Boolean) :Int = if (col != -1) {
+      // if this is an "expr" block, it only affects indentation if it's on the top of the stack
+      if (top) col+1 else next.indent(cfg)
+    } else super.indent(cfg)
     override def popBlock (close :Char) = if (this.close == close) next else next.popBlock(close)
     override protected def show :String = s"BlockS($close, $col)"
   }
