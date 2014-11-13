@@ -73,6 +73,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     bind("ENTER",   "electric-newline").
     bind("S-ENTER", "electric-newline").
     bind("{",       "electric-open-brace").
+    bind("}",       "electric-close-brace").
     bind("\"",      "electric-quote").
     bind("'",       "electric-quote").
 
@@ -220,6 +221,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       selfInsertCommand("}")
       view.point() = p
     }
+  }
+
+  @Fn("Automatically indents a close-brace immediately after typing it.")
+  def electricCloseBrace (typed :String) {
+    selfInsertCommand(typed)
+    reindentAtPoint()
   }
 
   @Fn("""Inserts a (single or double) quote and, if the point is currently on whitespace and in
