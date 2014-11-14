@@ -102,7 +102,7 @@ object Indenter {
       state(stater, buffer, row) match {
         // if this character closes the block on the top of the stack, handle it specially because
         // the close bracket is not indented as if it were inside the block
-        case bs :BlockS if (bs.isClose(line.charAt(first)) && bs.col == -1) =>
+        case bs :BlockS if (bs.isClose(line.charAt(first)) && !bs.isExpr) =>
           computeCloseIndent(bs, line, first)
         case st => computeIndent(st, st.indent(config, true), line, first)
       }
@@ -139,6 +139,7 @@ object Indenter {
   /** Indicates that we're nested in a bracketed section of code (block or expr). */
   class BlockS (close :Char, val col :Int, next :State) extends State(next) {
     def isClose (close :Char) :Boolean = this.close == close
+    def isExpr :Boolean = (col >= 0)
     override def indent (cfg :Config, top :Boolean) :Int = if (col != -1) {
       // if this is an "expr" block, it only affects indentation if it's on the top of the stack
       if (top) col+1 else next.indent(cfg)
