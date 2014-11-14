@@ -11,7 +11,7 @@ import scaled.util.Properties
 
 class ConfigImplTest {
 
-  object TestConfig extends Config.Defs(true) {
+  object TestConfig extends Config.Defs() {
     @Var("The default width of editor views, in characters.")
     val viewWidth = key(100)
     @Var("The default height of editor views, in characters.")
