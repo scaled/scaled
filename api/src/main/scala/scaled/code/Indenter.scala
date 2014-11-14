@@ -239,6 +239,21 @@ object Indenter {
     loop(line.length-1)
   }
 
+  /** Scans `line` looking for open (slash star) and close (star slash) comments and the number of
+    * opens minus the number of closes.
+    * @param from the character offset in `line` at which to start counting. */
+  def countComments (line :LineV, from :Int = 0) :Int = {
+    var res = 0
+    var ii = from ; val ll = line.length ; while (ii < ll) {
+      val c = line.charAt(ii)
+      val n = if (ii < ll-1) line.charAt(ii+1) else 0.toChar
+      if (c == '/' && n == '*') res += 1
+      else if (c == '*' && n == '/') res -= 1
+      ii += 1
+    }
+    res
+  }
+
   // /** Indents based on the innermost block that contains pos.
   //   *
   //   *  - Lines following a brace are indented one step from the line that contains the brace.
@@ -276,21 +291,6 @@ object Indenter {
   //   *      "bar",
   //   *      "baz"
   //   *    ]
-  //   */
-
-  // /** Indents the line following one-liner conditionals like `if` and `while`. The conditionals must
-  //   * have an arg list, i.e. this rule checks that the previous line ends with `)`, then matches
-  //   * the token preceding the open `(` against `tokens` to check for applicability. Examples:
-  //   *
-  //   * ```
-  //   * if (foo)
-  //   *   bar()
-  //   * while (foo)
-  //   *   bar()
-  //   * // etc.
-  //   * ```
-  //   *
-  //   * Use `OneLinerNoArgs` for non-conditional one liners, like `else`, `do`, etc.
   //   */
 
   // /** Indents `bar` and `baz` keywords to match the `foo` keyword for `foo / bar* / baz?` constructs.
