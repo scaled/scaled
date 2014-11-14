@@ -16,18 +16,18 @@ object CodeConfig extends Config.Defs {
   @Var("Enables debug logging for indentation logic.")
   val debugIndent = key(false)
 
-  @Var("""Whether to automatically insert a close brace `}` when an open brace `{` is typed at
-          the end of a line. See `electric-open-brace` for details.""")
-  val autoCloseBrace = key(true)
+  @Var("""Whether to automatically insert a close bracket when an open bracket is typed at
+          the end of a line. See `electric-open-bracket` for details.""")
+  val autoCloseBracket = key(true)
 
   @Var("""When enabled, inserting a (single or double) quote will insert a matching close quote
           and position the point between the quotes. See `electric-quote` for more details.""")
   val autoCloseQuote = key(true)
 
   @Var("""Whether to auto expand a block when enter is pressed between a pair of open and close
-          braces (`{}`). Expansion means properly indenting the close brace on the next line and
-          then inserting a blank line between the open and close brace and positioning the point
-          properly indented on that line.""")
+          brackets (`{}`). Expansion means properly indenting the close bracket on the next line
+          and then inserting a blank line between the open and close bracket and positioning the
+          point properly indented on that line.""")
   val autoExpandBlock = key(true)
 
   /** The CSS style applied to `builtin` syntax. */
@@ -69,23 +69,21 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap.
-    bind("TAB",     "reindent").
-    bind("ENTER",   "electric-newline").
-    bind("S-ENTER", "electric-newline").
-    bind("{",       "electric-open-brace").
-    bind("}",       "electric-close-brace").
-    bind("\"",      "electric-quote").
-    bind("'",       "electric-quote").
+    bind("reindent",               "TAB").
+    bind("electric-newline",       "ENTER", "S-ENTER").
+    bind("electric-open-bracket",  "{", "(", "[").
+    bind("electric-close-bracket", "}", ")", "]").
+    bind("electric-quote",         "\"", "'").
 
-    bind("S-C-,", "previous-bracket").
-    bind("S-C-.", "next-bracket").
-    bind("S-C-/", "bounce-bracket").
+    bind("previous-bracket", "S-C-,").
+    bind("next-bracket",     "S-C-.").
+    bind("bounce-bracket",   "S-C-/").
 
-    bind("C-M-\\",  "indent-region").
-    bind("C-c C-c", "comment-region").
-    bind("C-c C-u", "uncomment-region"). // TODO: prefix args?
+    bind("indent-region",    "C-M-\\").
+    bind("comment-region",   "C-c C-c").
+    bind("uncomment-region", "C-c C-u"). // TODO: prefix args?
 
-    bind("M-A-s", "show-syntax");
+    bind("show-syntax", "M-A-s");
 
   /** Handles indentation for this buffer. */
   lazy val indenter :Indenter = createIndenter()
@@ -145,6 +143,15 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Reindents the line at the point. */
   def reindentAtPoint () {
     reindent(view.point())
+  }
+
+  /** Returns the close bracket for the supplied open bracket.
+    * `?` is returned if the open bracket is unknown. */
+  def closeForOpen (bracket :String) = bracket match {
+    case "{" => "}"
+    case "(" => ")"
+    case "[" => "]"
+    case _   => "?"
   }
 
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
@@ -212,21 +219,28 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     reindentAtPoint()
   }
 
-  @Fn("""Inserts an open brace, and if the `auto-close-brace` configuration is true, inserts a close
-         brace following the open brace, leaving the cursor positioned after the open brace.""")
-  def electricOpenBrace () {
-    selfInsertCommand("{")
+  @Fn("""Inserts an open bracket, and if the `auto-close-bracket` configuration is true, inserts
+         a close bracket following the open bracket, leaving the cursor positioned after the open
+         bracket.""")
+  def electricOpenBracket (typed :String) {
+    selfInsertCommand(typed)
     val p = view.point()
-    if (p.col == buffer.line(p).length && config(autoCloseBrace)) {
-      selfInsertCommand("}")
+    if (p.col == buffer.line(p).length && config(autoCloseBracket)) {
+      selfInsertCommand(closeForOpen(typed))
       view.point() = p
     }
   }
 
-  @Fn("Automatically indents a close-brace immediately after typing it.")
-  def electricCloseBrace (typed :String) {
-    selfInsertCommand(typed)
-    reindentAtPoint()
+  @Fn("""Automatically indents a close-bracket immediately after typing it. Also avoids duplicating
+         the close bracket if the needed bracket is already under the point.""")
+  def electricCloseBracket (typed :String) {
+    // if we're currently on the desired close bracket, just pretend like we typed it and fwd-char
+    val p = view.point() ; val c = buffer.charAt(p)
+    if (c == typed.charAt(0)) view.point() = p.nextC
+    else {
+      selfInsertCommand(typed)
+      reindentAtPoint()
+    }
   }
 
   @Fn("""Inserts a (single or double) quote and, if the point is currently on whitespace and in
@@ -236,9 +250,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          is simply moved past the quote. This avoids undesirable behavior if the user's fingers
          insist on typing the close quote even though it was already inserted for them.""")
   def electricQuote (typed :String) {
-    val p = view.point()
     // if we're currently on the desired quote, just pretend like we typed it and move forward
-    val c = buffer.charAt(p) ; val s = buffer.syntaxNear(p)
+    val p = view.point() ; val c = buffer.charAt(p) ; val s = buffer.syntaxNear(p)
     if (c == typed.charAt(0)) view.point() = p.nextC
     // if we're not looking at whitespace or not in code mode, no magic
     else if (!isWhitespace(c) || !s.isCode) selfInsertCommand(typed)
