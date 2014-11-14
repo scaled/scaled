@@ -4,6 +4,8 @@
 
 package scaled
 
+import scala.annotation.varargs
+
 object Key {
 
   /** Defines a key binding. Trigger sequences are defined thusly: A single key consists of the key
@@ -32,8 +34,8 @@ object Key {
     def bindings :SeqV[Binding] = _bindings
 
     /** Appends a binding to this keymap. */
-    def bind (trigger :String, fn :String) :this.type = {
-      _bindings += Binding(trigger, fn)
+    @varargs def bind (fn :String, triggers :String*) :this.type = {
+      triggers foreach { tr => _bindings += Binding(tr, fn) }
       this
     }
 

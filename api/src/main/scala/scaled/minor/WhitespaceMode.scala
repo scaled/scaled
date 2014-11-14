@@ -113,7 +113,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   })
 
   override def keymap = super.keymap.
-    bind("C-M-]", "trim-buffer-trailing-whitespace");
+    bind("trim-buffer-trailing-whitespace", "C-M-]");
   override def configDefs = WhitespaceConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
 

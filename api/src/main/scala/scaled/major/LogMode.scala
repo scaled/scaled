@@ -18,7 +18,7 @@ class LogMode (env :Env) extends ReadingMode(env) {
   view.point() = buffer.end
 
   override def keymap = super.keymap.
-    bind("M-k", "clear-log");
+    bind("clear-log", "M-k");
 
   @Fn("Clears the contents of this log buffer.")
   def clearLog () {

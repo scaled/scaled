@@ -33,58 +33,54 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   override def configDefs = EditingConfig :: super.configDefs
   override def keymap = super.keymap.
     // character editing commands
-    bind("BS",  "delete-backward-char"). // TODO: make this delete back to mark (if set)
-    bind("DEL", "delete-forward-char"). // ...forward to mark (if set)
-    bind("C-d", "delete-forward-char"). // this should be delete-char and ignore mark
+    bind("delete-backward-char", "BS"). // TODO: make this delete back to mark (if set)
+    bind("delete-forward-char",  "DEL", "C-d"). // ...forward to mark (if set)
+    // TODO: C-d should be delete-char and ignore mark
 
-    bind("ENTER",   "newline").
-    bind("S-ENTER", "newline").
-    bind("TAB",     "indent-for-tab-command").
+    bind("newline",                "ENTER", "S-ENTER").
+    bind("indent-for-tab-command", "TAB").
     // TODO: open-line, split-line, ...
 
-    bind("C-t",     "transpose-chars").
-    bind("C-x C-u", "upcase-region").
-    bind("C-x C-l", "downcase-region").
-    bind("M-u",     "upcase-word").
-    bind("M-l",     "downcase-word").
-    bind("M-c",     "capitalize-word").
+    bind("transpose-chars", "C-t").
+    bind("upcase-region",   "C-x C-u").
+    bind("downcase-region", "C-x C-l").
+    bind("upcase-word",     "M-u").
+    bind("downcase-word",   "M-l").
+    bind("capitalize-word", "M-c").
 
-    bind("C-M-l",   "sort-paragraph").
+    bind("sort-paragraph", "C-M-l").
     // NONE   -> "sort-lines",
     // NONE   -> "reverse-region",
-    bind("M-q",     "fill-paragraph").
+    bind("fill-paragraph", "M-q").
 
     // killing and yanking commands
-    bind("C-w",     "kill-region").
-    bind("C-M-w",   "append-next-kill").
-    bind("C-k",     "kill-line").
-    bind("C-S-BS",  "kill-whole-line").
-    bind("M-d",     "kill-word").
-    bind("M-DEL",   "backward-kill-word").
-    bind("C-BS",    "backward-kill-word").
-    // bind("M-z",     "zap-to-char"),
-    // bind("M-k",     "kill-sentence"), // do we want?
-    // bind("C-x DEL", "backward-kill-sentence"), // do we want?
-    // bind("C-M-k",   "kill-balanced-sexp"), // do we want?
+    bind("kill-region",        "C-w").
+    bind("append-next-kill",   "C-M-w").
+    bind("kill-line",          "C-k").
+    bind("kill-whole-line",    "C-S-BS").
+    bind("kill-word",          "M-d").
+    bind("backward-kill-word", "M-DEL").
+    bind("backward-kill-word", "C-BS").
+    // bind("zap-to-char", "M-z"),
+    // bind("kill-sentence", "M-k"), // do we want?
+    // bind("backward-kill-sentence", "C-x DEL"), // do we want?
+    // bind("kill-balanced-sexp", "C-M-k"), // do we want?
 
-    bind("C-y", "yank").
-    bind("M-y", "yank-pop").
+    bind("yank",     "C-y").
+    bind("yank-pop", "M-y").
 
     // undo commands
-    bind("C-/",   "undo").
-    bind("C-\\",  "redo").
-    bind("C-x r", "redo").
-    bind("C-x u", "undo").
-    bind("C-_",   "undo").
+    bind("undo", "C-/", "C-x u", "C-_").
+    bind("redo", "C-\\", "C-x r").
     // TEMP: until we sort out ctrl'd shifted keys
-    bind("C-S--", "undo").
+    bind("undo", "C-S--").
 
     // replacing commands
     // TODO: "replace-string", "replace-regepx"
 
     // buffer commands
-    bind("C-x C-s", "save-buffer").
-    bind("C-x C-w", "write-file");
+    bind("save-buffer", "C-x C-s").
+    bind("write-file",  "C-x C-w");
 
   /** Deletes the region `[from, to)` from the buffer and adds it to the kill-ring. If `to` is
     * earlier in the buffer than `from` the arguments will automatically be swapped.

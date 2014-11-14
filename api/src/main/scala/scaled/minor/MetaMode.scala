@@ -16,21 +16,21 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   override def keymap = super.keymap.
     // buffer commands
-    bind("C-x b",   "switch-to-buffer").
-    bind("C-x k",   "kill-buffer").
-    bind("C-x C-f", "find-file").
+    bind("switch-to-buffer", "C-x b").
+    bind("kill-buffer",      "C-x k").
+    bind("find-file",        "C-x C-f").
 
     // editor commands
-    bind("C-x C-c", "save-buffers-close-window").
+    bind("save-buffers-close-window", "C-x C-c").
 
     // help commands
-    bind("C-h f", "describe-fn").
-    bind("C-h v", "describe-var").
-    bind("C-h m", "describe-mode").
-    bind("C-h e", "describe-editor").
+    bind("describe-fn",     "C-h f").
+    bind("describe-var",    "C-h v").
+    bind("describe-mode",   "C-h m").
+    bind("describe-editor", "C-h e").
 
     // misc commands
-    bind("M-x", "execute-extended-command");
+    bind("execute-extended-command", "M-x");
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :Config.VarBind[_] => Unit) {

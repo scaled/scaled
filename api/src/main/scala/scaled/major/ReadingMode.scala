@@ -26,66 +26,54 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   override def configDefs = ReadingConfig :: super.configDefs
   override def keymap = super.keymap.
     // mark manipulation commands
-    bind("C-SPACE", "set-mark-command"). // TODO: make this push-mark instead?
-    bind("C-@",     "set-mark-command"). // needs to be C-S-2? meh.
-    bind("C-x C-x", "exchange-point-and-mark").
+    bind("set-mark-command",        "C-SPACE", "C-@"). // needs to be C-S-2? meh.
+    bind("exchange-point-and-mark", "C-x C-x").
 
     // the one non-destructive kill command
-    bind("M-w", "kill-ring-save").
+    bind("kill-ring-save", "M-w").
 
     // searching commands
-    bind("C-s", "isearch-forward").
-    bind("C-r", "isearch-backward").
+    bind("isearch-forward",  "C-s").
+    bind("isearch-backward", "C-r").
 
     // motion commands
-    bind("C-b",   "backward-char").
-    bind("C-f",   "forward-char").
-    bind("LEFT",  "backward-char").
-    bind("RIGHT", "forward-char").
+    bind("backward-char", "C-b", "LEFT").
+    bind("forward-char",  "C-f", "RIGHT").
 
-    bind("M-b",     "backward-word").
-    bind("M-f",     "forward-word").
-    bind("C-LEFT",  "backward-word").
-    bind("C-RIGHT", "forward-word").
+    bind("backward-word", "M-b", "C-LEFT").
+    bind("forward-word",  "M-f", "C-RIGHT").
 
-    bind("C-a",  "move-beginning-of-line").
-    bind("C-e",  "move-end-of-line").
-    bind("HOME", "move-beginning-of-line").
-    bind("END",  "move-end-of-line").
+    bind("move-beginning-of-line", "C-a", "HOME").
+    bind("move-end-of-line",       "C-e", "END").
 
-    bind("C-p",  "previous-line").
-    bind("C-n",  "next-line").
-    bind("UP",   "previous-line").
-    bind("DOWN", "next-line").
+    bind("previous-line", "C-p", "UP").
+    bind("next-line",     "C-n", "DOWN").
 
-    bind("C-UP",   "previous-paragraph").
-    bind("C-DOWN", "next-paragraph").
+    bind("previous-paragraph", "C-UP").
+    bind("next-paragraph",     "C-DOWN").
 
-    bind("M-<",    "beginning-of-buffer").
-    bind("M->",    "end-of-buffer").
-    bind("C-HOME", "beginning-of-buffer").
-    bind("C-END",  "end-of-buffer").
-    bind("BEGIN",  "beginning-of-buffer").
+    bind("beginning-of-buffer", "M-<", "C-HOME", "BEGIN").
+    bind("end-of-buffer",       "M->", "C-END").
     // TEMP: until we sort out meta'd shifted keys
-    bind("M-S-,",  "beginning-of-buffer").
-    bind("M-S-.",  "end-of-buffer").
+    bind("beginning-of-buffer", "M-S-,").
+    bind("end-of-buffer",       "M-S-.").
 
-    bind("M-g",    "goto-line").
-    bind("M-S-g",  "goto-offset").
+    bind("goto-line",   "M-g").
+    bind("goto-offset", "M-S-g").
 
     // view commands (scrolling, etc.)
-    bind("S-UP",   "scroll-up"). // TODO: extend-mark-backward-line
-    bind("S-DOWN", "scroll-down"). // TODO: extend-mark-forward-line
-    bind("M-v",    "scroll-up-page").
-    bind("C-v",    "scroll-down-page").
-    bind("PGUP",   "scroll-up-page").
-    bind("PGDN",   "scroll-down-page").
+    bind("scroll-up",        "S-UP"). // TODO: extend-mark-backward-line
+    bind("scroll-down",      "S-DOWN"). // TODO: extend-mark-forward-line
+    bind("scroll-up-page",   "M-v").
+    bind("scroll-down-page", "C-v").
+    bind("scroll-up-page",   "PGUP").
+    bind("scroll-down-page", "PGDN").
 
-    bind("C-l",    "recenter").
+    bind("recenter", "C-l").
 
     // help commands
-    bind("M-A-t", "show-tags").
-    bind("M-C-t", "show-line-tags");
+    bind("show-tags",      "M-A-t").
+    bind("show-line-tags", "M-C-t")
 
   /** Seeks forward to the end a word. Moves forward from `p` until at least one word char is seen,
     * and then keeps going until a non-word char is seen (or the end of the buffer is reached), and

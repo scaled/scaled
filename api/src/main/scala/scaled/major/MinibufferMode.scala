@@ -51,7 +51,7 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
     // TODO: disable other commands (like save-buffer) or factor them out of editing mode? or
     // maybe everything just fails because we reject minibuffer use while in the minibuffer... it
     // looks like that might be what emacs does
-    bind("C-g", "abort");
+    bind("abort", "C-g");
 
   @Fn("""Aborts the current minibuffer action.""")
   def abort () {

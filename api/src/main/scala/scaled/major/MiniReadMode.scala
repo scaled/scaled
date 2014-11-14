@@ -24,12 +24,11 @@ class MiniReadMode[T] (
   setContents(initText)
 
   override def keymap = super.keymap.
-    bind("UP",    "previous-history-entry").
-    bind("DOWN",  "next-history-entry").
-    bind("TAB",   "complete").
-    bind("S-TAB", "complete").
+    bind("previous-history-entry", "UP").
+    bind("next-history-entry",     "DOWN").
+    bind("complete",               "TAB", "S-TAB").
     // TODO: special C-d that updates completions if at eol (but does not complete max prefix)
-    bind("ENTER", "commit-read");
+    bind("commit-read",            "ENTER");
 
   def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
 

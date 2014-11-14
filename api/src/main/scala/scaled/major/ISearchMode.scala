@@ -178,16 +178,15 @@ class ISearchMode (
     // we don't inherit normal editing commands; we repeat a few essentials here and route all
     // non-matching fns back to the main buffer
     clear().
-    bind("C-g",   "abort").
-    bind("C-y",   "yank").
-    bind("M-y",   "yank-pop").
+    bind("abort",    "C-g").
+    bind("yank",     "C-y").
+    bind("yank-pop", "M-y").
 
-    bind("C-s",   "next-match").
-    bind("C-r",   "prev-match").
+    bind("next-match", "C-s").
+    bind("prev-match", "C-r").
 
-    bind("BS",    "prev-search").
-    bind("DEL",   "prev-search").
-    bind("ENTER", "end-search");
+    bind("prev-search", "BS", "DEL").
+    bind("end-search",  "ENTER");
     // Type C-j to match end of line.
     // Type C-w to yank next word or character in buffer onto the end of the search string.
     // Type M-s C-e to yank rest of line onto end of search string and search for it.
