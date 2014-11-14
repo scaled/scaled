@@ -31,7 +31,7 @@ object Indenter {
 
   /** Tracks buffer elements that change the indentation state. These include things like `BlockS`
     * (a block of code, often nested in curly braces), `ExprS` (an expression that spans multiplie
-    * lines), `ContdS` (a continued statement).
+    * lines), `ContinuedS` (a continued statement), etc..
     *
     * A stack of elements describes the indentation state at the start of a given line. The state
     * is combined with information local to that line to determine the indentation of the line as
@@ -102,8 +102,7 @@ object Indenter {
       state(stater, buffer, row) match {
         // if this character closes the block on the top of the stack, handle it specially because
         // the close bracket is not indented as if it were inside the block
-        case bs :BlockS if (bs.isClose(line.charAt(first)) && !bs.isExpr) =>
-          computeCloseIndent(bs, line, first)
+        case bs :BlockS if (bs.isClose(line.charAt(first))) => computeCloseIndent(bs, line, first)
         case st => computeIndent(st, st.indent(config, true), line, first)
       }
     }
@@ -136,16 +135,22 @@ object Indenter {
     override protected def show :String = "UnknownS"
   }
 
-  /** Indicates that we're nested in a bracketed section of code (block or expr). */
-  class BlockS (close :Char, val col :Int, next :State) extends State(next) {
+  /** Indicates that we're nested in a bracketed block of code. */
+  class BlockS (close :Char, next :State) extends State(next) {
+    def isClose (close :Char) :Boolean = this.close == close
+    override def popBlock (close :Char) = if (this.close == close) next else next.popBlock(close)
+    override protected def show :String = s"BlockS($close)"
+  }
+
+  /** Indicates that we're nested in a bracketed expression. */
+  class ExprS (close :Char, val col :Int, next :State) extends State(next) {
     def isClose (close :Char) :Boolean = this.close == close
     def isExpr :Boolean = (col >= 0)
-    override def indent (cfg :Config, top :Boolean) :Int = if (col != -1) {
-      // if this is an "expr" block, it only affects indentation if it's on the top of the stack
+    override def indent (cfg :Config, top :Boolean) :Int =
+      // an expr block only affects indentation if it's on the top of the stack
       if (top) col+1 else next.indent(cfg)
-    } else super.indent(cfg)
     override def popBlock (close :Char) = if (this.close == close) next else next.popBlock(close)
-    override protected def show :String = s"BlockS($close, $col)"
+    override protected def show :String = s"ExprS($close, $col)"
   }
 
   /** Incrementally computes indentation state changes. */
@@ -183,7 +188,8 @@ object Indenter {
     protected def openBlock (line :LineV, open :Char, close :Char, col :Int, state :State) :State =
       // if the open char is at the end of the line, then we treat it like a block rather than an
       // expression regardless of whether it's a curly brace or paren or whatever
-      new BlockS(close, if (col < line.length-1 && isExprOpen(open)) col else -1, state)
+      if (col < line.length-1 && isExprOpen(open)) new ExprS(close, col, state)
+      else new BlockS(close, state)
     protected def closeBlock (line :LineV, close :Char, col :Int, state :State) :State =
       state.popBlock(close)
 
