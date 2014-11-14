@@ -186,6 +186,22 @@ abstract class LineV extends CharSequence {
     if (n == -1) n else n - offset
   }
 
+  /** Returns the index of the first character whose syntax matches `pred` at pos `from or later.
+    * Returns -1 if no match is found. */
+  def synIndexOf (pred :Syntax => Boolean, from :Int) :Int = {
+    val offset = _offset ; val end = length
+    var pos = from ; while (pos < end && !pred(_syns(offset+pos))) pos += 1
+    if (pos == end) -1 else pos
+  }
+
+  /** Returns the index of the first character whose syntax matches `pred` at pos `from or earlier.
+    * Returns -1 if no match is found. */
+  def synLastIndexOf (pred :Syntax => Boolean, from :Int) :Int = {
+    val offset = _offset
+    var pos = from ; while (pos >= 0 && !pred(_syns(offset+pos))) pos -= 1
+    pos
+  }
+
   /** Returns the index of the first non-whitespace character on this line, or [[length]] if
     * no-non-whitespace character could be found. */
   def firstNonWS :Int = indexOf(isNotWhitespace, 0) match {
