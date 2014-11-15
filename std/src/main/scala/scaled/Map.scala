@@ -28,14 +28,6 @@ abstract class Map[K,+V] extends Unordered[(K,V)] with (K => V) {
   /** Returns the values in this map as an unordered collection. */
   def values :Unordered[V]
 
-  /** Applies `op` to each mapping in this map. As op takes two arguments, this avoids boxing each
-    * map entry into a tuple. */
-  def foreach[U] (op :(K, V) => U) :Unit
-
-  /** Applies `f` to each `(k,v)` mapping in this map and returns a [[Seq]] that contains the
-    * concatenation of the results. */
-  def flatMap[B] (f :((K,V)) => JIterable[B]) :Seq[B] = foldBuild[B]((b, a) => b ++= f(a)).toSeq
-
   /** Creates a new map containing this map's mappings plus the mappings in `that`. */
   def concat[V1 >: V] (that :Iterable[(K,V1)]) :Map[K,V1] = {
     val mb = Map.builder[K,V1](size + that.sizeHint)
@@ -48,6 +40,29 @@ abstract class Map[K,+V] extends Unordered[(K,V)] with (K => V) {
   def concat[V1 >: V] (that :JIterable[(K,V1)]) :Map[K,V1] = concat(that :Iterable[(K,V1)])
   /** An alias for [[concat]]. */
   def ++[V1 >: V] (bs :JIterable[(K,V1)]) :Map[K,V1] = concat(bs)
+
+  /** Applies `op` to each mapping in this map. As op takes two arguments, this avoids boxing each
+    * map entry into a tuple. */
+  def foreach[U] (op :(K, V) => U) :Unit
+
+  /** Applies `f` to each `(k,v)` mapping in this map and returns a [[Seq]] that contains the
+    * concatenation of the results. */
+  def flatMap[B] (f :((K,V)) => JIterable[B]) :Seq[B] = foldBuild[B]((b, a) => b ++= f(a)).toSeq
+
+  /** Applies `f` to each `(k,v)` mapping in this map and returns a [[Seq]] that contains the
+    * concatenation of the results. */
+  def flatMap[B] (f :(K,V) => JIterable[B]) :Seq[B] = {
+    val b = newBuilder[B](4)
+    foreach { (k,v) => b ++= f(k, v) }
+    b.build()
+  }
+
+  /** Returns a [[Seq]] which contains `f` applied to each `(k,v)` mapping. */
+  def map[B] (f :(K,V) => B) :Seq[B] = {
+    val b = newBuilder[B](size)
+    foreach { (k,v) => b += f(k, v) }
+    b.build()
+  }
 
   // TODO: mapValues, etc.
 
