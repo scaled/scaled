@@ -102,7 +102,7 @@ object Visit {
       if (_stack.isEmpty) window.emitStatus(s"Visit stack is empty.")
       else {
         val (store, loc) = _stack.last
-        _stack.remove(_stack.size-1)
+        _stack.removeAt(_stack.size-1)
         window.focus.visitFile(store).point() = loc
       }
     }
