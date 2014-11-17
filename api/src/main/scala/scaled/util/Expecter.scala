@@ -13,10 +13,22 @@ import scaled._
   * When an expecter instance is constructed, the associated command is immediately spawned and
   * interaction begins.
   *
-  * @param exec the executor via which callbacks are invoked on the UI thread.
+  * @param exec needed to route callbacks to the UI thread.
   * @param config the subprocess configuration.
   */
-abstract class Expecter (exec :Executor, config :SubProcess.Config) extends SubProcess(config) {
+abstract class Expecter (exec :Executor, config :SubProcess.Config) {
+  import SubProcess._
+
+  private val events = Signal[SubProcess.Event](exec.uiExec)
+  events.onValue { _ match {
+    case Output(text, isErr) =>
+      if (_responder == null) onUnexpected(text, isErr)
+      else if (_responder(text, isErr)) _responder = null
+    case Failure(cause, isErr) =>
+      onFailure(cause, isErr)
+    case Complete(_) => // nada
+  }}
+  private val proc = new SubProcess(config, events)
 
   /** Initiates an interaction with the subprocess. An interaction consists of sending one or more
     * lines of text to the subprocess and then piping subprocess output to a supplied responder
@@ -32,8 +44,7 @@ abstract class Expecter (exec :Executor, config :SubProcess.Config) extends SubP
     if (_responder != null) false
     else {
       _responder = responder
-      input foreach out.println
-      out.flush()
+      proc.send(input)
       true
     }
   }
@@ -41,12 +52,15 @@ abstract class Expecter (exec :Executor, config :SubProcess.Config) extends SubP
   /** Called when output is received from the subprocess, but we have no configured responder. */
   def onUnexpected (line :String, isErr :Boolean) :Unit
 
-  override protected def onOutput (text :String, isErr :Boolean) {
-    exec.runOnUI {
-      if (_responder == null) onUnexpected(text, isErr)
-      else if (_responder(text, isErr)) _responder = null
-    }
+  /** Called when an error occurs starting or reading from the subprocess. */
+  def onFailure (exn :Throwable, isErr :Boolean) {
+    onUnexpected(Errors.stackTraceToString(exn), isErr)
   }
+
+  // delegation!
+  def close () :Unit = proc.close()
+  def kill () :Unit = proc.kill()
+  def waitFor () :Int = proc.waitFor()
 
   private var _responder :(String, Boolean) => Boolean = _
 }
@@ -63,7 +77,7 @@ object Expecter {
       override def onUnexpected (line :String, isErr :Boolean) {
         log.log(msg(line, isErr))
       }
-      override protected def onFailure (exn :Exception, isErr :Boolean) {
+      override def onFailure (exn :Throwable, isErr :Boolean) {
         exec.runOnUI { log.log(msg("expect failure", isErr), exn) }
       }
     }
