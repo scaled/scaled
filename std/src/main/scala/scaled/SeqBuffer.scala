@@ -157,12 +157,12 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
 
   /** Removes the first element which is equal to `elem` (per [[Object.equals]]). Returns true if
     * an element was found and removed, false otherwise. */
-  def remove[B >: A] (elem :B) :Boolean = indexOf(elem) match {
+  def remove (elem :A) :Boolean = indexOf(elem) match {
     case -1 => false
     case ii => remove(ii, 1) ; true
   }
   /** An alias for [[remove]]. */
-  def -=[B >: A] (elem :B) :Boolean = remove(elem)
+  def -= (elem :A) :Boolean = remove(elem)
 
   /** Removes the first `count` elements from this buffer. If `count` exceeds [[size]], the buffer
     * is cleared. */
