@@ -23,6 +23,10 @@ class MetaMode (env :Env) extends MinorMode(env) {
     // editor commands
     bind("save-buffers-close-window", "C-x C-c").
 
+    // visit list commands
+    bind("visit-next", "C-]").
+    bind("visit-prev", "C-[").
+
     // help commands
     bind("describe-fn",     "C-h f").
     bind("describe-var",    "C-h v").
@@ -103,6 +107,25 @@ class MetaMode (env :Env) extends MinorMode(env) {
         })
     }
     saveLoop(wspace.buffers.filter(_.needsSave).toList)
+  }
+
+  //
+  // VISIT FNS
+
+  @Fn("Navigates to the next entry in the current visit list, if any.")
+  def visitNext () {
+    window.visits.getOption match {
+      case None     => window.popStatus("No visit list is currently configured.")
+      case Some(vs) => vs.next(window)
+    }
+  }
+
+  @Fn("Navigates to the previous entry in the current visit list, if any.")
+  def visitPrev () {
+    window.visits.getOption match {
+      case None     => window.popStatus("No visit list is currently configured.")
+      case Some(vs) => vs.prev(window)
+    }
   }
 
   //

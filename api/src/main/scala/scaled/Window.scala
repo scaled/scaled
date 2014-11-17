@@ -31,6 +31,9 @@ trait Window {
   /** A reactive mapping of window-wide state. */
   val state :State = new State()
 
+  /** The active [[VisitList]] (if any). */
+  val visits = OptValue[VisitList]()
+
   /** Returns the current geometry of this window. */
   def geometry :Geometry
 
