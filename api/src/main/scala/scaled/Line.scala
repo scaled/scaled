@@ -291,11 +291,8 @@ object Line {
     }
 
     /** Builds and returns the line. This builder will be rendered unusable after this call. */
-    def build () :Line = {
-      val l = new Line(_cs, _xs, _ts, 0, _cs.length)
-      _cs = null ; _xs = null ; _ts = null
-      l
-    }
+    def build () :Line = try new Line(_cs, _xs, _ts, 0, _cs.length)
+                         finally { _cs = null ; _xs = null ; _ts = null }
   }
 
   /** A class that must be extended by all line tags. */
