@@ -19,6 +19,9 @@ trait Window {
     /** Returns the window that contains this frame. */
     def window :Window = Window.this
 
+    /** Returns the buffer view that currently occupies this frame. */
+    def view :BufferView
+
     /** Makes the specified buffer the active buffer for this frame.
       * @return the view for the buffer. */
     def visit (buffer :Buffer) :BufferView
@@ -31,8 +34,11 @@ trait Window {
   /** A reactive mapping of window-wide state. */
   val state :State = new State()
 
-  /** The active [[VisitList]] (if any). */
-  val visits = OptValue[VisitList]()
+  /** The active [[Visit.List]] (if any). */
+  val visits = OptValue[Visit.List]()
+
+  /** A stack of visits made from within this window. */
+  val visitStack = new Visit.Stack()
 
   /** Returns the current geometry of this window. */
   def geometry :Geometry

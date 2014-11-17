@@ -23,9 +23,10 @@ class MetaMode (env :Env) extends MinorMode(env) {
     // editor commands
     bind("save-buffers-close-window", "C-x C-c").
 
-    // visit list commands
+    // visit-related commands
     bind("visit-next", "C-]").
     bind("visit-prev", "C-[").
+    bind("visit-pop",  "M-,").
 
     // help commands
     bind("describe-fn",     "C-h f").
@@ -126,6 +127,11 @@ class MetaMode (env :Env) extends MinorMode(env) {
       case None     => window.popStatus("No visit list is currently configured.")
       case Some(vs) => vs.prev(window)
     }
+  }
+
+  @Fn("Pops the top location from the visit stack and returns to it.")
+  def visitPop () {
+    window.visitStack.pop(window)
   }
 
   //

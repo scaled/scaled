@@ -30,7 +30,6 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   class FrameImpl extends BorderPane with Frame {
     var onKill :Connection = _
     var disp :DispatcherImpl = _
-    def view = disp.area.bview
 
     def focus () {
       val buf = view.buffer
@@ -83,6 +82,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
         view
       }
 
+    override def view = disp.area.bview
     override def geometry = WindowImpl.this.geometry // TODO
     override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl])
   }
