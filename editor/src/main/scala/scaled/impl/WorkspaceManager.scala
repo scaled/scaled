@@ -212,7 +212,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   private def addBuffer (buf :BufferImpl) :BufferImpl = {
     buffers += buf
     bufferOpened.emit(buf)
-    buf.killed.onValue(b => buffers.remove(b))
+    buf.killed.onEmit(buffers.remove(buf))
     buf
   }
 
