@@ -117,6 +117,13 @@ object Visit {
     private val _stack = SeqBuffer[(Store,Loc)]()
   }
 
+  /** Used to tag lines in buffers with visits. `help-mode` supports automatically visiting a
+    * line's visit when ENTER is pressed on said line. Other modes can also use the tag. */
+  case class Tag (visit :Visit) extends Line.Tag {
+    /** Applies our enclosed visit. */
+    def apply (window :Window, push :Boolean = true) :Unit = visit.apply(window, push)
+  }
+
   /** Returns an instance that will visit `offset` in `store`. */
   def apply (store :Store, offset :Int) :Visit = new Visit() {
     protected def go (window :Window) {
