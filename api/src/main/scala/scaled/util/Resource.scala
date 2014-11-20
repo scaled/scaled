@@ -58,7 +58,7 @@ object Resource {
     // if the URLs are not all file: URLs, we can't do auto-reloading
     if (sources.exists(_.getProtocol != "file")) new Resource() {
       override def streams = sources.map(_.openStream)
-      override protected def lastModified = 0L
+      override protected def lastModified = 1L
     }
     else new Resource {
       val paths = sources.map(s => Paths.get(s.toURI))

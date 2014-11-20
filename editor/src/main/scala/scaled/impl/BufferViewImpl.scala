@@ -72,7 +72,10 @@ class BufferViewImpl (_buffer :BufferImpl, iwid :Int, ihei :Int) extends RBuffer
 
   // pass style changes onto the line views
   _toClose += _buffer.lineStyled.onValue { loc => {
-    if (loc.row > _lines.length) println(s"Bogus style notification $loc ([0...${_lines.length}))")
+    if (loc.row >= _lines.length) {
+      println(s"Bogus style notification $loc ([0..${_lines.length}))")
+      Thread.dumpStack()
+    }
     else _lines(loc.row).onStyle(loc)
   }}
 
