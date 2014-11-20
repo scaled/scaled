@@ -309,6 +309,9 @@ object Line {
       this
     }
 
+    /** Replaces the [[Tags]] used by this builder wholesale. Any previous tags are lost. */
+    def withTags (ts :Tags) :Builder = { _ts = ts ; this }
+
     /** Builds and returns the line. This builder will be rendered unusable after this call. */
     def build () :Line = try new Line(_cs, _xs, _ts, _lts, 0, _cs.length)
                          finally { _cs = null ; _xs = null ; _ts = null ; _lts = null }
