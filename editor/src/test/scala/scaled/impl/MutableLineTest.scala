@@ -43,29 +43,30 @@ class MutableLineTest {
   @Test def testLineTags () {
     val buf = TestData.buffer("test", "")
     val line = new MutableLine(buf, "Every good boy deserves fudge.".toCharArray)
+    val ltags = line.lineTagSet
 
     val tag = TestTag("one") ; val dtag = TestTag("two")
-    line.setLineTag(tag)
+    ltags.set(tag)
     assertEquals(tag, line.lineTag(dtag))
-    line.clearLineTag(classOf[TestTag])
+    ltags.clear(classOf[TestTag])
     assertEquals(dtag, line.lineTag(dtag))
 
     // now set the non-ephemeral tag again and make sure it doesn't go away on edits
-    line.setLineTag(tag)
+    ltags.set(tag)
 
     // make sure an ephemeral tag *does* go away on edits
     val etag = EphTestTag("one") ; val detag = EphTestTag("two")
-    line.setLineTag(etag)
+    ltags.set(etag)
     line.insert(Loc(0, 0), ' ', Syntax.Default)
     assertEquals(detag, line.lineTag(detag))
     assertEquals(tag, line.lineTag(dtag))
 
-    line.setLineTag(EphTestTag("one"))
+    ltags.set(EphTestTag("one"))
     line.delete(Loc(0, 0), 2)
     assertEquals(detag, line.lineTag(detag))
     assertEquals(tag, line.lineTag(dtag))
 
-    line.setLineTag(EphTestTag("one"))
+    ltags.set(EphTestTag("one"))
     line.replace(Loc(0, 0), 2, Line("yay"))
     assertEquals(detag, line.lineTag(detag))
     assertEquals(tag, line.lineTag(dtag))

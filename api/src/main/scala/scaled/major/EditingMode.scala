@@ -286,8 +286,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     else {
       val swap = tp.prevC
       buffer.replace(swap, 2, new Line(Array(buffer charAt tp, buffer charAt swap),
-                                       Array(buffer syntaxAt tp, buffer syntaxAt swap),
-                                       new Tags()))
+                                       Array(buffer syntaxAt tp, buffer syntaxAt swap)))
       view.point() = tp.nextC
     }
   }

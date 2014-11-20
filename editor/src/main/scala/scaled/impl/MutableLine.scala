@@ -22,8 +22,9 @@ object MutableLine {
     val cs = new Array[Char](line.length)
     val xs = new Array[Syntax](line.length)
     val ts = new Tags()
-    line.sliceInto(0, line.length, cs, xs, ts, 0)
-    new MutableLine(buffer, cs, xs, ts)
+    val lts = new Line.TagSet()
+    line.sliceInto(0, line.length, cs, xs, ts, lts, 0)
+    new MutableLine(buffer, cs, xs, ts, lts)
   }
 }
 
@@ -42,42 +43,30 @@ object MutableLine {
   * @param cs The initial characters in this line. Ownership of this array is taken by this line
   * instance and the array may subsequently be mutated thereby.
   */
-class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags :Tags)
-    extends LineV with Store.Writable {
+class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
+                   tags :Tags, ltags :Line.TagSet) extends LineV with Store.Writable {
   def this (buffer :BufferImpl, cs :Array[Char]) = this(
-    buffer, cs, Array.fill(cs.length)(Syntax.Default), new Tags())
+    buffer, cs, Array.fill(cs.length)(Syntax.Default), new Tags(), new Line.TagSet())
 
   require(cs != null && xs != null && tags != null)
 
   protected var _chars = cs
   protected var _syns = xs
   protected def _tags = tags
+  protected def _ltags = ltags
   private[this] var _end = cs.size
-  private[this] var _lineTags = new Array[Line.Tag](4)
 
   override def length = _end
-  override def view (start :Int, until :Int) = new Line(_chars, _syns, tags, start, until-start)
+  override def view (start :Int, until :Int) = new Line(
+    _chars, _syns, tags, ltags, start, until-start)
   override def slice (start :Int, until :Int) = new Line(
-    _chars.slice(start, until), _syns.slice(start, until), tags.slice(start, until))
+    _chars.slice(start, until), _syns.slice(start, until), tags.slice(start, until), ltags.copy())
   override protected def _offset = 0
 
-  override def lineTag[T <: Line.Tag] (dflt :T) :T = {
-    val key = dflt.key ; val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
-      val tag = lt(ii) ; if (tag != null && tag.key == key) return tag.asInstanceOf[T]
-      ii += 1
-    }
-    dflt
-  }
-  override def lineTags = {
-    val lb = List.builder[Line.Tag]()
-    val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
-      val tag = lt(ii) ; if (tag != null) lb += tag
-      ii += 1
-    }
-    lb.build()
-  }
-
   override def write (out :Writer) = out.write(_chars, 0, _end)
+
+  /** Provides access to our tag set for adding/clearing tags. */
+  def lineTagSet = ltags
 
   /** Splits this line at `loc`. Deletes the data from `loc.col` onward from this line.
     * @return a new line which contains the data from `loc.col` onward. */
@@ -93,15 +82,15 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     _chars(loc.col) = c
     _syns(loc.col) = syntax
     _end += 1
-    clearEphLineTags()
+    _ltags.clearEphemeral()
   }
 
   /** Inserts `[offset, offset+count)` slice of `line` into this line at `loc`. */
   def insert (loc :Loc, line :LineV, offset :Int, count :Int) :Loc = if (count == 0) loc else {
     prepInsert(loc.col, count)
-    line.sliceInto(offset, offset+count, _chars, _syns, tags, loc.col)
+    line.sliceInto(offset, offset+count, _chars, _syns, tags, ltags, loc.col)
     _end += count
-    clearEphLineTags()
+    _ltags.clearEphemeral()
     loc + (0, count)
   }
 
@@ -124,7 +113,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
       System.arraycopy(_syns  , last, _syns  , pos, _end-last)
       tags.delete(pos, last)
       _end -= length
-      clearEphLineTags()
+      _ltags.clearEphemeral()
       deleted
     }
   }
@@ -150,9 +139,9 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     // otherwise, we've got a perfect match, no shifting needed
 
     if (delete > 0) tags.clear(pos, lastDeleted)
-    line.sliceInto(0, added, _chars, _syns, tags, pos)
+    line.sliceInto(0, added, _chars, _syns, tags, ltags, pos)
     _end += deltaLength
-    clearEphLineTags()
+    _ltags.clearEphemeral()
     replaced
   }
 
@@ -192,33 +181,6 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     }
   }
 
-  /** Sets the line tag for `tclass` to `tag`. */
-  def setLineTag[T <: Line.Tag] (tag :T) {
-    val key = tag.key ; val lt = _lineTags
-    var idx = -1 ; var ii = 0 ; while (ii < lt.length) {
-      val etag = lt(ii)
-      if (etag == null) { if (idx == -1) idx = ii }
-      else if (etag.key == key) { lt(ii) = tag ; return }
-      ii += 1
-    }
-    if (idx >= 0) lt(idx) = tag
-    else { // expand tags array
-      val nlt = Arrays.copyOf(lt, lt.length*2)
-      nlt(lt.length) = tag
-      _lineTags = nlt
-    }
-  }
-
-  /** Clears any line tag which matches `key`. */
-  def clearLineTag (key :Any) {
-    val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
-      val tag = lt(ii) ; if (tag != null && tag.key == key) {
-        lt(ii) = null
-        return
-      }
-    }
-  }
-
   /** Sets the syntax of chars in `[loc,last)` to `syntax`. */
   def setSyntax (syntax :Syntax, loc :Loc, last :Int = length) {
     var p = loc.col ; while (p < last) { _syns(p) = syntax ; p += 1 }
@@ -254,13 +216,5 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax], tags 
     }
     // we always shift our tags
     _tags.expand(pos, length)
-  }
-
-  private def clearEphLineTags () {
-    val lt = _lineTags ; var ii = 0 ; while (ii < lt.length) {
-      val tag = lt(ii)
-      if (tag != null && tag.clearOnEdit) lt(ii) = null
-      ii += 1
-    }
   }
 }

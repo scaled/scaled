@@ -90,10 +90,10 @@ abstract class LineV extends CharSequence {
     * Line tags are not copied when a line is sliced or otherwise duplicated. Their chief purpose
     * is for modes to store ephemeral state directly in a buffer without having to maintain a
     * parallel data structure. */
-  def lineTag[T <: Line.Tag] (dflt :T) :T
+  def lineTag[T <: Line.Tag] (dflt :T) :T = _ltags.tag(dflt)
 
   /** Returns all line tags applied to this line. */
-  def lineTags :List[Line.Tag]
+  def lineTags :List[Line.Tag] = _ltags.toList
 
   /** Bounds the supplied column into this line. This adjusts it to be in [0, [[length]]] (inclusive
     * of the length because the point can be after the last char on this line). */
@@ -110,11 +110,14 @@ abstract class LineV extends CharSequence {
     * @param until one past the index of the last character to include in the slice. */
   def slice (start :Int, until :Int = length) :Line
 
-  /** Copies `[start, until)` from this line into `cs`/`ss` at `off`. */
-  def sliceInto (start :Int, until :Int, cs :Array[Char], xs :Array[Syntax], ts :Tags, off :Int) {
+  /** Copies `[start, until)` from this line into `cs`/`ss` at `off`. Tags that overlap the region
+    * will be added to `ts` and all line tags will be added to `lts`. */
+  def sliceInto (start :Int, until :Int, cs :Array[Char], xs :Array[Syntax],
+                 ts :Tags, lts :Line.TagSet, off :Int) {
     System.arraycopy(_chars, _offset+start, cs, off, until-start)
     System.arraycopy(_syns, _offset+start, xs, off, until-start)
     _tags.sliceInto(start, until, ts, off)
+    _ltags.addTo(lts)
   }
 
   /** Returns the characters in `[start, until)` as a string. */
@@ -125,9 +128,10 @@ abstract class LineV extends CharSequence {
     val cs = new Array[Char](length + other.length)
     val xs = new Array[Syntax](cs.length)
     val tags = new Tags()
-    sliceInto(0, length, cs, xs, tags, 0)
-    other.sliceInto(0, other.length, cs, xs, tags, length)
-    new Line(cs, xs, tags)
+    val ltags = new Line.TagSet()
+    sliceInto(0, length, cs, xs, tags, ltags, 0)
+    other.sliceInto(0, other.length, cs, xs, tags, ltags, length)
+    new Line(cs, xs, tags, ltags)
   }
 
   /** Returns the index of the first occurrence of `ch` at pos `from` or later.
@@ -255,6 +259,9 @@ abstract class LineV extends CharSequence {
     * implement read-only methods and will never be mutated. */
   protected def _chars :Array[Char]
 
+  /** Returns the offset into [[_chars]] at which our data starts. */
+  protected def _offset :Int
+
   /** Returns the `Syntax` array that backs this line. The returned array will only be used to
     * implement read-only methods and will never be mutated. */
   protected def _syns :Array[Syntax]
@@ -263,16 +270,19 @@ abstract class LineV extends CharSequence {
     * read-only methods and will never be mutated. */
   protected def _tags :Tags
 
-  /** Returns the offset into [[_chars]] at which our data starts. */
-  protected def _offset :Int
+  /** Returns the `TagSet` for this line. The returned object will only be used to implement
+    * read-only methods and will never be mutated. */
+  protected def _ltags :Line.TagSet
 }
 
 /** `Line` related types and utilities. */
 object Line {
 
   /** Used to build (immutable) lines with non-default syntax, styles and tags. */
-  class Builder (private var _cs :Array[Char], private var _ts :Tags) {
+  class Builder (private var _cs :Array[Char]) {
     private var _xs = Array.fill(_cs.length)(Syntax.Default)
+    private var _ts = new Tags()
+    private var _lts = new TagSet()
 
     /** Applies `syntax` to `[start,end)` of the being-built line. */
     def withSyntax (syntax :Syntax, start :Int = 0, end :Int = _cs.length) :Builder = {
@@ -290,9 +300,18 @@ object Line {
       this
     }
 
+    /** Adds `tag` to the being-built line. */
+    def withLineTag (tag :Line.Tag) :Builder = {
+      if (tag.clearOnEdit) throw new IllegalArgumentException(
+        "Ephemeral tags are not propagated into (or out of) the buffer, " +
+        "so setting them when building a line is meaningless.")
+      _lts.set(tag)
+      this
+    }
+
     /** Builds and returns the line. This builder will be rendered unusable after this call. */
-    def build () :Line = try new Line(_cs, _xs, _ts, 0, _cs.length)
-                         finally { _cs = null ; _xs = null ; _ts = null }
+    def build () :Line = try new Line(_cs, _xs, _ts, _lts, 0, _cs.length)
+                         finally { _cs = null ; _xs = null ; _ts = null ; _lts = null }
   }
 
   /** A class that must be extended by all line tags. */
@@ -306,6 +325,84 @@ object Line {
     def clearOnEdit :Boolean = false
   }
 
+  /** Maintains a collection of line tags. */
+  class TagSet (capacity :Int = 4) {
+    private[this] var _tags = new Array[Line.Tag](capacity)
+
+    /** Returns the tag with the same key as `dflt`, or `dflt` if no matching tag is found. */
+    def tag[T <: Line.Tag] (dflt :T) :T = {
+      val key = dflt.key ; val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
+        val tag = lt(ii) ; if (tag != null && tag.key == key) return tag.asInstanceOf[T]
+        ii += 1
+      }
+      dflt
+    }
+
+    /** Returns the tags in this collection as a list. */
+    def toList :List[Line.Tag] = {
+      val lb = List.builder[Line.Tag]()
+      val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
+        val tag = lt(ii) ; if (tag != null) lb += tag
+        ii += 1
+      }
+      lb.build()
+    }
+
+
+    /** Sets the line tag for `tclass` to `tag`. */
+    def set[T <: Line.Tag] (tag :T) {
+      val key = tag.key ; val lt = _tags
+      var idx = -1 ; var ii = 0 ; while (ii < lt.length) {
+        val etag = lt(ii)
+        if (etag == null) { if (idx == -1) idx = ii }
+        else if (etag.key == key) { lt(ii) = tag ; return }
+        ii += 1
+      }
+      if (idx >= 0) lt(idx) = tag
+      else { // expand tags array
+        val nlt = Arrays.copyOf(lt, lt.length*2)
+        nlt(lt.length) = tag
+        _tags = nlt
+      }
+    }
+
+    /** Clears any line tag which matches `key`. */
+    def clear (key :Any) {
+      val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
+        val tag = lt(ii) ; if (tag != null && tag.key == key) {
+          lt(ii) = null
+          return
+        }
+      }
+    }
+
+    /** Clears any line tags which are marked as `clearOnEdit`. */
+    def clearEphemeral () {
+      val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
+        val tag = lt(ii)
+        if (tag != null && tag.clearOnEdit) lt(ii) = null
+        ii += 1
+      }
+    }
+
+    /** Adds all of our non-ephemeral tags into `into`. */
+    def addTo (into :TagSet) {
+      val lt = _tags ; var ii = 0
+      while (ii < lt.length) {
+        val tag = lt(ii)
+        if (tag != null && !tag.clearOnEdit) into.set(tag)
+        ii += 1
+      }
+    }
+
+    /** Creates a copy of all of this tag set's non-ephemeral tags. */
+    def copy () :TagSet = {
+      val ts = new TagSet(_tags.length)
+      addTo(ts)
+      ts
+    }
+  }
+
   /** An empty line. */
   final val Empty = apply("")
 
@@ -316,10 +413,10 @@ object Line {
   def apply (s :String) = builder(s).build()
 
   /** Creates a line builder with `cs` as the line text. */
-  def builder (cs :CharSequence) = new Builder(toCharArray(cs), new Tags())
+  def builder (cs :CharSequence) = new Builder(toCharArray(cs))
 
   /** Creates a line builder with `s` as the line text. */
-  def builder (s :String) = new Builder(s.toCharArray, new Tags())
+  def builder (s :String) = new Builder(s.toCharArray)
 
   /** Creates one or more lines from the supplied text. Newlines are assumed to be equal to
     * [[System.lineSeparator]]. */
@@ -348,9 +445,11 @@ object Line {
   * The constructor takes ownership of the supplied arrays. Do not mutate them after using them to
   * create a `Line`. Clone them first if you need to retain the ability to mutate the arrays.
   */
-class Line (_cs :Array[Char], _xs :Array[Syntax], _ts :Tags,
+class Line (_cs :Array[Char], _xs :Array[Syntax], _ts :Tags, _lts :Line.TagSet,
             protected val _offset :Int, val length :Int) extends LineV {
-  def this (cs :Array[Char], xs :Array[Syntax], tags :Tags) = this(cs, xs, tags, 0, cs.length)
+  def this (cs :Array[Char], xs :Array[Syntax], tags :Tags, ltags :Line.TagSet) = this(
+    cs, xs, tags, ltags, 0, cs.length)
+  def this (cs :Array[Char], xs :Array[Syntax]) = this(cs, xs, new Tags(), new Line.TagSet())
 
   require(_cs != null && _xs != null && _ts != null && _cs.length == _xs.length &&
           _offset >= 0 && length >= 0 && length <= (_cs.length - _offset),
@@ -358,14 +457,13 @@ class Line (_cs :Array[Char], _xs :Array[Syntax], _ts :Tags,
 
   override def view (start :Int, until :Int) = if (start == 0 && until == length) this
                                                else slice(start, until)
-  override def slice (start :Int, until :Int) = new Line(_cs, _xs, _ts, _offset+start, until-start)
-
-  override def lineTag[T <: Line.Tag] (dflt :T) = dflt
-  override def lineTags = Nil
+  override def slice (start :Int, until :Int) =
+    new Line(_cs, _xs, _ts, _lts, _offset+start, until-start)
 
   override protected def _chars = _cs
   override protected def _syns  = _xs
   override protected def _tags  = _ts
+  override protected def _ltags = _lts
 
   override def toString () = s"$asString [${_offset}:$length/${_cs.length}]"
 }
