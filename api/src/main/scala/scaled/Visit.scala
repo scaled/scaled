@@ -7,8 +7,18 @@ package scaled
 /** Encapsulates a "visit". */
 abstract class Visit {
 
-  /** Visits this visit's target in `window`'s focused frame. */
-  def apply (window :Window) :Unit
+  /** Visits our target in `window`'s focused frame.
+    * @param push whether to push the current location onto the visit stack before we go. */
+  def apply (window :Window, push :Boolean = true) {
+    val obuf = window.focus.view.buffer ; val oloc = window.focus.view.point()
+    go(window)
+    // if requested, and we actually went anywhere, push our old loc onto the visit stack
+    if (push && (oloc != window.focus.view.point() || obuf != window.focus.view.buffer)) {
+      window.visitStack.push(obuf, oloc)
+    }
+  }
+
+  protected def go (window :Window) :Unit
 }
 
 /** Visit factory methods. */
@@ -62,10 +72,7 @@ object Visit {
       // the visit stack; this means that the first time you start cycling through the visit list,
       // we note your loc, but if you just cycle cycle cycle, we don't push every intermediate
       // location onto the visit stack, only if you move the point after a visit do we push
-      val obuf = window.focus.view.buffer ; val oloc = window.focus.view.point()
-      val push = oloc != _lastLoc
-      visits(_current)(window)
-      if (push) window.visitStack.push(obuf, oloc)
+      visits(_current)(window, window.focus.view.point() != _lastLoc)
       _lastLoc = window.focus.view.point()
     }
 
@@ -112,7 +119,7 @@ object Visit {
 
   /** Returns an instance that will visit `offset` in `store`. */
   def apply (store :Store, offset :Int) :Visit = new Visit() {
-    def apply (window :Window) {
+    protected def go (window :Window) {
       val view = window.focus.visitFile(store)
       view.point() = view.buffer.loc(offset)
     }
@@ -121,7 +128,7 @@ object Visit {
 
   /** Returns an instance that will visit `loc` in `store`. */
   def apply (store :Store, loc :Loc) :Visit = new Visit() {
-    def apply (window :Window) {
+    protected def go (window :Window) {
       val view = window.focus.visitFile(store)
       view.point() = loc
     }
