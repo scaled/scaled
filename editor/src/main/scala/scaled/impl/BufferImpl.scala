@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import java.io.File
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Errors
@@ -27,7 +28,8 @@ object BufferImpl {
   }
 
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
-  def scratch (name :String) :BufferImpl = apply(new TextStore(name, cwd.toString, ""))
+  def scratch (name :String) :BufferImpl = apply(
+    new TextStore(name, cwd.toString + File.separator, ""))
 
   /** Used to track the view state for a buffer when it's not visible. */
   case class ViewState (point :Loc, scrollTop :Int, scrollLeft :Int)
