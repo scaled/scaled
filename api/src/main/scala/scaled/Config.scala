@@ -5,8 +5,9 @@
 package scaled
 
 import java.io.{FileNotFoundException, InputStream}
+import java.net.URL
 import java.nio.file.{Files, Path, Paths}
-import scaled.util.Reloadable
+import scaled.util.Resource
 
 /** Provides editor configuration to modes. The global configuration and mode configuration will be
   * combined together into an instance of this trait and supplied to a mode when it is constructed.
@@ -173,18 +174,15 @@ object Config {
       case strm => strm
     }
 
-    protected def reloadable[T] (path :String)( parser :Path => T) :PropertyV[T] =
-      new Reloadable(rsrcPath(path), parser)
-    protected def reloadable[T] (paths :Seq[String])(parser :Seq[Path] => T) :PropertyV[T] =
-      new Reloadable(paths map rsrcPath, parser)
+    protected def resource[T] (path :String)(parser :Resource => T) :PropertyV[T] =
+      Resource(rsrcURL(path)).toProperty(parser)
+    protected def resource[T] (paths :Seq[String])(parser :Resource => T) :PropertyV[T] =
+      Resource(paths map rsrcURL).toProperty(parser)
 
-    private def rsrcPath (path :String) :Path = {
-      val rsrc = getClass.getClassLoader.getResource(path)
-      if (rsrc == null) throw new FileNotFoundException(path)
-      // if the resource is not a file for some reason, we can't reload it
-      else if (rsrc.getProtocol != "file") throw new IllegalStateException(
-        s"Cannot reload non-file resource: '$rsrc'")
-      else Paths.get(rsrc.toURI)
+    private def rsrcURL (path :String) :URL = {
+      val url = getClass.getClassLoader.getResource(path)
+      if (url == null) throw new FileNotFoundException(path)
+      url
     }
   }
 
