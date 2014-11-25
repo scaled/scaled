@@ -73,15 +73,20 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
     None
   }
 
-  /** Partitions this collection into a map of collections based on discrimitator function `f`.
+  /** Partitions this collection into a map of collections based on discriminator function `f`.
     * $ORDER */
-  def groupBy[K] (f :A => K) :Map[K,Unordered[A]] = {
-    val bs = new HashMap[K,Builder[A]]()
+  def groupBy[K] (f :A => K) :Map[K,Unordered[A]] = groupBy(f, a => a)
+
+  /** Partitions this collection into a map of collections based on key discriminator function
+    * `kf` and value discriminator function `vf`.
+    * $ORDER */
+  def groupBy[K,V] (kf :A => K, vf :A => V) :Map[K,Unordered[V]] = {
+    val bs = new HashMap[K,Builder[V]]()
     val iter = iterator() ; while (iter.hasNext) {
       val a = iter.next
-      Mutable.getOrPut(bs, f(a), newBuilder[A]()) += a
+      Mutable.getOrPut(bs, kf(a), newBuilder[V]()) += vf(a)
     }
-    val mb = Map.builder[K,Unordered[A]]()
+    val mb = Map.builder[K,Unordered[V]]()
     val meiter = bs.entrySet.iterator() ; while (meiter.hasNext) {
       val me = meiter.next
       mb += (me.getKey, me.getValue.build())
