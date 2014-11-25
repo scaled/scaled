@@ -260,6 +260,16 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
     sb.append(close)
   }
 
+  // views
+  /** Returns a view of this iterable as a Scala [[SIterable]]. */
+  def asSIterable :SIterable[A] = new SIterable[A]() {
+    override def iterator = new SIterator[A]() {
+      private[this] val iter = Iterable.this.iterator()
+      def next = iter.next
+      def hasNext = iter.hasNext
+    }
+  }
+
   override def hashCode () = {
     var code = 1
     val iter = iterator() ; while (iter.hasNext) {

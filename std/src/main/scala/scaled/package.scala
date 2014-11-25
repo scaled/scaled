@@ -27,6 +27,8 @@ package object scaled {
   type JStringBuilder = java.lang.StringBuilder
 
   // for great Scala interop
+  type SIterator[+A] = scala.collection.Iterator[A]
+  type SIterable[+A] = scala.collection.Iterable[A]
   type SList[+A] = scala.List[A]
   @inline final val SNil = scala.Nil
   type SSeq[+A] = scala.Seq[A]
