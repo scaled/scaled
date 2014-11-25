@@ -4,7 +4,7 @@
 
 package scaled
 
-import java.util.{Collection, Comparator, Set => JSet}
+import java.util.{AbstractSet, Collection, Comparator, Set => JSet}
 
 /** An unordered collection of elements, with no duplicates. */
 abstract class Set[A] extends Unordered[A] with (A => Boolean) {
@@ -67,6 +67,14 @@ abstract class Set[A] extends Unordered[A] with (A => Boolean) {
   /** Applies `f` to each element of this set and returns a new set that contains the union of the
     * resulting sets. */
   def flatMap[B] (f :A => JIterable[B]) :Set[B] = foldBuild[B]((b, a) => b ++= f(a))
+
+  // views
+  /** Returns a view of this seq as a [[JList]]. */
+  def asJSet :JSet[A] = new AbstractSet[A]() {
+    override def size = Set.this.size
+    override def contains (elem :Any) = Set.this.contains(elem.asInstanceOf[A])
+    override def iterator = Set.this.iterator
+  }
 
   // overrides for performance and type specificity
   override def concat[B >: A] (that :Iterable[B]) :Set[B] = super.concat(that).toSet
