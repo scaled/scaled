@@ -14,7 +14,7 @@ object Errors {
     * [[Editor.emitError]] will report such exceptions to the user but not dump their stack trace
     * for debugging.
     */
-  class FeedbackException (msg :String) extends Exception(msg)
+  class FeedbackException (msg :String) extends RuntimeException(msg)
 
   /** Returns true if `t` is a feedback exception. */
   def isFeedback (t :Throwable) :Boolean = t.isInstanceOf[FeedbackException]
