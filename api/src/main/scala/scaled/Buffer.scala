@@ -389,12 +389,18 @@ abstract class Buffer extends BufferV {
     * @return the buffer location just after the inserted character. */
   def insert (loc :Loc, c :Char, syntax :Syntax) :Loc
 
-  /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be spliced
-    * into the line at `loc`, a new line will not be created. If you wish to create a new line,
-    * [[split]] at `loc` and then insert into the appropriate half.
+  /** Inserts the contents of `line` into this buffer at `loc`. The line in question will be
+    * spliced into the line at `loc`, a new line will not be created. Use [[insertLine]] if you
+    * wish to break the line immediately following the inserted line.
     *
     * @return the buffer location just after the inserted line. */
   def insert (loc :Loc, line :LineV) :Loc
+
+  /** Inserts the contents of `line` into this buffer at `loc` and splits the line immediately
+    * following the inserted line. This effectively inserts a line plus a newline.
+    *
+    * @return the buffer location just after the inserted newline. */
+  def insertLine (loc :Loc, line :LineV) :Loc = split(insert(loc, line))
 
   /** Inserts `region` into this buffer at `loc`. `region` will often have come from a call to
     * [[region(Loc,Loc)]] or [[delete(Loc,Loc)]].
@@ -442,8 +448,9 @@ abstract class Buffer extends BufferV {
 
   /** Splits the line at `loc`. The characters up to `loc.col` will remain on the `loc.row`th line,
     * and the character at `loc.col` and all subsequent characters will be moved to a new line
-    * which immediately follows the `loc.row`th line. */
-  def split (loc :Loc) :Unit
+    * which immediately follows the `loc.row`th line.
+    * @return the new location of the character that was at `loc`. */
+  def split (loc :Loc) :Loc
 
   /** Sets the syntax of the characters between `[start, until)` to `syntax`. */
   def setSyntax (syntax :Syntax, start :Loc, until :Loc) :Unit

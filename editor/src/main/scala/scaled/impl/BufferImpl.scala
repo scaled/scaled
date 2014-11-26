@@ -196,7 +196,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
       noteTransform(start, orig.build())
     }
 
-  override def split (loc :Loc) {
+  override def split (loc :Loc) = {
     _lines.insert(loc.row+1, line(loc).split(loc))
     noteInsert(loc, loc.nextStart)
   }
