@@ -6,10 +6,10 @@ package scaled;
 
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import scala.runtime.BoxedUnit;
 
 /**
@@ -119,16 +119,12 @@ public class Std {
     };
   }
 
-  /** Bridges a {@link Callable} to a {@code scala.Function0}.
+  /** Bridges a {@link Supplier} to a {@code scala.Function0}.
     * Useful until Scala gets its shit together SAM-wise. */
-  public static <R> scala.Function0<R> fn0 (Callable<R> fn) {
+  public static <R> scala.Function0<R> fn0 (Supplier<R> fn) {
     return new scala.runtime.AbstractFunction0<R>() {
       public R apply () {
-        try {
-          return fn.call();
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+        return fn.get();
       }
     };
   }
