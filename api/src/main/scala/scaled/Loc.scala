@@ -64,11 +64,14 @@ class Loc private (val rowCol :Long) extends AnyVal {
   def prevC :Loc = Loc(row, col-1)
   /** Returns the loc directly to the right of this loc. */
   def nextC :Loc = Loc(row, col+1)
+
   /** Returns the loc directly above this loc. */
   def prevL :Loc = Loc(row-1, col)
   /** Returns the loc directly below this loc. */
   def nextL :Loc = Loc(row+1, col)
 
+  /** Returns the start of the line before the line referenced by this loc. */
+  def prevStart :Loc = Loc(row-1, 0)
   /** Returns the start of the line after the line referenced by this loc. */
   def nextStart :Loc = Loc(row+1, 0)
 
