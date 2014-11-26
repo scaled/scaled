@@ -6,6 +6,11 @@ package scaled;
 
 import java.util.Iterator;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import scala.runtime.BoxedUnit;
 
 /**
  * Provides utility functions and static methods that operate on {@code scaled} data structures.
@@ -96,5 +101,43 @@ public class Std {
       result = 31 * result + (elem == null ? 0 : elem.hashCode());
     }
     return result;
+  }
+
+  /** Bridges a {@link Function} to a {@code scala.Function1}.
+    * Useful until Scala gets its shit together SAM-wise. */
+  public static <T1,R> scala.Function1<T1,R> fn (Function<T1,R> fn) {
+    return new scala.runtime.AbstractFunction1<T1,R>() {
+      public R apply (T1 value) { return fn.apply(value); }
+    };
+  }
+
+  /** Bridges a {@link Consumer} to a {@code scala.Function1} which returns {@code Unit}.
+    * Useful until Scala gets its shit together SAM-wise. */
+  public static <T> scala.Function1<T,BoxedUnit> fnU (Consumer<T> fn) {
+    return new scala.runtime.AbstractFunction1<T,BoxedUnit>() {
+      public BoxedUnit apply (T value) { fn.accept(value); return BoxedUnit.UNIT; }
+    };
+  }
+
+  /** Bridges a {@link Callable} to a {@code scala.Function0}.
+    * Useful until Scala gets its shit together SAM-wise. */
+  public static <R> scala.Function0<R> fn0 (Callable<R> fn) {
+    return new scala.runtime.AbstractFunction0<R>() {
+      public R apply () {
+        try {
+          return fn.call();
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+  }
+
+  /** Bridges a {@link BiFunction} to a {@code scala.Function2}.
+    * Useful until Scala gets its shit together SAM-wise. */
+  public static <T1,T2,R> scala.Function2<T1,T2,R> fn2 (BiFunction<T1,T2,R> fn) {
+    return new scala.runtime.AbstractFunction2<T1,T2,R>() {
+      public R apply (T1 v1, T2 v2) { return fn.apply(v1, v2); }
+    };
   }
 }
