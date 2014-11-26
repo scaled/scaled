@@ -18,6 +18,8 @@ case class Popup (
     * getting manner than non-error (informatinonal) popups. */
   isError :Boolean) {
 
+  assert(!lines.isEmpty, "Popup must contain at least one line.")
+
   /** Returns a copy of this popup that is persistent, not ephemeral. */
   def toPersistent :Popup = copy(isEphemeral=false)
 
