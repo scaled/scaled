@@ -34,7 +34,10 @@ class ServiceInjector (val log :Logger, val exec :Executor, editor :Editor)
       var remargs = SeqBuffer[Any]().append(args).append(stockArgs)
       val params = ctor.getParameterTypes.map { p => remargs.find(p.isInstance) match {
         case Some(arg) => remargs.remove(arg) ; arg
-        case None      => resolveService(p)
+        case None =>
+          if (p.getName.endsWith("Service")) resolveService(p)
+          else throw new InstantiationException(
+            s"Unable to resolve mode arg: $p (args: $args, remargs: $remargs")
       }}
       ctor.newInstance(params.asInstanceOf[Array[Object]] :_*).asInstanceOf[T]
     } catch {
