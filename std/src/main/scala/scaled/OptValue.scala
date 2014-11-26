@@ -70,7 +70,11 @@ object OptValue {
 
   /** Creates an instance with the specified starting value. */
   def apply[T] (init :T) = new OptValue[T](init)
-
   /** Creates an instance with an empty starting value. */
   def apply[T] () = new OptValue[T](null.asInstanceOf[T])
+
+  /** Creates an instance with the specified starting value. */
+  def create[T] (init :T) = apply(init)
+  /** Creates an instance with an empty starting value. */
+  def create[T] () = apply[T]()
 }
