@@ -177,10 +177,9 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   override def createBuffer (name :String, state :List[State.Init[_]],
                              reuse :Boolean) :BufferImpl = {
-    def isScratch (name :String) = (name startsWith "*") && (name endsWith "*")
     def create (name :String) = {
       val parent = buffers.headOption.map(b => Paths.get(b.store.parent)) || cwd
-      val buf = if (isScratch(name)) BufferImpl.scratch(name)
+      val buf = if (Buffer.isScratch(name)) BufferImpl.scratch(name)
                 else BufferImpl(Store(parent.resolve(name)))
       state foreach { _.apply(buf.state) }
       addBuffer(buf)

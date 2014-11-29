@@ -535,6 +535,9 @@ object Buffer {
     def unapply (edit :Transform) = Some((edit.start, edit.end, edit.original))
   }
 
+  /** Returns true if `name` is a temporary buffer name. */
+  def isScratch (name :String) = (name startsWith "*") && (name endsWith "*")
+
   /** Creates a read-only buffer view. Mainly useful for testing. */
   def apply (name :String, text :String) :BufferV = apply(name, Line.fromText(text))
 
