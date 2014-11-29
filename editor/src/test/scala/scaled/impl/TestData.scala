@@ -66,6 +66,7 @@ object TestData {
 
   val editor = new Editor {
     val config = new ConfigImpl("editor", cwd, testScope, EditorConfig :: Nil, None)
+    val exec = TestData.exec
     val workspaceOpened = Signal[Workspace]()
     def showURL (url :String) {}
   }

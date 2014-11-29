@@ -34,7 +34,7 @@ class Scaled extends Application with Editor {
     }
   }
 
-  val exec = new Executor {
+  override val exec = new Executor {
     override val uiExec = new java.util.concurrent.Executor {
       override def execute (op :Runnable) = Platform.runLater(op)
     }

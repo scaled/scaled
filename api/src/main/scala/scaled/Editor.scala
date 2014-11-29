@@ -21,6 +21,9 @@ trait Editor {
   /** Provides global config data. Keys are defined in [[EditorConfig]]. */
   def config :Config
 
+  /** Enables running code on background or UI threads. */
+  def exec :Executor
+
   /** Displays the supplied URL in the user's preferred web browser. */
   def showURL (url :String) :Unit
 

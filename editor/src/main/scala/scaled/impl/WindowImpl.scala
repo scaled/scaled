@@ -103,15 +103,20 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
       ws.app.svcMgr.injectInstance(clazz, args)
   }
 
-  /** Called when this editor pane is going away. Cleans up. */
+  /** Called when this window is going away. Cleans up. */
   def dispose () {
+    _msgConn.close()
     _frames foreach { _.disp.dispose() }
     _frames.clear()
   }
+
   private val _frames = SeqBuffer[FrameImpl]()
   private val _frame = new FrameImpl() // TEMP: for now we have only one frame
   _frames += _frame
   getChildren().add(_frame)
+
+  // pass workspace status messages along via our status bar
+  private val _msgConn = ws.statusMsg.onValue(emitStatus(_, true))
 
   //
   // Window interface methods

@@ -162,6 +162,10 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     }
   }
 
+  // record statusMsg messsages to messages buffer; the windows emit them ephemerally which
+  // circumvents their being appended then because otherwise we'd get one copy per window
+  statusMsg.onValue(recordMessage)
+
   def focusedBuffer (buffer :BufferImpl) {
     buffers -= buffer
     buffers prepend buffer
