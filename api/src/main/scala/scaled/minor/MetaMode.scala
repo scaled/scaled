@@ -52,7 +52,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
     val fstb = wspace.buffers.head
     val defb = wspace.buffers.drop(1).headOption getOrElse fstb
     val defp = s" (default ${defb.name})"
-    val comp = Completer.buffer(wspace, Some(defb), Set(fstb))
+    val comp = Completer.buffer(wspace, defb, Set(fstb))
     window.mini.read(s"Switch to buffer$defp:", "", bufferHistory(wspace),
                      comp) onSuccess frame.visit
   }
@@ -61,7 +61,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   def killBuffer () {
     val current = wspace.buffers.head
     val prompt = s"Kill buffer (default ${current.name}):"
-    val comp = Completer.buffer(wspace, Some(current))
+    val comp = Completer.buffer(wspace, current)
     window.mini.read(prompt, "", bufferHistory(wspace), comp) onSuccess(_.kill())
 
     // TODO: document our process when we have one:
@@ -139,7 +139,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Displays the documentation for a fn.")
   def describeFn () {
-    window.mini.read("Fn:", "", fnHistory(wspace), Completer.from(disp.fns, true)) onSuccess { fn =>
+    window.mini.read("Fn:", "", fnHistory(wspace), Completer.from(disp.fns)) onSuccess { fn =>
       disp.describeFn(fn) match {
         case Some(descrip) => window.popStatus(s"Fn: $fn", descrip)
         case None => window.popStatus(s"No such fn: $fn")
@@ -234,7 +234,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Reads fn name then invokes it.")
   def executeExtendedCommand () {
-    window.mini.read("M-x", "", fnHistory(wspace), Completer.from(disp.fns, true)) onSuccess { fn =>
+    window.mini.read("M-x", "", fnHistory(wspace), Completer.from(disp.fns)) onSuccess { fn =>
       if (!disp.invoke(fn)) window.popStatus(s"Unknown fn: $fn")
     }
   }
@@ -254,7 +254,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
-    val comp = Completer.from(disp.minorModes, true)
+    val comp = Completer.from(disp.minorModes)
     window.mini.read("Mode:", "", modeHistory(wspace), comp) onSuccess disp.toggleMode
   }
 

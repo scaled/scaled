@@ -23,60 +23,55 @@ class MiniReadMode[T] (
   miniui.setPrompt(prompt)
   setContents(initText)
 
-  override def keymap = super.keymap.
-    bind("previous-history-entry", "UP").
-    bind("next-history-entry",     "DOWN").
-    bind("complete",               "TAB", "S-TAB").
-    // TODO: special C-d that updates completions if at eol (but does not complete max prefix)
-    bind("commit-read",            "ENTER");
+  private def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
+  private var _comp = completer(current)
+  display()
 
-  def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
-
-  @Fn("Commits the current minibuffer read with its current contents.")
-  def commitRead () {
-    val curpre = current
-    // if they commit and we have no current completion...
-    if (!curcomp.isDefined) {
-      // generate a completion and then attempt to commit with that; if they provided a valid
-      // completion (or more likely it was provided as a default) then it will commit directly
-      curcomp = Some(completer.complete(curpre))
-      // don't allow the default completion to be used because the user hasn't seen it yet
-      completer.commit(curcomp, curpre, false) match {
-        // if no match, display the completion to let them know we need more info
-        case None    => display(curpre, curcomp.get)
-        case Some(r) => succeed(r)
+  // machinery for handling coalesced search string refreshing
+  private var _refreshPending = false
+  private def queueRefresh () {
+    if (!_refreshPending) {
+      _refreshPending = true
+      env.exec.runOnUI { // TODO: after 250ms delay?
+        val glob = current ; val oglob = _comp.glob
+        if (glob != oglob) {
+          _comp = completer.refine(_comp, glob)
+          // the completer may "massage" the completion string, so stuff if back in the minibuffer
+          setContents(_comp.glob)
+          display()
+        }
+        _refreshPending = false
       }
     }
-    // otherwise we commit with the current completion
-    else completer.commit(curcomp, curpre, true) match {
-      case None    => complete()
-      case Some(r) => succeed(r)
-    }
   }
+  buffer.edited onEmit queueRefresh
 
-  // saves the current contents to our history and sends back a resultult
-  private def succeed (result :T) {
-    // only add contents to history if it's non-empty
-    val lns = buffer.region(buffer.start, buffer.end)
-    if (lns.size > 1 || lns.head.length > 0) history.filterAdd(lns)
-    promise.succeed(result)
-  }
-
-  private var curcomp :Option[Completion[T]] =  None
-  private var currentText = initText
+  private var nonHistoryText = initText
   private var historyAge = -1
   // reset to historyAge -1 whenever the buffer is modified
   buffer.edited.onEmit { historyAge = -1 }
 
-  private def showHistory (age :Int) {
-    if (age == -1) setContents(currentText)
-    else {
-      // if we were showing currentText, save it before overwriting it with history
-      if (historyAge == -1) currentText = buffer.region(buffer.start, buffer.end)
-      setContents(history.entry(age).get)
+  override def keymap = super.keymap.
+    bind("previous-history-entry", "UP").
+    bind("next-history-entry",     "DOWN").
+    bind("extend-completion",      "TAB").
+    bind("commit-read",            "ENTER");
+
+  @Fn("Extends the current completion to the longest shared prefix of the displayed completions.")
+  def extendCompletion () {
+    val pre = _comp.longestPrefix
+    // only set the prefix if it actually extends the current completion
+    if (Completer.startsWithI(current)(pre)) setContents(pre)
+  }
+
+  @Fn("Commits the current minibuffer read with its current contents.")
+  def commitRead () {
+    completer.commit(_comp, current).foreach { result =>
+      // only add contents to history if it's non-empty
+      val lns = buffer.region(buffer.start, buffer.end)
+      if (lns.size > 1 || lns.head.length > 0) history.filterAdd(lns)
+      promise.succeed(result)
     }
-    // update historyAge after setting contents because setting contents wipes historyAge
-    historyAge = age
   }
 
   @Fn("Puts the previous history entry into the minibuffer.")
@@ -92,33 +87,30 @@ class MiniReadMode[T] (
     else showHistory(historyAge-1)
   }
 
-  @Fn("Completes the minibuffer contents as much as possible.")
-  def complete () {
-    val curpre = current
-    val comp = completer.complete(curpre)
-    curcomp = Some(comp)
-    display(curpre, comp)
+  private def showHistory (age :Int) {
+    if (age == -1) setContents(nonHistoryText)
+    else {
+      // if we were showing non-history text, save it before overwriting it with history
+      if (historyAge == -1) nonHistoryText = buffer.region(buffer.start, buffer.end)
+      setContents(history.entry(age).get)
+    }
+    // update historyAge after setting contents because setting contents wipes historyAge
+    historyAge = age
   }
 
-  private def display (curpre :String, comp :Completion[_]) {
-    if (comp.comps.isEmpty) miniui.showCompletions(Seq("No match."))
-    else if (comp.comps.size == 1) {
-      miniui.showCompletions(Seq())
-      setContents(comp.comps.head)
-    }
+  // don't display completions if we're not completing (TODO: have this be a member on Completer;
+  // comparing against a global seems pretty hacky)
+  private def display () :Unit = if (completer != Completer.none) {
+    val comps = _comp.comps
+    if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
     else {
-      // allow the completer to massage the currently displayed prefix (usually this means
-      // replacing it with the longest shared prefix of the completions)
-      val pre = comp.massageCurrent(curpre)
-      if (pre != curpre) setContents(pre)
       // if we have a path separator, strip off the path prefix shared by the current completion;
       // this results in substantially smaller and more readable completions when we're completing
       // things like long file system paths
+      val pre = _comp.glob
       val preLen = completer.pathSeparator map(sep => pre.lastIndexOf(sep)+1) getOrElse 0
-      val stripped = if (preLen > 0) comp.comps.map(_.substring(preLen)) else comp.comps
+      val stripped = if (preLen > 0) comps.map(_.substring(preLen)) else comps
       miniui.showCompletions(stripped)
     }
   }
-
-  private def copyContents = buffer.region(buffer.start, buffer.end)
 }

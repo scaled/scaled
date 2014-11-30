@@ -9,22 +9,28 @@ import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.util.stream.Stream
 
 /** Represents a computed completion. */
-abstract class Completion[T] {
+abstract class Completion[+T] (
+  /** The string used to generate this completion. */
+  val glob :String,
+  /** The strings to be displayed for completion, in display order. */
+  val comps :SeqV[String]) {
 
-  /** Returns the completion display strings, in the order they should be displayed. */
-  def comps :Seq[String]
+  /** Returns the completion originally returned from a [[Completer]] regardless of how many times
+    * it has been [[refine]]d. */
+  def root :Completion[T]
 
   /** Returns `Some` value associated with the completion `comp`, or `None`. */
   def apply (comp :String) :Option[T]
 
-  /** Returns the default value to use when committed with a non-matching value. */
-  def defval :Option[T] = comps.headOption.flatMap(apply)
+  /** Refines this completion with the longer prefix `prefix`. This generally means filtering
+    * `comps` to contain only those elements which [[Completion.fuzzyMatch]] `prefix`. */
+  def refine (prefix :String) :Completion[T]
 
-  /** Gives the completion a chance to "massage" the currently displayed prefix. By default the
-    * prefix is replaced with the longest shared prefix of all the completions. In normal
-    * circumstances this is useful, but if a completer is doing special stuff, it might not be.
-    */
-  def massageCurrent (cur :String) :String = comps reduce sharedPrefix
+  /** Returns the default value to use when committed with a non-matching value. */
+  def onNonMatch :Option[T] = comps.headOption.flatMap(apply)
+
+  /** Returns the longest prefix of the completions that is the same for all completions. */
+  def longestPrefix :String = if (comps.isEmpty) "" else comps reduce sharedPrefix
 
   override def toString = s"Completion($comps)"
 
@@ -52,18 +58,31 @@ abstract class Completion[T] {
 /** Factory methods for standard completions. */
 object Completion {
 
-  /** Creates a completion over `values`, formatting them with `format`.
-    * @param sort if true the values will be sorted lexically, if false they will be displayed in
-    * iteration order.
-    */
-  def apply[T] (values :Iterable[T], format :T => String, sort :Boolean) :Completion[T] =
-    apply(values.iterator, format, sort)
+  /** Returns an empty completion of type `T`. */
+  def empty[T] (prefix :String) :Completion[T] = new Completion[T](prefix, Seq()) {
+    override def apply (curval :String) = None
+    override def refine (prefix :String) :Completion[T] = this
+    override def root = this
+  }
+
+  /** Returns a sorted completion over some strings. */
+  def string (glob :String, ss :Iterable[String]) :Completion[String] =
+    apply[String](glob, ss, true)(identity)
 
   /** Creates a completion over `values`, formatting them with `format`.
     * @param sort if true the values will be sorted lexically, if false they will be displayed in
     * iteration order.
     */
-  def apply[T] (viter :JIterator[T], format :T => String, sort :Boolean) :Completion[T] = {
+  def apply[T] (glob :String, values :Iterable[T], sort :Boolean)
+               (format :T => String) :Completion[T] =
+    apply(glob, values.iterator, sort)(format)
+
+  /** Creates a completion over `values`, formatting them with `format`.
+    * @param sort if true the values will be sorted lexically, if false they will be displayed in
+    * iteration order.
+    */
+  def apply[T] (glob :String, viter :JIterator[T], sort :Boolean)
+               (format :T => String) :Completion[T] = {
     val cb = Seq.builder[String]()
     val mb = Map.builder[String,T]()
     while (viter.hasNext) {
@@ -75,7 +94,7 @@ object Completion {
     // we need to turn our treeset into a seq immediately otherwise the sort ordering will be lost
     // further down the line when it is filtered or grouped or whatnot
     val cs = cb.build()
-    apply(if (sort) cs.sorted else cs, mb.build())
+    apply(glob, if (sort) cs.sorted else cs, mb.build())
   }
 
   /** Creates a completion with `cs` and `map`.
@@ -90,105 +109,133 @@ object Completion {
     * @param cs the list of completion strings.
     * @param map a map from completion string back to completed object.
     */
-  def apply[T] (cs :Seq[String], map :Map[String,T]) :Completion[T] = new Completion[T] {
-    def comps = cs
-    def apply (comp :String) = map.get(comp)
-    override def toString = map.toString
+  def apply[T] (glob :String, cs :Seq[String], map :Map[String,T]) :Completion[T] =
+    new MapComp(glob, cs, map)
+
+  /** Returns true if `glob` fuzzy matches `full`. A fuzzy match means that each character of
+    * `glob` appears in `full`, in order, with zero or more intervening characters. For example:
+    * `pnts` fuzzy matches `peanuts`. */
+  def fuzzyMatch (glob :String)(full :String) :Boolean = {
+    val glen = glob.length ; val flen = full.length
+    if (glen == 0) true
+    else if (glen > flen) false
+    else {
+      var gg = 0 ; var lg = Character.toLowerCase(glob.charAt(gg))
+      var ff = 0 ; while (gg < glen && ff < flen) {
+        val lf = Character.toLowerCase(full.charAt(ff))
+        if (lg == lf) {
+          gg += 1
+          if (gg < glen) lg = Character.toLowerCase(glob.charAt(gg))
+        }
+        ff += 1
+      }
+      gg == glen
+    }
   }
 
-  /** Creates an intermediate completion over `cs`. None of the completions will resolve to a value,
-    * but they presumably resolve to strings which will be further completed to valid completions.
-    * The main use for this is to complete intermediate directories in a completer that only
-    * completes files, but which must needs complete directories along the way.
-    */
-  def intermediate[T] (cs :Seq[String]) :Completion[T] = new Completion[T] {
-    def comps :Seq[String] = cs
-    def apply (comp :String) = None
-    override def toString = cs.toString
+  private class MapComp[T] (gl :String, cs :SeqV[String], map :Map[String,T])
+      extends Completion[T](gl, cs) {
+    def apply (comp :String) = map.get(comp)
+    def refine (prefix :String) = {
+      val outer = this
+      new MapComp[T](prefix, comps.filter(fuzzyMatch(prefix)), map) {
+        override def root = outer.root
+      }
+    }
+    def root = this
+    override def toString = map.toString
   }
 }
 
 /** Handles completions. */
 abstract class Completer[T] {
 
-  /** Completes `prefix`, returning a list of completions.
-    * The completions should be complete values, not suffixes to be applied to `prefix. */
-  def complete (prefix :String) :Completion[T]
+  /** Generates a completion for the specified initial prefix. */
+  def apply (prefix :String) :Completion[T] =
+    if (prefix.length >= minPrefix) complete(prefix)
+    else Completion.empty(prefix)
 
-  /** Requests to commit `comp` with the specified `current` value. If `Some(r)` is
-    * returned, the completion will finish with that result. If `None` is returned, the
-    * user will be required to keep going until they provide a valid completion.
-    *
-    * The default implementation checks whether current is currently a valid completion, and
-    * uses it, if so. Otherwise it calls `fromString` and uses that result if possible. Finally
-    * it attempts to return the lexically first current completion (which is what will be
-    * displayed at the top of the completions list).
-    */
-  def commit (comp :Option[Completion[T]], current :String, allowDefault :Boolean) :Option[T] = {
-    comp.flatMap(_.apply(current)) orElse fromString(current) orElse {
-      if (allowDefault) comp.flatMap(_.defval) else None
+  /** Refines an existing completion given the supplied prefix. */
+  def refine (comp :Completion[T], prefix :String) :Completion[T] = {
+    val oglob = comp.glob
+    // if prefix is (still) too short, return empty completion
+    if (prefix.length < minPrefix) Completion.empty(prefix)
+    // if the previous completion is empty, we need to generate a proper completion now that we
+    // have a sufficiently long prefix
+    else if (oglob.length < minPrefix) apply(prefix)
+    // normal case: extending an existing match
+    else if (prefix startsWith oglob) comp.refine(prefix)
+    // backspace case: new glob is prefix of old glob
+    else if (oglob startsWith prefix) {
+      // if we're still within our root glob, refine from there
+      if (prefix startsWith comp.root.glob) comp.root.refine(prefix)
+      // otherwise we need to generate a new completion
+      else apply(prefix)
     }
+    // other case: new glob totally unrelated to old glob
+    else apply(prefix)
   }
+
+  /** Returns the value identified by `curval` given the current completion `comp`. */
+  def commit (comp :Completion[T], curval :String) :Option[T] = comp(curval) orElse comp.onNonMatch
 
   /** If the value being completed is a path, this separator will be used to omit the path elements
     * shared by the currently displayed prefix and the current completions. */
   def pathSeparator :Option[String] = None
 
-  /** Generates a `T` from the supplied string. Return `None` to restrict the user to selecting
-    * from one of the returned prefixes, return `Some(t)` to allow the user to enter any string
-    * and have it turned into a valid result. */
-  protected def fromString (value :String) :Option[T] = None
+  /** Returns the minimum prefix length needed to generate completion. Most completers will return
+    * zero for this method and supply all possible completions immediately. However, if that is
+    * computationally infeasible, a completer can require a one or two character prefix to reduce
+    * the completion space prior to generating a list of potential matches. */
+  protected def minPrefix :Int = 0
 
-  /** Returns a completion over `values` in iteration order. */
-  protected def completion[T] (values :Iterable[T], format :T => String) =
-    Completion(values, format, false)
-
-  /** Returns a completion over `values` in lexical order (of the formatted completions). */
-  protected def sortedCompletion[T] (values :Iterable[T], format :T => String) =
-    Completion(values, format, true)
-
-  /** Returns a sorted completion over some strings. */
-  protected def stringCompletion (ss :Iterable[String]) = sortedCompletion(ss, identity[String])
+  /** Generates a list of completions which start with `prefix`. `prefix` will be exactly
+    * [[minPrefix]] characters long. */
+  protected def complete (prefix :String) :Completion[T]
 }
 
 /** Some useful completion functions. */
 object Completer {
 
-  /** A noop completer for strings. */
-  val none :Completer[String] = new Completer[String] {
-    def complete (prefix :String) = stringCompletion(Seq(prefix))
-    override protected def fromString (value :String) = Some(value)
+  /** A noop completer (for strings). */
+  val none :Completer[String] = new Completer[String]() {
+    def complete (prefix :String) = new Completion[String](prefix, Seq(prefix)) {
+      def root :Completion[String] = this
+      def apply (prefix :String) = Some(prefix)
+      def refine (prefix :String) = complete(prefix)
+    }
   }
 
   /** Returns a completer over `names`.
     * @param requireComp whether to require a completion from the supplied set. */
-  def from (names :Iterable[String], requireComp :Boolean) = new Completer[String] {
-    def complete (prefix :String) = stringCompletion(names.filter(startsWithI(prefix)))
-    override protected def fromString (value :String) = if (requireComp) None else Some(value)
+  def from (names :Iterable[String]) = new Completer[String] {
+    def complete (prefix :String) = Completion.string(prefix, names)
   }
 
   /** Returns a completer over `things` using `nameFn` to obtain each thing's name. */
   def from[T] (things :Iterable[T])(nameFn :T => String) = new Completer[T]() {
-    def complete (prefix :String) = sortedCompletion(
-      things.filter(t => startsWithI(prefix)(nameFn(t))), nameFn)
+    def complete (prefix :String) = Completion(prefix, things, true)(nameFn)
   }
 
   /** Returns a completer on buffer name. */
-  def buffer (wspace :Workspace, defbuf :Option[Buffer]) :Completer[Buffer] =
-    buffer(wspace, defbuf, Set())
+  def buffer (wspace :Workspace, defbuf :Buffer) :Completer[Buffer] = buffer(wspace, defbuf, Set())
 
   /** Returns a completer on buffer name. This behaves specially in that the empty completion omits
     * transient buffers (buffers named `*foo*`).
     * @param except a set of buffers to exclude from completion.
     */
-  def buffer (wspace :Workspace, defbuf :Option[Buffer], except :Set[Buffer]) :Completer[Buffer] =
+  def buffer (wspace :Workspace, defbuf :Buffer, except :Set[Buffer]) :Completer[Buffer] =
     new Completer[Buffer] {
-      def complete (prefix :String) = sortedCompletion(wspace.buffers.filter { b =>
-        val want = if (prefix == "") !(b.name startsWith "*") else startsWithI(prefix)(b.name)
-        want && !except(b)
-      } , _.name)
-      override protected def fromString (name :String) =
-        if (name == "") defbuf else Some(wspace.createBuffer(name, reuse=true))
+      def complete (prefix :String) = {
+        val bb = Seq.builder[Buffer]()
+        bb += defbuf
+        // add the non-scratch buffers, sorted by name
+        bb ++= wspace.buffers.filter(b => !except(b) && !Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
+        // add the scratch buffers after the non-scratch buffers, also sorted by name
+        bb ++= wspace.buffers.filter(b => !except(b) && Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
+        val bufs = bb.build()
+        Completion(prefix, bufs.map(_.name), bufs.mapBy(_.name))
+      }
     }
 
   /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */
@@ -218,37 +265,54 @@ object Completer {
     * omitted. */
   def fileFilter (prefix :String) :(Path => Boolean) =
     if (prefix == "") { p => !(defang(p.getFileName.toString) startsWith ".") }
-    else              { p => startsWithI(prefix)(defang(p.getFileName.toString)) }
+    else              { p => Completion.fuzzyMatch(prefix)(defang(p.getFileName.toString)) }
 
   /** A completer on file system files. */
   val file :Completer[Store] = new Completer[Store] {
-    def complete (path :String) = {
+    override def complete (path :String) = {
       val p = Paths.get(path)
-      if (path endsWith File.separator) expand(p, "")
+      if (path endsWith File.separator) expand(path, p, "")
       else p.getParent match {
-        case null => expand(rootPath /*TODO*/, path)
-        case prnt => expand(prnt, p.getFileName.toString)
+        case null => expand(path, rootPath /*TODO*/, path)
+        case prnt => expand(path, prnt, p.getFileName.toString)
       }
     }
 
-    override def pathSeparator = Some(File.separator)
-    override protected def fromString (value :String) = {
-      val path = Paths.get(value)
-      if (Files.exists(path) && Files.isDirectory(path)) None else Some(Store(path))
+    override def refine (comp :Completion[Store], prefix :String) :Completion[Store] = {
+      // if completion string ends in a path separator, and it references a real directory, then
+      // descend into the directory and complete from there
+      val ppath = Paths.get(prefix)
+      if ((prefix endsWith File.separator) && Files.isDirectory(ppath)) expand(prefix, ppath, "")
+      else super.refine(comp, prefix)
     }
 
+    override def commit (comp :Completion[Store], curval :String) =
+      comp.comps.headOption.flatMap(fromString)
+
+    override def pathSeparator = Some(File.separator)
     override def toString = "FileCompleter"
 
-    private def expand (dir :Path, prefix :String) = {
+    private def expand (path :String, dir :Path, prefix :String) :Completion[Store] = {
       val edir = massage(dir)
       val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
       val matches = try files.iterator.toSeq.filter(fileFilter(prefix)) finally files.close()
-      new Completion[Store] {
-        val comps = matches.map(format).sorted
-        def apply (comp :String) = fromString(comp)
-        override def defval = None // using first completion here would be weird
-        override def toString = s"($dir, $prefix) => $comps"
+      class FileComp (gl :String, mstrs :Seq[String]) extends Completion[Store](gl, mstrs) {
+        override def apply (comp :String) = None
+        override def refine (prefix :String) = {
+          val outer = this
+          new FileComp(prefix, mstrs.filter(Completion.fuzzyMatch(prefix))) {
+            override def root = outer.root
+          }
+        }
+        override def root = this
+        override def toString = s"($dir, $prefix) => $mstrs"
       }
+      new FileComp(path, matches.map(format).sorted)
+    }
+
+    private def fromString (value :String) = {
+      val path = Paths.get(value)
+      if (Files.exists(path) && Files.isDirectory(path)) None else Some(Store(path))
     }
 
     private def massage (dir :Path) = dir.getFileName match {

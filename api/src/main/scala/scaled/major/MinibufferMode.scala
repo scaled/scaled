@@ -18,7 +18,7 @@ abstract class MiniUI {
   def getPrompt :String
 
   /** Displays the supplied completion strings. */
-  def showCompletions (comps :Seq[String]) :Unit
+  def showCompletions (comps :SeqV[String]) :Unit
 }
 
 /** The base class for modes which operate in the minibuffer. These modes generally manage the

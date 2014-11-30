@@ -27,7 +27,7 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
     override def getPrompt = plabel.getText
-    override def showCompletions (comps :Seq[String]) {} // not supported presently
+    override def showCompletions (comps :SeqV[String]) {} // not supported presently
   }
 
   /** Called to check whether we can show this minibuffer.

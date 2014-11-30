@@ -44,7 +44,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
     override def getPrompt = plabel.getText
-    override def showCompletions (comps :Seq[String]) {
+    override def showCompletions (comps :SeqV[String]) {
       if (comps.isEmpty) setBottom(null)
       else {
         val fcomps = formatCompletions(if (comps.length <= MaxComps) comps else {
@@ -112,7 +112,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
       result
   }
 
-  private def formatCompletions (comps :Seq[String]) :Seq[String] = {
+  private def formatCompletions (comps :SeqV[String]) :SeqV[String] = {
     // our completion area might not have been shown yet, so we have to get the font width
     // from the prompt label and then do the pixel to char max width math ourselves; sigh...
     val fm = Toolkit.getToolkit.getFontLoader.getFontMetrics(plabel.getFont)

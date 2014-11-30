@@ -17,7 +17,7 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
 
   @Fn("Opens an existing workspace.")
   def openWorkspace () {
-    val comp = Completer.from(wsvc.list, true)
+    val comp = Completer.from(wsvc.list)
     window.mini.read(s"Name:", "", nameHistory, comp) onSuccess(wsvc.open)
   }
 
