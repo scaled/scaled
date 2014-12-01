@@ -197,6 +197,10 @@ abstract class SeqV[+A] extends Ordered[A] {
 
   override def slice (from :Int, until :Int) :Seq[A] = super.slice(from, until).toSeq
 
+  override def take (count :Int) :Seq[A] = super.take(count).toSeq
+  override def takeRight (count :Int) :Seq[A] = super.takeRight(count).toSeq
+  override def takeWhile (pred :A => Boolean) :Seq[A] = super.takeWhile(pred).toSeq
+
   override def zip[B] (that :Ordered[B]) :Seq[(A,B)] = super.zip(that).toSeq
   override def zipAll[A1 >: A,B] (that :Ordered[B], a :A1, b :B) :Seq[(A1,B)] =
     super.zipAll(that, a, b).toSeq

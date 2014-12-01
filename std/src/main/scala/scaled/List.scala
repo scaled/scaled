@@ -147,6 +147,10 @@ sealed abstract class List[+A] extends Ordered[A] {
   override def sortBy[B] (fn :(A => B))(implicit cmp :Ordering[B]) :List[A] =
     super.sortBy(fn)(cmp).toList
 
+  override def take (count :Int) :List[A] = super.take(count).toList
+  override def takeRight (count :Int) :List[A] = super.takeRight(count).toList
+  override def takeWhile (pred :A => Boolean) :List[A] = super.takeWhile(pred).toList
+
   override def zip[B] (that :Ordered[B]) :List[(A,B)] = super.zip(that).toList
   override def zipAll[A1 >: A,B] (that :Ordered[B], a :A1, b :B) :List[(A1,B)] =
     super.zipAll(that, a, b).toList
