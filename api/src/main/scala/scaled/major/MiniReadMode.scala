@@ -28,20 +28,16 @@ class MiniReadMode[T] (
   display()
 
   // machinery for handling coalesced search string refreshing
-  private var _refreshPending = false
+  private var _refreshConn = null :Connection
   private def queueRefresh () {
-    if (!_refreshPending) {
-      _refreshPending = true
-      env.exec.runOnUI { // TODO: after 250ms delay?
-        val glob = current ; val oglob = _comp.glob
-        if (glob != oglob) {
-          _comp = completer.refine(_comp, glob)
-          // the completer may "massage" the completion string, so stuff if back in the minibuffer
-          setContents(_comp.glob)
-          display()
-        }
-        _refreshPending = false
+    if (_refreshConn != null) _refreshConn.close()
+    _refreshConn = env.exec.uiTimer(75).connectSuccess { _ =>
+      val glob = current ; val oglob = _comp.glob
+      if (glob != oglob) {
+        _comp = completer.refine(_comp, glob)
+        display()
       }
+      _refreshConn = null
     }
   }
   buffer.edited onEmit queueRefresh
