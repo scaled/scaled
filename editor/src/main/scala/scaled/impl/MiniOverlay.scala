@@ -35,29 +35,24 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
     }
   }
 
-  // limit completions display to 100 entries; scanning hundreds of completions is not useful, just
-  // type more characters and you'll get closer to what you want
-  private val PreComps = 95
-  private val PostComps = 5
-  private val MaxComps = PreComps + PostComps
-
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
     override def getPrompt = plabel.getText
     override def showCompletions (comps :SeqV[String]) {
       if (comps.isEmpty) setBottom(null)
       else {
-        val fcomps = formatCompletions(if (comps.length <= MaxComps) comps else {
-          val b = Seq.builder[String]()
-          b ++= comps.take(PreComps)
-          b += s"...(${comps.length-MaxComps} omitted)..."
-          b ++= comps.takeRight(PostComps)
-          b.build()
-        })
-        cview.buffer.replace(cview.buffer.start, cview.buffer.end, fcomps.map(Line.apply))
+        // we have approximately the bottom two thirds of the window for completions
+        val maxComps = ((2*window.getHeight/3)/plabel.getHeight-1).toInt
+        val fcomps = formatCompletions(comps)
+        val tcomps = if (fcomps.size <= maxComps) fcomps else fcomps.take(maxComps-1)
+        cview.buffer.replace(cview.buffer.start, cview.buffer.end, tcomps.map(Line.apply))
+        if (tcomps.size < fcomps.size) {
+          cview.buffer.split(cview.buffer.end)
+          cview.buffer.insert(cview.buffer.end, Line(s"...(${comps.size} total matches)..."))
+        }
         cview.point() = Loc(0, 0)
-        cview.width() = fcomps.map(_.length).max
-        cview.height() = fcomps.length
+        cview.width() = tcomps.map(_.length).max
+        cview.height() = math.min(maxComps, fcomps.length)
         setBottom(carea)
         BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
       }
