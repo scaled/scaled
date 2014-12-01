@@ -17,12 +17,22 @@ class FuzzyMatch (glob :String) {
   /** Returns the subset of `as` which fuzzy match `glob` after being converted to strings via
     * `fn`, in order of match quality. */
   def filter[A] (as :SeqV[A], fn :A => String) :Seq[A] = {
-    val sb = Seq.builder[(A,String,Int)](as.size)
+    case class Score[A] (a :A, astr :String, score :Int) extends Comparable[Score[A]] {
+      def compareTo (other :Score[A]) = {
+        val r0 = Integer.compare(score, other.score)
+        if (r0 != 0) r0
+        else {
+          val r1 = Integer.compare(astr.length, other.astr.length)
+          if (r1 != 0) r1 else astr.compareTo(other.astr)
+        }
+      }
+    }
+    val sb = Seq.builder[Score[A]](as.size)
     val iter = as.iterator() ; while (iter.hasNext()) {
       val a = iter.next() ; val astr = fn(a) ; val ascore = score(astr)
-      if (ascore > 0) sb += (a, astr, ascore)
+      if (ascore > 0) sb += Score(a, astr, -ascore)
     }
-    sb.build().sortBy(-_._3).map(_._1)
+    sb.build().sorted.map(_.a)
   }
 
   /** Returns a match score `> 0` if `glob` fuzzy matches `full`, `0` if it does not match. */
@@ -36,6 +46,9 @@ class FuzzyMatch (glob :String) {
       var ff = 0 ; while (gg < glen && ff < flen) {
         val lf = adjustCase(full.charAt(ff))
         if (lg == lf) {
+          // make consecutive matches that start with the very first character score higher than
+          // consecutive matches later in the string
+          if (ff == 0) consec += 1
           consec += 1
           score += consec
           gg += 1
