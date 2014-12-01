@@ -12,11 +12,11 @@ import scaled._
 class FuzzyMatch (glob :String) {
 
   /** Returns the subset of `strs` which fuzzy match `glob`, in order of match quality. */
-  def filter (strs :SeqV[String]) :Seq[String] = filter(strs, identity[String])
+  def filter (strs :Iterable[String]) :Seq[String] = filterBy(strs)(identity)
 
   /** Returns the subset of `as` which fuzzy match `glob` after being converted to strings via
     * `fn`, in order of match quality. */
-  def filter[A] (as :SeqV[A], fn :A => String) :Seq[A] = {
+  def filterBy[A] (as :Iterable[A])(fn :A => String) :Seq[A] = {
     case class Score[A] (a :A, astr :String, score :Int) extends Comparable[Score[A]] {
       def compareTo (other :Score[A]) = {
         val r0 = Integer.compare(score, other.score)
@@ -27,7 +27,7 @@ class FuzzyMatch (glob :String) {
         }
       }
     }
-    val sb = Seq.builder[Score[A]](as.size)
+    val sb = Seq.builder[Score[A]](as.sizeHint)
     val iter = as.iterator() ; while (iter.hasNext()) {
       val a = iter.next() ; val astr = fn(a) ; val ascore = score(astr)
       if (ascore > 0) sb += Score(a, astr, -ascore)
@@ -71,9 +71,12 @@ object FuzzyMatch {
     // if the glob string is mixed case, do exact case fuzzy matching
     if (glob.exists(Character.isUpperCase)) new FuzzyMatch(glob)
     // otherwise do case insensitive matching
-    else new FuzzyMatch(glob) {
-      override def adjustCase (c :Char) = Character.toLowerCase(c)
-    }
+    else createI(glob)
+  }
+
+  /** Returns a case insensitive fuzzy matcher on `glob`. */
+  def createI (glob :String) :FuzzyMatch = new FuzzyMatch(glob) {
+    override def adjustCase (c :Char) = Character.toLowerCase(c)
   }
 
   /** Alias for [[create]] for Scala clients. */

@@ -144,11 +144,11 @@ abstract class Completer[T] {
     // have a sufficiently long prefix
     else if (oglob.length < minPrefix) apply(prefix)
     // normal case: extending an existing match
-    else if (prefix startsWith oglob) comp.refine(prefix)
+    else if (refines(prefix, oglob)) comp.refine(prefix)
     // backspace case: new glob is prefix of old glob
     else if (oglob startsWith prefix) {
       // if we're still within our root glob, refine from there
-      if (prefix startsWith comp.root.glob) comp.root.refine(prefix)
+      if (refines(prefix, comp.root.glob)) comp.root.refine(prefix)
       // otherwise we need to generate a new completion
       else apply(prefix)
     }
@@ -168,6 +168,9 @@ abstract class Completer[T] {
     * computationally infeasible, a completer can require a one or two character prefix to reduce
     * the completion space prior to generating a list of potential matches. */
   protected def minPrefix :Int = 0
+
+  /** Returns true if `nglob` refines `oglob`. False if it's an unrelated query. */
+  protected def refines (nglob :String, oglob :String) :Boolean = nglob startsWith oglob
 
   /** Generates a list of completions which start with `prefix`. `prefix` will be exactly
     * [[minPrefix]] characters long. */
@@ -270,13 +273,13 @@ object Completer {
       val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
       def defpath (path :Path) = defang(path.getFileName.toString)
       // TODO: sort .files below non-.files
-      val matches = try FuzzyMatch(prefix).filter(files.iterator.toSeq, defpath)
+      val matches = try FuzzyMatch.createI(prefix).filterBy(files.iterator.toSeq)(defpath)
                     finally files.close()
       class FileComp (gl :String, mstrs :Seq[String]) extends Completion[Store](gl, mstrs) {
         override def apply (comp :String) = None
         override def refine (prefix :String) = {
           val outer = this
-          new FileComp(prefix, FuzzyMatch(prefix).filter(mstrs)) {
+          new FileComp(prefix, FuzzyMatch.createI(prefix).filter(mstrs)) {
             override def root = outer.root
           }
         }
