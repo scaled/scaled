@@ -7,6 +7,7 @@ package scaled
 import java.io.File
 import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.util.stream.Stream
+import scaled.util.FuzzyMatch
 
 /** Represents a computed completion. */
 abstract class Completion[+T] (
@@ -23,7 +24,7 @@ abstract class Completion[+T] (
   def apply (comp :String) :Option[T]
 
   /** Refines this completion with the longer prefix `prefix`. This generally means filtering
-    * `comps` to contain only those elements which [[Completion.fuzzyMatch]] `prefix`. */
+    * `comps` to contain only those elements which [[FuzzyMatch]] `prefix`. */
   def refine (prefix :String) :Completion[T]
 
   /** Returns the default value to use when committed with a non-matching value. */
@@ -112,33 +113,12 @@ object Completion {
   def apply[T] (glob :String, cs :Seq[String], map :Map[String,T]) :Completion[T] =
     new MapComp(glob, cs, map)
 
-  /** Returns true if `glob` fuzzy matches `full`. A fuzzy match means that each character of
-    * `glob` appears in `full`, in order, with zero or more intervening characters. For example:
-    * `pnts` fuzzy matches `peanuts`. */
-  def fuzzyMatch (glob :String)(full :String) :Boolean = {
-    val glen = glob.length ; val flen = full.length
-    if (glen == 0) true
-    else if (glen > flen) false
-    else {
-      var gg = 0 ; var lg = Character.toLowerCase(glob.charAt(gg))
-      var ff = 0 ; while (gg < glen && ff < flen) {
-        val lf = Character.toLowerCase(full.charAt(ff))
-        if (lg == lf) {
-          gg += 1
-          if (gg < glen) lg = Character.toLowerCase(glob.charAt(gg))
-        }
-        ff += 1
-      }
-      gg == glen
-    }
-  }
-
   private class MapComp[T] (gl :String, cs :SeqV[String], map :Map[String,T])
       extends Completion[T](gl, cs) {
     def apply (comp :String) = map.get(comp)
     def refine (prefix :String) = {
       val outer = this
-      new MapComp[T](prefix, comps.filter(fuzzyMatch(prefix)), map) {
+      new MapComp[T](prefix, FuzzyMatch(prefix).filter(comps), map) {
         override def root = outer.root
       }
     }
@@ -258,14 +238,7 @@ object Completer {
   /** Replaces newlines with whitespace. This should be called on any string that will be used
     * as a completion key which may potentially contain newlines. File names are the primary
     * culprit here. */
-  def defang (name :String) = name.replace('\n', ' ').replace('\r', ' ')
-
-  /** Returns a prefix matching filter for file names. This [[defangs]] the file name and does a
-    * normal case-insensitive prefix match, except that when `prefix` is empty, dot files are
-    * omitted. */
-  def fileFilter (prefix :String) :(Path => Boolean) =
-    if (prefix == "") { p => !(defang(p.getFileName.toString) startsWith ".") }
-    else              { p => Completion.fuzzyMatch(prefix)(defang(p.getFileName.toString)) }
+  def defang (name :String) :String = name.replace('\n', ' ').replace('\r', ' ')
 
   /** A completer on file system files. */
   val file :Completer[Store] = new Completer[Store] {
@@ -295,19 +268,22 @@ object Completer {
     private def expand (path :String, dir :Path, prefix :String) :Completion[Store] = {
       val edir = massage(dir)
       val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
-      val matches = try files.iterator.toSeq.filter(fileFilter(prefix)) finally files.close()
+      def defpath (path :Path) = defang(path.getFileName.toString)
+      // TODO: sort .files below non-.files
+      val matches = try FuzzyMatch(prefix).filter(files.iterator.toSeq, defpath)
+                    finally files.close()
       class FileComp (gl :String, mstrs :Seq[String]) extends Completion[Store](gl, mstrs) {
         override def apply (comp :String) = None
         override def refine (prefix :String) = {
           val outer = this
-          new FileComp(prefix, mstrs.filter(Completion.fuzzyMatch(prefix))) {
+          new FileComp(prefix, FuzzyMatch(prefix).filter(mstrs)) {
             override def root = outer.root
           }
         }
         override def root = this
         override def toString = s"($dir, $prefix) => $mstrs"
       }
-      new FileComp(path, matches.map(format).sorted)
+      new FileComp(path, matches.map(format))
     }
 
     private def fromString (value :String) = {
