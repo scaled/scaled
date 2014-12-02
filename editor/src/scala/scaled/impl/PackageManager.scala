@@ -74,7 +74,7 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   override def willShutdown () {} // not used
 
   override def classpath (source :String) =
-    metas.get(Source.parse(source)).mod.depends(pkgRepo.resolver, false).classpath.toSeq
+    metas.get(Source.parse(source)).mod.depends(pkgRepo.resolver).classpath.toSeq
 
   private def moduleAdded (mod :Module) {
     // create a package metadata ; there's some special hackery to handle the fact that services
