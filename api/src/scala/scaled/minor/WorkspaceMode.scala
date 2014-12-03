@@ -21,6 +21,11 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
     window.mini.read(s"Name:", "", nameHistory, comp) onSuccess(wsvc.open)
   }
 
+  @Fn("Opens a new window in the current workspace.")
+  def openWindow () {
+    wspace.openWindow(None)
+  }
+
   /** The history ring for workspace names. */
   protected def nameHistory = Workspace.historyRing(wspace, "workspace-name")
 

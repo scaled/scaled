@@ -77,7 +77,10 @@ abstract class Workspace {
     * be returned instead. */
   def openBuffer (file :Store) :Buffer
 
-  // TODO: create new window (with geometry?)
+  /** Opens a new window in this workspace.
+    * @param geom optional gemoetry for the window. If none is provided, the geometry will be
+    * determined by the user's configurtion. */
+  def openWindow (geom :Option[Geometry]) :Window
 
   /** Adds `path` to this workspace's list of hint paths. A hint path is used to trigger the
     * selection of this workspace when Scaled is first started. If the file being edited is in a

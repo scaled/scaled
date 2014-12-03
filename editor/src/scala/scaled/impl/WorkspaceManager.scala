@@ -192,6 +192,9 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def openBuffer (store :Store) =
     buffers.find(_.store == store) || addBuffer(BufferImpl(store))
 
+  override def openWindow (geom :Option[Geometry]) = createWindow(
+    new Stage(), Geom(geom.map(g => (g.width, g.height)), geom.map(g => (g.x, g.y))))
+
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
   override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
