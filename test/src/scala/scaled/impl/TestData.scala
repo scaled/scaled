@@ -46,6 +46,7 @@ object TestData {
     val bufferOpened = Signal[RBuffer]()
     def createBuffer (name :String, state :List[State.Init[_]], reuse :Boolean) = buffer(name, "")
     def openBuffer (store :Store) = BufferImpl(store)
+    def openWindow (geom :Option[Geometry]) = null
     def killBuffer (buffer :Buffer) {}
     def addHintPath (path :Path) {}
     def removeHintPath (path :Path) {}
