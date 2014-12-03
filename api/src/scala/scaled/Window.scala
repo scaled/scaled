@@ -83,6 +83,9 @@ trait Window {
     * requires the user to see the contents of the main buffer, and hence the popup minibuffer
     * would potentially obscure important data. */
   def statusMini :Minibuffer
+
+  /** Requests that this window be brought to the front of the window stack by the OS. */
+  def toFront () :Unit
 }
 
 /** Describes the geometry of a [[Window]] or [[Frame]].

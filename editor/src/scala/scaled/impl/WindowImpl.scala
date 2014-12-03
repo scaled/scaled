@@ -162,19 +162,20 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _focus.get.view.clearEphemeralPopup()
   }
 
-  // used internally to open files passed on the command line or via remote cmd
-  def visitPath (path :Path) {
-    _frame.visitFile(Store(path))
-    stageToFront()
-  }
-  def visitScratchIfEmpty () {
-    if (_frame.disp == null) _frame.setBuffer(ws.getScratch())
-    stageToFront()
-  }
-  def stageToFront () {
+  override def toFront () {
     stage.show()
     stage.toFront() // move our window to front if it's not there already
     stage.requestFocus() // and request window manager focus
+  }
+
+  // used internally to open files passed on the command line or via remote cmd
+  def visitPath (path :Path) {
+    _frame.visitFile(Store(path))
+    toFront()
+  }
+  def visitScratchIfEmpty () {
+    if (_frame.disp == null) _frame.setBuffer(ws.getScratch())
+    toFront()
   }
 
   //
