@@ -128,6 +128,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   override def mini = _mini
   override def statusMini = _statusMini
 
+  override val onClose = Signal[Window]()
   override def close () = ws.close(this)
 
   override def popStatus (msg :String, subtext :String) {

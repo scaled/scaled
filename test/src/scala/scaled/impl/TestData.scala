@@ -56,6 +56,7 @@ object TestData {
   val window :Window = new Window {
     val geometry = Geometry(100, 40, 10, 10)
     val frames = Seq()
+    val onClose = Signal[Window]()
     def focus = ???
     def workspace = TestData.workspace
     def close () {}

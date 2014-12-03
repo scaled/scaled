@@ -133,12 +133,18 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   def open () = windows.headOption || createWindow(new Stage(), NoGeom)
 
   def close (win :WindowImpl) {
-    windows.remove(win) // TODO: didClosedWindow signal?
+    // let third parties know the window is going away, but don't let them hose us
+    try win.onClose.emit(win)
+    catch {
+      case e :Throwable => log.log(s"$win.onClose failure", e)
+    }
+
+    windows.remove(win)
     try {
       win.dispose() // this may cause us to hibernate
       win.stage.close()
     } catch {
-      case e :Throwable => log.log(s"Error closing $win", e)
+      case e :Throwable => log.log(s"Internal error closing $win", e)
     }
 
     // if we just closed our last window, "hibernate" (we're not actually a reffed, but we're doing

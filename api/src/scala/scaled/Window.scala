@@ -40,6 +40,9 @@ trait Window {
   /** A stack of visits made from within this window. */
   val visitStack = new Visit.Stack()
 
+  /** A signal emitted when this window is closed. */
+  def onClose :SignalV[Window]
+
   /** Returns the current geometry of this window. */
   def geometry :Geometry
 
