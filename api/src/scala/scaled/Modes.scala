@@ -5,7 +5,7 @@
 package scaled
 
 import java.io.FileNotFoundException
-import scaled.util.{Behavior, Close}
+import scaled.util.{Behavior, Close, Errors}
 
 /** Provides a mode with a bunch of standard dependencies. We package these up for two reasons:
   *  - one it makes passing a bundle of standard depends on to a superclass constructor less
@@ -150,6 +150,10 @@ abstract class Mode (env :Env) {
   @inline protected final def view = env.view
   @inline protected final def buffer = env.view.buffer
   @inline protected final def disp = env.disp
+
+  /** Aborts the execution of the current fn with a feedback exception containing `msg`. The
+    * exception will be caught by the dispatcher and displayed to the user as a popup. */
+  protected def abort (msg :String) :Nothing = throw Errors.feedback(msg)
 
   /** Binds `behavior` to the specified boolean configuration key. When `key` is true, the behavior
     * will be activated, when it is false it will be deactivated.
