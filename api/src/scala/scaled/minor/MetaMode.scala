@@ -49,8 +49,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
   def switchToBuffer () {
-    val fstb = wspace.buffers.head
-    val defb = wspace.buffers.drop(1).headOption getOrElse fstb
+    val fstb = buffer
+    val defb = wspace.buffers.filter(_ != fstb).headOption getOrElse fstb
     val defp = s" (default ${defb.name})"
     val comp = Completer.buffer(wspace, defb, Set(fstb))
     window.mini.read(s"Switch to buffer$defp:", "", bufferHistory(wspace),
@@ -59,7 +59,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Reads a buffer name from the minibuffer and kills (closes) it.""")
   def killBuffer () {
-    val current = wspace.buffers.head
+    val current = buffer
     val prompt = s"Kill buffer (default ${current.name}):"
     val comp = Completer.buffer(wspace, current)
     window.mini.read(prompt, "", bufferHistory(wspace), comp) onSuccess(_.kill())
