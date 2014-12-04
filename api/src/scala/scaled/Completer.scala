@@ -30,30 +30,7 @@ abstract class Completion[+T] (
   /** Returns the default value to use when committed with a non-matching value. */
   def onNonMatch :Option[T] = comps.headOption.flatMap(apply)
 
-  /** Returns the longest prefix of the completions that is the same for all completions. */
-  def longestPrefix :String = if (comps.isEmpty) "" else comps reduce sharedPrefix
-
   override def toString = s"Completion($comps)"
-
-  /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
-    * only when both strings have the character in uppercase, lowercase otherwise. */
-  protected def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
-    val buf = new StringBuilder
-    @inline @tailrec def loop (ii :Int) {
-      if (ii < a.length && ii < b.length) {
-        val ra = a.charAt(ii) ; val la = Character.toLowerCase(ra)
-        val rb = b.charAt(ii) ; val lb = Character.toLowerCase(rb)
-        if (la == lb) {
-          // if everyone uses uppercase here, keep the prefix uppercase, otherwise lower
-          val c = if (Character.isUpperCase(ra) && Character.isUpperCase(rb)) ra else la
-          buf.append(c)
-          loop(ii+1)
-        }
-      }
-    }
-    loop(0)
-    buf.toString
-  }
 }
 
 /** Factory methods for standard completions. */
@@ -236,6 +213,29 @@ object Completer {
       }
     }
     if (prefix.length > full.length) false else loop(0)
+  }
+
+  /** Returns the longest shared prefix of all the strings in `strs`. */
+  def longestPrefix (strs :Iterable[String]) = strs reduce sharedPrefix
+
+  /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
+    * only when both strings have the character in uppercase, lowercase otherwise. */
+  def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
+    val buf = new StringBuilder
+    @inline @tailrec def loop (ii :Int) {
+      if (ii < a.length && ii < b.length) {
+        val ra = a.charAt(ii) ; val la = Character.toLowerCase(ra)
+        val rb = b.charAt(ii) ; val lb = Character.toLowerCase(rb)
+        if (la == lb) {
+          // if everyone uses uppercase here, keep the prefix uppercase, otherwise lower
+          val c = if (Character.isUpperCase(ra) && Character.isUpperCase(rb)) ra else la
+          buf.append(c)
+          loop(ii+1)
+        }
+      }
+    }
+    loop(0)
+    buf.toString
   }
 
   /** Replaces newlines with whitespace. This should be called on any string that will be used
