@@ -55,9 +55,12 @@ class MiniReadMode[T] (
 
   @Fn("Extends the current completion to the longest shared prefix of the displayed completions.")
   def extendCompletion () {
-    val pre = _comp.longestPrefix
-    // only set the prefix if it actually extends the current completion
-    if (Completer.startsWithI(current)(pre)) setContents(pre)
+    // if we have at least one completion which prefix-matches our current text...
+    val preMatchedComps = _comp.comps.filter(Completer.startsWithI(current))
+    if (!preMatchedComps.isEmpty) {
+      // ...set the contents to the longest shared prefix of the applicable completions
+      setContents(Completer.longestPrefix(preMatchedComps))
+    }
   }
 
   @Fn("Commits the current minibuffer read with its current contents.")
