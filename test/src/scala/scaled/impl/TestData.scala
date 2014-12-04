@@ -71,6 +71,7 @@ object TestData {
       def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
     }
     def statusMini = mini
+    def toFront {}
   }
 
   val injector = new ServiceInjector(log, exec, editor) {
