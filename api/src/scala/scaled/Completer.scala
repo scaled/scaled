@@ -7,7 +7,7 @@ package scaled
 import java.io.File
 import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.util.stream.Stream
-import scaled.util.FuzzyMatch
+import scaled.util.{FuzzyMatch, IFuzzyMatch}
 
 /** Represents a computed completion. */
 abstract class Completion[+T] (
@@ -266,17 +266,25 @@ object Completer {
     override def pathSeparator = Some(File.separator)
     override def toString = "FileCompleter"
 
+    class FileFuzzyMatch (glob :String) extends IFuzzyMatch(glob) {
+      // sort dot files after non-dot-files
+      override def compare (a :String, b :String) = {
+        val adot = a startsWith "." ; val bdot = b startsWith "."
+        if (adot == bdot) super.compare(a, b)
+        else if (adot) 1 else -1
+      }
+    }
+
     private def expand (path :String, dir :Path, prefix :String) :Completion[Store] = {
-      val files = if (Files.exists(dir)) Files.list(dir) else Stream.empty[Path]()
-      def defpath (path :Path) = defang(path.getFileName.toString)
-      // TODO: sort .files below non-.files
-      val matches = try FuzzyMatch.createI(prefix).filterBy(files.iterator.toSeq)(defpath)
-                    finally files.close()
+      val fstream = if (Files.exists(dir)) Files.list(dir) else Stream.empty[Path]()
+      val files = try fstream.iterator.toSeq finally fstream.close()
+      val matches = new FileFuzzyMatch(prefix).filterBy(files)(p => defang(p.getFileName.toString))
+
       class FileComp (gl :String, mstrs :Seq[String]) extends Completion[Store](gl, mstrs) {
         override def apply (comp :String) = None
         override def refine (prefix :String) = {
           val outer = this
-          new FileComp(prefix, FuzzyMatch.createI(prefix).filter(mstrs)) {
+          new FileComp(prefix, new FileFuzzyMatch(prefix).filter(mstrs)) {
             override def root = outer.root
           }
         }
