@@ -21,10 +21,7 @@ class FuzzyMatch (glob :String) {
       def compareTo (other :Score[A]) = {
         val r0 = Integer.compare(score, other.score)
         if (r0 != 0) r0
-        else {
-          val r1 = Integer.compare(astr.length, other.astr.length)
-          if (r1 != 0) r1 else astr.compareTo(other.astr)
-        }
+        else compare(astr, other.astr)
       }
     }
     val sb = Seq.builder[Score[A]](as.sizeHint)
@@ -60,7 +57,14 @@ class FuzzyMatch (glob :String) {
     }
   }
 
+  protected def compare (astr :String, bstr :String) :Int = astr.compareTo(bstr)
+
   protected def adjustCase (c :Char) :Char = c
+}
+
+/** A case-insensitive [[FuzzyMatch]]. */
+class IFuzzyMatch (glob :String) extends FuzzyMatch(glob) {
+  override def adjustCase (c :Char) = Character.toLowerCase(c)
 }
 
 object FuzzyMatch {
@@ -75,9 +79,7 @@ object FuzzyMatch {
   }
 
   /** Returns a case insensitive fuzzy matcher on `glob`. */
-  def createI (glob :String) :FuzzyMatch = new FuzzyMatch(glob) {
-    override def adjustCase (c :Char) = Character.toLowerCase(c)
-  }
+  def createI (glob :String) :FuzzyMatch = new IFuzzyMatch(glob)
 
   /** Alias for [[create]] for Scala clients. */
   def apply (glob :String) = create(glob)
