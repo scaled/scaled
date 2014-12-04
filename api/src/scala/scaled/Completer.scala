@@ -245,20 +245,18 @@ object Completer {
 
   /** A completer on file system files. */
   val file :Completer[Store] = new Completer[Store] {
-    override def complete (path :String) = {
-      val p = Paths.get(path)
-      if (path endsWith File.separator) expand(path, p, "")
-      else p.getParent match {
-        case null => expand(path, rootPath /*TODO*/, path)
-        case prnt => expand(path, prnt, p.getFileName.toString)
+    override def complete (prefix :String) = {
+      val (pstr, path, endInSep) = grok(prefix)
+      if (endInSep && Files.isDirectory(path)) expand(pstr, path, "")
+      else path.getParent match {
+        case null => expand(pstr, rootPath /*TODO*/, prefix)
+        case prnt => expand(pstr, prnt, path.getFileName.toString)
       }
     }
 
     override def refine (comp :Completion[Store], prefix :String) :Completion[Store] = {
-      // if completion string ends in a path separator, and it references a real directory, then
-      // descend into the directory and complete from there
-      val ppath = Paths.get(prefix)
-      if ((prefix endsWith File.separator) && Files.isDirectory(ppath)) expand(prefix, ppath, "")
+      val (pstr, path, endInSep) = grok(prefix)
+      if (endInSep && Files.isDirectory(path)) expand(pstr, path, "")
       else super.refine(comp, prefix)
     }
 
@@ -269,8 +267,7 @@ object Completer {
     override def toString = "FileCompleter"
 
     private def expand (path :String, dir :Path, prefix :String) :Completion[Store] = {
-      val edir = massage(dir)
-      val files = if (Files.exists(edir)) Files.list(edir) else Stream.empty[Path]()
+      val files = if (Files.exists(dir)) Files.list(dir) else Stream.empty[Path]()
       def defpath (path :Path) = defang(path.getFileName.toString)
       // TODO: sort .files below non-.files
       val matches = try FuzzyMatch.createI(prefix).filterBy(files.iterator.toSeq)(defpath)
@@ -294,10 +291,13 @@ object Completer {
       if (Files.exists(path) && Files.isDirectory(path)) None else Some(Store(path))
     }
 
-    private def massage (dir :Path) = dir.getFileName match {
-      case null => dir
-      case name if (name.toString == "~") => Paths.get(System.getProperty("user.home"))
-      case _ => dir // TODO: map '//' to root of file system?
+    private def grok (pathstr :String) :(String,Path,Boolean) = {
+      val path = Paths.get(pathstr) ; val fname = path.getFileName
+      val endInSep = pathstr endsWith File.separator
+      if (fname != null && fname.toString == "~") {
+        val home = Paths.get(System.getProperty("user.home"))
+        (s"$home${File.separator}", home, true)
+      } else (pathstr, path, endInSep)
     }
 
     private def rootPath = FileSystems.getDefault.getRootDirectories.iterator.next
