@@ -23,7 +23,7 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
 
   @Fn("Opens a new window in the current workspace.")
   def openWindow () {
-    wspace.openWindow(None)
+    wspace.openWindow(None).focus.visit(buffer)
   }
 
   /** The history ring for workspace names. */

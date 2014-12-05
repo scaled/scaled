@@ -77,7 +77,8 @@ abstract class Workspace {
     * be returned instead. */
   def openBuffer (file :Store) :Buffer
 
-  /** Opens a new window in this workspace.
+  /** Opens a new window in this workspace. The window will not become visible until the caller
+    * instructs it to visit a buffer.
     * @param geom optional gemoetry for the window. If none is provided, the geometry will be
     * determined by the user's configurtion. */
   def openWindow (geom :Option[Geometry]) :Window
