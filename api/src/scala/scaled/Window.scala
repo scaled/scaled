@@ -22,6 +22,11 @@ trait Window {
     /** Returns the buffer view that currently occupies this frame. */
     def view :BufferView
 
+    /** Returns the store for the buffer edited previous to the current buffer in this frame.
+      * This mainly exists to make it easy to bounce between two buffers in a given frame via
+      * `switch-to-buffer`. */
+    def prevStore :Option[Store]
+
     /** Makes the specified buffer the active buffer for this frame.
       * @return the view for the buffer. */
     def visit (buffer :Buffer) :BufferView

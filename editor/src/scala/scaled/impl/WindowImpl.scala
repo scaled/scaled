@@ -30,6 +30,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   class FrameImpl extends BorderPane with Frame {
     var onKill :Connection = _
     var disp :DispatcherImpl = _
+    var prevStore :Option[Store] = None // this also implements 'def prevStore' in Frame
 
     def focus () {
       val buf = view.buffer
@@ -59,7 +60,10 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
         if (onKill != null) onKill.close()
         onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch()) }
 
-        if (disp != null) disp.dispose()
+        if (disp != null) {
+          prevStore = Some(this.view.buffer.store)
+          disp.dispose()
+        }
         disp = new DispatcherImpl(
           WindowImpl.this, resolver(this, buf), view, mline,
           // if no mode was specified, have the package manager infer one
@@ -82,8 +86,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
         view
       }
 
-    override def view = disp.area.bview
     override def geometry = WindowImpl.this.geometry // TODO
+    override def view = disp.area.bview
     override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl])
   }
 
