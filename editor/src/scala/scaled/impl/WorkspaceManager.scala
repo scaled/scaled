@@ -200,8 +200,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   override def openWindow (geom :Option[Geometry]) = {
     val wg = Geom(geom.map(g => (g.width, g.height)), geom.map(g => (g.x, g.y)))
-    val win = createWindow(new Stage(), wg)
-    win
+    createWindow(new Stage(), wg)
   }
 
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)

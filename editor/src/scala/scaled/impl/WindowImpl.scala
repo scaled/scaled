@@ -83,6 +83,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
         // what emacs does and who are we to question five decades of hard won experience
         if (buf.store.file.isDefined && !buf.store.exists) emitStatus("(New file)")
 
+        // make sure our window is visible and up front
+        WindowImpl.this.toFront()
+
         view
       }
 
@@ -175,11 +178,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   // used internally to open files passed on the command line or via remote cmd
   def visitPath (path :Path) {
     _frame.visitFile(Store(path))
-    toFront()
   }
   def visitScratchIfEmpty () {
     if (_frame.disp == null) _frame.setBuffer(ws.getScratch())
-    toFront()
   }
 
   //
