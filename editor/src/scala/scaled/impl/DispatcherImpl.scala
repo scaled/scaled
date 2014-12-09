@@ -90,12 +90,13 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
             _trigger :+= key
             // if it matches a known command prefix, wait for the rest of the command to come in
             if (_prefixes(_trigger)) deferDisplayPrefix(_trigger)
-            // otherwise resolve the fn bound to this trigger (if any)
-            else resolve(_trigger, _metas) match {
-              case Some(fn) if (!fn.wantsTyped) => invoke("pressed", fn, _trigger.last.text)
+            else {
+              // otherwise resolve the fn(s) bound to this trigger (if any)
+              val fns = resolve(_trigger, _metas)
+              if (!fns.isEmpty && !fns.head.wantsTyped) invoke("pressed", fns, _trigger.last.text)
               // if we don't find one (or if the fn we found wants the typed character),
               // wait until the associated key typed event comes in
-              case _ => _dispatchTyped = true
+              else _dispatchTyped = true
             }
           }
         }
@@ -114,10 +115,10 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
           }
           val defFn = if (_trigger.size > 1 || !_trigger.last.isPrintable) None
                       else _majorMeta.defaultFn
-          resolve(_trigger, _metas) orElse defFn match {
-            case Some(fn) => invoke("typed", fn, _trigger.last.text)
-            case None     => invokeMissed()
-          }
+          val fns = resolve(_trigger, _metas)
+          if (!fns.isEmpty) invoke("typed", fns, _trigger.last.text)
+          else if (defFn.isDefined) invoke("typed", defFn.toList, _trigger.last.text)
+          else invokeMissed()
         }
 
       case KeyEvent.KEY_RELEASED =>
@@ -143,7 +144,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   override def prevFn = _prevFn
 
   override def fns = (Set[String]() /: _metas) { _ ++ _.fns.bindings.map(_.name) }
-  override def describeFn (fn :String) = findFn(fn) map(_.descrip)
+  override def describeFn (fn :String) = findFn(fn).headOption map(_.descrip)
   override def majorModes = resolver.modes(true)
   override def minorModes = resolver.modes(false)
 
@@ -160,16 +161,16 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   }
 
   override def invoke (fn :String) = findFn(fn) match {
-    case Some(fn) => invoke("invoke", fn, "") ; true
-    case None => false
+    case Nil => false
+    case fns => invoke("invoke", fns, "") ; true
   }
 
   override def press (trigger :String) {
     KeyPress.toKeyPresses(trigger) match {
-      case Right(kps) => resolve(kps, _metas) match {
-        case Some(fn) => invoke("press", fn, kps.last.text)
-        case None     => invokeMissed(trigger)
-      }
+      case Right(kps) =>
+        val fns = resolve(kps, _metas)
+        if (fns.isEmpty) invokeMissed(trigger)
+        else invoke("press", fns, kps.last.text)
       case Left(errs) => window.popStatus(
         s"Invalid keys in '$trigger': ${errs.mkString(", ")}")
     }
@@ -201,39 +202,45 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     _minors() = _metas.map(_.mode).toSeq.collect { case mode :MinorMode => mode }
   }
 
-  private def findFn (fn :String) :Option[FnBinding] = _metas.flatMap(_.fns.binding(fn)).headOption
-  private def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :Option[FnBinding] =
-    // we could do modes.flatMap(_.map.get(trigger)).headOption but we want zero garbage
-    if (modes.isEmpty) None else {
-      val fnopt = modes.head.map.get(trigger)
-      if (fnopt.isDefined) fnopt else resolve(trigger, modes.tail)
+  private def findFn (fn :String) :List[FnBinding] = _metas.flatMap(_.fns.binding(fn))
+  private def resolve (trigger :Seq[KeyPress], modes :List[ModeMeta]) :List[FnBinding] =
+    modes.flatMap(_.map.get(trigger))
+
+  private def invoke (from :String, fns :List[FnBinding], typed :String) :Boolean = {
+    var ll = fns ; while (!ll.isEmpty) {
+      val fn = ll.head
+      // println(s"invoking ($from) $fn on '$typed' (${typed.map(_.toInt)})")
+
+      // prepare to invoke our fn
+      _curFn = fn.name
+      window.clearStatus()
+      view.buffer.undoStack.delimitAction(view.point())
+      _willInvoke.emit(fn.name)
+
+      val res = try fn.invoke(typed)
+      catch {
+        case e :InvocationTargetException => window.emitError(e.getCause) ; false
+      }
+
+      // finish up after invoking our fn
+      _didInvoke.emit(fn.name)
+      view.buffer.undoStack.delimitAction(view.point())
+      _prevFn = _curFn
+      _curFn = null
+      didInvokeFn()
+
+      // if the fn returns anything other than false, we assume it handled the key
+      if (res != java.lang.Boolean.FALSE) return true
+
+      // otherwise try the next fn in the list
+      ll = ll.tail
     }
-
-  private def invoke (from :String, fn :FnBinding, typed :String) {
-    // println(s"invoking ($from) $fn on '$typed' (${typed.map(_.toInt)})")
-
-    // prepare to invoke our fn
-    _curFn = fn.name
-    window.clearStatus()
-    view.buffer.undoStack.delimitAction(view.point())
-    _willInvoke.emit(fn.name)
-
-    try fn.invoke(typed)
-    catch {
-      case e :InvocationTargetException => window.emitError(e.getCause)
-    }
-
-    // finish up after invoking our fn
-    _didInvoke.emit(fn.name)
-    view.buffer.undoStack.delimitAction(view.point())
-    _prevFn = _curFn
-    _curFn = null
-    didInvokeFn()
+    false
   }
 
   private def invokeMissed () :Unit = invokeMissed(_trigger.mkString(" "))
   private def invokeMissed (trigger :String) :Unit = _majorMeta.missedFn match {
-    case Some(fn) => invoke("missed", fn, trigger)
+    case Some(fn) => invoke("missed", fn :: Nil, trigger)
     case None     => _prevFn = null ; didInvokeFn()
   }
 

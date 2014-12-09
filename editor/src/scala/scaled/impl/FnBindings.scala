@@ -27,8 +27,11 @@ case class FnBinding (mode :Mode, meth :Method, wantsTyped :Boolean) {
     * @param typed the typed character(s) if this fn is being invoked as a result of a key typed
     * event because no fn binding was found for the key pressed event that preceded it, or null if
     * the fn binding is being invoked as a result of a key pressed event.
+    * @return the return value of the fn itself; usually null but fns are allowed to return
+    * `false` to indicate that they did not handle the key and any other fns bound to that key
+    * should be given a chance to run.
     */
-  def invoke (typed :String) = if (wantsTyped) meth.invoke(mode, typed) else meth.invoke(mode)
+  def invoke (typed :String) :Any = if (wantsTyped) meth.invoke(mode, typed) else meth.invoke(mode)
 
   override def toString = s"[mode=${mode.name}, name=$name]"
 }
