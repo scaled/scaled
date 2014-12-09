@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import javafx.application.Platform
 import javafx.geometry.VPos
 import javafx.scene.Node
 import javafx.scene.text.{TextFlow, FontSmoothingType}
@@ -45,8 +46,11 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
   /** Marks this line view as invalid, clearing its children. */
   def invalidate () :Unit = if (_valid) {
     _valid = false
-    getChildren.clear()
-    if (isVisible) validate()
+    // if we're not visible, remove our children now to free up memory
+    if (!isVisible) getChildren.clear()
+    else Platform.runLater(new Runnable() {
+      override def run () = validate()
+    })
   }
 
   /** Validates this line, rebuilding its visualization. This is called when the line becomes
@@ -85,6 +89,7 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
       }
     }
     _valid = true // mark ourselves valid now to avoid looping if freakoutery
+    getChildren.clear()
     val adder = new Adder()
     _line.visitTags(classOf[String])(adder)
     adder.finish()
