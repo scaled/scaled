@@ -141,9 +141,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   /** Reindents the line at the point. */
-  def reindentAtPoint () {
-    reindent(view.point())
-  }
+  def reindentAtPoint () :Unit = reindent(view.point())
 
   /** Returns the close bracket for the supplied open bracket.
     * `?` is returned if the open bracket is unknown. */
