@@ -4,6 +4,8 @@
 
 package scaled
 
+import scaled.util.Chars
+
 /** A location in a buffer which responds as predictably as possible to changes in the buffer.
   * Edits that precede the anchor cause it to shift forward or back appropriately. Edits after the
   * anchor do not cause movement. Deleting the text that includes the anchor causes it to move to
@@ -177,6 +179,16 @@ abstract class BufferV extends Region {
 
   /** Returns a copy of the data in region `r`. $RNLNOTE */
   def region (r :Region) :Seq[Line] = region(r.start, r.end)
+
+  /** Returns the largest region around `loc` which matches the supplied `category`.
+    * For example, supply [[Chars.Word]] to obtain the "word" at `loc`. */
+  def regionAt (loc :Loc, category :Chars.Category) :Seq[Line] = {
+    val lstart = scanBackward(category.isNot, loc)
+    val start = if (category.is(charAt(lstart))) lstart else forward(lstart, 1)
+    val end = if (!category.is(charAt(start))) start
+              else scanForward(category.isNot, loc)
+    region(start, end)
+  }
 
   /** Returns the start of the line at `row`. */
   def lineStart (row :Int) :Loc = Loc(row, 0)

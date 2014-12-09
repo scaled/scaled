@@ -12,53 +12,60 @@ import scaled.Syntax
   */
 object Chars {
 
+  /** Identifies a category of characters. */
+  class Category (val is :Pred, val isNot :Pred)
+
   /** Returns true for characters that are whitespace. */
   lazy val isWhitespace = new Pred() {
     protected def slowApply (c :Char) = Character.isWhitespace(c)
     override def toString = "isWhitespace"
   }
-
   /** Returns true for characters that are not whitespace. */
   lazy val isNotWhitespace = new Pred() {
     protected def slowApply (c :Char) = !Character.isWhitespace(c)
     override def toString = "isNotWhitespace"
   }
+  /** The whitespace category. */
+  case object Whitespace extends Category(isWhitespace, isNotWhitespace)
 
   /** Returns true for characters that comprise "words". */
   lazy val isWord = new Pred() {
     protected def slowApply (c :Char) = isWordClass(c)
     override def toString = "isWord"
   }
-
   /** Returns true for characters that do not comprise "words". */
   lazy val isNotWord = new Pred() {
     protected def slowApply (c :Char) = !isWordClass(c)
     override def toString = "isNotWord"
   }
+  /** The word category. */
+  case object Word extends Category(isWord, isNotWord)
 
   /** Returns true for characters that are punctuation. */
   lazy val isPunctuation = new Pred() {
     protected def slowApply (c :Char) = isPunctuationClass(c)
     override def toString = "isPunctuation"
   }
-
   /** Returns true for characters that are not punctuation. */
   lazy val isNotPunctuation = new Pred() {
     protected def slowApply (c :Char) = !isPunctuationClass(c)
     override def toString = "isNotPunctuation"
   }
+  /** The punctuation category. */
+  case object Punctuation extends Category(isPunctuation, isNotPunctuation)
 
   /** Returns true for characters that are uppercase. */
   lazy val isUpperCase = new Pred() {
     protected def slowApply (c :Char) = Character.isUpperCase(c)
     override def toString = "isUpperCase"
   }
-
   /** Returns true for characters that are not uppercase. */
   lazy val isNotUpperCase = new Pred() {
     protected def slowApply (c :Char) = !Character.isUpperCase(c)
     override def toString = "isNotUpperCase"
   }
+  /** The upper-case category. */
+  case object UpperCase extends Category(isUpperCase, isNotUpperCase)
 
   abstract class Pred extends Function1[Char,Boolean] with Function2[Char,Syntax,Boolean] {
     private[this] val masks = new Array[Long](4)
