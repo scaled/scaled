@@ -519,5 +519,12 @@ class Line (_cs :Array[Char], _xs :Array[Syntax], _ts :Tags, _lts :Line.TagSet,
   override protected def _tags  = _ts
   override protected def _ltags = _lts
 
-  override def toString () = s"$asString [${_offset}:$length/${_cs.length}]"
+  override def toString () = {
+    val sb = new JStringBuilder()
+    sb.append(_cs, _offset, length)
+    sb.append(" [").append(_offset).append(':').append(length)
+    sb.append('/').append(_cs.length).append(']')
+    if (!_ts.isEmpty) sb.append(" t:").append(_ts)
+    sb.toString
+  }
 }
