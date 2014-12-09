@@ -62,6 +62,9 @@ class Tags {
   // a dummy element at the root of our node linked list simplifies logic
   private val _root :Node[_] = rootNode()
 
+  /** Returns true if this tags set contains no tags. */
+  def isEmpty :Boolean = _root.isEmpty
+
   /** Adds a tag for the specified region denoted by `tag`. */
   def add[T] (tag :T, start :Int, end :Int) {
     _root.insert(mkNode(tag, start, end))
@@ -301,6 +304,7 @@ object Tags {
   private case class Node[T] (tag :T, start :Int, end :Int) extends Tag[T] {
     var next :Node[_] = _
 
+    def isEmpty = (next == null)
     def toList :List[Tag[_]] = this :: toListTail
     def toListTail :List[Tag[_]] = if (next == null) Nil else next.toList
 
