@@ -306,6 +306,7 @@ object Line {
       text.getChars(0, text.length, _cs, olength)
       this
     }
+    /** A synonym for [[append(String)]]. */
     def += (text :String) = append(text)
 
     /** Appends `text` to this line builder. */
@@ -315,11 +316,28 @@ object Line {
       System.arraycopy(text, 0, _cs, olength, text.length)
       this
     }
+    /** A synonym for [[append(Array[Char])]]. */
     def += (text :Array[Char]) = append(text)
+
+    /** Appends `text` and assigns its syntax to `syntax`. */
+    def appendWithSyntax[T] (text :String, syntax :Syntax) :Builder = {
+      val start = length
+      append(text).withSyntax(syntax, start, length)
+    }
+
+    /** Appends `text` and tags with `style`. */
+    def appendWithStyle[T] (text :String, style :String) :Builder =
+      appendWithTag(text, style.intern)
+
+    /** Appends `text` and tags with `tag`. */
+    def appendWithTag[T] (text :String, tag :T) :Builder = {
+      val start = length
+      append(text).withTag(tag, start, length)
+    }
 
     /** Applies `syntax` to `[start,end)` of the being-built line. */
     def withSyntax (syntax :Syntax, start :Int = 0, end :Int = _length) :Builder = {
-      var ii = start ; while (ii < end) { _xs(ii) = syntax ; ii += 1 }
+      Arrays.fill(_xs.asInstanceOf[Array[Object]], start, end, syntax)
       this
     }
 
