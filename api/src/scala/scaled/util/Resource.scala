@@ -18,6 +18,9 @@ import scaled._
   */
 abstract class Resource {
 
+  /** Returns the file names of each of this resource's files. */
+  def names :Seq[String]
+
   /** Returns input streams for this resource's files. */
   def streams :Seq[InputStream]
 
@@ -57,11 +60,13 @@ object Resource {
   def apply (sources :Seq[URL]) :Resource = {
     // if the URLs are not all file: URLs, we can't do auto-reloading
     if (sources.exists(_.getProtocol != "file")) new Resource() {
+      lazy val names = sources.map(s => Paths.get(s.getPath).getFileName.toString)
       override def streams = sources.map(_.openStream)
       override protected def lastModified = 1L
     }
     else new Resource {
       val paths = sources.map(s => Paths.get(s.toURI))
+      override def names = paths.map(_.getFileName.toString)
       override def streams = paths.map(Files.newInputStream(_))
       override protected def lastModified = paths.map(
         f => Files.getLastModifiedTime(f).toMillis).max
