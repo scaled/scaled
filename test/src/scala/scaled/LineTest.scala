@@ -134,4 +134,11 @@ class LineTest {
     assertEquals(t2.lastIndexOf("blah,"), l2.lastIndexOf(Matcher.regexp("\\bblah")))
     assertEquals(t2.lastIndexOf("blah.", 14), l2.lastIndexOf(Matcher.regexp("\\bblah"), 14))
   }
+
+  @Test def testBuilderAppend () {
+    val lb = Line.builder("Test")
+    lb += " foo"
+    lb += " bar"
+    assertEquals(Line("Test foo bar"), lb.build())
+  }
 }

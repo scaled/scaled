@@ -280,22 +280,52 @@ object Line {
 
   /** Used to build (immutable) lines with non-default syntax, styles and tags. */
   class Builder (private var _cs :Array[Char]) {
+    private var _length = _cs.length
     private var _xs = Array.fill(_cs.length)(Syntax.Default)
     private var _ts = new Tags()
     private var _lts = new TagSet()
 
+    private def expand (length :Int) {
+      val olength = _length ; val nlength = olength + length ; val ocapacity = _cs.length
+      if (nlength > ocapacity) {
+        val ncapacity = (nlength + 63) & -64 // round up to multiple of 64
+        _cs = Arrays.copyOf(_cs, ncapacity)
+        _xs = Arrays.copyOf(_xs, ncapacity)
+        Arrays.fill(_xs.asInstanceOf[Array[Object]], olength, _xs.length, Syntax.Default)
+      }
+      _length = nlength
+    }
+
+    /** Appends `text` to this line builder. */
+    def append (text :String) :Builder = {
+      val olength = _length
+      expand(text.length)
+      text.getChars(0, text.length, _cs, olength)
+      this
+    }
+    def += (text :String) = append(text)
+
+    /** Appends `text` to this line builder. */
+    def append (text :Array[Char]) :Builder = {
+      val olength = _length
+      expand(text.length)
+      System.arraycopy(text, 0, _cs, olength, text.length)
+      this
+    }
+    def += (text :Array[Char]) = append(text)
+
     /** Applies `syntax` to `[start,end)` of the being-built line. */
-    def withSyntax (syntax :Syntax, start :Int = 0, end :Int = _cs.length) :Builder = {
+    def withSyntax (syntax :Syntax, start :Int = 0, end :Int = _length) :Builder = {
       var ii = start ; while (ii < end) { _xs(ii) = syntax ; ii += 1 }
       this
     }
 
     /** Applies `style` to `[start,end)` of the being-built line. */
-    def withStyle (style :String, start :Int = 0, end :Int = _cs.length) :Builder =
+    def withStyle (style :String, start :Int = 0, end :Int = _length) :Builder =
       withTag(style.intern, start, end)
 
     /** Tags `[start,end)` of the being-built line with `tag`. */
-    def withTag[T] (tag :T, start :Int = 0, end :Int = _cs.length) :Builder = {
+    def withTag[T] (tag :T, start :Int = 0, end :Int = _length) :Builder = {
       if (end > start) _ts.add(tag, start, end)
       this
     }
@@ -313,7 +343,7 @@ object Line {
     def withTags (ts :Tags) :Builder = { _ts = ts ; this }
 
     /** Builds and returns the line. This builder will be rendered unusable after this call. */
-    def build () :Line = try new Line(_cs, _xs, _ts, _lts, 0, _cs.length)
+    def build () :Line = try new Line(_cs, _xs, _ts, _lts, 0, _length)
                          finally { _cs = null ; _xs = null ; _ts = null ; _lts = null }
   }
 
