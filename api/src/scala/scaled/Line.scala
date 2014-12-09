@@ -296,6 +296,9 @@ object Line {
       _length = nlength
     }
 
+    /** Returns the current length of this builder's line. */
+    def length = _length
+
     /** Appends `text` to this line builder. */
     def append (text :String) :Builder = {
       val olength = _length
