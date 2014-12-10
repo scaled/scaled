@@ -4,7 +4,7 @@
 
 package scaled
 
-import java.util.{AbstractList, Comparator, List => JList, Objects}
+import java.util.{AbstractList, Comparator, List => JList, Objects, RandomAccess}
 
 /** A view of an ordered sequence of elements which are O(1) accessible by index. The underlying
   * sequence may be mutable or immutable. Most of the time you should use the concrete class
@@ -137,7 +137,7 @@ abstract class SeqV[+A] extends Ordered[A] {
 
   // views
   /** Returns a view of this seq as a [[JList]]. */
-  def asJList[B >: A] :JList[B] = new AbstractList[B]() {
+  def asJList[B >: A] :JList[B] = new AbstractList[B] with RandomAccess {
     override def size = SeqV.this.size
     override def get (idx :Int) = SeqV.this.get(idx)
   }
