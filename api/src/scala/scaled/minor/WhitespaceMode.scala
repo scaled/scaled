@@ -81,29 +81,6 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     }
   })
 
-  addBehavior(trimTrailingWhitespace, new Behavior() {
-    private val _trimLines = MSet[Int]()
-
-    override protected def activate () {
-      // note lines to be trimmed when we see edits of the appropriate form
-      note(buffer.edited onValue { _ match {
-        case Buffer.Insert(start, end) =>
-          if (end.col == 0 && end.row == start.row + 1) _trimLines += start.row
-        case _ => // ignore
-      }})
-      // trim the to-be-trimmed lines in the did-invoke hook; we cannot modify the buffer when
-      // responding to buffer modifications, but doing it in did-invoke ensures that our changes
-      // are bundled up with the original fns with regard to the undo stack
-      note(disp.didInvoke onEmit {
-        // we don't trim whitespace from the row that contains the point;
-        // the user is working on that row and that whitespace might be meaningful
-        val p = view.point()
-        _trimLines foreach { row => if (p.row != row) trimTrailingWhitespaceAt(row) }
-        _trimLines.clear()
-      })
-    }
-  })
-
   addBehavior(requireTrailingNewline, new Behavior() {
     override protected def activate () {
       note(buffer.willSave onValue { buf =>
@@ -113,6 +90,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   })
 
   override def keymap = super.keymap.
+    bind("trim-whitespace-then-newline", "ENTER", "S-ENTER").
     bind("trim-buffer-trailing-whitespace", "C-M-]");
   override def configDefs = WhitespaceConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
@@ -121,6 +99,13 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     val line = buffer.line(row) ; val len = line.length ; val last = len-1
     var pos = last ; while (pos >= 0 && isWhitespace(line.charAt(pos))) pos -= 1
     if (pos < last) buffer.delete(Loc(row, pos+1), Loc(row, len))
+  }
+
+  @Fn("""If `trim-trailing-whitespace` is enabled, trims whitespace from the current line.
+         Then dispatches the default ENTER behavior.""")
+  def trimWhitespaceThenNewline () :Boolean = {
+    if (config(trimTrailingWhitespace)) trimTrailingWhitespaceAt(view.point().row)
+    false // continue dispatch
   }
 
   @Fn("Trims trailing whitespace from the line at the point.")
