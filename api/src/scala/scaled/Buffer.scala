@@ -512,7 +512,12 @@ abstract class Buffer extends BufferV {
 object Buffer {
 
   /** Conveys information about a buffer edit. See [[Insert]], [[Delete]], [[Transform]]. */
-  sealed trait Edit extends Region with Undoable
+  sealed trait Edit extends Region with Undoable {
+    /** The start of this edit. */
+    def start :Loc
+    /** The end of this edit. */
+    def end :Loc
+  }
 
   /** An event emitted when text is inserted into a buffer. */
   class Insert (val start :Loc, val end :Loc, buffer :Buffer) extends Edit {
