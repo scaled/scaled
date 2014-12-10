@@ -6,17 +6,6 @@ package scaled
 
 import scaled.util.Chars
 
-/** A location in a buffer which responds as predictably as possible to changes in the buffer.
-  * Edits that precede the anchor cause it to shift forward or back appropriately. Edits after the
-  * anchor do not cause movement. Deleting the text that includes the anchor causes it to move to
-  * the start of the deleted range.
-  */
-trait Anchor {
-
-  /** Returns this anchor's current location. */
-  def loc :Loc
-}
-
 /** Manages a sequence of characters, providing a line-by-line view and the means to translate
   * between character offset and line offset plus (intra-line) character offset. This isolates the
   * read-only API, see [[Buffer]] for the mutable API and [[RBuffer]] for the reactive-mutable API.
