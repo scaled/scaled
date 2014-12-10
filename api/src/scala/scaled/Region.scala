@@ -43,7 +43,7 @@ object Region {
 
   /** Finds the region in the supplied ordered sequence of non-overlapping regions which contains
     * `loc`, if any. A binary search is used to search regions. */
-  def find[R <: Region] (rs :Seq[R], loc :Loc) :Option[R] = {
+  def find[R <: Region] (rs :SeqV[R], loc :Loc) :Option[R] = {
     var low = 0 ; var high = rs.size-1
     while (low <= high) {
       val mid = (low + high) >>> 1
