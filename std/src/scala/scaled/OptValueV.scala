@@ -30,8 +30,8 @@ abstract class OptValueV[T] extends ValueReactor[Option[T]] {
   /** Returns the current value if one is set, `alt` otherwise. */
   @inline final def getOrElse[B >: T] (alt : => B) :B = if (isDefined) get else alt
 
-  /** Maps the contents of this value via `f`. When this value is updated, the mapped value will emit
-    * that value as transformed by `f`. When this value is cleared, the mapped value is also
+  /** Maps the contents of this value via `f`. When this value is updated, the mapped value will
+    * emit that value as transformed by `f`. When this value is cleared, the mapped value is also
     * cleared. A call to `get` on the mapped value will call get on this value and transform the
     * result via `f` before returning it. The mapped value will retain a connection to this value
     * for as long as it has connections of its own.
