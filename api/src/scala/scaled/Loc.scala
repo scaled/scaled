@@ -21,10 +21,7 @@ class Loc private (val rowCol :Long) extends AnyVal {
   def col :Int = rowCol.toInt
 
   /** Returns true if this loc is earlier than `other`. */
-  def < (other :Loc) :Boolean = {
-    val trow = row ; val orow = other.row
-    (trow < orow) || (trow == orow && col < other.col)
-  }
+  def < (other :Loc) :Boolean = rowCol < other.rowCol
   /** Returns true if this loc is earlier than or equal to `other`. */
   def <= (other :Loc) :Boolean = !(other < this)
   /** Returns true if this loc is later than `other`. */
@@ -32,12 +29,8 @@ class Loc private (val rowCol :Long) extends AnyVal {
   /** Returns true if this loc is later than or equal to `other`. */
   def >= (other :Loc) :Boolean = !(this < other)
 
-  /** Returns `< 0` if `this` is `<` `other`, `0` if `this` == `other` and `> 0` otherwise. */
-  def compareTo (other :Loc) :Int = {
-    // overflow is not a risk, if a buffer has ~2 billion rows/cols, you have bigger problems
-    val drow = row - other.row
-    if (drow != 0) drow else col - other.col
-  }
+  /** Returns `-1` if `this < other`, `1` if `this > other` and `0` otherwise. */
+  def compareTo (other :Loc) :Int = java.lang.Long.compare(rowCol, other.rowCol)
 
   /** Returns the lesser (earlier in the buffer) of `this` and `other`. */
   def lesser (other :Loc) :Loc = if (this < other) this else other
@@ -89,6 +82,9 @@ object Loc {
 
   /** Creates a location with the specified row and column. */
   def apply (row :Int, col :Int) = new Loc((row.toLong << 32) + col)
+
+  /** Compares `a` and `b` per `Comparable` specification. */
+  def compare (a :Loc, b :Loc) = java.lang.Long.compare(a.rowCol, b.rowCol)
 
   /** Adjusts `loc` based on an insert that may have preceded it. */
   def adjustForInsert (loc :Loc, start :Loc, end :Loc) :Loc =
