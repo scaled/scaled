@@ -19,6 +19,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
     bind("switch-to-buffer", "C-x b").
     bind("kill-buffer",      "C-x k").
     bind("find-file",        "C-x C-f").
+    bind("create-file",      "C-x C-n").
 
     // editor commands
     bind("save-buffers-close-window", "C-x C-c").
@@ -60,7 +61,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
                      comp) onSuccess frame.visit
   }
 
-  @Fn("""Reads a buffer name from the minibuffer and kills (closes) it.""")
+  @Fn("Reads a buffer name from the minibuffer and kills (closes) it.")
   def killBuffer () {
     val current = buffer
     val prompt = s"Kill buffer (default ${current.name}):"
@@ -76,11 +77,18 @@ class MetaMode (env :Env) extends MinorMode(env) {
     // not change the current buffer.
   }
 
-  @Fn("""Reads a filename from the minibuffer and visits it in a buffer.""")
+  @Fn("Reads a filename from the minibuffer and visits it in a buffer.")
   def findFile () {
     window.mini.read("Find file:", buffer.store.parent, fileHistory(wspace),
                      Completer.file) onSuccess frame.visitFile
   }
+
+  @Fn("Reads a filename from the minibuffer and visits it in a buffer. The file need not exist.")
+  def createFile () {
+    window.mini.read("File path:", buffer.store.parent, createFileHistory,
+                     Completer.none) onSuccess { path => frame.visitFile(Store(path)) }
+  }
+  private val createFileHistory = new Ring(16)
 
   //
   // EDITOR FNS
@@ -172,7 +180,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
     val bb = new BufferBuilder(this.view.width()-1)
-    disp.modes foreach { m =>
+    def describe (m :Mode) {
       bb.addHeader(s"${m.name}-mode:")
       bb.addFilled(m.desc)
       bb.add(s"(tags: ${m.tags.mkString(" ")})")
@@ -194,7 +202,11 @@ class MetaMode (env :Env) extends MinorMode(env) {
       }
     }
 
+    // describe the major mode first, then the minor modes
     val major = disp.modes.last
+    describe(major)
+    disp.modes filter(_ != major) foreach describe
+
     val hbuf = wspace.createBuffer(s"*mode:${major.name}*", reuse=true,
                                    state=State.inits(Mode.Hint("help")))
     frame.visit(bb.applyTo(hbuf))
