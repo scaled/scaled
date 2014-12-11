@@ -223,10 +223,10 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
       }
 
       // finish up after invoking our fn
-      _didInvoke.emit(fn.name)
-      view.buffer.undoStack.delimitAction(view.point())
       _prevFn = _curFn
       _curFn = null
+      _didInvoke.emit(fn.name)
+      view.buffer.undoStack.delimitAction(view.point())
       didInvokeFn()
 
       // if the fn returns anything other than false, we assume it handled the key
