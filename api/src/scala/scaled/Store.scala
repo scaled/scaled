@@ -99,6 +99,7 @@ class FileStore private (val path :Path) extends Store {
   override def reader = if (exists) new FileReader(path.toFile) else new StringReader("")
 
   override def write (lines :Iterable[Store.Writable]) {
+    Files.createDirectories(path.getParent) // make sure our parent directory exists
     // TODO: file encoding?
     val temp = path.resolveSibling(name + "~")
     val perms = if (exists) Files.getPosixFilePermissions(path) else null
