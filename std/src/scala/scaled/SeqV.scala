@@ -55,7 +55,7 @@ abstract class SeqV[+A] extends Ordered[A] {
     -1
   }
   /** Returns the index of the first element that satisfies `pred`, or -1. */
-  def indexWhere (pred :A => Boolean) :Int = indexOf(pred, 0)
+  def indexWhere (pred :A => Boolean) :Int = indexWhere(pred, 0)
 
   /** Returns the index (>= `from`) of the first occurrence of `slice` in this sequence or -1. */
   def indexOfSlice[B >: A] (slice :SeqV[B], from :Int) :Int = {
