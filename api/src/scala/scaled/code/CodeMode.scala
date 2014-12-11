@@ -172,7 +172,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   override def refillLinesIn (start :Loc, end :Loc) =
-    if (!commenter.inComment(buffer, start)) super.refillLinesIn(start, end)
+    if (!commenter.inComment(buffer, view.point())) super.refillLinesIn(start, end)
     else {
       val cend = trimEnd(end)
       buffer.replace(start, cend, commenter.refilled(buffer, fillColumn, start, cend))
