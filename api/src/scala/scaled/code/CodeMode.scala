@@ -152,28 +152,31 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     case _   => "?"
   }
 
+  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && canAutoFill(p)
   // when editing code, we only auto-fill comments; auto-filling code is too hairy
-  override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && commenter.inComment(buffer, p)
+  protected def canAutoFill (p :Loc) :Boolean = commenter.inComment(buffer, p)
 
   override def mkParagrapher (syn :Syntax) =
     if (syn.isComment) commenter.mkParagrapher(syn, buffer)
     else super.mkParagrapher(syn)
 
-  // in code mode, refills only happen inside comments
   override def fillParagraph () {
-    // make sure we're "looking at" a comment on this line
+    // make sure we're "looking at" something fillable on this line
     val p = view.point()
     val wp = buffer.line(p).indexOf(isNotWhitespace, p.col) match {
       case -1 => p
       case ii => p.atCol(ii)
     }
-    if (commenter.inComment(buffer, wp)) super.fillParagraph()
-    else window.popStatus("Code modes only fill comments, not code.")
+    if (canAutoFill(wp)) super.fillParagraph()
+    else window.popStatus(s"$name-mode doesn't know how to fill this paragraph.")
   }
-  override def refillLinesIn (start :Loc, end :Loc) = {
-    val cend = trimEnd(end)
-    buffer.replace(start, cend, commenter.refilled(buffer, fillColumn, start, cend))
-  }
+
+  override def refillLinesIn (start :Loc, end :Loc) =
+    if (!commenter.inComment(buffer, start)) super.refillLinesIn(start, end)
+    else {
+      val cend = trimEnd(end)
+      buffer.replace(start, cend, commenter.refilled(buffer, fillColumn, start, cend))
+    }
 
   // when we break for auto-fill, insert the appropriate comment prefix
   override def autoBreak (at :Loc) {
