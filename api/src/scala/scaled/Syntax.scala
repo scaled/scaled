@@ -65,6 +65,13 @@ object Syntax {
     override def toString = "StringLiteral"
   }
 
+  /** A singleton [[Syntax]] instance for tagging heredoc (multiline string) literals. */
+  val HereDocLiteral = new Syntax {
+    def isComment = false
+    def isLiteral = true
+    override def toString = "HereDocLiteral"
+  }
+
   /** A singleton [[Syntax]] instance for tagging character literals. */
   val CharLiteral = new Syntax {
     def isComment = false
