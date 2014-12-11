@@ -4,9 +4,10 @@
 
 package scaled.minor
 
-import scaled._
-import scaled.util.{BufferBuilder, SubProcess}
 import java.nio.file.Paths
+import scaled._
+import scaled.major.TextConfig
+import scaled.util.{BufferBuilder, SubProcess}
 
 /** Defines fns that are not related to the current buffer, but rather for interation with the
   * editor environment or other global things. */
@@ -182,7 +183,18 @@ class MetaMode (env :Env) extends MinorMode(env) {
     val bb = new BufferBuilder(this.view.width()-1)
     def describe (m :Mode) {
       bb.addHeader(s"${m.name}-mode:")
-      bb.addFilled(m.desc)
+      // split the description into double newline separated paragraphs, and fill those
+      // individually
+      m.desc.split("\n\n") foreach { p =>
+        var inPre = false
+        p.split("```") foreach { sec =>
+          val tsec = sec.trim
+          if (inPre) tsec.split("\n") foreach { l => bb.add(l, TextConfig.listStyle) }
+          else if (tsec.length > 0) bb.addFilled(tsec)
+          inPre = !inPre
+        }
+        bb.addBlank()
+      }
       bb.add(s"(tags: ${m.tags.mkString(" ")})")
 
       val keys = m.keymap.bindings
