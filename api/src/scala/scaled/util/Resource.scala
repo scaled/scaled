@@ -25,10 +25,7 @@ abstract class Resource {
   def streams :Seq[InputStream]
 
   /** Returns the contents of this resource's files as lists of lines. */
-  def lines :Seq[SeqV[String]] = streams map { in =>
-    try CharStreams.readLines(new InputStreamReader(in, Charsets.UTF_8)).toSeqV
-    finally in.close()
-  }
+  def lines :Seq[SeqV[String]] = streams map Resource.readLines
 
   /** Returns a property which converts this resource to a `T` lazily. If the resource supports
     * change detection, the property will be regenerated the next time it is requested after the
@@ -72,4 +69,9 @@ object Resource {
         f => Files.getLastModifiedTime(f).toMillis).max
     }
   }
+
+  /** Reads the lines from `in`, which must contain UTF8 encoded text. */
+  def readLines (in :InputStream) :SeqV[String] =
+    try CharStreams.readLines(new InputStreamReader(in, Charsets.UTF_8)).toSeqV
+    finally in.close()
 }
