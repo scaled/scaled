@@ -145,11 +145,36 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** Returns the close bracket for the supplied open bracket.
     * `?` is returned if the open bracket is unknown. */
-  def closeForOpen (bracket :String) = bracket match {
-    case "{" => "}"
-    case "(" => ")"
-    case "[" => "]"
-    case _   => "?"
+  def closeForOpen (bracket :Char) = bracket match {
+    case '{' => '}'
+    case '(' => ')'
+    case '[' => ']'
+    case '"' => '"'
+    case '\'' => '\''
+    case _   => '?'
+  }
+
+  /** Used to tag auto-inserted close quote/brackets. */
+  case class AutoPair (openLoc :Loc)
+
+  /** Inserts `open` and the corresponding close quote/bracket, leaving the point between the two.
+    * The close character will be tagged as auto-inserted so that the electric-foo methods know
+    * that it may be overwritten if the user manually types the close character over top of it. */
+  def insertTaggedPair (open :Char) {
+    val fst = view.point()
+    val mid = buffer.insert(fst, open, Syntax.Default)
+    val end = buffer.insert(mid, closeForOpen(open), Syntax.Default)
+    buffer.addTag(AutoPair(fst), mid, end)
+    view.point() = mid
+  }
+
+  /** Returns true if `loc` contains an auto-inserted close quote/bracket which matches `close`
+    * and for which the auto-closed open quote/bracket appears to still be valid. */
+  def isTaggedClose (loc :Loc, close :Char) :Boolean = {
+    buffer.charAt(loc) == close && (buffer.tagAt(classOf[AutoPair], loc) match {
+      case None     => false
+      case Some(ap) => closeForOpen(buffer.charAt(ap.openLoc)) == close
+    })
   }
 
   override def shouldAutoFill (p :Loc) = super.shouldAutoFill(p) && canAutoFill(p)
@@ -224,20 +249,19 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          a close bracket following the open bracket, leaving the cursor positioned after the open
          bracket.""")
   def electricOpenBracket (typed :String) {
-    selfInsertCommand(typed)
     val p = view.point()
-    if (p.col == buffer.line(p).length && config(autoCloseBracket)) {
-      selfInsertCommand(closeForOpen(typed))
-      view.point() = p
-    }
+    // TODO: instead just scan ahead a bit for the expected close and don't pair if we see it...
+    if (config(autoCloseBracket) && p == buffer.lineEnd(p)) insertTaggedPair(typed.charAt(0))
+    // if auto-close bracket is disabled or we're not at the end of the line, no magic!
+    else selfInsertCommand(typed)
   }
 
   @Fn("""Automatically indents a close-bracket immediately after typing it. Also avoids duplicating
          the close bracket if the needed bracket is already under the point.""")
   def electricCloseBracket (typed :String) {
+    val p = view.point()
     // if we're currently on the desired close bracket, just pretend like we typed it and fwd-char
-    val p = view.point() ; val c = buffer.charAt(p)
-    if (c == typed.charAt(0)) view.point() = p.nextC
+    if (isTaggedClose(p, typed.charAt(0))) view.point() = p.nextC
     else {
       selfInsertCommand(typed)
       reindentAtPoint()
@@ -250,21 +274,18 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          If the point is currently on the to-be-inserted quote, nothing is inserted and the point
          is simply moved past the quote. This avoids undesirable behavior if the user's fingers
          insist on typing the close quote even though it was already inserted for them.""")
-  def electricQuote (typed :String) {
-    // if we're currently on the desired quote, just pretend like we typed it and move forward
-    val p = view.point() ; val c = buffer.charAt(p) ; val s = buffer.syntaxNear(p)
-    if (c == typed.charAt(0)) view.point() = p.nextC
-    // if we're not looking at whitespace or not in code mode, no magic
-    else if (!isWhitespace(c) || !s.isCode) selfInsertCommand(typed)
-    // otherwise auto-pair the quote and leave the point betwixt
+  def electricQuote (typed :String) :Unit =
+    if (!config(autoCloseQuote)) selfInsertCommand(typed)
     else {
-      selfInsertCommand(typed)
-      val inP = view.point()
-      // TODO: skip over non-whitespace?
-      selfInsertCommand(typed)
-      view.point() = inP
+      val p = view.point()
+      // if we're currently on the desired quote, just pretend like we typed it and move forward
+      if (isTaggedClose(p, typed.charAt(0))) view.point() = p.nextC
+      // if we're not looking at whitespace or not in code mode, no magic
+      else if (!isWhitespace(buffer.charAt(p)) ||
+               !buffer.syntaxNear(p).isCode) selfInsertCommand(typed)
+      // otherwise auto-pair the quote and leave the point betwixt
+      else insertTaggedPair(typed.charAt(0))
     }
-  }
 
   @Fn("""Moves the point onto the open bracket (paren, brace, etc.) of the enclosing block. This
          places the point into the block that encloses the current block, so a repeated invocation
