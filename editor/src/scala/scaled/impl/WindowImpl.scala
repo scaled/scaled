@@ -39,7 +39,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
       ws.focusedBuffer(buf) // move the focused buffer to the head of the buffers
     }
 
-    def setBuffer (buf :BufferImpl) :BufferViewImpl =
+    def setBuffer (buf :BufferImpl, oldBufferDisposing :Boolean) :BufferViewImpl =
       // if we're already displaying this buffer, just keep it
       if (disp != null && buf == view.buffer) view else {
         val Geometry(width, height, _, _) = geometry
@@ -58,11 +58,11 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
 
         // listen for buffer death and repopulate this frame as needed
         if (onKill != null) onKill.close()
-        onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch()) }
+        onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch(), true) }
 
         if (disp != null) {
           prevStore = Some(this.view.buffer.store)
-          disp.dispose()
+          disp.dispose(oldBufferDisposing)
         }
         disp = new DispatcherImpl(
           WindowImpl.this, resolver(this, buf), view, mline,
@@ -91,7 +91,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
 
     override def geometry = WindowImpl.this.geometry // TODO
     override def view = disp.area.bview
-    override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl])
+    override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl], false)
   }
 
   /** Used to resolve modes in this window/frame. */
@@ -111,9 +111,11 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   }
 
   /** Called when this window is going away. Cleans up. */
-  def dispose () {
+  def dispose (willHibernate :Boolean) {
     _msgConn.close()
-    _frames foreach { _.disp.dispose() }
+    // if we're going to hibernate, then our buffers are all going away; let the dispatcher know
+    // that so that it can clean up active modes more efficiently
+    _frames foreach { _.disp.dispose(willHibernate) }
     _frames.clear()
   }
 
@@ -180,7 +182,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     _frame.visitFile(Store(path))
   }
   def visitScratchIfEmpty () {
-    if (_frame.disp == null) _frame.setBuffer(ws.getScratch())
+    if (_frame.disp == null) _frame.setBuffer(ws.getScratch(), false)
   }
 
   //

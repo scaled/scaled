@@ -57,7 +57,7 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
       ui.setPrompt("")
       ui.showCompletions(Seq())
       view.popup.clear() // clear any active popup
-      disp.dispose()
+      disp.dispose(true)
       setCenter(null)
       setVisible(false)
       onClear()

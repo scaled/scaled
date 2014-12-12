@@ -141,7 +141,11 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
     windows.remove(win)
     try {
-      win.dispose() // this may cause us to hibernate
+      // if we're about to close our last window, this workspace will hibernate and all of its
+      // buffers will go away; we let the window know that so that when it closes its frames it can
+      // clean things up more efficiently
+      val willHibernate = (windows.size == 1)
+      win.dispose(willHibernate)
       win.stage.close()
     } catch {
       case e :Throwable => log.log(s"Internal error closing $win", e)

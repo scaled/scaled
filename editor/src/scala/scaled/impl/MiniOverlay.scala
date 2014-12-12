@@ -94,7 +94,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
       ui.setPrompt("")
       ui.showCompletions(Seq())
       view.popup.clear() // clear any active popup
-      disp.dispose()
+      disp.dispose(true)
       setCenter(null)
       setVisible(false)
       onClear()

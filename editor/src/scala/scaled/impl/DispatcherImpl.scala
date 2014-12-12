@@ -50,7 +50,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   major onValueNotify { major =>
     val hadMajor = (_majorMeta != null)
     // all old modes need to be cleaned out, and applicable minor modes re-resolved
-    _metas foreach { _.dispose(false) }
+    _metas foreach { _.dispose(false, false) }
     // set up our new major mode
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
@@ -131,9 +131,9 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   }
 
   /* Called when this dispatcher and all of its associated machinery should go away. */
-  def dispose () {
+  def dispose (bufferDisposing :Boolean) {
     view.dispose()
-    _metas foreach(_.dispose(true))
+    _metas foreach(_.dispose(true, bufferDisposing))
     _metas = Nil // render ourselves useless
     _prefixes = Set()
   }
@@ -189,7 +189,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
   private def removeMode (minor :MinorMode) {
     _metas = _metas.filterNot { mm =>
-      if (mm.mode == minor) { mm.dispose(false); true }
+      if (mm.mode == minor) { mm.dispose(false, false); true }
       else false
     }
     modesChanged()
@@ -298,11 +298,14 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     // the global user sheets (so that the global user sheets are always last)
     addSheets(mode.stylesheets)
 
-    def dispose (bufferDisposing :Boolean) {
-      // if the buffer is not going away...
-      if (!bufferDisposing) {
+    def dispose (windowDisposing :Boolean, bufferDisposing :Boolean) {
+      // if the window is not going away...
+      if (!windowDisposing) {
         // remove this mode's stylesheet (if any) from the window
         mode.stylesheets.foreach { ss => area.getStylesheets.remove(ss) }
+      }
+      // if the buffer is not going away...
+      if (!bufferDisposing) {
         // tell the mode that it's being deactivated before we dispose it
         mode.deactivate()
       }
