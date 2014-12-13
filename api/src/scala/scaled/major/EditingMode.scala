@@ -49,8 +49,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     bind("capitalize-word", "M-c").
 
     bind("sort-paragraph", "C-M-l").
-    // NONE   -> "sort-lines",
-    // NONE   -> "reverse-region",
+    //   "sort-lines", "no binding",
+    //   "reverse-region", "no binding",
     bind("fill-paragraph", "M-q").
 
     // killing and yanking commands
@@ -197,6 +197,9 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   /** Auto-breaks a line at `at`. */
   def autoBreak (at :Loc) {
     buffer.split(at)
+    // trim whitespace immediately preceeding `at` (but only up to the start of the line)
+    val from = buffer.scanBackWhile(Chars.isWhitespace, at, at.atCol(0))
+    if (from < at) buffer.delete(from, at)
   }
 
   //
