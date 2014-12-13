@@ -101,11 +101,15 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     if (pos < last) buffer.delete(Loc(row, pos+1), Loc(row, len))
   }
 
-  @Fn("""If `trim-trailing-whitespace` is enabled, trims whitespace from the current line.
-         Then dispatches the default ENTER behavior.""")
+  @Fn("""If `trim-trailing-whitespace` is enabled, trims whitespace from the current line after
+         the current fn has completed.""")
   def trimWhitespaceThenNewline () :Boolean = {
-    if (config(trimTrailingWhitespace)) trimTrailingWhitespaceAt(view.point().row)
-    false // continue dispatch
+    if (config(trimTrailingWhitespace)) {
+      val row = view.point().row
+      // defer the trim until the current fn dispatch chain is complete
+      env.exec runOnUI { trimTrailingWhitespaceAt(row) }
+    }
+    false // always continue dispatch
   }
 
   @Fn("Trims trailing whitespace from the line at the point.")
