@@ -7,16 +7,6 @@ package scaled
 import java.nio.file.Path
 import scala.reflect.ClassTag
 
-/** Scaled services must extend this class so that they can be notified of lifecycle events. */
-abstract class AbstractService {
-
-  /** A callback invoked when a service is first started by Scaled. */
-  def didStartup () :Unit
-
-  /** A callback invoked when a service is about to be shutdown by Scaled. */
-  def willShutdown () :Unit
-}
-
 /** Provides services relating to services. */
 @Service(name="service", impl="impl.ServiceManager",
          desc="Provides meta-services. Mainly logging and dependency injection.")
