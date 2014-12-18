@@ -58,7 +58,7 @@ class WatchManager (log :Logger, exec :Executor) extends AbstractService with Wa
     val signal = Signal[WatchEvent[_]](exec.uiExec)
     val key = dir.register(service, kinds, SensitivityWatchEventModifier.HIGH)
     byKey.put(key, this)
-    log.log(s"Created watch: $dir ($key)")
+    log.log(s"Created watch: $dir")
 
     def dispatch (ev :WatchEvent[_]) {
       signal.emit(ev)
