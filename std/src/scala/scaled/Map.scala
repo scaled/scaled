@@ -4,7 +4,7 @@
 
 package scaled
 
-import java.util.Objects
+import java.util.{AbstractMap, Map => JMap, Objects, HashSet}
 
 /** A mapping from keys to values. Conceptually this is a `Set[K]` and `(K => V)`. */
 abstract class Map[K,+V] extends Unordered[(K,V)] with (K => V) {
@@ -62,6 +62,23 @@ abstract class Map[K,+V] extends Unordered[(K,V)] with (K => V) {
     val b = newBuilder[B](size)
     foreach { (k,v) => b += f(k, v) }
     b.build()
+  }
+
+  // views
+
+  /** Returns a view of this seq as a [[JMap]]. */
+  def asJMap[V1 >: V] :JMap[K,V1] = new AbstractMap[K,V1]() {
+    override def isEmpty = Map.this.isEmpty
+    override def size = Map.this.size
+    override def get (key :Any) = Map.this.get(key.asInstanceOf[K]) || null.asInstanceOf[V1]
+    override def containsKey (key :Any) = Map.this.contains(key.asInstanceOf[K])
+    override def keySet = Map.this.keySet.asJSet
+    override def values = Map.this.values.toSeq.asJList[V1]
+    override def entrySet = {
+      val set = new HashSet[JMap.Entry[K,V1]]()
+      Map.this foreach { (k,v) => set.add(new AbstractMap.SimpleImmutableEntry(k, v)) }
+      set
+    }
   }
 
   // TODO: mapValues, etc.
@@ -146,7 +163,7 @@ object Map {
   /** Returns a [[Map]] view of `jmap`. `jmap` must not contain null keys or values.
     * `jmap` is also assumed to be effectively immutable for the lifetime of this view.
     * Violate this assumption at your peril. */
-  def view[K,V] (jmap :java.util.Map[K,V]) :Map[K,V] =
+  def view[K,V] (jmap :JMap[K,V]) :Map[K,V] =
     if (jmap.isEmpty) empty else new Map[K,V]() {
       override def iterator () = new JIterator[(K,V) @uV]() {
         val eiter = jmap.entrySet.iterator()
