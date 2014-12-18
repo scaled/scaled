@@ -136,16 +136,19 @@ object Indenter {
   }
 
   /** Indicates that we're nested in a bracketed block of code. */
-  class BlockS (close :Char, next :State) extends State(next) {
+  class BlockS (close :Char, col :Int, next :State) extends State(next) {
     def isClose (close :Char) :Boolean = this.close == close
+    // a block bracket only affects indentation if it's at the end of a line;
+    // if we see {{, for example, we only want the last one to affect indentation
+    override def indent (cfg :Config, top :Boolean) :Int =
+      if (col >= 0) next.indent(cfg) else super.indent(cfg, top)
     override def popBlock (close :Char) = if (this.close == close) next else next.popBlock(close)
-    override protected def show :String = s"BlockS($close)"
+    override protected def show :String = s"BlockS($close, $col)"
   }
 
   /** Indicates that we're nested in a bracketed expression. */
   class ExprS (close :Char, val col :Int, next :State) extends State(next) {
     def isClose (close :Char) :Boolean = this.close == close
-    def isExpr :Boolean = (col >= 0)
     override def indent (cfg :Config, top :Boolean) :Int =
       // an expr block only affects indentation if it's on the top of the stack
       if (top) col+1 else next.indent(cfg)
@@ -188,8 +191,9 @@ object Indenter {
     protected def openBlock (line :LineV, open :Char, close :Char, col :Int, state :State) :State =
       // if the open char is at the end of the line, then we treat it like a block rather than an
       // expression regardless of whether it's a curly brace or paren or whatever
-      if (col < line.length-1 && isExprOpen(open)) new ExprS(close, col, state)
-      else new BlockS(close, state)
+      if (col >= line.length-1) new BlockS(close, -1, state)
+      else if (isExprOpen(open)) new ExprS(close, col, state)
+      else new BlockS(close, col, state)
     protected def closeBlock (line :LineV, close :Char, col :Int, state :State) :State =
       state.popBlock(close)
 
