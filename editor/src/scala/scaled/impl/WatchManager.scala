@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import scaled._
 
 /** Handles watching the filesystem for changes. */
-class WatchManager (log :Logger, msvc :MetaService) extends AbstractService with WatchService {
+class WatchManager (log :Logger, exec :Executor) extends AbstractService with WatchService {
   import java.nio.file.StandardWatchEventKinds._
 
   // TODO...
@@ -55,7 +55,7 @@ class WatchManager (log :Logger, msvc :MetaService) extends AbstractService with
     asInstanceOf[Array[WatchEvent.Kind[_]]] // oh Scala, you devil
 
   private case class WatchInfo (dir :Path) {
-    val signal = Signal[WatchEvent[_]](msvc.exec.uiExec)
+    val signal = Signal[WatchEvent[_]](exec.uiExec)
     val key = dir.register(service, kinds, SensitivityWatchEventModifier.HIGH)
     byKey.put(key, this)
     log.log(s"Created watch: $dir ($key)")
