@@ -47,10 +47,10 @@ class IndenterTest {
     val states = buf.lines.scan(Indenter.EmptyS)((ss, ll) => stater.compute(ll, ss))
     val sstrs = states.map(_.toString)
     // for (i <- 0 until sstrs.length) println(s"$i -> ${sstrs(i)}")
-    assertEquals("BlockS(})", sstrs(6))
-    assertEquals("BlockS(}) BlockS(})", sstrs(12))
-    assertEquals("ExprS(), 23) BlockS(}) BlockS(})", sstrs(13));
-    assertEquals("ExprS(), 20) BlockS(})", sstrs(24))
-    assertEquals("BlockS(})", sstrs(25))
+    assertEquals("BlockS(}, -1)", sstrs(6))
+    assertEquals("BlockS(}, -1) BlockS(}, -1)", sstrs(12))
+    assertEquals("ExprS(), 23) BlockS(}, -1) BlockS(}, -1)", sstrs(13));
+    assertEquals("ExprS(), 20) BlockS(}, -1)", sstrs(24))
+    assertEquals("BlockS(}, -1)", sstrs(25))
   }
 }
