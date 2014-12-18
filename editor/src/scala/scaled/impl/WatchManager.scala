@@ -10,72 +10,74 @@ import java.util.concurrent.ConcurrentHashMap
 import scaled._
 
 /** Handles watching the filesystem for changes. */
-class WatchManager (log :Logger) extends AbstractService with WatchService {
+class WatchManager (log :Logger, msvc :MetaService) extends AbstractService with WatchService {
   import java.nio.file.StandardWatchEventKinds._
-
-  private val _service = FileSystems.getDefault.newWatchService()
-  private val _watches = new ConcurrentHashMap[WatchKey,WatchImpl]()
-  private val _watcher = new Thread("WatchManager") {
-    override def run () = { while (true) pollWatches() }
-  }
-  _watcher.setDaemon(true)
-  _watcher.start()
-
-  private case class WatchImpl (key :WatchKey, dir :Path, watcher :Watcher) extends Watch {
-    def dispatch (ev :WatchEvent[_]) = {
-      val kind = ev.kind ; val name = ev.context.toString
-      onMainThread(kind match {
-        case ENTRY_CREATE => watcher.onCreate(dir, name)
-        case ENTRY_DELETE => watcher.onDelete(dir, name)
-        case ENTRY_MODIFY => watcher.onModify(dir, name)
-        case _ => log.log(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
-      })
-    }
-    def close () {
-      key.cancel()
-      log.log(s"Cleared watch: $dir")
-      _watches.remove(key)
-    }
-  }
 
   // TODO...
   override def didStartup () {}
   override def willShutdown () {}
 
-  /** Registers a watch on `file`. `watcher` will be invoked (on the main JavaFX thread) when `file`
-    * is modified or deleted. */
-  def watchFile (file :Path, watcher :Path => Unit) :Watch = {
+  override def watchFile (file :Path, watcher :Path => Unit) = {
     val name = file.getFileName.toString
-    watchDir(file.getParent, new Watcher() {
-      override def onCreate (dir :Path, child :String) = if (child == name) watcher(file)
-      override def onModify (dir :Path, child :String) = if (child == name) watcher(file)
-      override def onDelete (dir :Path, child :String) = if (child == name) watcher(file)
-    })
+    addWatch(file.getParent) { ev =>
+      val evname = ev.context.toString
+      if (evname == name) watcher(file)
+    }
   }
 
-  /** Registers a watch on `dir`. `watcher` will be invoked (on the main JavaFX thread) when any
-    * files are created, modified or deleted in `dir`. */
-  def watchDir (dir :Path, watcher :Watcher) :Watch = {
-    val kinds = Array(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY).
-      asInstanceOf[Array[WatchEvent.Kind[_]]] // oh Scala, you devil
-    val key = dir.register(_service, kinds, SensitivityWatchEventModifier.HIGH)
-    val impl = WatchImpl(key, dir, watcher)
-    log.log(s"Created watch: $dir")
-    _watches.put(key, impl)
-    impl
+  override def watchDir (dir :Path, watcher :Watcher) = addWatch(dir) { ev =>
+    val kind = ev.kind ; val name = ev.context.toString
+    kind match {
+      case ENTRY_CREATE => watcher.onCreate(dir, name)
+      case ENTRY_DELETE => watcher.onDelete(dir, name)
+      case ENTRY_MODIFY => watcher.onModify(dir, name)
+      case _ => log.log(s"Unknown event type [dir=$dir, kind=$kind, ctx=$name]")
+    }
   }
+
+  private def addWatch (dir :Path)(cb :WatchEvent[_] => Unit) = byDir.get(dir).signal onValue cb
 
   private def pollWatches () :Unit = try {
     // wait for key to be signalled
-    val key = _service.take()
-    val watcher = _watches.get(key)
-    if (watcher != null) {
-      key.pollEvents() foreach watcher.dispatch
+    val key = service.take()
+    val info = byKey.get(key)
+    if (info != null) {
+      key.pollEvents() foreach info.dispatch
       // if we can't reset the key (the dir went away or something), clear it out
-      if (!key.reset()) watcher.close()
+      if (!key.reset()) info.close()
     }
   } catch {
     case ie :InterruptedException => // loop!
     case ex :Exception => log.log("pollWatches failure", ex)
   }
+
+  private val kinds = Array(ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY).
+    asInstanceOf[Array[WatchEvent.Kind[_]]] // oh Scala, you devil
+
+  private case class WatchInfo (dir :Path) {
+    val signal = Signal[WatchEvent[_]](msvc.exec.uiExec)
+    val key = dir.register(service, kinds, SensitivityWatchEventModifier.HIGH)
+    byKey.put(key, this)
+    log.log(s"Created watch: $dir ($key)")
+
+    def dispatch (ev :WatchEvent[_]) {
+      signal.emit(ev)
+      if (!signal.hasConnections) close()
+    }
+    def close () {
+      key.cancel()
+      log.log(s"Cleared watch: $dir")
+      byKey.remove(key)
+      byDir.invalidate(dir)
+    }
+  }
+
+  private val service = FileSystems.getDefault.newWatchService()
+  private val byDir = Mutable.cacheMap[Path,WatchInfo](WatchInfo(_))
+  private val byKey = new ConcurrentHashMap[WatchKey,WatchInfo]()
+  private val watcher = new Thread("WatchManager") {
+    override def run () = { while (true) pollWatches() }
+  }
+  watcher.setDaemon(true)
+  watcher.start()
 }
