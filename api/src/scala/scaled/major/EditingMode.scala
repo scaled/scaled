@@ -61,6 +61,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     bind("kill-word",          "M-d").
     bind("backward-kill-word", "M-DEL").
     bind("backward-kill-word", "C-BS").
+    bind("join-line",          "M-BS").
     // bind("zap-to-char", "M-z"),
     // bind("kill-sentence", "M-k"), // do we want?
     // bind("backward-kill-sentence", "C-x DEL"), // do we want?
@@ -378,6 +379,21 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   @Fn("""Kills characters backward until encountering the beginning of a word.""")
   def backwardKillWord () {
     kill(backwardWord(view.point()), view.point())
+  }
+
+  @Fn("""Joins this line to the previous line. Deletes from the first whitespace character at the
+         end of the previous line to the last whitespace character at the start of the current
+         line, including the intervening line break.""")
+  def joinLine () {
+    val cloc = view.point() ; val cstart = buffer.lineStart(cloc)
+    if (cstart > Loc.Zero) {
+      val ploc = cloc.prevStart
+      // find the first non-whitespace character on this line
+      val cjoin = buffer.scanForward(isNotWhitespace, cstart, buffer.lineEnd(cloc))
+      // find the last non-whitespace character on the previous line
+      val pjoin = buffer.scanBackWhile(isWhitespace, buffer.lineEnd(ploc), buffer.lineStart(ploc))
+      buffer.delete(pjoin, cjoin)
+    } // otherwise we're on the first line so there's nothing to which to join
   }
 
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
