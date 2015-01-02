@@ -126,10 +126,15 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     * point is in the whitespace at the start of the indented line, it will be moved to the first
     * non-whitespace character in the line, otherwise it will be shifted along with the line to
     * retain its relative position in the line.
+    *
+    * @param indentBlanks whether blank lines will have whitespace added to their start up to their
+    * computed indentation. This is true as one generally wants that if the user is interactively
+    * requesting indentation on the current line, but if one is bulk indenting a region, then its
+    * preferable not to introduce whitespace on blank lines.
     */
-  def reindent (pos :Loc) {
+  def reindent (pos :Loc, indentBlanks :Boolean = true) {
     val indent = computeIndent(pos.row)
-    if (indent >= 0) {
+    if (indent >= 0 && (indentBlanks || buffer.line(pos).length > 0)) {
       // shift the line, if needed
       val delta = indent - Indenter.readIndent(buffer, pos)
       if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
@@ -346,7 +351,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   def indentRegion () {
     withRegion { (start, end) =>
       var pos = start ; while (pos < end) {
-        if (buffer.line(pos).length > 0) reindent(pos)
+        reindent(pos, false)
         pos = pos.nextL
       }
     }
