@@ -67,7 +67,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
         disp = new DispatcherImpl(
           WindowImpl.this, resolver(this, buf), view, mline,
           // if no mode was specified, have the package manager infer one
-          Mode.nameHint(buf.state, ws.app.pkgMgr.detectMode(buf.name, buf.lines(0).asString)),
+          Mode.nameHint(buf.state, ws.app.pkgMgr.detectMode(buf.store.name, buf.lines(0).asString)),
           Mode.argsHint(buf.state), tags)
 
         // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
