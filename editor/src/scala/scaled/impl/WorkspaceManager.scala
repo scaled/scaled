@@ -229,9 +229,39 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   private def addBuffer (buf :BufferImpl) :BufferImpl = {
     buffers += buf
+    buf.nameV.onValueNotify(checkNameConflict)
     bufferOpened.emit(buf)
     buf.killed.onEmit(buffers.remove(buf))
     buf
+  }
+
+  private var renaming = false
+  private def checkNameConflict (name :String) = {
+    // some helper fns for manipulating paths
+    def makeRoot (path :Path) = if (path.getFileName == null) path else path.getFileName
+    def takeRight (n :Int, path :Path) :Path =
+      if (n == 1 || path.getParent == null) makeRoot(path)
+      else takeRight(n-1, path.getParent).resolve(path.getFileName)
+
+    // avoid triggering name conflict resolution *while* we're resolving name conflicts;
+    // we react to buffer name changes, but we also trigger many name changes during resolution
+    if (!renaming) try {
+      renaming = true
+      // if more than one buffer has this name, generate non-conflicting names for the buffers by
+      // tacking parent directories onto their name (in <> brackets) until they no longer conflict
+      var sameName = buffers.filter(_.name == name)
+      var cc = 1 ; while (sameName.size > 1) {
+        // rename each buffer to name<p1>, name<p2/p1>, etc.
+        sameName foreach { buf =>
+        val path = Paths.get(buf.store.parent)
+        buf.nameV() = s"${buf.store.name}<${takeRight(cc, path)}>"
+        }
+        // map the renamed buffers by name, and then filter out buffers which now have a unique name
+        val byName = sameName.groupBy(_.name)
+        sameName = sameName.filter(buf => byName(buf.name).size > 1)
+        cc += 1
+      }
+    } finally renaming = false
   }
 
   private def createWindow (stage :Stage, geom :Geom) :WindowImpl = {
