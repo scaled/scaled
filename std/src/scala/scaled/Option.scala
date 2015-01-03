@@ -23,8 +23,14 @@ sealed abstract class Option[+A] extends Unordered[A] {
   /** Returns `isEmpty` if this option is empty, otherwise `f(get)`. */
   @inline final def fold[B] (ifEmpty : =>B)(f :A => B) :B = if (isDefined) f(get) else ifEmpty
 
+  /** Applies `op` to this option, if it is defined. */
+  @inline final override def foreach[U] (op :A => U) :Unit = if (isDefined) op(get) else None
+
   /** Returns `get` if this option is defined, `other` if not. Note that `other` is lazy. */
   @inline final def getOrElse[B >: A] (other : =>B) :B = if (isDefined) get else other
+
+  /** Applies `op` to this option, if it is defined. */
+  @inline final def ifDefined[U] (op :A => U) :Unit = if (isDefined) op(get) else None
 
   /** Returns `this` if non-empty, `opt` otherwise. Note that `opt` is lazy. */
   @inline final def orElse[B >: A] (opt : =>Option[B]) :Option[B] = if (isDefined) this else opt
