@@ -190,9 +190,11 @@ object Completer {
         val bb = Seq.builder[Buffer]()
         bb += defbuf
         // add the non-scratch buffers, sorted by name
-        bb ++= wspace.buffers.filter(b => !except(b) && !Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
+        bb ++= wspace.buffers.filter(
+          b => !except(b) && !Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
         // add the scratch buffers after the non-scratch buffers, also sorted by name
-        bb ++= wspace.buffers.filter(b => !except(b) && Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
+        bb ++= wspace.buffers.filter(
+          b => !except(b) && Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
         val bufs = bb.build()
         Completion(prefix, bufs.map(_.name), bufs.mapBy(_.name))
       }
