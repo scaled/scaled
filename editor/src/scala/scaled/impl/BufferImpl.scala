@@ -96,8 +96,10 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     } catch {
       case e :Exception => e
     }
+    // write our contents to the store
     store.write(lines)
-    _name() = store.name
+    // if the store changed, update our name to the new store's name
+    if (this.store != store) _name() = store.name
     _dirty() = false
     // now run our post-save hooks, and if they also fail, then tack any on-save hooks thereon
     try _store.updateForce(store)
