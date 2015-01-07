@@ -229,7 +229,11 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   private def addBuffer (buf :BufferImpl) :BufferImpl = {
     buffers += buf
-    buf.nameV.onValueNotify(checkNameConflict)
+    checkNameConflict(buf.name)
+    // when a buffer's name changes, trigger a name conflict check on the next UI tick; we can't do
+    // it immediately because we may end up trying to re-change the name while the current name
+    // change was being dispatched
+    buf.nameV.onValue { name => app.exec.runOnUI(checkNameConflict(name)) }
     bufferOpened.emit(buf)
     buf.killed.onEmit(buffers.remove(buf))
     buf
@@ -253,8 +257,8 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
       var cc = 1 ; while (sameName.size > 1) {
         // rename each buffer to name<p1>, name<p2/p1>, etc.
         sameName foreach { buf =>
-        val path = Paths.get(buf.store.parent)
-        buf.nameV() = s"${buf.store.name}<${takeRight(cc, path)}>"
+          val path = Paths.get(buf.store.parent)
+          buf.nameV() = s"${buf.store.name}<${takeRight(cc, path)}>"
         }
         // map the renamed buffers by name, and then filter out buffers which now have a unique name
         val byName = sameName.groupBy(_.name)
