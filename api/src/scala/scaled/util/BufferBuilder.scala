@@ -70,27 +70,34 @@ class BufferBuilder (val fillWidth :Int) {
   /** Adds a header to the accumulating buffer. If the preceding line is not blank, a blank line
     * will be inserted before the header. The header text will be styled with
     * [[TextConfig.headerStyle]] and followed by a line of `===`s. */
-  def addHeader (text :String) :this.type = {
+  def addHeader (text :String) :this.type = addHeader(Line.builder(text))
+  /** Adds a header to the accumulating buffer. See [[addHeader(String)]]. */
+  def addHeader (lb :Line.Builder) :this.type = {
     ensureBlank()
-    add(text, TextConfig.headerStyle)
-    add(toDashes(text, '='), TextConfig.headerStyle)
+    val line = lb.withStyle(TextConfig.headerStyle).build()
+    add(line).add(toDashes(line, '='), TextConfig.headerStyle)
   }
 
   /** Adds a subheader to the accumulating buffer. If the preceding line is not blank, a blank line
     * will be inserted before the subheader. The text will be styled with
     * [[TextConfig.subHeaderStyle]] and followed by a line of `---`s. */
-  def addSubHeader (text :String) :this.type  = {
+  def addSubHeader (text :String) :this.type  = addSubHeader(Line.builder(text))
+  /** Adds a subheader to the accumulating buffer. See [[addSubHeader(String)]]. */
+  def addSubHeader (lb :Line.Builder) :this.type  = {
     ensureBlank()
-    add(text, TextConfig.subHeaderStyle)
-    add(toDashes(text, '-'), TextConfig.subHeaderStyle)
+    val line = lb.withStyle(TextConfig.subHeaderStyle).build()
+    add(line)
+    add(toDashes(line, '-'), TextConfig.subHeaderStyle)
   }
 
   /** Adds a section header to the accumulating buffer. If the preceding line is not blank, a blank
     * line will be inserted before the section header. The text will be styled with
     * [[TextConfig.sectionStyle]]. */
-  def addSection (text :String) :this.type  = {
+  def addSection (text :String) :this.type  = addSection(Line.builder(text))
+  /** Adds a section header to the accumulating buffer. See [[addSection(String)]]. */
+  def addSection (lb :Line.Builder) :this.type  = {
     ensureBlank()
-    add(text, TextConfig.sectionStyle)
+    add(lb.withStyle(TextConfig.sectionStyle).build())
   }
 
   /** Adds `keyvalue` with `key` styled in [[TextConfig.prefixStyle]]. The caller is expected to
@@ -128,7 +135,7 @@ class BufferBuilder (val fillWidth :Int) {
   private def styledLine (text :CharSequence, styles :scala.Seq[String]) =
     ((Line.builder(text) /: styles)(_.withStyle(_))).build()
 
-  private def toDashes (text :String, dash :Char) = {
+  private def toDashes (text :CharSequence, dash :Char) = {
     val sb = new StringBuilder()
     val ll = text.length ; var ii = 0 ; while (ii < ll) {
       sb.append(if (Character.isWhitespace(text.charAt(ii))) ' ' else dash)
