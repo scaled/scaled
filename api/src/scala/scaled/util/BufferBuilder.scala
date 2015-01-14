@@ -61,11 +61,17 @@ class BufferBuilder (val fillWidth :Int) {
   /** Appends a blank line to this buffer. */
   def addBlank () :this.type  = add(Line.Empty)
 
+  /** Ensures that the buffer is either empty or contains a trailing blank line. */
+  def ensureBlank () :this.type = {
+    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
+    this
+  }
+
   /** Adds a header to the accumulating buffer. If the preceding line is not blank, a blank line
     * will be inserted before the header. The header text will be styled with
     * [[TextConfig.headerStyle]] and followed by a line of `===`s. */
-  def addHeader (text :String) :this.type  = {
-    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
+  def addHeader (text :String) :this.type = {
+    ensureBlank()
     add(text, TextConfig.headerStyle)
     add(toDashes(text, '='), TextConfig.headerStyle)
   }
@@ -74,7 +80,7 @@ class BufferBuilder (val fillWidth :Int) {
     * will be inserted before the subheader. The text will be styled with
     * [[TextConfig.subHeaderStyle]] and followed by a line of `---`s. */
   def addSubHeader (text :String) :this.type  = {
-    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
+    ensureBlank()
     add(text, TextConfig.subHeaderStyle)
     add(toDashes(text, '-'), TextConfig.subHeaderStyle)
   }
@@ -83,7 +89,7 @@ class BufferBuilder (val fillWidth :Int) {
     * line will be inserted before the section header. The text will be styled with
     * [[TextConfig.sectionStyle]]. */
   def addSection (text :String) :this.type  = {
-    if (!_lines.isEmpty && _lines.last.length > 0) addBlank()
+    ensureBlank()
     add(text, TextConfig.sectionStyle)
   }
 
@@ -109,8 +115,8 @@ class BufferBuilder (val fillWidth :Int) {
   /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
     * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
   def addKeysValues (kvs :(String,String)*) :this.type = {
-    val padWidth = kvs.map(_._1.length).max
-    def pad (key :String) = key + (" " * math.max(0, padWidth-key.length))
+    val padWidth = (0 /: kvs)((m, kv) => math.max(m, kv._1.length))
+    def pad (key :String) = key + (" " * (padWidth-key.length))
     kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
     this
   }
