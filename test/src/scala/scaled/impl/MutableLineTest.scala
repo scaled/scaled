@@ -37,7 +37,7 @@ class MutableLineTest {
 
   case class TestTag (val text :String) extends Line.Tag
   case class EphTestTag (val text :String) extends Line.Tag {
-    override def clearOnEdit = true
+    override def ephemeral = true
   }
 
   @Test def testLineTags () {

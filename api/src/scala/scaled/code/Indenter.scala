@@ -56,7 +56,7 @@ object Indenter {
     def popBlock (close :Char) :State = next.popBlock(close)
 
     override def key = classOf[State]
-    override def clearOnEdit :Boolean = true
+    override def ephemeral :Boolean = true
 
     override def toString = {
       val sb = new StringBuilder()

@@ -87,9 +87,8 @@ abstract class LineV extends CharSequence {
     * in that it "tags" the entire line. There may also only be a single instance of a tag, per
     * class. See [[Buffer.setLineTag]].
     *
-    * Line tags are not copied when a line is sliced or otherwise duplicated. Their chief purpose
-    * is for modes to store ephemeral state directly in a buffer without having to maintain a
-    * parallel data structure. */
+    * Note: except for tags that are marked as ephemeral, line tags are copied when a line is
+    * sliced or otherwise duplicated, and merged when lines are merged. */
   def lineTag[T <: Line.Tag] (dflt :T) :T = _ltags.tag(dflt)
 
   /** Returns all line tags applied to this line. */
@@ -353,7 +352,7 @@ object Line {
 
     /** Adds `tag` to the being-built line. */
     def withLineTag (tag :Line.Tag) :Builder = {
-      if (tag.clearOnEdit) throw new IllegalArgumentException(
+      if (tag.ephemeral) throw new IllegalArgumentException(
         "Ephemeral tags are not propagated into (or out of) the buffer, " +
         "so setting them when building a line is meaningless.")
       _lts.set(tag)
@@ -375,8 +374,10 @@ object Line {
       * of their root class. */
     def key :Any = getClass
 
-    /** Returns true if this tag should be cleared any time the line is edited. */
-    def clearOnEdit :Boolean = false
+    /** Returns true if this tag should be cleared any time the line is edited, false if it should
+      * persist. Note: this also controls whether this tag will be extracted if a line is extracted
+      * from a buffer, and preserved when lines are merged. */
+    def ephemeral :Boolean = false
   }
 
   /** Maintains a collection of line tags. */
@@ -430,11 +431,11 @@ object Line {
       }
     }
 
-    /** Clears any line tags which are marked as `clearOnEdit`. */
+    /** Clears any line tags which are marked as `ephemeral`. */
     def clearEphemeral () {
       val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
         val tag = lt(ii)
-        if (tag != null && tag.clearOnEdit) lt(ii) = null
+        if (tag != null && tag.ephemeral) lt(ii) = null
         ii += 1
       }
     }
@@ -444,7 +445,7 @@ object Line {
       val lt = _tags ; var ii = 0
       while (ii < lt.length) {
         val tag = lt(ii)
-        if (tag != null && !tag.clearOnEdit) into.set(tag)
+        if (tag != null && !tag.ephemeral) into.set(tag)
         ii += 1
       }
     }
