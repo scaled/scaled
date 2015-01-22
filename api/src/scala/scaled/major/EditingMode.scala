@@ -41,6 +41,9 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     bind("indent-for-tab-command", "TAB").
     // TODO: open-line, split-line, ...
 
+    bind("indent-rigidly",   "M-RIGHT").
+    bind("unindent-rigidly", "M-LEFT").
+
     bind("transpose-chars", "C-t").
     bind("upcase-region",   "C-x C-u").
     bind("downcase-region", "C-x C-l").
@@ -248,6 +251,25 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def indentForTabCommand () {
     // TODO: I suppose we'll eventually have to support real tabs... sigh
     buffer.insert(view.point(), Line.fromText("  "))
+  }
+
+  @Fn("""Inserts a single space at the start of every line in the region.
+         If no region is set, it operates on the current line.""")
+  def indentRigidly () :Unit = withRegionOrLine { (start, end) =>
+    var p = start.atCol(0) ; while (p < end) {
+      buffer.insert(p, Line(" "))
+      p = p.nextStart
+    }
+  }
+
+  @Fn("""Removes a single space from the start of every line in the region (if possible).
+         If no region is set, it operates on the current line.""")
+  def unindentRigidly () :Unit = withRegionOrLine { (start, end) =>
+    var p = start.atCol(0) ; while (p < end) {
+      val line = buffer.line(p)
+      if (line.length > 0 && Chars.isWhitespace(line.charAt(0))) buffer.delete(p, 1)
+      p = p.nextStart
+    }
   }
 
   @Fn("""Swaps the character at the point with the character preceding it, and moves the point

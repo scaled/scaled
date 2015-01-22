@@ -101,6 +101,14 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     case Some(mp) => val p = view.point() ; if (mp < p) fn(mp, p) else fn(p, mp)
   }
 
+  /** Invokes `fn` with the start and end of the current region. If the mark is not set, a fake
+    * region which starts at the beginning of the line at the point and continues to the beginning
+    * of the next line is used. */
+  def withRegionOrLine (fn :(Loc, Loc) => Unit) :Unit = {
+    val p = view.point() ; val mp = buffer.mark || p.nextStart
+    if (mp < p) fn(mp, p) else fn(p, mp)
+  }
+
   /** Creates a paragrapher for the specified syntax. */
   def mkParagrapher (syntax :Syntax) = new Paragrapher(syntax, buffer)
 
