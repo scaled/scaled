@@ -62,10 +62,12 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   }
 
   private def resolve (path :String) :Path = {
-    val p = Paths.get(path).normalize
+    val p = Paths.get(path)
     // attempt to absolute-ize the path; if it does not exist and is not already absolute, fall
     // back to tacking in onto the cwd so that we a chance at properly deducing workspace
-    if (p.isAbsolute) p else if (Files.exists(p)) p.toAbsolutePath else cwd.resolve(p)
+    val ap = if (p.isAbsolute) p else if (Files.exists(p)) p.toAbsolutePath else cwd.resolve(p)
+    // finally normalize the resulting path to get rid of funny business
+    ap.normalize
   }
 
   def checkExit () {
