@@ -62,6 +62,14 @@ abstract class Workspace {
   /** Returns all buffers open in this workspace, in order of most recent activation. */
   def buffers :SeqV[Buffer]
 
+  /** Returns the [[Window#Frame]] displaying `buffer` or `None`. */
+  def frameForBuffer (buffer :Buffer) :Option[Window#Frame] =
+    windows.flatMap(_.frames).find(_.view.buffer == buffer)
+
+  /** Returns the [[Window]] displaying `buffer` or `None`. */
+  def windowForBuffer (buffer :Buffer) :Option[Window] =
+    windows.find(_.frames.exists(_.view.buffer == buffer))
+
   /** A signal emitted when a buffer is opened. */
   def bufferOpened :SignalV[RBuffer]
 
