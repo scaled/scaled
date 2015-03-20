@@ -256,10 +256,10 @@ object Indenter {
   def countComments (line :LineV, from :Int = 0) :Int = {
     var res = 0
     var ii = from ; val ll = line.length ; while (ii < ll) {
-      val c = line.charAt(ii)
-      val n = if (ii < ll-1) line.charAt(ii+1) else 0.toChar
-      if (c == '/' && n == '*') res += 1
-      else if (c == '*' && n == '/') res -= 1
+      val c = line.charAt(ii) ; val n = line.charAt(ii+1)
+      val ps = if (ii == 0) Syntax.Default else line.syntaxAt(ii-1)
+      if (c == '/' && n == '*' && ps.isCode) res += 1
+      else if (c == '*' && n == '/' && line.syntaxAt(ii+2).isCode) res -= 1
       ii += 1
     }
     res
