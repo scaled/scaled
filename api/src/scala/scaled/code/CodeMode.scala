@@ -142,7 +142,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       // if the point is now in the whitespace preceding the indent, move it to line-start
       val p = view.point()
       if (p.row == pos.row && p.col < indent) view.point() = Loc(p.row, indent)
-    } else window.emitStatus(s"Indenter has lost the plot [indent=$indent]. Ignoring.")
+    } else if (indent < 0) window.emitStatus(
+      s"Indenter has lost the plot [pos=$pos, indent=$indent]. Ignoring.")
   }
 
   /** Reindents the line at the point. */
