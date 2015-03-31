@@ -34,7 +34,7 @@ object Visit {
     *
     * @param thing a noun describing the thing being visited ("error", "test failure", etc.).
     */
-  class List (thing :String, val visits :Seq[Visit]) {
+  class List (val thing :String, val visits :Seq[Visit]) {
 
     /** Visits the next visit in the list in `frame`. */
     def next (window :Window) {
