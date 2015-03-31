@@ -77,4 +77,7 @@ object OptValue {
   def create[T] (init :T) = apply(init)
   /** Creates an instance with an empty starting value. */
   def create[T] () = apply[T]()
+
+  /** Unapplies an `OptValue` for use in pattern matching. */
+  def unapply[A] (opt :OptValue[A]) :Option[A] = if (opt.isDefined) Some(opt.get) else None
 }
