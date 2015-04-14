@@ -47,7 +47,9 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
     val view = new BufferViewImpl(buffer, 40, 1)
     val modeArgs = ui :: result :: List.copyOf(args)
     val disp = new DispatcherImpl(window, window.resolver(null, buffer), view, ModeLine.Noop,
-                                  s"mini-$mode", modeArgs, Nil)
+                                  s"mini-$mode", modeArgs, Nil) {
+      override protected def fallbackToText = false
+    }
     setCenter(disp.area)
     setVisible(true)
     toFront()

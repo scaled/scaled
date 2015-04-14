@@ -41,7 +41,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   val area = createBufferArea()
 
   /** The major mode with which we interact. */
-  val major = Value[MajorMode](resolver.resolveMajor(majorMode, view, mline, this, modeArgs))
+  val major = Value[MajorMode](if (fallbackToText) resolveMajorOrText else resolveMajor)
 
   /** The current configured set of minor modes. */
   val minors :ValueV[Seq[MinorMode]] = _minors
@@ -178,6 +178,18 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
   /** Factored out because we need some custom fiddling in places. Blah. */
   protected def createBufferArea () = new BufferArea(view, this)
+
+  /** Whether or not we fall back to text-mode if we fail to resolve our desired major mode.
+    * Usually this is desired, but in the case of the mini-buffer, that just causes new problems,
+    * so we just want unexpected failure to propagate out to the mini-buffer creator. */
+  protected def fallbackToText = true
+
+  private def resolveMajorOrText = try resolveMajor catch {
+    case t :Throwable =>
+      window.emitError(t)
+      resolver.resolveMajor("text", view, mline, this, Nil) // fall back to text mode
+  }
+  private def resolveMajor = resolver.resolveMajor(majorMode, view, mline, this, modeArgs)
 
   private def addMode (interactive :Boolean)(mode :MinorMode) {
     _metas = new ModeMeta(mode) :: _metas

@@ -19,13 +19,8 @@ abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Fr
 
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
   def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
-                    args :List[Any]) :MajorMode = try {
+                    args :List[Any]) :MajorMode =
     resolve(mode, view, mline, disp, args, requireMajor(mode))
-  } catch {
-    case t :Throwable =>
-      window.emitError(t)
-      resolve("text", view, mline, disp, Nil, requireMajor("text")) // fall back to text mode
-  }
 
   /** Resolves and instantiates the minor mode `mode` with the supplied environment. */
   def resolveMinor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,

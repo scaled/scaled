@@ -77,6 +77,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
     val modeArgs = ui :: result :: List.copyOf(args)
     val disp = new DispatcherImpl(window, window.resolver(null, buffer), view, ModeLine.Noop,
                                   s"mini-$mode", modeArgs, Nil) {
+      override protected def fallbackToText = false
       override protected def createBufferArea () = new BufferArea(view, this) {
         override protected def wasResized (widthChars :Int, heightChars :Int) {
           // only persist width; height is unfortunately delivered bogus values due to JavaFX
@@ -85,6 +86,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
         }
       }
     }
+
     setCenter(disp.area)
     setVisible(true)
     toFront()
