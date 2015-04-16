@@ -62,9 +62,15 @@ object KeyPress {
     new KeyPress(toKeyId(code), KeyEvent.CHAR_UNDEFINED, shift, ctrl, alt, meta)
 
   /** Converts a key pressed event into a `KeyPress`. */
-  def fromPressed (kev :KeyEvent) :KeyPress = new KeyPress(
-    toKeyId(kev.getCode), kev.getCharacter,
-    kev.isShiftDown, kev.isControlDown, kev.isAltDown, kev.isMetaDown)
+  def fromPressed (kev :KeyEvent) :KeyPress = {
+    // TEMP: on JavaFX on Linux Alt is Meta and Windows is Alt, but Emacs assigns Alt to Meta and
+    // Windows to Super, and Meta is super important so we want to be Emacs-like there
+    // TODO: should this be done with a more complex key remapping scheme?
+    val isAltDown = if (IsLinux) kev.isMetaDown else kev.isAltDown
+    val isMetaDown = if (IsLinux) kev.isAltDown else kev.isMetaDown
+    new KeyPress(toKeyId(kev.getCode), kev.getCharacter,
+                 kev.isShiftDown, kev.isControlDown, isAltDown, isMetaDown)
+  }
 
   /** Parses a key press sequence (e.g. `C-c C-j`, `a`, `M-.`) into [[KeyPress]]es. If any key
     * press in the sequence is invalid, `Left` will be returned with the text of the invalid key
@@ -356,4 +362,6 @@ object KeyPress {
   private val IdToCode = Map[String,KeyCode](KeyIds.collect {
     case (code, str) if (str != "") => (str, code)
   })
+
+  private val IsLinux = System.getProperty("os.name") equalsIgnoreCase "linux"
 }
