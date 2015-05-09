@@ -188,12 +188,14 @@ object Indenter {
     protected def adjustEnd (line :LineV, first :Int, last :Int,
                              start :State, current :State) :State = current
 
-    protected def openBlock (line :LineV, open :Char, close :Char, col :Int, state :State) :State =
-      // if the open char is at the end of the line, then we treat it like a block rather than an
-      // expression regardless of whether it's a curly brace or paren or whatever
-      if (col >= line.length-1) new BlockS(close, -1, state)
+    protected def openBlock (line :LineV, open :Char, close :Char, col :Int, state :State) :State = {
+      // if the open char is the last non-comment character of the line, then we treat it like a
+      // block rather than an expression regardless of whether it's a curly brace, paren, etc.
+      val last = lastNonWS(line)
+      if (col >= last) new BlockS(close, -1, state)
       else if (isExprOpen(open)) new ExprS(close, col, state)
       else new BlockS(close, col, state)
+    }
     protected def closeBlock (line :LineV, close :Char, col :Int, state :State) :State =
       state.popBlock(close)
 
