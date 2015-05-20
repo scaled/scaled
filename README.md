@@ -97,13 +97,10 @@ Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Applica
 Support/Scaled` on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via
 `spam`, but it's cumbersome, instead symlink `SCALED_HOME/Packages/scaled/bin/scaled` into your
 `~/bin` directory (or wherever you like to put things so that they are on your shell path), and
-then invoke Scaled via `scaled`. Windows users can link (or copy)
-`SCALED_HOME\Packages\scaled\bin\scaled.bat` somewhere such that it's on their path.
+then invoke Scaled via `scaled`.
 
-If you have the `nc` program installed (`brew install netcat`), the `scaled` script will use it to
-communicate with an already running instance of Scaled when possible. Thus you can invoke `scaled
-somefile` on the command line and that file will be opened in the already running Scaled if one
-exists, or Scaled will be launched otherwise.
+Windows users can link (or copy) `SCALED_HOME\Packages\scaled\bin\scaled.bat` somewhere such that
+it's on their path.
 
 ## Packages
 
