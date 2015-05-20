@@ -4,37 +4,18 @@
 
 : ${PORT:=32323}
 : ${SPAM:=spam}
+: ${SCALED_LOG:=/dev/null}
 
-# if scaled is already running
-LISTENER=`netstat -n -p udp | grep $PORT`
-if [ -z "$LISTENER" ] ; then
-    # if we have the curspace tool, pass that to Scaled so that it can do per-desktop stuffs
-    # TODO: support Linux variants (KDE: dcop kwin KWinInterface currentDesktop, Gnome: wmctrl -d)
-    declare CURDESK=""
-    if hash curspace 2>/dev/null; then
-        CURDESK=`which curspace`
-    fi
-    # find the Scaled package manager
-    if hash $SPAM 2>/dev/null; then
-        exec $SPAM -Dscaled.curdesk=$CURDESK -Dscaled.port=$PORT $SCALED_ARGS \
-            run "scaled#editor" scaled.impl.Scaled "$@"
-    else
-        echo "Scaled package manager '$SPAM' must be on your shell search path."
-    fi
+# if we have the curspace tool, pass that to Scaled so that it can do per-desktop stuffs
+# TODO: support Linux variants (KDE: dcop kwin KWinInterface currentDesktop, Gnome: wmctrl -d)
+if hash curspace 2>/dev/null; then
+    export SCALED_CURDESK=`which curspace`
+fi
 
-elif hash nc 2>/dev/null; then
-    # send request to running scaled process
-    for ARG in $* ; do
-        if [ -f $ARG ]; then
-            FILE=`echo $(cd $(dirname $ARG); pwd)/$(basename $ARG)`
-        elif [[ $ARG == /* ]] ; then
-            FILE=$ARG        # absolute path
-        else
-            FILE=`pwd`/$ARG  # relative path, prepend CWD
-        fi
-        echo open $FILE | nc -c -u localhost $PORT
-    done
-
+# find the Scaled package manager
+if hash $SPAM 2>/dev/null; then
+    export SCALED_PORT=$PORT
+    $SPAM run "scaled#editor" scaled.impl.Scaled "$@" 2>&1 >> $SCALED_LOG &
 else
-    echo "Install 'nc' to communicate with running Scaled instance."
+    echo "Scaled package manager '$SPAM' must be on your shell search path."
 fi

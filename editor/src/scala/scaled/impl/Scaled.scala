@@ -111,7 +111,30 @@ class Scaled extends Application with Editor {
 
 object Scaled {
 
+  /** The port on which [Server] listens for commands. */
+  final val Port = (Option(System.getenv("SCALED_PORT")) getOrElse "32323").toInt
+
   def main (args :Array[String]) {
-    Application.launch(classOf[Scaled], args :_*)
+    // if there's already a Scaled instance running, pass our args to it and exit; otherwise launch
+    // our fully operational mothership
+    if (!sendFiles(args)) Application.launch(classOf[Scaled], args :_*)
+  }
+
+  private def sendFiles (args :Array[String]) :Boolean = {
+    import java.io.{IOException, OutputStreamWriter, PrintWriter}
+    import java.net.{ConnectException, Socket}
+
+    try {
+      val sock = new Socket("localhost", Port)
+      val out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), "UTF-8"))
+      val cwd = Paths.get(System.getProperty("user.dir"))
+      args foreach { file => out.println(s"open ${cwd.resolve(Paths.get(file))}") }
+      out.close()
+      sock.close()
+      true
+    } catch {
+      case e :ConnectException => false
+      case e :Throwable => e.printStackTrace(System.err) ; false
+    }
   }
 }
