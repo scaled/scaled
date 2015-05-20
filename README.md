@@ -41,9 +41,9 @@ Note: the `java` executable in your path must be from a Java 8 JDK installation,
 
 ### Unix / Mac OS X / Cygwin
 
-1. Download [scaled-pacman.jar] and put it in your `~/bin` directory.
+- Download [scaled-pacman.jar] and put it in your `~/bin` directory.
 
-2. Create a shell script `~/bin/spam` with the following contents:
+- Create a shell script `~/bin/spam` with the following contents:
 
 ```
 java -jar `dirname $0`/scaled-pacman.jar "$@"
@@ -52,15 +52,15 @@ java -jar `dirname $0`/scaled-pacman.jar "$@"
 Note: Cygwin users can't use `dirname $0` so they'll have to replace that with the absolute path to
 `scaled-pacman.jar`.
 
-3. Make the `spam` script executable: `chmod u+x ~/bin/spam`
+- Make the `spam` script executable: `chmod u+x ~/bin/spam`
 
 Simply download [the `spam` shell script], put it on your shell path and invoke:
 
 ### Windows
 
-1. Download [scaled-pacman.jar] and put it wherever you put this sort of thing.
+- Download [scaled-pacman.jar] and put it wherever you put this sort of thing.
 
-2. Create a batch file `spam.bat` in the same directory as `scaled-pacman.jar` with the following
+- Create a batch file `spam.bat` in the same directory as `scaled-pacman.jar` with the following
 contents:
 
 ```
