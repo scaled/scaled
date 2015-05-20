@@ -56,7 +56,7 @@ Note: Cygwin users can't use `dirname $0` so they'll have to replace that with t
 
 ### Windows
 
-- Download [scaled-pacman.jar] and put it wherever you put this sort of thing.
+- Download [scaled-pacman.jar] and put it into some directory that's in your shell search path.
 
 - Create a batch file `spam.bat` in the same directory as `scaled-pacman.jar` with the following
 contents:
