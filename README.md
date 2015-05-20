@@ -54,8 +54,6 @@ Note: Cygwin users can't use `dirname $0` so they'll have to replace that with t
 
 - Make the `spam` script executable: `chmod u+x ~/bin/spam`
 
-Simply download [the `spam` shell script], put it on your shell path and invoke:
-
 ### Windows
 
 - Download [scaled-pacman.jar] and put it wherever you put this sort of thing.
