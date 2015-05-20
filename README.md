@@ -33,15 +33,61 @@ exclusively to develop itself, but it has rough edges. Fortunately, it's relativ
 a whirl.
 
 Scaled includes a package management system which is used to install Scaled itself as well as
-extension packages. The Scaled package manager (spam) is desgined to bootstrap itself. Simply
-download [the `spam` shell script], put it on your shell path and invoke:
+extension packages. The Scaled package manager (spam) is desgined to bootstrap itself from a very
+simple bootstrap jar file which you can install in conjunction with a shell script or batch file.
+
+Note: the `java` executable in your path must be from a Java 8 JDK installation, otherwise replace
+`java` in the below scripts with the absolute path to `bin/java` in a Java 8 JDK installation.
+
+### Unix / Mac OS X / Cygwin
+
+1. Download [scaled-pacman.jar] and put it in your `~/bin` directory.
+
+2. Create a shell script `~/bin/spam` with the following contents:
+
+```
+java -jar `dirname $0`/scaled-pacman.jar "$@"
+```
+
+Note: Cygwin users can't use `dirname $0` so they'll have to replace that with the absolute path to
+`scaled-pacman.jar`.
+
+3. Make the `spam` script executable: `chmod u+x ~/bin/spam`
+
+Simply download [the `spam` shell script], put it on your shell path and invoke:
+
+### Windows
+
+1. Download [scaled-pacman.jar] and put it wherever you put this sort of thing.
+
+2. Create a batch file `spam.bat` in the same directory as `scaled-pacman.jar` with the following
+contents:
+
+```
+set SCRIPT_DIR=%~dp0
+java -jar "%SCRIPT_DIR%scaled-pacman.jar" %*
+```
+
+### Use spam to install Scaled
+
+Now that spam is installed, you can test that it's working by running:
+
+```
+spam list
+```
+
+and you should see this output:
+
+```
+Installed:
+pacman      The Scaled Package Manager. Wakka wakka wakka.
+```
+
+Assuming you do, then you're ready to install Scaled. Do that like so:
 
 ```
 spam install scaled
 ```
-
-Note: the `java` executable in your shell path must be from a Java 8 JDK installation, or you must
-set the `JAVA_HOME` environment variable to a Java 8 JDK installation before running `spam`.
 
 This will download and build all of the core packages that make up Scaled. Scaled packages are
 fetched directly from their DVCS source URLs and built locally during the installation process.
@@ -53,7 +99,8 @@ Scaled will install itself into `~/.scaled` on a non-Mac, and `~/Library/Applica
 Support/Scaled` on a Mac. Let's call that directory `SCALED_HOME`. You can invoke Scaled via
 `spam`, but it's cumbersome, instead symlink `SCALED_HOME/Packages/scaled/bin/scaled` into your
 `~/bin` directory (or wherever you like to put things so that they are on your shell path), and
-then invoke Scaled via `scaled`.
+then invoke Scaled via `scaled`. Windows users can link (or copy)
+`SCALED_HOME\Packages\scaled\bin\scaled.bat` somewhere such that it's on their path.
 
 If you have the `nc` program installed (`brew install netcat`), the `scaled` script will use it to
 communicate with an already running instance of Scaled when possible. Thus you can invoke `scaled
@@ -171,3 +218,4 @@ https://github.com/scaled/scaled
 [Emacs reference card]: http://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
 [the `spam` shell script]: https://raw.githubusercontent.com/scaled/pacman/master/bin/spam
 [Scaled Google Group]: https://groups.google.com/forum/#!forum/scalable-editor
+[scaled-pacman.jar]: http://scaled.github.io/scaled-pacman.jar
