@@ -37,4 +37,11 @@ class RegionTest {
 
     assertEquals(None, Region.find(Seq[Region](), Loc(3, 3)))
   }
+
+  @Test def testUnapply () {
+    val r1 = Region(Loc(0, 0), Loc(0, 5))
+    val Region(start, end) = r1
+    assertEquals(Loc(0, 0), start)
+    assertEquals(Loc(0, 5), end)
+  }
 }

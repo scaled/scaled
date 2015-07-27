@@ -31,6 +31,9 @@ object Region {
     override def toString = Region.toString(this)
   }
 
+  /** Unapplies region `r`, for pattern matching. */
+  def unapply (r :Region) = Some((r.start, r.end))
+
   /** Formats the region `r`. Single line regions as `rR:cA-B`, multi-line regions as
     * `rR:cC-rS:cD`. */
   def toString (r :Region) :String = toString(r.start, r.end)
