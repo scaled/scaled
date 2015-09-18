@@ -87,6 +87,13 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         view
       }
 
+    def dispose (willHibernate :Boolean) {
+      if (onKill != null) onKill.close()
+      // if we're going to hibernate, then our buffers are all going away; let the dispatcher know
+      // that so that it can clean up active modes more efficiently
+      disp.dispose(willHibernate)
+    }
+
     override def geometry = Geometry(disp.area.width, disp.area.height, 0, 0) // TODO: x/y pos
     override def view = disp.area.bview
     override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl], false)
@@ -111,9 +118,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   /** Called when this window is going away. Cleans up. */
   def dispose (willHibernate :Boolean) {
     _msgConn.close()
-    // if we're going to hibernate, then our buffers are all going away; let the dispatcher know
-    // that so that it can clean up active modes more efficiently
-    _frames foreach { _.disp.dispose(willHibernate) }
+    _frames foreach { _.dispose(willHibernate) }
     _frames.clear()
   }
 
