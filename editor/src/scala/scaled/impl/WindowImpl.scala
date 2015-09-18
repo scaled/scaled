@@ -24,7 +24,7 @@ import scaled.util.Errors
   * or simply shown one at a time, depending on the user's configuration), but each editor pane is
   * largely an island unto itself.
   */
-class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
+class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight :Int)
     extends Region with Window {
 
   class FrameImpl extends BorderPane with Frame {
@@ -42,14 +42,12 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
     def setBuffer (buf :BufferImpl, oldBufferDisposing :Boolean) :BufferViewImpl =
       // if we're already displaying this buffer, just keep it
       if (disp != null && buf == view.buffer) view else {
-        val Geometry(width, height, _, _) = geometry
-
         // create the modeline and add some default data before anyone else sneaks in
         val mline = new ModeLineImpl()
         mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), "* indicates unsaved changes")
         mline.addDatum(buf.nameV, "Name of the current buffer")
 
-        val view = new BufferViewImpl(buf, width, height)
+        val view = new BufferViewImpl(buf, defWidth, defHeight)
         // TODO: move this to LineNumberMode? (and enable col number therein)
         mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
         // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but we
@@ -89,7 +87,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
         view
       }
 
-    override def geometry = WindowImpl.this.geometry // TODO
+    override def geometry = Geometry(disp.area.width, disp.area.height, 0, 0) // TODO: x/y pos
     override def view = disp.area.bview
     override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl], false)
   }
@@ -130,7 +128,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   //
   // Window interface methods
 
-  override def geometry = Geometry(size._1, size._2, 0, 0) // TODO!
+  override def geometry = focus.geometry // TODO: the right thing when we have multiple frames
   override def frames = _frames
   override def focus = _focus.get
   override def workspace = ws
@@ -242,7 +240,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, size :(Int, Int))
   override protected def computeMinWidth (height :Double) = _focus.get.minWidth(height)
   override protected def computeMinHeight (width :Double) = _focus.get.minHeight(width)
   override protected def computePrefWidth (height :Double) = _focus.get.prefWidth(height)
-  override protected def computePrefHeight (width :Double) = _focus.get.prefHeight(width)
+  override protected def computePrefHeight (width :Double) = {
+    _focus.get.prefHeight(width) + _statusLine.prefHeight(width)
+  }
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 

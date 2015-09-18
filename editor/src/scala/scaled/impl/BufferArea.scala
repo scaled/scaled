@@ -71,6 +71,11 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   /** Returns the number of characters that we can fit in the specified pixel height. */
   def heightInChars (height :Double) :Int = (height / lineHeight).toInt
 
+  /** Returns this area's current width, in characters. */
+  def width :Int = widthInChars(getWidth)
+  /** Returns this area's current height, in lines. */
+  def height :Int = heightInChars(getHeight)
+
   /** Tells this buffer area that it's going into the background. This frees up some resources that
     * are easy enough to recreate if/when the buffer area is made active again. */
   def hibernate () {

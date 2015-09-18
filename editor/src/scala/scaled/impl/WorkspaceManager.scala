@@ -271,10 +271,10 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   }
 
   private def createWindow (stage :Stage, geom :Geom) :WindowImpl = {
-    val bufferSize = geom.size getOrElse {
+    val (bwidth, bheight) = geom.size getOrElse {
       (config(EditorConfig.viewWidth), config(EditorConfig.viewHeight))
     }
-    val win = new WindowImpl(stage, this, bufferSize)
+    val win = new WindowImpl(stage, this, bwidth, bheight)
     // TODO: willCreateWindow
 
     val scene = new Scene(win)

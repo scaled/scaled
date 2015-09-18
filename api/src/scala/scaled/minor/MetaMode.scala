@@ -279,6 +279,16 @@ class MetaMode (env :Env) extends MinorMode(env) {
     }
   }
 
+  @Fn("Reports the geometry of the current window.")
+  def windowGeom () {
+    window.emitStatus(window.geometry.toString)
+  }
+
+  @Fn("Reports the geometry of the current frame.")
+  def frameGeom () {
+    window.emitStatus(window.focus.geometry.toString)
+  }
+
   @Fn("Toggles the activation of a minor mode.")
   def toggleMode () {
     val comp = Completer.from(disp.minorModes)
