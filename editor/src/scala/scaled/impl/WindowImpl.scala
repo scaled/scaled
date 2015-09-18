@@ -128,7 +128,10 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   //
   // Window interface methods
 
-  override def geometry = focus.geometry // TODO: the right thing when we have multiple frames
+  override def geometry = {
+    val fg = focus.geometry // TODO: the right thing when we have multiple frames
+    Geometry(fg.width, fg.height, stage.getX.toInt, stage.getY.toInt)
+  }
   override def frames = _frames
   override def focus = _focus.get
   override def workspace = ws
