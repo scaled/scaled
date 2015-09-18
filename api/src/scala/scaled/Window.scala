@@ -106,3 +106,18 @@ trait Window {
 case class Geometry (width :Int, height :Int, x :Int, y :Int) {
   override def toString = s"${width}x$height+$x+$y"
 }
+
+object Geometry {
+
+  /** Creates a [[Geometry]] instance from a descriptor string of the form `WxH+x+y`. */
+  def apply (geom :String) :Option[Geometry] = geom match {
+    case GeomRe(w, h, x, y) =>
+      try Some(apply(w.toInt, h.toInt, x.toInt, y.toInt))
+      catch {
+        case nfe: NumberFormatException => None
+      }
+    case _ => None
+  }
+
+  private val GeomRe = """(\d+)x(\d+)([+-]\d+)([+-]\d+)""".r
+}
