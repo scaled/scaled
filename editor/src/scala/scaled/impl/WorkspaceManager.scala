@@ -187,18 +187,17 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override val config = app.cfgMgr.editorConfig(Config.Scope(state, app.state))
   override val bufferOpened = Utils.safeSignal[RBuffer](app.logger)
 
-  override def createBuffer (name :String, state :List[State.Init[_]],
+  override def createBuffer (store :Store, state :List[State.Init[_]],
                              reuse :Boolean) :BufferImpl = {
-    def create (name :String) = {
+    def create (store :Store) = {
       val parent = buffers.headOption.map(b => Paths.get(b.store.parent)) || cwd
-      val buf = if (Buffer.isScratch(name)) BufferImpl.scratch(name)
-                else BufferImpl(Store(parent.resolve(name)))
+      val buf = BufferImpl(store)
       state foreach { _.apply(buf.state) }
       addBuffer(buf)
     }
-    buffers.find(_.name == name) match {
-      case None     => create(name)
-      case Some(ob) => if (reuse) ob else create(freshName(name))
+    buffers.find(_.name == store.name) match {
+      case None     => create(store)
+      case Some(ob) => if (reuse) ob else create(Store.scratch(freshName(name), store))
     }
   }
   override def openBuffer (store :Store) =
@@ -215,12 +214,12 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def toString = s"ws:$name"
 
   private final val ScratchName = "*scratch*"
-  def getScratch () = createBuffer(ScratchName, Nil, true)
+  def getScratch () = createBuffer(Store.scratch(ScratchName, cwd), Nil, true)
 
   private final val MessagesName = "*messages*"
   private def getMessages () = {
     _pendingMessages = Nil
-    val mbuf = createBuffer(MessagesName, State.inits(Mode.Hint("log")), true)
+    val mbuf = createBuffer(Store.scratch(MessagesName, cwd), State.inits(Mode.Hint("log")), true)
     _pendingMessages foreach { msg =>
       mbuf.append(Line.fromText(msg + System.lineSeparator))
     }

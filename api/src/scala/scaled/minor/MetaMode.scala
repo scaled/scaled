@@ -219,8 +219,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
     describe(major)
     disp.modes filter(_ != major) foreach describe
 
-    val hbuf = wspace.createBuffer(s"*mode:${major.name}*", reuse=true,
-                                   state=State.inits(Mode.Hint("help")))
+    val hbuf = wspace.createBuffer(Store.scratch(s"*mode:${major.name}*", buffer.store),
+                                   reuse=true, state=State.inits(Mode.Hint("help")))
     frame.visit(bb.applyTo(hbuf))
   }
 
@@ -252,7 +252,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
       addState(buf.state)
     }
 
-    val hbuf = wspace.createBuffer(s"*editor*", reuse=true, state=State.inits(Mode.Hint("help")))
+    val hbuf = wspace.createBuffer(Store.scratch(s"*editor*", buffer.store),
+                                   reuse=true, state=State.inits(Mode.Hint("help")))
     frame.visit(bb.applyTo(hbuf))
   }
 
@@ -272,8 +273,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
     window.mini.read("Command", "", shellCommandHistory, Completer.none) onSuccess { cmd =>
       def parseCmd (cmd :String) = cmd.split(" ") // TODO: handle quoted args
       val cfg = SubProcess.Config(parseCmd(cmd), cwd=Paths.get(buffer.store.parent))
-      val ebuf = wspace.createBuffer(s"*exec:${cfg.cmd(0)}*", reuse=true,
-                                     state=State.inits(Mode.Hint("text")))
+      val ebuf = wspace.createBuffer(Store.scratch(s"*exec:${cfg.cmd(0)}*", buffer.store),
+                                     reuse=true, state=State.inits(Mode.Hint("text")))
       SubProcess(cfg, env.exec, ebuf)
       frame.visit(ebuf)
     }

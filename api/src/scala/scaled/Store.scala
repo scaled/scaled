@@ -84,6 +84,14 @@ object Store {
   /** Creates a store for `path`. */
   def apply (path :Path) :Store = FileStore(path)
 
+  /** Creates a scratch store with the supplied name and working directory. */
+  def scratch (name :String, cwd :Path) = new TextStore(name, cwd.toString + File.separator, "")
+
+  /** Creates a scratch store with the supplied name and which inherits its working directory
+    * from `inherit`. This is often appropriate when opening a scratch buffer while viewing an
+    * existing buffer. */
+  def scratch (name :String, inherit :Store) = new TextStore(name, inherit.parent, "")
+
   def realPath (path :Path) = if (Files.exists(path)) path.toRealPath() else path
 }
 

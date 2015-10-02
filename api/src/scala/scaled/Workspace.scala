@@ -74,12 +74,14 @@ abstract class Workspace {
   def bufferOpened :SignalV[RBuffer]
 
   /** Creates a buffer named `name` and with the specified initial `state`.
+    * @param store the store that will back the buffer.
+    * @param state extra state to be passed along to the modes instantiated for the buffer.
     * @param reuse requests reuse of an existing buffer with the same name. If a buffer named
     * `name` exists, it will be returned directly (as is, so be careful you're not getting an
     * unexpected buffer in this case). Otherwise in the event of name collision, a fresh buffer
     * name will be generated from `name` by appending <N> to the name with increasing values of N
     * until an unused name is obtained. */
-  def createBuffer (name :String, state :List[State.Init[_]] = Nil, reuse :Boolean = false) :Buffer
+  def createBuffer (store :Store, state :List[State.Init[_]] = Nil, reuse :Boolean = false) :Buffer
 
   /** Opens a buffer for `file` in this workspace. If a buffer is already open for `file` it will
     * be returned instead. */

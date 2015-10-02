@@ -28,8 +28,7 @@ object BufferImpl {
   }
 
   /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
-  def scratch (name :String) :BufferImpl = apply(
-    new TextStore(name, cwd.toString + File.separator, ""))
+  def scratch (name :String) :BufferImpl = apply(Store.scratch(name, cwd))
 
   /** Used to track the view state for a buffer when it's not visible. */
   case class ViewState (point :Loc, scrollTop :Int, scrollLeft :Int)
