@@ -44,7 +44,7 @@ object TestData {
     val windows = Seq(window)
     val buffers = Seq()
     val bufferOpened = Signal[RBuffer]()
-    def createBuffer (name :String, state :List[State.Init[_]], reuse :Boolean) = buffer(name, "")
+    def createBuffer (store :Store, state :List[State.Init[_]], reuse :Boolean) = BufferImpl(store)
     def openBuffer (store :Store) = BufferImpl(store)
     def openWindow (geom :Option[Geometry]) = null
     def killBuffer (buffer :Buffer) {}
