@@ -116,5 +116,5 @@ final class Rings extends HashMap[String,Ring]()
 
 object Rings {
   /** Returns (creating if needed) the [[Rings]] instance in `state`. */
-  def apply (state :State) :Rings = state[Rings].getOrElseUpdate(new Rings())
+  def apply (state :RState) :Rings = state[Rings].getOrElseUpdate(new Rings())
 }

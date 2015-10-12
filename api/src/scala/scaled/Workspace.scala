@@ -32,7 +32,7 @@ abstract class Workspace {
   val events :EventBus = new EventBus()
 
   /** State local to this workspace. */
-  val state :State = new State(
+  val state :RState = new RState(
     // pre-populate our state with our workspace config scope
     State.init(Config.Scope("workspace", root, None)))
 

@@ -6,7 +6,7 @@ package scaled
 
 import scala.reflect.ClassTag
 
-/** Provides a read-only view of [[State]]. */
+/** Provides a read-only view of buffer state. See [[State]]. */
 abstract class StateV {
 
   /** Returns the current state value associated with `key`, if any. */
@@ -23,11 +23,28 @@ abstract class StateV {
   def keys :Set[Class[_]]
 }
 
+/** Provides a mutable, but non-reactive view of buffer state. See [[RState]]. */
+abstract class State extends StateV {
+
+  /* Sets the state value associated with `key` to `value`. */
+  def set[T] (key :Class[T], value :T) :Unit
+
+  /* A `set` variant that uses class tags to allow usage like: `set[Foo](value)`. */
+  def set[T] (value :T)(implicit tag :ClassTag[T]) :Unit =
+    set(tag.runtimeClass.asInstanceOf[Class[T]], value)
+
+  /** Clears the current state value associated with `key`. */
+  def clear[T] (key :Class[T]) :Unit
+
+  /** A `clear` variant that uses class tags to allow usage like: `clear[Foo]`. */
+  def clear[T] (implicit tag :ClassTag[T]) :Unit = clear(tag.runtimeClass.asInstanceOf[Class[T]])
+}
+
 /** Maintains a collection of type-keyed state. `Class` objects serve as the key for a piece of
   * state which maps to a reactive value which optionally holds an instance of the class. This is
   * used to maintain per-editor and per-buffer state maps.
   */
-class State (inits :State.Init[_]*) extends StateV {
+class RState (inits :State.Init[_]*) extends State {
 
   private val _states = Mutable.cacheMap { key :Class[_] => new OptValue[Any](null) {
     override def emptyFail = throw new NoSuchElementException(s"No state for $key")
@@ -47,6 +64,8 @@ class State (inits :State.Init[_]*) extends StateV {
   override def get[T] (key :Class[T]) = apply(key).getOption
   override def get[T] (implicit tag :ClassTag[T]) = apply(tag).getOption
   override def req[T] (key :Class[T]) = apply(key).get
+  override def set[T] (key :Class[T], value :T) :Unit = apply(key).update(Some(value))
+  override def clear[T] (key :Class[T]) :Unit = apply(key).update(None)
 }
 
 /** Static [[State]] bits. */
@@ -55,7 +74,7 @@ object State {
   /** Used to provide initial state to a buffer. */
   class Init[T] (key :Class[T], value :T) {
     /** Applies this initial value to `state`. */
-    def apply (state :State) :Unit = state(key).update(value)
+    def apply (state :RState) :Unit = state(key).update(value)
   }
 
   /** Creates a state instance with the specified key and value. */

@@ -16,7 +16,7 @@ trait Editor {
   val events :EventBus = new EventBus()
 
   /** A reactive mapping of editor-wide state. */
-  val state :State = new State()
+  val state :RState = new RState()
 
   /** Provides global config data. Keys are defined in [[EditorConfig]]. */
   def config :Config

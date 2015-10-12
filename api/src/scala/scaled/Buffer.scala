@@ -49,7 +49,7 @@ abstract class BufferV extends Region {
     */
   def needsSave :Boolean = dirty && store.exists
 
-  /** A mapping of buffer-local state. */
+  /** A read-only mapping of buffer-local state. */
   def state :StateV
 
   /** Returns the position at the start of the buffer. This is always [[Loc.Zero]], but this method
@@ -356,6 +356,9 @@ abstract class BufferV extends Region {
   */
 abstract class Buffer extends BufferV {
 
+  /** A read-write mapping of buffer-local state. */
+  override def state :State
+
   /** Requests that this buffer be killed. Any pre-kill hooks will be executed, and assuming none
     * of the hooks abort the kill process, the buffer will be unloaded from its corresponding
     * workspace and any live views of the buffer will be closed. */
@@ -554,7 +557,7 @@ object Buffer {
     def mark = None
     def editable = false
     def dirty = false
-    val state = new State()
+    val state = new RState()
     def lines = _lines
   }
 }
@@ -594,8 +597,8 @@ abstract class RBuffer extends Buffer {
     * before that `Loc`. */
   def lineStyled :SignalV[Loc]
 
-  /** A reactive mapping of buffer-local state. */
-  override val state :State = new State()
+  /** A reactive, read-write mapping of buffer-local state. */
+  override val state :RState = new RState()
 
   // implement some Buffer methods in terms of our reactive values
   override def name = nameV()

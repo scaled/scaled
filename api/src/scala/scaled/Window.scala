@@ -37,7 +37,7 @@ trait Window {
   }
 
   /** A reactive mapping of window-wide state. */
-  val state :State = new State()
+  val state :RState = new RState()
 
   /** The active [[Visit.List]] (if any). */
   val visits = OptValue[Visit.List]()
