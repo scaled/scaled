@@ -38,4 +38,11 @@ public @interface Minor {
      * {@code "*"} to indicate that it is always applicable. Use sparingly!
      */
     String[] tags () default {};
+
+    /**
+     * Zero or more classes of buffer state objects which, if present on a bufer, indicate that this
+     * minor mode should be automatically enabled. For example, {@code SubProcessMode} is
+     * automatically activated when a {@code SubProcess} instance is added to buffer state.
+     */
+    Class<?>[] stateTypes () default {};
 }

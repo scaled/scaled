@@ -55,7 +55,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
     // automatically activate any minor modes that match our major mode's tags
-    resolver.minorModes(major.tags ++ tags) foreach { mode =>
+    resolver.minorModes(major.tags ++ tags, view.buffer.state.keys) foreach { mode =>
       try addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
       catch {
         case e :Throwable =>

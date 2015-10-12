@@ -36,10 +36,11 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   val services = MMap[String,String]() // svc classname -> impl classname for this package's svcs
   val autoSvcs = SeqBuffer[String]() // svc classname iff autoLoad=true
 
-  val plugins   = HashMultimap.create[String,String]() // plugin tag -> classname(s)
-  val patterns  = HashMultimap.create[String,String]() // major mode -> mode's file patterns
-  val interps   = HashMultimap.create[String,String]() // major mode -> mode's interpreters
-  val minorTags = HashMultimap.create[String,String]() // tag -> minor mode
+  val plugins    = HashMultimap.create[String,String]() // plugin tag -> classname(s)
+  val patterns   = HashMultimap.create[String,String]() // major mode -> mode's file patterns
+  val interps    = HashMultimap.create[String,String]() // major mode -> mode's interpreters
+  val minorTags  = HashMultimap.create[String,String]() // tag -> minor mode
+  val minorTypes = HashMultimap.create[String,String]() // stateType -> minor mode
 
   override def toString = String.format(
     "%s [majors=%s, minors=%s, svcs=%s, deps=%s]",
@@ -129,6 +130,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
         val mode = attrs.get("name").iterator.next
         minors.put(mode, _cname)
         attrs.get("tags") foreach { minorTags.put(_, mode) }
+        attrs.get("stateTypes") map(jvmToJava) foreach { minorTypes.put(_, mode) }
       }
     }
   })
@@ -153,4 +155,9 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
       }
     }
   })
+
+  /** Turns `Lfoo/bar/Baz;` into `foo.bar.Baz`. */
+  private def jvmToJava (cn :String) =
+    if (cn.startsWith("L") && cn.endsWith(";")) cn.substring(1, cn.length-1).replace('/', '.')
+    else cn
 }
