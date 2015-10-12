@@ -15,12 +15,12 @@ import scaled._
 object Utils {
 
   def computeTextWidth (font :Font, text :String) :Double = {
-    layout.setContent(if (text != null) text else "", font.impl_getNativeFont)
+    layout.setContent(if (text != null) text else "", Dep.getNativeFont(font))
     layout.getBounds.getWidth
   }
 
   def getLineHeight (font :Font, boundsType :TextBoundsType) :Double = {
-    layout.setContent("", font.impl_getNativeFont())
+    layout.setContent("", Dep.getNativeFont(font))
     layout.setWrapWidth(0)
     layout.setLineSpacing(0)
     if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) layout.setBoundsType(

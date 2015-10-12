@@ -59,7 +59,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     override protected def invalidated () {
       // if font is changed by calling setFont, then css might need to be reapplied since font size
       // affects calculated values for styles with relative values
-      if (!fontSetByCss) impl_reapplyCSS()
+      if (!fontSetByCss) Dep.reapplyCSS(BufferArea.this);
     }
   }
   font.addListener(new InvalidationListener() {
