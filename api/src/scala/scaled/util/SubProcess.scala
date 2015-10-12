@@ -71,6 +71,9 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event])
     out.flush()
   }
 
+  /** Returns true if this subprocess is still alive. */
+  def isAlive :Boolean = process.isAlive
+
   /** Closes this subprocess's output stream. This may trigger termination if it expects that sort
     * of thing. This must only be called after [[start]]. */
   def close () {
