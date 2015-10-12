@@ -72,7 +72,7 @@ class RState (inits :State.Init[_]*) extends State {
     apply(tag.runtimeClass.asInstanceOf[Class[T]])
 
   /** Returns the keys for all currently defined state. */
-  def keys :Set[Class[_]] = _states.asMap.keySet.toSet
+  def keys :Set[Class[_]] = _states.asMap.keySet.filter(key => apply(key).isDefined).toSet
 
   override def get[T] (key :Class[T]) = apply(key).getOption
   override def get[T] (implicit tag :ClassTag[T]) = apply(tag).getOption
@@ -84,6 +84,8 @@ class RState (inits :State.Init[_]*) extends State {
   }
   override def set[T] (key :Class[T], value :T) :Unit = apply(key).update(Some(value))
   override def clear[T] (key :Class[T]) :Unit = apply(key).update(None)
+
+  override def toString = keys.map(k => s"$k=${apply(k)}").toString
 }
 
 /** Static [[State]] bits. */
