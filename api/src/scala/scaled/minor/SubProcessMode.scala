@@ -19,6 +19,7 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
   })
 
   override def keymap = super.keymap.
+    bind("interrupt-subprocess", "C-c C-c").
     bind("kill-subprocess", "C-g");
 
   // listen for changes to the SubProcess state of the buffer
@@ -38,6 +39,15 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
   def describeSubprocess () {
     val proc = buffer.state.req[SubProcess]("No active subprocess in buffer.")
     buffer.append(Line.fromText(proc.toString))
+  }
+
+  @Fn("""Sends SIGINT to the attached subprocess.""")
+  def interruptSubprocess () {
+    val proc = buffer.state.req[SubProcess]("No active subprocess in buffer.")
+    proc.pid match {
+      case None      => throw Errors.feedback("Unable to get subprocess pid. Not on Unix?")
+      case Some(pid) => Runtime.getRuntime.exec("kill " + pid).waitFor()
+    }
   }
 
   @Fn("""Attempts to quit the attached subprocess by sending SIGTERM.

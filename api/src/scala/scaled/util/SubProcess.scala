@@ -80,6 +80,17 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event])
     process.getOutputStream.close()
   }
 
+  /** Returns the PID of this subprocess, if we can get it. This is only available on Unix
+    * platforms. */
+  def pid :Option[Int] = process.getClass.getName match {
+    case "java.lang.UNIXProcess" =>
+      val cl = process.getClass
+      val field = cl.getDeclaredField("pid")
+      field.setAccessible(true)
+      Some(field.get(process).asInstanceOf[Integer])
+    case _ => None
+  }
+
   /** Terminates the subprocess, less than forcibly. */
   def terminate () {
     process.destroy()
