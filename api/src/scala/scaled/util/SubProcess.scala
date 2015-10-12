@@ -80,6 +80,11 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event])
     process.getOutputStream.close()
   }
 
+  /** Terminates the subprocess, less than forcibly. */
+  def terminate () {
+    process.destroy()
+  }
+
   /** Terminates the subprocess forcibly. */
   def kill () {
     process.destroyForcibly()
