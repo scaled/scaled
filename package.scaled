@@ -4,8 +4,7 @@ version: 1.0
 descrip: A Scalable editor, extensible via JVM languages.
  weburl: https://github.com/scaled/scaled/
 license: New BSD
- jcopts: -source 1.8 -target 1.8 -Xlint:all
- scopts: -deprecation -feature -Yopt:l:classpath
+ scopts: -Yopt:l:classpath
  module: std
  module: api
  module: editor
