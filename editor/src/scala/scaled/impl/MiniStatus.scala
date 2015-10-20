@@ -40,7 +40,9 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
   /** Called when this minibuffer is cleared. */
   def onClear () :Unit
 
-  override def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = try {
+  override def apply[R] (mode :String, args :Any*) :Future[R] = {
+    val result = window.workspace.editor.exec.uiPromise[R]()
+    try {
     willShow() // make sure it's OK to activate ourselves
 
     val buffer = BufferImpl.scratch("*minibuffer*")
@@ -69,6 +71,7 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
     case e :Exception =>
       result.fail(e)
       window.emitError(e)
-      result
+  }
+    result
   }
 }

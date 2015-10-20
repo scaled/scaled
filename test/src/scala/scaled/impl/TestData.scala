@@ -68,7 +68,7 @@ object TestData {
     def emitStatus (msg :String, ephemeral :Boolean) :Unit = println(msg)
     def clearStatus () {}
     val mini = new Minibuffer() {
-      def apply[R] (mode :String, result :Promise[R], args :Any*) :Future[R] = result
+      def apply[R] (mode :String, args :Any*) :Future[R] = Promise[R]()
     }
     def statusMini = mini
     def toFront {}
