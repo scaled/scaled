@@ -149,12 +149,12 @@ class ZipEntryStore private (val zipFile :Path, val entry :String) extends Store
 
   override def name = Paths.get(entry).getFileName.toString
   override def parent = zipFile.toString
-  override def exists = zentry != null
+  override def exists = Files.exists(zipFile) && zentry != null
   override def readOnly = true
-  override def reader = zentry match {
+  override def reader = if (exists) zentry match {
     case null  => new StringReader("")
     case entry => new InputStreamReader(zfile.getInputStream(entry), "UTF-8")
-  }
+  } else new StringReader("")
 
   override def equals (other :Any) = other match {
     case os :ZipEntryStore => zipFile == os.zipFile && entry == os.entry
