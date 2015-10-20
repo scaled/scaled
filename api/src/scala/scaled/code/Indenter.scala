@@ -138,6 +138,8 @@ object Indenter {
   /** Indicates that we're nested in a bracketed block of code. */
   class BlockS (close :Char, col :Int, next :State) extends State(next) {
     def isClose (close :Char) :Boolean = this.close == close
+    /** Returns a copy of this block with EOL closing column. */
+    def makeEOL = new BlockS(close, -1, next)
     // a block bracket only affects indentation if it's at the end of a line;
     // if we see {{, for example, we only want the last one to affect indentation
     override def indent (cfg :Config, top :Boolean) :Int =
