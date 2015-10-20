@@ -125,7 +125,7 @@ object Config {
   abstract class Defs () {
 
     /** All config vars defined by this defs instance. */
-    lazy val vars :Seq[Var[_]] = getClass.getDeclaredFields.mkSeq foldBuild[Var[_]] { (b, f) =>
+    lazy val vars :Seq[Var[_]] = getClass.getDeclaredFields.mkSeq.foldBuild[Var[_]] { (b, f) =>
       val vara = f.getAnnotation(classOf[scaled.Var])
       if (vara != null) {
         f.setAccessible(true)
