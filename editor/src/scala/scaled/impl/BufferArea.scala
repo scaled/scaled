@@ -312,13 +312,13 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       // position the cursor
       updateCursor(bview.point())
 
-      val elapsed = (System.nanoTime() - start)/1000
-      if (elapsed > 500) println(s"BufferArea layout $elapsed us")
+      val elapsed = (System.nanoTime() - start)/1000000
+      if (elapsed > 5) println(s"BufferArea layout (${bview.buffer.store}) $elapsed ms")
     }
 
     def updateVizLines () {
-      val top = bview.scrollTop()
       onLines(_.setViz(_))
+      val top = bview.scrollTop()
       contentNode.setLayoutY(-bview.lines(top).getLayoutY)
     }
   }

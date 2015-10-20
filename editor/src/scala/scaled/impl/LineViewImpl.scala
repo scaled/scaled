@@ -16,6 +16,9 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
   override def line = _line
   private var _valid = false
 
+  // start out invisible
+  setVisible(false)
+
   // fontProperty.bind(ctrl.fontProperty)
   // fillProperty.bind(textFill)
   // impl_selectionFillProperty().bind(highlightTextFill)
