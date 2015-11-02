@@ -36,16 +36,23 @@ object SubProcess {
 
   /** Starts a subprocess with the specified configuration. Output will be directed to `buffer`. If
     * the subprocess fails to start, the starting exception will be captured, recorded to `buffer`
-    * and then rethrown. */
-  def apply (config :Config, exec :Executor, buffer :Buffer) :SubProcess = {
+    * and then rethrown.
+    * @param onExit a function that will be called with `false` if stdout is closed due to
+    * failure, `true` if it's closed normally. */
+  def apply (config :Config, exec :Executor, buffer :Buffer,
+             onExit :Boolean => Unit = noopOnExit) :SubProcess = {
     val events = Signal[Event](exec.uiExec)
     events.onValue { _ match {
-      case Output(text, _)   => buffer.append(Line.fromTextNL(text))
-      case Failure(cause, _) => buffer.append(Line.fromTextNL(Errors.stackTraceToString(cause)))
-      case Complete(_)       => // nada
+      case Output(text, _) => buffer.append(Line.fromTextNL(text))
+      case Complete(isErr) => if (!isErr) onExit(true)
+      case Failure(cause, isErr) =>
+        buffer.append(Line.fromTextNL(Errors.stackTraceToString(cause)))
+        if (!isErr) onExit(false)
     }}
     new SubProcess(config, events)
   }
+
+  private def noopOnExit (success :Boolean) {}
 }
 
 /** Encapsulates a sub-process.
