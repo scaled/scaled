@@ -152,16 +152,6 @@ object Config {
     }
     // TODO: other types: sets? maps?
 
-    // some specializations for Java interop
-    /** Creates a config key described by `desc` with default value `default`. */
-    protected def key (default :JBoolean) = new Config.Key(JBoolC) {
-      override def defval (config :Config) = default
-    }
-    /** Creates a config key described by `desc` with default value `default`. */
-    protected def key (default :JInteger) = new Config.Key(JIntC) {
-      override def defval (config :Config) = default
-    }
-
     /** Creates a config key described by `desc` that defaults to the current value of the
       * dependent config value identified by `default`. */
     protected def key[T] (default :Config.Key[T]) = new Config.Key[T](default.converter) {
@@ -183,6 +173,21 @@ object Config {
       val url = getClass.getClassLoader.getResource(path)
       if (url == null) throw new FileNotFoundException(path)
       url
+    }
+  }
+
+  /** Extends [[Defs]] with some helpers for Java interop. We can't put these directly into
+    * [[Defs]] as they cause problems with Kotlin (and potentially other JVM langs that want to
+    * abstract over boxed and unboxed primitives). */
+  abstract class JavaDefs extends Defs {
+
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :JBoolean) = new Config.Key(JBoolC) {
+      override def defval (config :Config) = default
+    }
+    /** Creates a config key described by `desc` with default value `default`. */
+    protected def key (default :JInteger) = new Config.Key(JIntC) {
+      override def defval (config :Config) = default
     }
   }
 
