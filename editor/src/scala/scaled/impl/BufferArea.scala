@@ -218,11 +218,14 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       }
     }
   }
+
   private val popup = new PopWin()
-  bview.popup onValueNotify { _ match {
+  private def checkPopup (force :Boolean)(popOpt :Option[Popup]) = popOpt match {
     case None      => popup.clear()
-    case Some(pop) => popup.display(pop)
-  }}
+    // if our content node is not currently laid out, it will recheck the popup when it's done
+    case Some(pop) => if (!contentNode.isNeedsLayout || force) popup.display(pop)
+  }
+  bview.popup onValue checkPopup(false)
 
   // contains our line nodes and other decorative nodes (cursor, selection, etc.)
   class ContentNode extends Region {
@@ -314,6 +317,9 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
       val elapsed = (System.nanoTime() - start)/1000000
       if (elapsed > 5) println(s"BufferArea layout (${bview.buffer.store}) $elapsed ms")
+
+      // if we have a popup, we might need to show it now that we know where everything is
+      checkPopup(true)(bview.popup.getOption)
     }
 
     def updateVizLines () {
