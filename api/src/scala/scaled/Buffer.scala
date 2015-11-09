@@ -417,7 +417,7 @@ abstract class Buffer extends BufferV {
     *
     * @return the buffer location just after the end of the inserted region.
     */
-  def insert (loc :Loc, region :Ordered[LineV]) :Loc
+  def insert (loc :Loc, region :Ordered[_ <: LineV]) :Loc
 
   /** Appends `region` to the end of this buffer.
     * @return the buffer location just after the end of the appended region.
