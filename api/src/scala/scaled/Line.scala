@@ -177,17 +177,23 @@ abstract class LineV extends CharSequence {
 
   /** Returns the first offset into this line at which `m` matches, starting from `from`.
     * -1 is returned if no match is found. */
-  def indexOf (m :Matcher, from :Int = 0) :Int = {
+  def indexOf (m :Matcher, from :Int) :Int = {
     val offset = _offset ; val n = m.search(_chars, offset, offset+length, offset+from)
     if (n == -1) n else n - offset
   }
+  /** Returns the first offset into this line at which `m` matches, starting from `0`.
+    * -1 is returned if no match is found. */
+  def indexOf (m :Matcher) :Int = indexOf(m, 0)
 
   /** Returns the last offset into this line at which `m` matches, starting from `from`.
     * -1 is returned if no match could be found. */
-  def lastIndexOf (m :Matcher, from :Int = length-1) :Int = {
+  def lastIndexOf (m :Matcher, from :Int) :Int = {
     val offset = _offset ; val n = m.searchBackward(_chars, offset, offset+length, offset+from)
     if (n == -1) n else n - offset
   }
+  /** Returns the last offset into this line at which `m` matches, starting from the end of the
+    * line. -1 is returned if no match could be found. */
+  def lastIndexOf (m :Matcher) :Int = lastIndexOf(m, length-1)
 
   /** Returns the index of the first character whose syntax matches `pred` at pos `from or later.
     * Returns -1 if no match is found. */
@@ -215,8 +221,12 @@ abstract class LineV extends CharSequence {
   /** Returns true if `m` matches this line starting at `start`. NOTE: this is merely a
     * (potentially) more efficient way to say `indexOf(m, start) == start)`, it does not mean that
     * the matcher matches ALL of the remaining characters on the line. */
-  def matches (m :Matcher, start :Int = 0) :Boolean =
+  def matches (m :Matcher, start :Int) :Boolean =
     m.matches(_chars, _offset+start, _offset+length)
+  /** Returns true if `m` matches this line starting at `0`. NOTE: this is merely a (potentially)
+    * more efficient way to say `indexOf(m, start) == start)`, it does not mean that the matcher
+    * matches ALL of the remaining characters on the line. */
+  def matches (m :Matcher) :Boolean = matches(m, 0)
 
   /** Returns true if the syntaxes of `xs` in `[offset, length)` are equal to the syntaxes in this
     * line in `[start, length)`. */
