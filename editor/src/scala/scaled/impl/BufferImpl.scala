@@ -119,7 +119,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     val end = _lines(loc.row).insert(loc, line)
     noteInsert(loc, end)
   }
-  override def insert (loc :Loc, region :Ordered[LineV]) = region.size match {
+  override def insert (loc :Loc, region :Ordered[_ <: LineV]) = region.size match {
     case 0 => loc
     case 1 => insert(loc, region.head)
     case _ =>
