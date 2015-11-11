@@ -4,8 +4,9 @@
 
 package scaled.major
 
+import java.util.regex.PatternSyntaxException
 import scaled._
-import scaled.util.{Chars, Filler}
+import scaled.util.{Chars, Errors, Filler}
 
 /** Configuration for [[EditingMode]]. */
 object EditingConfig extends Config.Defs {
@@ -567,8 +568,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def replaceRegexp () {
     getReplaceArgs("Replace regexp", (from, to) => {
       // TODO: transient mark mode and replacing in the region
-      val search = Search(buffer, view.point(), buffer.end, Matcher.regexp(from))
-      replaceAll(search, Line.fromText(to), search.min)
+      try {
+        val search = Search(buffer, view.point(), buffer.end, Matcher.regexp(from))
+        replaceAll(search, Line.fromText(to), search.min)
+      } catch {
+        case pse :PatternSyntaxException =>
+          window.emitError(Errors.feedback(s"Invalid regexp: $from\n${pse.getMessage}"))
+      }
     })
   }
 
