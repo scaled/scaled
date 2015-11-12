@@ -259,6 +259,13 @@ object Completer {
     override def refine (comp :Completion[Store], prefix :String) :Completion[Store] = {
       val (pstr, path, endInSep) = grok(prefix)
       if (endInSep && Files.isDirectory(path)) expand(pstr, path, "")
+      // it's possible for us to get more than a whole directory ahead of our completion, i.e. the
+      // latest glob was "foo/bar/" but our prefix is "foo/bar/baz/bing" which we handle by just
+      // starting afresh using the entire prefix; TODO: we could immediately refine after
+      // completing to avoid having to press tab one more time to get a single completion in the
+      // case where that's all that matches, but I worry about opening the door to infinite loops
+      // in weird situations, so I'll punt on that for now
+      else if (prefix.substring(comp.glob.length).contains(File.separator)) complete(prefix)
       else super.refine(comp, prefix)
     }
 
