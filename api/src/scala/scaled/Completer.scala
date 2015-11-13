@@ -265,7 +265,8 @@ object Completer {
       // completing to avoid having to press tab one more time to get a single completion in the
       // case where that's all that matches, but I worry about opening the door to infinite loops
       // in weird situations, so I'll punt on that for now
-      else if (prefix.substring(comp.glob.length).contains(File.separator)) complete(prefix)
+      else if (prefix.length > comp.glob.length &&
+               prefix.substring(comp.glob.length).contains(File.separator)) complete(prefix)
       else super.refine(comp, prefix)
     }
 
