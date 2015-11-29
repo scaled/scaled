@@ -252,6 +252,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
       addState(buf.state)
     }
 
+    env.msvc.service[PackageService].describePackages(bb)
+
     val hbuf = wspace.createBuffer(Store.scratch(s"*editor*", buffer.store),
                                    reuse=true, state=State.inits(Mode.Hint("help")))
     frame.visit(bb.applyTo(hbuf))

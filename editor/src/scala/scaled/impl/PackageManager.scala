@@ -11,6 +11,7 @@ import java.util.HashMap
 import java.util.regex.Pattern
 import scaled._
 import scaled.pacman._
+import scaled.util.BufferBuilder
 
 /** Extends the base package manager with extra info needed by Scaled. */
 class PackageManager (log :Logger) extends AbstractService with PackageService {
@@ -76,6 +77,36 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
 
   override def classpath (source :String) =
     metas.get(Source.parse(source)).mod.depends(pkgRepo.resolver).classpath.toSeq
+
+  override def describePackages (bb :BufferBuilder) {
+    val modmetas = modules.filter(_.mod.name != "test").toSeq.sortBy(_.mod.toString)
+
+    bb.addHeader("Packages")
+    bb.addKeysValues("Root: " -> metaDir.toString,
+                     "Modules: " -> modmetas.size.toString)
+
+    for (meta <- modmetas) {
+      bb.addSubHeader(meta.mod.toString)
+      val codeDir = metaDir.relativize(meta.loader.mod.classpath)
+      bb.addKeysValues(Seq("Code: "        -> s"%root%/$codeDir",
+                           "Majors: "      -> fmt(meta.majors),
+                           "Minors: "      -> fmt(meta.minors),
+                           "Services: "    -> fmt(meta.services),
+                           "Auto-load: "   -> fmt(meta.autoSvcs),
+                           "Plugins: "     -> fmt(meta.plugins.asMap.entrySet),
+                           "Patterns: "    -> fmt(meta.patterns.asMap.entrySet),
+                           "Interps: "     -> fmt(meta.interps.asMap.entrySet),
+                           "Minor tags: "  -> fmt(meta.minorTags.asMap.entrySet),
+                           "Minor types: " -> fmt(meta.minorTypes.asMap.entrySet)
+                           ).filter(_._2 != ""))
+    }
+  }
+
+  private def fmt (iter :JIterable[_]) :String = iter.mkString(", ")
+  private def fmt (iter :scala.Iterable[_]) :String = (iter.map {
+    case (k, v) => s"$k=$v"
+    case v      => v
+  }).mkString(", ")
 
   private def moduleAdded (mod :Module) {
     // create a package metadata ; there's some special hackery to handle the fact that services
