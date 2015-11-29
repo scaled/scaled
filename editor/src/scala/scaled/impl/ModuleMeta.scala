@@ -55,7 +55,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
           if (attrs.isRegularFile) {
             val name = file.getFileName.toString ; val fn = apply(name)
             if (fn != null) fn(name, new ClassReader(Files.readAllBytes(file)))
-        }
+          }
           FileVisitResult.CONTINUE
         }
       })
