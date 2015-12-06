@@ -1,2 +1,2 @@
 depend: git:https://github.com/scaled/scaled.git#editor
-depend: mvn:junit:junit:4.11
+depend: mvn:junit:junit:4.12
