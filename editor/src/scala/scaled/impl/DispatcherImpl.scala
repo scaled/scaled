@@ -69,7 +69,11 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   }
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
-  def keyPressed (kev :KeyEvent) :Unit = {
+  def keyPressed (kev :KeyEvent) {
+    // this is a hacky workaround for LINUX where the CapsLock key is reported as a CAPS keypress
+    // by JavaFX even if it has been remapped to be a Control key; sigh
+    if (kev.getCode() == KeyCode.CAPS) return
+
     kev.getEventType match {
       case KeyEvent.KEY_PRESSED =>
         // if this is a modifier key press, ignore it; wait for the modified key press
@@ -126,6 +130,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
         // come in, but none did, so we need to treat the last key press like a missed fn
         if (_dispatchTyped) invokeMissed()
     }
+
     // consume all key events so that they don't percolate up and misbehave
     kev.consume()
   }
