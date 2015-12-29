@@ -27,7 +27,7 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
     // if a new subprocess is set in this buffer, kill the old one
     oprocO foreach { oproc =>
       if (oproc.isAlive) {
-        // TODO: report to the buffer?
+        message("(killing active subproc before starting new)")
         oproc.kill()
       }
     }
@@ -37,14 +37,12 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Describes the subprocess bound to this buffer, if any.""")
   def describeSubprocess () {
-    val proc = buffer.state.req[SubProcess]("No active subprocess in buffer.")
-    buffer.append(Line.fromText(proc.toString))
+    message(requireProc.toString)
   }
 
   @Fn("""Sends SIGINT to the attached subprocess.""")
   def interruptSubprocess () {
-    val proc = buffer.state.req[SubProcess]("No active subprocess in buffer.")
-    proc.pid match {
+    requireProc.pid match {
       case None      => throw Errors.feedback("Unable to get subprocess pid. Not on Unix?")
       case Some(pid) => Runtime.getRuntime.exec("kill " + pid).waitFor()
     }
@@ -54,11 +52,20 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
          If this function is invoked a second time and the subprocess is still alive,
          it will be terminated via SIGKILL.""")
   def killSubprocess () {
-    val proc = buffer.state.req[SubProcess]("No active subprocess in buffer.")
-    if (termAttempted) proc.kill()
+    val proc = requireProc
+    if (!proc.isAlive) throw Errors.feedback(NoActive)
+    else if (termAttempted) {
+      proc.kill()
+      message("(sent SIGKILL to subproc)")
+    }
     else {
       proc.terminate()
+      message("(sent SIGTERM to subproc)")
       termAttempted = true
     }
   }
+
+  private def NoActive = "No active subprocess in buffer."
+  private def requireProc = buffer.state.req[SubProcess](NoActive)
+  private def message (text :String) :Unit = buffer.append(Line.fromTextNL(text))
 }
