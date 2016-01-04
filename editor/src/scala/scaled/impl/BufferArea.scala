@@ -324,13 +324,13 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       //   s"vlines=$viewLines ccount=$preChildCount")
 
       // trim or add lines at the top, as needed
-      if (otop < top) removeLines(0, math.min(top-otop, preChildCount))
+      if (otop < top) removeLines(0, top-otop)
       else if (otop > top) addLines(0, lines.slice(top, math.min(otop, bot)))
 
       val childCount = lineNodes.getChildren.size
       if (childCount > viewLines) removeLines(viewLines, childCount)
       else if (childCount < viewLines) {
-        val start = top+childCount ; val end = math.min(top+viewLines, lines.size)
+        val start = top+childCount ; val end = math.min(bot, lines.size)
         addLines(childCount, lines.slice(start, end))
       }
 
@@ -343,9 +343,11 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       lineNodes.getChildren.addAll(index, lines.asJList)
     }
     def removeLines (from :Int, to :Int) {
-      // println(s"removeLines [$from, $to)")
-      lineNodes.getChildren.subList(from, to).foreach { _.asInstanceOf[LineViewImpl].invalidate() }
-      lineNodes.getChildren.remove(from, to)
+      val capped = math.min(to, lineNodes.getChildren.size)
+      // println(s"removeLines [$from, $to/$capped)")
+      lineNodes.getChildren.subList(from, capped).foreach {
+        _.asInstanceOf[LineViewImpl].invalidate() }
+      lineNodes.getChildren.remove(from, capped)
     }
   }
   private val contentNode = new ContentNode()
