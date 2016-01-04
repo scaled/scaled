@@ -79,8 +79,8 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   /** Tells this buffer area that it's going into the background. This frees up some resources that
     * are easy enough to recreate if/when the buffer area is made active again. */
   def hibernate () {
-    // invalidate all non-visible lines (this will clear out their internal UI elements)
-    onLines { (line, isViz) => if (!isViz) line.invalidate() }
+    // remove all of our lines, we'll add them back in on reactivation
+    contentNode.removeLines(0, lineNodes.getChildren.size)
   }
 
   private var charWidth  = 0d
@@ -251,7 +251,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       }
     })
     // move our lines when scrollTop/Left change
-    bview.scrollTop onEmit updateVizLines
+    bview.scrollTop onChange { (ntop, otop) => updateVizLines(otop) }
     bview.scrollLeft onValue { left => contentNode.setLayoutX(-left*charWidth) }
 
     def updateCursor (point :Loc) {
@@ -296,8 +296,6 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     override def getChildren = super.getChildren
 
     override def layoutChildren () {
-      val start = System.nanoTime()
-
       // position our lines at the proper y offset
       val x = snappedLeftInset ; var y = snappedTopInset
       val iter = lineNodes.getChildren.iterator
@@ -308,24 +306,46 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
         y += lineHeight
       }
 
-      // update which lines are visible
-      updateVizLines()
+      // position the whole contentNode at the proper x offset
       contentNode.setLayoutX(-bview.scrollLeft()*charWidth)
 
       // position the cursor
       updateCursor(bview.point())
 
-      val elapsed = (System.nanoTime() - start)/1000000
-      if (elapsed > 5) println(s"BufferArea layout (${bview.buffer.store}) $elapsed ms")
-
       // if we have a popup, we might need to show it now that we know where everything is
       checkPopup(true)(bview.popup.getOption)
     }
 
-    def updateVizLines () {
-      onLines(_.setViz(_))
-      val top = bview.scrollTop()
-      contentNode.setLayoutY(-bview.lines(top).getLayoutY)
+    def updateVizLines (otop :Int) {
+      val viewLines = bview.height()+1 ; val top = bview.scrollTop()
+      val lines = bview.lines ; val bot = top + viewLines
+      val preChildCount = lineNodes.getChildren.size
+      // println(s"updateVizLines otop=$otop top=$top bot=$bot lines=${lines.size} " +
+      //   s"vlines=$viewLines ccount=$preChildCount")
+
+      // trim or add lines at the top, as needed
+      if (otop < top) removeLines(0, math.min(top-otop, preChildCount))
+      else if (otop > top) addLines(0, lines.slice(top, math.min(otop, bot)))
+
+      val childCount = lineNodes.getChildren.size
+      if (childCount > viewLines) removeLines(viewLines, childCount)
+      else if (childCount < viewLines) {
+        val start = top+childCount ; val end = math.min(top+viewLines, lines.size)
+        addLines(childCount, lines.slice(start, end))
+      }
+
+      requestLayout()
+    }
+
+    def addLines (index :Int, lines :SeqV[LineViewImpl]) {
+      // println(s"addLines @$index +${lines.size}")
+      lines.foreach { _.validate() }
+      lineNodes.getChildren.addAll(index, lines.asJList)
+    }
+    def removeLines (from :Int, to :Int) {
+      // println(s"removeLines [$from, $to)")
+      lineNodes.getChildren.subList(from, to).foreach { _.asInstanceOf[LineViewImpl].invalidate() }
+      lineNodes.getChildren.remove(from, to)
     }
   }
   private val contentNode = new ContentNode()
@@ -341,17 +361,22 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   // listen for addition and removal of lines
   bview.changed onValue { change =>
     // println(s"Lines @${change.row} ${change.delta}")
+    val top = bview.scrollTop() ; val bot = top+bview.height()+1
+    val tstart = math.max(top, change.row)
     if (change.delta < 0) {
-      lineNodes.getChildren.remove(change.row, change.row-change.delta)
-      // TODO: let these nodes know they've been removed so they can cleanup?
+      // if the change overlaps the visible area, remove the visible lines
+      val tend = math.min(change.row-change.delta, bot)
+      if (tend > tstart) contentNode.removeLines(tstart-top, tend-top)
     } else if (change.delta > 0) {
-      val nodes = bview.lines.slice(change.row, change.row+change.delta)
-      lineNodes.getChildren.addAll(change.row, nodes.asJList)
+      // if the change overlaps the visible area, add the visible lines
+      val tend = math.min(change.row+change.delta, bot)
+      if (tend > tstart) contentNode.addLines(tstart-top, bview.lines.slice(tstart, tend))
     }
-    requestLayout()
+    contentNode.updateVizLines(top)
   }
-  // add all the current lines to the buffer
-  lineNodes.getChildren.addAll(bview.lines.asJList)
+
+  // display the lines visible at the top of the buffer
+  contentNode.updateVizLines(0)
 
   // request relayout when our view width/height changes
   bview.width onValue { _ => requestLayout() }
@@ -379,7 +404,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       // println(s"VP resized $nw x $nh -> $nwc x $nhc")
       wasResized(nwc, nhc)
       // update visible lines
-      contentNode.updateVizLines()
+      contentNode.updateVizLines(bview.scrollTop())
       // TODO: update scrollTop/scrollLeft if needed?
     }
   }
@@ -390,16 +415,6 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     // break that loop and separately handle current versus preferred size in BufferView
     bview.width() = widthChars
     bview.height() = heightChars
-  }
-
-  private def onLines (fn :(LineViewImpl,Boolean) => Unit) {
-    val top = bview.scrollTop()
-    val bot = top + bview.height()
-    val lines = bview.lines
-    var idx = lines.size-1 ; while (idx >= 0) {
-      fn(lines(idx), idx >= top && idx <= bot)
-      idx -= 1
-    }
   }
 
   override def getCssMetaData = BufferArea.getClassCssMetaData
