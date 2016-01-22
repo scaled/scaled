@@ -410,8 +410,6 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     if (nwc != bview.width() || nhc != bview.height()) {
       // println(s"VP resized $nw x $nh -> $nwc x $nhc")
       wasResized(nwc, nhc)
-      // update visible lines
-      contentNode.updateVizLines(bview.scrollTop())
       // TODO: update scrollTop/scrollLeft if needed?
     }
   }
