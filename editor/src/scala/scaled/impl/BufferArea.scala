@@ -377,6 +377,11 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     contentNode.updateVizLines(top)
   }
 
+  // if the buffer view height changes, update our viz lines as well
+  bview.height onValue { height =>
+    contentNode.updateVizLines(bview.scrollTop())
+  }
+
   // display the lines visible at the top of the buffer
   contentNode.updateVizLines(0)
 
