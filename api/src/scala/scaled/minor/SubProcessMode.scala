@@ -44,7 +44,7 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
   def interruptSubprocess () {
     requireProc.pid match {
       case None      => throw Errors.feedback("Unable to get subprocess pid. Not on Unix?")
-      case Some(pid) => Runtime.getRuntime.exec("kill " + pid).waitFor()
+      case Some(pid) => Runtime.getRuntime.exec("kill -INT " + pid).waitFor()
     }
   }
 
