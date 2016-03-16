@@ -256,17 +256,16 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     desiredColumn = oldDesiredColumn
   }
 
-  // TODO: add config: paragraph-ignore-whitespace and treat non-empty lines which contain only
-  // whitespace as paragraph delimiters
   @Fn("""Moves to the next paragraph. Paragraphs are currently delimited by blank lines.
          TODO: make this more emacs-like?""")
   def nextParagraph () {
     @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
       if (row >= buffer.lines.size) Loc(row, 0)
       else {
-        val len = buffer.lineLength(row)
-        if (len == 0 && seenNonBlank) Loc(row, 0)
-        else seek(row+1, seenNonBlank || len > 0)
+        val line = buffer.line(row)
+        val isBlank = line.firstNonWS == line.length
+        if (isBlank && seenNonBlank) Loc(row, 0)
+        else seek(row+1, seenNonBlank || !isBlank)
       }
     }
     view.point() = seek(view.point().row, false)
@@ -278,9 +277,10 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
       if (row <= 0) Loc(0, 0)
       else {
-        val len = buffer.lineLength(row)
-        if (len == 0 && seenNonBlank) Loc(row, 0)
-        else seek(row-1, seenNonBlank || len > 0)
+        val line = buffer.line(row)
+        val isBlank = line.firstNonWS == line.length
+        if (isBlank && seenNonBlank) Loc(row, 0)
+        else seek(row-1, seenNonBlank || !isBlank)
       }
     }
     view.point() = seek(view.point().row, false)
