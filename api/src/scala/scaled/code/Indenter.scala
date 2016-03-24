@@ -13,7 +13,13 @@ class Indenter (val config :Config) {
   import Indenter._
 
   /** Computes the indentation for the `row`th line of the buffer. */
-  def apply (row :Int) :Int = 0
+  def apply (buffer :Buffer, row :Int) :Int = {
+    val line = buffer.line(row)
+    apply(Info(buffer, row, line, line.firstNonWS))
+  }
+
+  /** Computes the indentation for the line identified by `info`. */
+  def apply (info :Info)  = 0
 
   /** Returns an indentation `steps` steps inset from `base`.
     * @param base the default indentation of the line (in characters, not steps). */
@@ -28,6 +34,14 @@ class Indenter (val config :Config) {
 
 object Indenter {
   import Chars._
+
+  /** Encapsulates info passed to an indenter to indent a single line. */
+  case class Info (buffer :Buffer, row :Int, line :LineV, first :Int) {
+    /** Returns the first non-WS character on our line. */
+    def firstChar = line.charAt(first)
+    /** Returns true if the first non-WS characters on our line match `matcher`. */
+    def startsWith (matcher :Matcher) = line.matches(matcher, first)
+  }
 
   /** Tracks buffer elements that change the indentation state. These include things like `BlockS`
     * (a block of code, often nested in curly braces), `ExprS` (an expression that spans multiplie
@@ -73,41 +87,38 @@ object Indenter {
   }
 
   /** An indenter that indents lines based on incrementally computed indentation state. */
-  abstract class ByState (val buffer :Buffer, cfg :Config) extends Indenter(cfg) {
+  abstract class ByState (cfg :Config) extends Indenter(cfg) {
 
-    override def apply (row :Int) :Int = {
-      val line = buffer.line(row) ; val first = line.firstNonWS
-      val lstate = state(stater, buffer, row)
-      computeIndent(lstate, lstate.indent(config, true), line, first)
+    override def apply (info :Info) :Int = {
+      val lstate = state(stater, info)
+      computeIndent(lstate, lstate.indent(config, true), info)
     }
 
     /** Computes the indent for `line`. The default implementation simply returns `base`.
       * @parma state the indentation state prior to processing `line`.
       * @param base the base indent for `line` based on braces, parens, etc.
-      * @param line the line whose indentation is being computed.
-      * @param first the position of the first non-non-whitespace character on `line`.
+      * @param info the info on the line whose indentation is being computed.
       * @return the column to which `line` should be indented.
       */
-    protected def computeIndent (state :State, base :Int, line :LineV, first :Int) :Int = base
+    protected def computeIndent (state :State, base :Int, info :Info) :Int = base
 
     protected lazy val stater = createStater()
     protected def createStater () :Stater
   }
 
   /** An indenter that indents lines based on blocks and expressions. */
-  class ByBlock (buf :Buffer, cfg :Config) extends ByState(buf, cfg) {
+  class ByBlock (cfg :Config) extends ByState(cfg) {
 
-    override def apply (row :Int) :Int = {
-      val line = buffer.line(row) ; val first = line.firstNonWS
-      state(stater, buffer, row) match {
+    override def apply (info :Info) :Int = {
+      state(stater, info) match {
         // if this character closes the block on the top of the stack, handle it specially because
         // the close bracket is not indented as if it were inside the block
-        case bs :BlockS if (bs.isClose(line.charAt(first))) => computeCloseIndent(bs, line, first)
-        case st => computeIndent(st, st.indent(config, true), line, first)
+        case bs :BlockS if (bs.isClose(info.firstChar)) => computeCloseIndent(bs, info)
+        case st => computeIndent(st, st.indent(config, true), info)
       }
     }
 
-    protected def computeCloseIndent (bs :BlockS, line :LineV, first :Int) :Int = {
+    protected def computeCloseIndent (bs :BlockS, info :Info) :Int = {
       // by default we just indent based on the state above block state on the stack, but other
       // languages may customize this if they need, for example, to go further up the state stack
       // or to do other special funny business
@@ -206,11 +217,12 @@ object Indenter {
     protected def isExprOpen (c :Char) = (c != '{')
   }
 
-  /** Returns the starting indentation state for `line` in `buffer`, computing it (and any
-    * precededing states) as necessary and storing the computed state in its associated line. */
-  def state (stater :Stater, buffer :Buffer, line :Int) :State = {
+  /** Returns the starting indentation state for `info`, computing it (and any precededing states)
+    * as necessary and storing the computed state in its associated line. */
+  def state (stater :Stater, info :Info) :State = {
     // scan backwards until we reach the start of the buffer or a line with known state
-    var ss = 0 ; var sstate = EmptyS ; var ll = line-1 ; while (ll > 0) {
+    val buffer = info.buffer
+    var ss = 0 ; var sstate = EmptyS ; var ll = info.row-1 ; while (ll > 0) {
       val lstate = buffer.line(ll).lineTag(UnknownS)
       if (lstate == UnknownS) ll -= 1
       else { ss = ll ; sstate = lstate ; ll = 0 /*break*/ }
@@ -218,7 +230,7 @@ object Indenter {
 
     // now proceed forward, computing and storing line state
     buffer.setLineTag(ss, sstate)
-    while (ss < line) {
+    while (ss < info.row) {
       sstate = stater.compute(buffer.line(ss), sstate)
       buffer.setLineTag(ss+1, sstate)
       ss += 1

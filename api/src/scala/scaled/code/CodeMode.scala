@@ -120,7 +120,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   /** Computes the indentation for the line at `row`. */
-  def computeIndent (row :Int) :Int = indenter(row)
+  def computeIndent (row :Int) :Int = indenter(buffer, row)
 
   /** Computes the indentation for the line at `pos` and adjusts its indentation to match. If the
     * point is in the whitespace at the start of the indented line, it will be moved to the first
