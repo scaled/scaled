@@ -90,6 +90,22 @@ class Commenter {
     }
   }
 
+  /** Used to identify paragraphs in doc comments. Does some special handling to handle
+    * Javadoc-style `@commands`. */
+  class DocCommentParagrapher (syn :Syntax, buf :Buffer) extends CommentParagrapher(syn, buf) {
+    private val atCmdM = Matcher.regexp(atCmdRegexp)
+    /** Returns the regexp that matches `@command`s. */
+    def atCmdRegexp = "@[a-z]+"
+    /** Returns true if we're on an `@command` line (or its moral equivalent). */
+    def isAtCmdLine (line :LineV) = line.matches(atCmdM, commentStart(line))
+    // don't extend paragraph upwards if the current top is an @cmd
+    override def canPrepend (row :Int) =
+      super.canPrepend(row) && !isAtCmdLine(line(row+1))
+    // don't extend paragraph downwards if the new line is at an @cmd
+    override def canAppend (row :Int) =
+      super.canAppend(row) && !isAtCmdLine(line(row))
+  }
+
   /** Returns a paragrapher that identifies comment paragraphs. */
   def mkParagrapher (syn :Syntax, buf :Buffer) :Paragrapher = new CommentParagrapher(syn, buf)
 
