@@ -248,6 +248,10 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       reindentAtPoint()
       view.point() = bp
     }
+    // shenanigans to determine whether we should auto-insert the doc prefix
+    else if (commenter.inDocComment(buffer, p)) {
+      view.point() = commenter.insertDocPre(buffer, view.point())
+    }
     reindentAtPoint()
   }
 
