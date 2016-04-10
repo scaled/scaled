@@ -57,8 +57,6 @@ object Indenter {
     def indent (cfg :Config, top :Boolean = false) :Int = indentWidth(cfg) + next.indent(cfg)
 
     /** Pops this state off the stack if `f` returns true. */
-    @inline def popIf (f :State => Boolean) :State = if (f(this)) next else this
-    /** Pops this state off the stack if `f` returns true. */
     def popIf (f :Predicate[State]) :State = if (f.test(this)) next else this
 
     /** Pops state off the stack until it pops off a state for which `f` returns true. */
