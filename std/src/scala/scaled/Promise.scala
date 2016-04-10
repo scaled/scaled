@@ -5,8 +5,6 @@
 
 package scaled
 
-import scala.util.{Try, Success, Failure}
-
 /** Provides a concrete implementation of [[Future]] that can be updated with a success or failure
   * result when it becomes available.
   *

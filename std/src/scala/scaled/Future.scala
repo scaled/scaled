@@ -5,8 +5,6 @@
 
 package scaled
 
-import scala.util.{Try, Success, Failure}
-
 /** Represents an asynchronous result. Unlike Java or Scala futures, you cannot block on this
   * result. You can [[map]] or [[flatMap]] it, and listen for success or failure via the
   * [[Future.success]] and [[Future.failure]] signals.
@@ -17,14 +15,14 @@ class Future[+T] protected (_result :ValueV[Try[T]]) {
     * suceeded, the slot will be notified immediately.
     * @return this future for chaining.
     */
-  def onSuccess (slot :T => Unit) :this.type = { connectSuccess(slot) ; this }
+  def onSuccess (slot :JConsumer[T]) :this.type = { connectSuccess(slot) ; this }
 
   /** Causes `slot` to be notified if/when this future is completed with success. If it has already
     * suceeded, the slot will be notified immediately.
     * @return a connection that can be used to cancel the notification. If the future has already
     * completed, the returned connection will do nothing.
     */
-  def connectSuccess (slot :T => Unit) :Connection = _result.get match {
+  def connectSuccess (slot :JConsumer[T]) :Connection = _result.get match {
     case null => _result.onValue(_.foreach(slot))
     case r    => r.foreach(slot) ; Connection.Noop
   }
@@ -33,14 +31,14 @@ class Future[+T] protected (_result :ValueV[Try[T]]) {
     * failed, the slot will be notified immediately.
     * @return this future for chaining.
     */
-  def onFailure (slot :Throwable => Unit) :this.type = { connectFailure(slot) ; this }
+  def onFailure (slot :JConsumer[Throwable]) :this.type = { connectFailure(slot) ; this }
 
   /** Causes `slot` to be notified if/when this future is completed with failure. If it has already
     * failed, the slot will be notified immediately.
     * @return a connection that can be used to cancel the notification. If the future has already
     * completed, the returned connection will do nothing.
     */
-  def connectFailure (slot :Throwable => Unit) :Connection = _result.get match {
+  def connectFailure (slot :JConsumer[Throwable]) :Connection = _result.get match {
     case null => _result.onValue(foreachFailure(_, slot))
     case r    => foreachFailure(r, slot) ; Connection.Noop
   }
@@ -50,23 +48,23 @@ class Future[+T] protected (_result :ValueV[Try[T]]) {
     * completed, the appropriate function will be called immediately.
     * @return this future for chaining.
     */
-  def onComplete (success :T => Unit, failure :Throwable => Unit) :this.type =
+  def onComplete (success :JConsumer[T], failure :JConsumer[Throwable]) :this.type =
     onSuccess(success).onFailure(failure)
 
   /** Causes `slot` to be notified when this future is completed. If it has already completed, the
     * slot will be notified immediately.
     * @return this future for chaining.
     */
-  def onComplete (slot :Try[T] => Unit) :this.type = { connectComplete(slot) ; this }
+  def onComplete (slot :JConsumer[Try[T]]) :this.type = { connectComplete(slot) ; this }
 
   /** Causes `slot` to be notified when this future is completed. If it has already completed, the
     * slot will be notified immediately.
     * @return a connection that can be used to cancel the notification. If the future has already
     * completed, the returned connection will do nothing.
     */
-  def connectComplete (slot :Try[T] => Unit) :Connection = _result.get match {
+  def connectComplete (slot :JConsumer[Try[T]]) :Connection = _result.get match {
     case null => _result.onValue(slot)
-    case r    => slot(r) ; Connection.Noop
+    case r    => slot.accept(r) ; Connection.Noop
   }
 
   /** Returns a value that indicates whether this future has completed. */
@@ -77,10 +75,12 @@ class Future[+T] protected (_result :ValueV[Try[T]]) {
     * disabled while the future is incomplete, then reenabled when it is completed).
     * @return this future for chaining.
     */
-  def bindComplete (slot :Boolean => Unit) :this.type = { isComplete.onValueNotify(slot) ; this }
+  def bindComplete (slot :JConsumer[Boolean]) :this.type = {
+    isComplete.onValueNotify(slot) ; this
+  }
 
   /** Maps the value of a successful result using `func` upon arrival. */
-  def map[R] (func :T => R) :Future[R] = new Future[R](_result.map(_ match {
+  def map[R] (func :JFunction[T, R]) :Future[R] = new Future[R](_result.map(_ match {
     case null => null
     case r    => r.map(func)
   }))
@@ -89,19 +89,19 @@ class Future[+T] protected (_result :ValueV[Try[T]]) {
     * result or the mapped result are both dispatched to the mapped result. This is useful for
     * chaining asynchronous actions. It's also known as monadic bind.
     */
-  def flatMap[R] (func :T => Future[R]) :Future[R] = {
+  def flatMap[R] (func :JFunction[T, Future[R]]) :Future[R] = {
     val mapped = Value[Try[R]](null)
     _result.onValueNotify { _ match {
-      case null => () // nada; source future not yet complete nothing to do
+      case null       => () // nada; source future not yet complete nothing to do
       case Failure(e) => mapped.update(Failure[R](e))
       case Success(v) => func(v).onComplete(mapped.update _)
     }}
     new Future[R](mapped)
   }
 
-  private def foreachFailure (t :Try[_], slot :Throwable => Unit) = t match {
-    case Failure(e) => slot(e)
-    case _ => // nada
+  private def foreachFailure (t :Try[_], slot :JConsumer[Throwable]) = t match {
+    case Failure(e) => slot.accept(e)
+    case _          => // nada
   }
 }
 
@@ -170,8 +170,8 @@ object Future {
     if (futures.isEmpty) success(Seq())
     else {
       val pseq = Promise[Seq[T]]()
-      val collector = new Function1[Try[T],Unit]() {
-        def apply (result :Try[T]) = synchronized {
+      val collector = new JConsumer[Try[T]]() {
+        def accept (result :Try[T]) = synchronized {
           if (result.isSuccess) _results += result.get
           _remain -= 1
           if (_remain == 0) pseq.succeed(_results.build())

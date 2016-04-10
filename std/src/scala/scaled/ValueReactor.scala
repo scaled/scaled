@@ -5,7 +5,10 @@
 
 package scaled
 
-abstract class ValueReactor[T] extends Reactor[(T,T) => Unit] {
+import java.util.function.{BiConsumer, Consumer, Function}
+
+abstract class ValueReactor[T] extends Reactor {
+  import Impl._
 
   /** Connects the supplied "value agnostic" block of code with priority 0. When a value is emitted,
     * the block will be executed. Useful when you don't care about the value.
@@ -18,39 +21,43 @@ abstract class ValueReactor[T] extends Reactor[(T,T) => Unit] {
     * @param prio $PRIODOC
     * @return $CONDOC
     */
-  def onEmitAt (prio :Int)(block : =>Unit) :Connection = addConnection(prio, (_,_) => block)
+  def onEmitAt (prio :Int)(block : =>Unit) :Connection = addLink(new Link(this, prio) {
+    override def notify (value :Any, ovalue :Any) = block
+  })
 
   /** Connects the supplied slot (side-effecting function) with priorty zero. When a value is
     * emitted, the slot will be invoked with the value.
     * @return $CONDOC
     */
-  def onValue (slot :T => Unit) :Connection = onValueAt(0)(slot)
+  def onValue (slot :Consumer[T]) :Connection = onValueAt(0)(slot)
 
   /** Connects the supplied slot (side-effecting function) at the specified priority. When a value is
     * emitted, the slot will be invoked with the value.
     * @param prio $PRIODOC
     * @return $CONDOC
     */
-  def onValueAt (prio :Int)(slot :T =>Unit) :Connection = addConnection(prio, (c, _) => slot(c))
+  def onValueAt (prio :Int)(slot :Consumer[T]) :Connection = addLink(new Link(this, prio) {
+    override def notify (value :Any, ovalue :Any) = slot.accept(value.asInstanceOf[T])
+  })
 
   /** Connects `slot` to this value with priority 0; it will be invoked when the value changes. Also
     * immediately invokes `slot` with the current value.
     * @return $CONDOC
     */
-  def onValueNotify (slot :T => Unit) :Connection = onValueNotifyAt(0)(slot)
+  def onValueNotify (slot :Consumer[T]) :Connection = onValueNotifyAt(0)(slot)
 
   /** Connects `slot` to this value; it will be invoked when the value changes. Also immediately
     * invokes `slot` with the current value.
     * @param prio $PRIODOC
     * @return $CONDOC
     */
-  def onValueNotifyAt (prio :Int)(slot :T => Unit) :Connection = {
+  def onValueNotifyAt (prio :Int)(slot :Consumer[T]) :Connection = {
     // connect before notifying the slot; if the slot changes the value during execution, it will
     // expect to be notified of that change; but if the slot throws an exception, we need to take
     // care of disconnecting because the returned connection will never reach the caller
     val conn = onValueAt(prio)(slot)
     try {
-      slot(getForNotify)
+      slot.accept(getForNotify)
       conn
     } catch {
       case e :Throwable => conn.close(); throw e
@@ -61,14 +68,17 @@ abstract class ValueReactor[T] extends Reactor[(T,T) => Unit] {
     * emitted, the slot will be invoked with the value.
     * @return $CONDOC
     */
-  def onChange (slot :(T,T) => Unit) :Connection = onChangeAt(0)(slot)
+  def onChange (slot :BiConsumer[T,T]) :Connection = onChangeAt(0)(slot)
 
   /** Connects the supplied slot (side-effecting function) at the specified priority. When a value is
     * emitted, the slot will be invoked with the value.
     * @param prio $PRIODOC
     * @return $CONDOC
     */
-  def onChangeAt (prio :Int)(slot :(T,T)=>Unit) :Connection = addConnection(prio, slot)
+  def onChangeAt (prio :Int)(slot :BiConsumer[T,T]) :Connection = addLink(new Link(this, prio) {
+    override def notify (value :Any, ovalue :Any) =
+      slot.accept(value.asInstanceOf[T], ovalue.asInstanceOf[T])
+  })
 
   /** Returns the current value, for use by [[onValueNotifyAt]]. */
   protected def getForNotify :T
@@ -84,7 +94,7 @@ abstract class ValueReactor[T] extends Reactor[(T,T) => Unit] {
       var cons = lners
       while (cons != null) {
         try {
-          cons.listener.apply(value, ovalue)
+          cons.notify(value, ovalue)
         } catch {
           case t :Throwable =>
             if (err == null) err = new ReactionException()

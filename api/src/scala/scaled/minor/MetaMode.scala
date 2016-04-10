@@ -40,7 +40,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
     bind("execute-extended-command", "M-x");
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
-  def withConfigVar (fn :Config.VarBind[_] => Unit) {
+  def withConfigVar (fn :JConsumer[Config.VarBind[_]]) {
     val vars = disp.modes.flatMap(m => m.varBindings)
     val comp = Completer.from(vars)(_.v.name)
     window.mini.read("Var:", "", varHistory(wspace), comp) onSuccess fn

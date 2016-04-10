@@ -26,6 +26,10 @@ package object scaled {
   type JIterable[+A]  = java.lang.Iterable[A @uV]
   type JStringBuilder = java.lang.StringBuilder
 
+  // TODO: make these aliases if SI-8079 is ever fixed; sigh
+  trait JConsumer[-T] extends juf.Consumer[T @uV]
+  trait JFunction[-T,+R] extends juf.Function[T @uV, R @uV]
+
   // for great Scala interop
   type SIterator[+A] = scala.collection.Iterator[A]
   type SIterable[+A] = scala.collection.Iterable[A]

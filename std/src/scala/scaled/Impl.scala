@@ -10,51 +10,46 @@ package scaled
   */
 object Impl {
 
-  /** Implements [[Connection]] and a linked-list style listener list for [[Reactor]]s.
-    */
-  class Cons[L](
+  /** Implements [[Connection]] and a cons list for [[Reactor]]s. */
+  class Link (
     /** The reactor that owns this cons cell. */
-    val owner :Reactor[L],
+    val owner :Reactor,
     /** The priority of this connection. */
-    val priority :Int,
-    /** Receives signals from the reactor. */
-    val listener :L
+    val priority :Int
   ) extends Connection {
     /** The next connection in our chain. */
-    var next :Cons[L] = _
+    var next :Link = _
     /** Indicates whether this connection is one-shot or persistent. */
     var oneShot :Boolean = false
 
-    def setNext (next :Cons[L]) :Cons[L] = { this.next = next; this }
+    def setNext (next :Link) :Link = { this.next = next; this }
+
+    // plumbing used (or not) by reactors; dangerous but simple and reasonably fast
+    def notify (arg0 :Any) {}
+    def notify (arg0 :Any, arg1 :Any) {}
 
     override def once () = { oneShot = true; this }
     override def close () = owner.disconnect(this)
     override def toString =
-      s"[owner=$owner, prio=$priority, lner=$listener, hasNext=${ next != null }, oneShot=$oneShot]"
+      s"[owner=$owner, prio=$priority, hasNext=${ next != null }, oneShot=$oneShot]"
   }
 
   abstract class Runs extends Runnable {
     var next :Runs = _
   }
 
-  final val DISPATCHING = new Cons(null, 0, null)
+  final val DISPATCHING = new Link(null, 0)
 
-  def insert[L] (head :Cons[L], cons :Cons[L]) :Cons[L] = {
+  def insert (head :Link, cons :Link) :Link = {
     if (head == null) cons
     else if (head.priority < cons.priority) cons.setNext(head)
     else head.setNext(insert(head.next, cons))
   }
 
-  def remove[L] (head :Cons[L], cons :Cons[L]) :Cons[L] = {
+  def remove (head :Link, cons :Link) :Link = {
     if (head == null) head
     else if (head == cons) head.next
     else head.setNext(remove(head.next, cons))
-  }
-
-  def removeAll[L] (head :Cons[L], listener :Object) :Cons[L] = {
-    if (head == null) null
-    else if (head.listener == listener) removeAll(head.next, listener)
-    else head.setNext(removeAll(head.next, listener))
   }
 
   def insert (head :Runs, action :Runs) :Runs = {

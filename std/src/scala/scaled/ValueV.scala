@@ -21,7 +21,7 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
     * value and transform the result via `f` before returning it. The mapped value will retain a
     * connection to this value for as long as it has connections of its own.
     */
-  def map[M] (f :T => M) :ValueV[M] = {
+  def map[M] (f :JFunction[T, M]) :ValueV[M] = {
     val outer = this
     new ValueV[M]() {
       override def get = f(outer.get)
@@ -44,7 +44,7 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
 
   override def hashCode = get match {
     case null => 0
-    case v => v.hashCode
+    case v    => v.hashCode
   }
 
   override def equals (other :Any) = {

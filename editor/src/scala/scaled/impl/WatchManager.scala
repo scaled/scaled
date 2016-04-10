@@ -35,7 +35,7 @@ class WatchManager (log :Logger, exec :Executor) extends AbstractService with Wa
     }
   }
 
-  private def addWatch (dir :Path)(cb :WatchEvent[_] => Unit) = byDir.get(dir).signal onValue cb
+  private def addWatch (dir :Path)(cb :JConsumer[WatchEvent[_]]) = byDir.get(dir).signal onValue cb
 
   private def pollWatches () :Unit = try {
     // wait for key to be signalled

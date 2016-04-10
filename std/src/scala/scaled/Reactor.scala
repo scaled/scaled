@@ -14,18 +14,18 @@ package scaled
   * All listeners will be notified regardless of whether any throw exceptions, and if one or more
   * listeners throw exceptions, they are aggregated into a ReactionException and thrown.
  */
-class Reactor[L] {
+class Reactor {
   import Impl._
 
   /** Returns true if this reactor has at least one connection. */
   def hasConnections :Boolean = (_listeners != null)
 
-  protected def addConnection (prio :Int, listener :L) :Connection = synchronized {
-    if (listener == null) throw new NullPointerException("Null listener")
-    addCons(new Cons(this, prio, listener))
-  }
+  // protected def addConnection (prio :Int, listener :AnyRef) :Connection = synchronized {
+  //   if (listener == null) throw new NullPointerException("Null listener")
+  //   addLink(new Link(this, prio, listener))
+  // }
 
-  protected def addCons (cons :Cons[L]) :Cons[L] = synchronized {
+  protected def addLink (cons :Link) :Link = synchronized {
     if (isDispatching) {
       _pendingRuns = insert(_pendingRuns, new Runs {
         def run () {
@@ -40,15 +40,15 @@ class Reactor[L] {
     cons
   }
 
-  protected def prepareNotify () :Cons[L] = synchronized {
+  protected def prepareNotify () :Link = synchronized {
     if (isDispatching)
       throw new IllegalStateException("Initiated notify while notifying")
     val lners = _listeners
-    _listeners = DISPATCHING.asInstanceOf[Cons[L]]
+    _listeners = DISPATCHING.asInstanceOf[Link]
     return lners
   }
 
-  protected def finishNotify (lners :Cons[L]) = synchronized {
+  protected def finishNotify (lners :Link) = synchronized {
     // note that we're no longer dispatching
     _listeners = lners
 
@@ -59,7 +59,7 @@ class Reactor[L] {
     }
   }
 
-  protected[scaled] def disconnect (cons :Cons[L]) = synchronized {
+  protected[scaled] def disconnect (cons :Link) = synchronized {
     if (isDispatching) {
       _pendingRuns = insert(_pendingRuns, new Runs {
         def run () {
@@ -69,20 +69,6 @@ class Reactor[L] {
       })
     } else {
       _listeners = remove(_listeners, cons)
-      connectionRemoved()
-    }
-  }
-
-  protected def removeConnection (listener :AnyRef) = synchronized {
-    if (isDispatching) {
-      _pendingRuns = insert(_pendingRuns, new Runs {
-        def run () {
-          _listeners = removeAll(_listeners, listener)
-          connectionRemoved()
-        }
-      })
-    } else {
-      _listeners = removeAll(_listeners, listener)
       connectionRemoved()
     }
   }
@@ -108,6 +94,6 @@ class Reactor[L] {
   // always called while lock is held on this reactor
   private final def isDispatching :Boolean = (_listeners eq DISPATCHING)
 
-  private[this] var _listeners :Cons[L] = _
+  private[this] var _listeners :Link = _
   private[this] var _pendingRuns :Runs = _
 }
