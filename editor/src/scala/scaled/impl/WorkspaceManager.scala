@@ -259,6 +259,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
         // rename each buffer to name<p1>, name<p2/p1>, etc.
         sameName foreach { buf =>
           val path = Paths.get(buf.store.parent)
+          println(s"Renaming ${buf.name} due to conflict.")
           buf.nameV() = s"${buf.store.name}<${takeRight(cc, path)}>"
         }
         // map the renamed buffers by name, and then filter out buffers which now have a unique name
