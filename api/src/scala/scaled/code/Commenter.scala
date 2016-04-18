@@ -107,7 +107,9 @@ class Commenter {
   }
 
   /** Returns a paragrapher that identifies comment paragraphs. */
-  def mkParagrapher (syn :Syntax, buf :Buffer) :Paragrapher = new CommentParagrapher(syn, buf)
+  def mkParagrapher (syn :Syntax, buf :Buffer) :Paragrapher =
+    if (docOpen.length > 0) new DocCommentParagrapher(syn, buf)
+    else new CommentParagrapher(syn, buf)
 
   /** Returns the column of start of the comment text on `line`. This skips over the comment
     * delimiter and any whitespace beyond it. If `line` does not contain comments, `line.length` is
