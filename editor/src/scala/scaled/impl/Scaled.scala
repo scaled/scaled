@@ -25,9 +25,12 @@ class Scaled extends Application with Editor {
   val log = Signal[String]()
 
   val logger = new Logger {
-    override def log (msg :String) :Unit = exec.runOnUI { doLog(msg) }
-    override def log (msg :String, exn :Throwable) :Unit =
-      exec.runOnUI { doLog(msg) ; doLog(Errors.stackTraceToString(exn)) }
+    override def log (msg :String) :Unit = Platform.runLater(new Runnable() {
+      override def run = doLog(msg)
+    })
+    override def log (msg :String, exn :Throwable) :Unit = Platform.runLater(new Runnable() {
+      override def run = { doLog(msg) ; doLog(Errors.stackTraceToString(exn)) }
+    })
     private def doLog (msg :String) {
       debugLog(msg)
       Scaled.this.log.emit(msg)

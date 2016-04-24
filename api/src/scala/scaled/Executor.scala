@@ -6,8 +6,19 @@ package scaled
 
 import java.util.concurrent.{Executor => JExecutor}
 
+/** Static bits for [[Executor]]. */
+object Executor {
+
+  /** Used to report errors for actions queued for execution on the UI thread. */
+  trait ErrorHandler {
+    /** Reports an unexpected error to the user. */
+    def emitError (err :Throwable) :Unit
+  }
+}
+
 /** Handles invoking execution units on the UI thread and background threads. */
 abstract class Executor {
+  import Executor._
 
   /** A Java `Executor` which runs operations on the UI thread. */
   val uiExec :JExecutor
@@ -15,11 +26,16 @@ abstract class Executor {
   /** A Java `Executor` which runs operations on a background thread pool. */
   val bgExec :JExecutor
 
-  /** Invokes `op` on the next UI tick. This can be invoked from the UI thread to defer an operation
-    * until the next tick, or it can be invoked from a background thread to process results back on
-    * the UI thread.
+  /** Invokes `op` on the next UI tick. This can be invoked from the UI thread to defer an
+    * operation until the next tick, or it can be invoked from a background thread to process
+    * results back on the UI thread.
+    * @param errHandler will be notified if any errors propagate up from the runnable.
     */
-  def runOnUI (op :Runnable) :Unit = uiExec.execute(op)
+  def runOnUI (errHandler: ErrorHandler, op :Runnable) :Unit = uiExec.execute(new Runnable() {
+    override def run () = try op.run() catch {
+      case t :Throwable => errHandler.emitError(t)
+    }
+  })
 
   /** Invokes `op` on a background thread. There are a pool of background threads, so multiple
     * invocations of this method may result in the operations being run in parallel. An operation
@@ -29,8 +45,10 @@ abstract class Executor {
   def runInBG (op :Runnable) :Unit = bgExec.execute(op)
 
   /** A Scala-friendly [[runOnUI(Runnable)]]. */
-  def runOnUI[U] (op : => U) :Unit = uiExec.execute(new Runnable() {
-    override def run () = op
+  def runOnUI[U] (errHandler: ErrorHandler)(op : => U) :Unit = uiExec.execute(new Runnable() {
+    override def run () = try op catch {
+      case t :Throwable => errHandler.emitError(t)
+    }
   })
 
   /** A Scala-friendly [[runInBG(Runnable)]]. */
@@ -39,9 +57,11 @@ abstract class Executor {
   })
 
   /** Runs `op` on a background thread, reports the results on the UI thread.
-    * @return a future that will deliver the result or cause of failure when available. */
-  def runAsync[R] (op : => R) :Future[R] = {
-    val result = uiPromise[R]()
+    * @param errHandler will be notified if any errors propagate up from the runnable.
+    * @return a future that will deliver the result or cause of failure when available.
+    */
+  def runAsync[R] (errHandler :ErrorHandler, op : => R) :Future[R] = {
+    val result = uiPromise[R](errHandler)
     bgExec.execute(new Runnable() {
       override def run () = try result.succeed(op) catch { case t :Throwable => result.fail(t) }
     })
@@ -49,14 +69,16 @@ abstract class Executor {
   }
 
   /** Returns a promise which will notify listeners of success or failure on the UI thread,
-    * regardless of the thread on which it is completed. */
-  def uiPromise[R] () :Promise[R] = new Promise[R]() {
+    * regardless of the thread on which it is completed.
+    * @param errHandler will be notified if any errors propagate up from the runnable.
+    */
+  def uiPromise[R] (errHandler :ErrorHandler) :Promise[R] = new Promise[R]() {
     private def superSucceed (value :R) = super.succeed(value)
-    override def succeed (value :R) = runOnUI(new Runnable() {
+    override def succeed (value :R) = runOnUI(errHandler, new Runnable() {
       def run () = superSucceed(value)
     })
     private def superFail (cause :Throwable) = super.fail(cause)
-    override def fail (cause :Throwable) = runOnUI(new Runnable() {
+    override def fail (cause :Throwable) = runOnUI(errHandler, new Runnable() {
       def run () = superFail(cause)
     })
   }

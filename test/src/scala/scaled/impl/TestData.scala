@@ -50,6 +50,9 @@ object TestData {
     def killBuffer (buffer :Buffer) {}
     def addHintPath (path :Path) {}
     def removeHintPath (path :Path) {}
+    def emitError (err :Throwable) {
+      err.printStackTrace(System.err)
+    }
     protected def log = TestData.log
   }
 

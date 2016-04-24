@@ -165,11 +165,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         case null => err.toString
         case msg  => msg
       })
-      if (!Errors.isFeedback(err)) {
-        val trace = Errors.stackTraceToString(err)
-        ws.app.debugLog(trace)
-        ws.recordMessage(trace)
-      }
+      ws.emitError(err)
     }
 
   override def clearStatus () = {

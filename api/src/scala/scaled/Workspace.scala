@@ -20,7 +20,7 @@ import scaled.util.Close
   * dependencies specially for projects that are added to the workspace, and to provide
   * workspace-wide searching and navigation functionality.
   */
-abstract class Workspace {
+abstract class Workspace extends Executor.ErrorHandler {
 
   /** The user supplied name for this workspace. */
   val name :String
@@ -100,6 +100,9 @@ abstract class Workspace {
 
   /** Removes `path` from this workspace's list of hint paths. */
   def removeHintPath (path :Path) :Unit
+
+  /** Reports an unexpected error to the user. It is appended to the `*messages*` buffer. */
+  def emitError (err :Throwable) :Unit
 }
 
 /** Static [[Workspace]] stuffs. */

@@ -70,7 +70,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   def onClear () :Unit
 
   override def apply[R] (mode :String, args :Any*) :Future[R] = {
-    val result = window.workspace.editor.exec.uiPromise[R]()
+    val result = window.workspace.editor.exec.uiPromise[R](window)
     try {
       willShow() // make sure it's OK to activate ourselves
 

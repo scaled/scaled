@@ -77,7 +77,7 @@ class ISearchMode (
 
     def extend (esought :Seq[LineV]) = {
       val search = mkSearch(esought)
-      val allMatches = env.exec.runAsync(search.findAll())
+      val allMatches = env.exec.runAsync(window, search.findAll())
       (if (fwd) search.findForward(start) else search.findBackward(end)) match {
         case Loc.None => IState(esought, allMatches, start, end,  fwd, true,  wrap)
         case s        => IState(esought, allMatches, s, s+esought, fwd, false, wrap)
@@ -165,7 +165,7 @@ class ISearchMode (
   private def queueRefresh () {
     if (!_refreshPending) {
       _refreshPending = true
-      env.exec.runOnUI {
+      env.exec.runOnUI(window) {
         val sought = buffer.region(buffer.start, buffer.end)
         if (sought != curstate.sought) pushState(curstate.extend(sought))
         _refreshPending = false
