@@ -27,9 +27,13 @@ trait Editor {
   /** Displays the supplied URL in the user's preferred web browser. */
   def showURL (url :String) :Unit
 
-  /** The ring in which killed blocks of text are stored. */
+  /** The ring in which killed regions are stored. */
   def killRing = Mutable.getOrPut(
     Rings(state), "kill", new KillRing(config(EditorConfig.killRingSize)))
+
+  /** The ring in which killed rectangles are stored. */
+  def rectKillRing = Mutable.getOrPut(
+    Rings(state), "rect-kill", new Ring(config(EditorConfig.killRingSize)))
 
   // TODO: def workspaces :SeqV[Workspace]?
 

@@ -74,6 +74,12 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     bind("yank",     "C-y").
     bind("yank-pop", "M-y").
 
+    // rectangle region fns
+    bind("kill-rectangle",         "C-x r k").
+    bind("yank-rectangle",         "C-x r y").
+    bind("replace-rectangle",      "C-x r t").
+    bind("copy-rectangle-as-kill", "C-x r M-w").
+
     // undo commands
     bind("undo", "C-/", "C-x u", "C-_").
     bind("redo", "C-\\", "C-x r").
@@ -449,6 +455,82 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   private val yanks = Set("yank", "yank-pop")
 
   //
+  // RECTANGLE FNS
+
+  /** Creates a rect region based on the supplied `start` and `end` locations. A rect region is
+    * represented as a `Loc` for the start of each line and a number of characters. Note: this
+    * function does not validate that `start` and `end` are in the buffer or otherwise valid. */
+  def rectRegion (start :Loc, end :Loc) :Seq[(Loc, Int)] = {
+    val width = end.col - start.col
+    val lines = Seq.builder[(Loc, Int)]()
+    var cur = start ; while (cur.row <= end.row) {
+      lines += (cur, width)
+      cur = cur.nextL
+    }
+    lines.build()
+  }
+
+  /** Extracts the rectangular region from the current region and applies `fn` to it. */
+  def withRectRegion (fn :Seq[(Loc, Int)] => Unit) :Unit = withRegion { (start, end) =>
+    fn(rectRegion(start, end))
+  }
+
+  @Fn("Deletes the region-rectangle and saves it to the kill ring.")
+  def killRectangle () :Unit = withRectRegion { lines =>
+    val killed = lines.map { case (start, length) =>
+      val line = buffer.line(start)
+      val end = math.min(line.length, start.col+length)
+      pad(buffer.delete(start, end-start.col), length-end)
+    }
+    editor.rectKillRing add killed
+  }
+
+  @Fn("Yanks the last killed rectangle with upper left corner at the point.")
+  def yankRectangle () :Unit = editor.rectKillRing.entry(0) match {
+    case None => window.popStatus("Rectangle kill ring is empty.")
+    case Some(region) =>
+      var pos = view.point()
+      for (rline <- region) {
+        // if we're past the end of the buffer, add a line
+        if (pos.row >= buffer.lines.size) buffer.split(buffer.end)
+        // pad the line out with spaces if it's not long enough
+        val bline = buffer.line(pos)
+        if (bline.length < pos.col) buffer.insert(
+          pos.atCol(bline.length), whitespace(pos.col-bline.length))
+        buffer.insert(pos, rline)
+        pos = pos.nextL
+      }
+  }
+
+  @Fn("Replaces the contents of a rectangle with a supplied string on each line.")
+  def replaceRectangle () {
+    window.mini.read("Replacement:", "", replaceRectHistory, Completer.none) onSuccess { str =>
+      val repline = Line(str)
+      withRectRegion { lines =>
+        val killed = lines.map { case (start, length) =>
+          val line = buffer.line(start)
+          val count = math.min(line.length-start.col, length)
+          buffer.replace(start, count, repline)
+        }
+      }
+    }
+  }
+
+  @Fn("Copies, but does not delete, the region-rectangle and saves it to the kill ring.")
+  def copyRectangleAsKill () :Unit = withRectRegion { lines =>
+    val killed = lines.map { case (start, length) =>
+      val line = buffer.line(start)
+      val end = math.min(line.length, start.col+length)
+      pad(buffer.line(start).slice(start.col, end-start.col), length-end)
+    }
+    editor.rectKillRing add killed
+  }
+
+  private def pad (line :LineV, spaces :Int) :LineV =
+    if (spaces <= 0) line else line.merge(whitespace(spaces))
+  private def whitespace (length :Int) = Line(" " * length)
+
+  //
   // UNDO FNS
 
   @Fn("Undoes the last change to the buffer.")
@@ -626,4 +708,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
        }
     }
   }
+
+  /** The history ring used for replace-rectangle strings. */
+  protected def replaceRectHistory = Workspace.historyRing(wspace, "replace-rectangle")
 }
