@@ -60,7 +60,7 @@ abstract class Executor {
     * @param errHandler will be notified if any errors propagate up from the runnable.
     * @return a future that will deliver the result or cause of failure when available.
     */
-  def runAsync[R] (errHandler :ErrorHandler, op : => R) :Future[R] = {
+  def runAsync[R] (errHandler :ErrorHandler)(op : => R) :Future[R] = {
     val result = uiPromise[R](errHandler)
     bgExec.execute(new Runnable() {
       override def run () = try result.succeed(op) catch { case t :Throwable => result.fail(t) }
