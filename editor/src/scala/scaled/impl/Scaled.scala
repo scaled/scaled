@@ -77,6 +77,7 @@ class Scaled extends Application with Editor {
   }
 
   override def stop () {
+    svcMgr.shutdown();
     pool.shutdown()
   }
 
