@@ -126,7 +126,7 @@ object Workspace {
   /** The history ring used for config var values. */
   def setVarHistory (ws :Workspace) = historyRing(ws, "set-var")
 
-  /** Returns the (editor-wide) history ring with the specified name. The ring will be created
+  /** Returns the (workspace-wide) history ring with the specified name. The ring will be created
     * on-demand. Note the history ring names above, which are used by Scaled. */
   def historyRing (ws :Workspace, name :String) = Mutable.getOrPut(
     Rings(ws.state), name, new Ring(ws.config(EditorConfig.historySize)) {
