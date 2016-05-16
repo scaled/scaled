@@ -104,14 +104,15 @@ class BufferBuilder (val fillWidth :Int) {
     * include the separator and whitespace in `key` (i.e. `foo: ` or `bar = `). `value` will be
     * wrapped to the builder's fill width minus the width of the key (wrapped lines will be prefixed
     * with `key.length` spaces). */
-  def addKeyValue (key :String, value :String) :this.type = {
+  def addKeyValue (key :String, value :Any) :this.type = {
     def simple (value :CharSequence) = Line.builder(s"$key$value").withStyle(
       TextConfig.prefixStyle, 0, key.length).build()
     val valueFill = math.max(fillWidth-key.length, MinFillWidth)
-    if (value.length <= valueFill) add(simple(value))
+    val valueStr = String.valueOf(value)
+    if (valueStr.length <= valueFill) add(simple(valueStr))
     else {
       val filler = new Filler(valueFill)
-      filler.append(Filler.flatten(value))
+      filler.append(Filler.flatten(valueStr))
       add(simple(filler.filled.head))
       val prefix = toDashes(key, ' ')
       filler.filled.drop(1).foreach(f => add(Line(prefix + f)))
@@ -121,7 +122,7 @@ class BufferBuilder (val fillWidth :Int) {
 
   /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
     * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
-  def addKeysValues (kvs :(String,String)*) :this.type = {
+  def addKeysValues (kvs :(String,Any)*) :this.type = {
     val padWidth = (0 /: kvs)((m, kv) => math.max(m, kv._1.length))
     def pad (key :String) = key + (" " * (padWidth-key.length))
     kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
@@ -130,7 +131,7 @@ class BufferBuilder (val fillWidth :Int) {
 
   /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
     * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
-  def addKeysValues (kvs :Seq[(String,String)]) :this.type = addKeysValues(kvs.toScala :_*)
+  def addKeysValues (kvs :Seq[(String,Any)]) :this.type = addKeysValues(kvs.toScala :_*)
 
   private def styledLine (text :CharSequence, styles :scala.Seq[String]) =
     ((Line.builder(text) /: styles)(_.withStyle(_))).build()
