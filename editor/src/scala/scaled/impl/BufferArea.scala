@@ -318,7 +318,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
     def updateVizLines (otop :Int) {
       val viewLines = bview.height()+1 ; val top = bview.scrollTop()
-      val lines = bview.lines ; val bot = top + viewLines
+      val lines = bview.lines ; val bot = math.min(top + viewLines, lines.size)
       val preChildCount = lineNodes.getChildren.size
       // println(s"updateVizLines otop=$otop top=$top bot=$bot lines=${lines.size} " +
       //   s"vlines=$viewLines ccount=$preChildCount")
@@ -329,10 +329,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
       val childCount = lineNodes.getChildren.size
       if (childCount > viewLines) removeLines(viewLines, childCount)
-      else if (childCount < viewLines) {
-        val start = top+childCount ; val end = math.min(bot, lines.size)
-        addLines(childCount, lines.slice(start, end))
-      }
+      else if (childCount < viewLines) addLines(childCount, lines.slice(top+childCount, bot))
 
       requestLayout()
     }
