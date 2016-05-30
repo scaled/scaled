@@ -61,7 +61,7 @@ object Close {
     private[this] var _contents :T = null
 
     /** Creates (if necessary) and returns the referent. */
-    def get :T = {
+    def get :T = synchronized {
       if (_contents == null) {
         _contents = create()
         didCreate()
