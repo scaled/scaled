@@ -211,6 +211,12 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
   override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
+  override val exec = new Executor {
+    override val uiExec = app.exec.uiExec
+    override val bgExec = app.exec.bgExec
+    override val errHandler = WorkspaceImpl.this
+    override def uiTimer (delay :Long) = app.exec.uiTimer(delay)
+  }
   override def emitError (err :Throwable) {
     if (!Errors.isFeedback(err)) {
       val trace = Errors.stackTraceToString(err)
@@ -242,7 +248,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     // when a buffer's name changes, trigger a name conflict check on the next UI tick; we can't do
     // it immediately because we may end up trying to re-change the name while the current name
     // change was being dispatched
-    buf.nameV.onValue { name => app.exec.runOnUI(this)(checkNameConflict(name)) }
+    buf.nameV.onValue { name => exec.runOnUI(checkNameConflict(name)) }
     bufferOpened.emit(buf)
     buf.killed.onEmit(buffers.remove(buf))
     buf

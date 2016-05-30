@@ -101,6 +101,9 @@ abstract class Workspace extends Executor.ErrorHandler {
   /** Removes `path` from this workspace's list of hint paths. */
   def removeHintPath (path :Path) :Unit
 
+  /** An executor which reports errors via [[emitError]]. */
+  def exec :Executor
+
   /** Reports an unexpected error to the user. It is appended to the `*messages*` buffer. */
   def emitError (err :Throwable) :Unit
 }

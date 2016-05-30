@@ -77,7 +77,7 @@ class ISearchMode (
 
     def extend (esought :Seq[LineV]) = {
       val search = mkSearch(esought)
-      val allMatches = env.exec.runAsync(window)(search.findAll())
+      val allMatches = window.exec.runAsync(search.findAll())
       (if (fwd) search.findForward(start) else search.findBackward(end)) match {
         case Loc.None => IState(esought, allMatches, start, end,  fwd, true,  wrap)
         case s        => IState(esought, allMatches, s, s+esought, fwd, false, wrap)
@@ -122,7 +122,7 @@ class ISearchMode (
   private def showMatches (matches :Seq[Loc], sought :Seq[LineV]) {
     clearMatches()
     // defer actually showing these matches for 250ms
-    _pendingShow = env.exec.uiTimer(250).connectSuccess { _ =>
+    _pendingShow = env.msvc.exec.uiTimer(250).connectSuccess { _ =>
       _pendingShow = Connection.Noop
       matches foreach { l => mainBuffer.addStyle(matchStyle, l, l + sought) }
       _clearMatches = { () =>
@@ -165,7 +165,7 @@ class ISearchMode (
   private def queueRefresh () {
     if (!_refreshPending) {
       _refreshPending = true
-      env.exec.runOnUI(window) {
+      window.exec.runOnUI {
         val sought = buffer.region(buffer.start, buffer.end)
         if (sought != curstate.sought) pushState(curstate.extend(sought))
         _refreshPending = false

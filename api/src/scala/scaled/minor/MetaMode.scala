@@ -277,7 +277,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
       val cfg = SubProcess.Config(parseCmd(cmd), cwd=Paths.get(buffer.store.parent))
       val ebuf = wspace.createBuffer(Store.scratch(s"*exec:${cfg.cmd(0)}*", buffer.store),
                                      reuse=true, state=State.inits(Mode.Hint("text")))
-      SubProcess(cfg, env.exec, ebuf)
+      SubProcess(cfg, window.exec, ebuf)
       frame.visit(ebuf)
     }
   }

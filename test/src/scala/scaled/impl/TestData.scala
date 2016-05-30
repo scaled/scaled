@@ -24,6 +24,10 @@ object TestData {
       override def execute (op :Runnable) = op.run()
     }
     val bgExec = uiExec
+    val errHandler = new Executor.ErrorHandler() {
+      override def emitError (err :Throwable) = err.printStackTrace(System.err)
+    }
+    override def uiTimer (delay :Long) = Future.failure(new Exception("Not implemented"))
   }
 
   val cwd = Paths.get("")
@@ -50,6 +54,7 @@ object TestData {
     def killBuffer (buffer :Buffer) {}
     def addHintPath (path :Path) {}
     def removeHintPath (path :Path) {}
+    def exec = editor.exec
     def emitError (err :Throwable) {
       err.printStackTrace(System.err)
     }
@@ -63,6 +68,7 @@ object TestData {
     def focus = ???
     def workspace = TestData.workspace
     def close () {}
+    def exec = workspace.exec
     def emitError (err :Throwable) = err.printStackTrace(System.err)
     def popStatus (msg :String, subtext :String) {
       println(msg)

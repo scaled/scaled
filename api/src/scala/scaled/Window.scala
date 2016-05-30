@@ -63,6 +63,9 @@ trait Window extends Executor.ErrorHandler {
   /** Closes this window. When all windows in all workspaces are closed, the process will exit. */
   def close () :Unit
 
+  /** An executor which reports errors to this window. */
+  def exec :Executor
+
   /** Reports an unexpected error to the user.
     * The message will also be appended to the `*messages*` buffer. */
   def emitError (err :Throwable) :Unit

@@ -56,7 +56,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     private def queueRethink (row :Int*) {
       val takeAction = _rethinkLines.isEmpty
       _rethinkLines ++= row
-      if (takeAction) env.exec.runOnUI(window)(rethink)
+      if (takeAction) window.exec.runOnUI(rethink)
     }
 
     private def rethink () {
@@ -107,7 +107,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
     if (config(trimTrailingWhitespace)) {
       val row = view.point().row
       // defer the trim until the current fn dispatch chain is complete
-      env.exec.runOnUI(window) { trimTrailingWhitespaceAt(row) }
+      window.exec.runOnUI { trimTrailingWhitespaceAt(row) }
     }
     false // always continue dispatch
   }

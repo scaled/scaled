@@ -42,6 +42,9 @@ class Scaled extends Application with Editor {
       override def execute (op :Runnable) = Platform.runLater(op)
     }
     override val bgExec = pool
+    override val errHandler = new Executor.ErrorHandler() {
+      def emitError (err :Throwable) = logger.log(Errors.stackTraceToString(err))
+    }
     override def uiTimer (delay :Long) = {
       val result = Promise[Unit]()
       new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {

@@ -31,7 +31,7 @@ class MiniReadMode[T] (
   private var _refreshConn = null :Connection
   private def queueRefresh () {
     if (_refreshConn != null) _refreshConn.close()
-    _refreshConn = env.exec.uiTimer(75).connectSuccess { _ =>
+    _refreshConn = window.exec.uiTimer(75).connectSuccess { _ =>
       val glob = current ; val oglob = _comp.glob
       if (glob != oglob) {
         _comp = completer.refine(_comp, glob)

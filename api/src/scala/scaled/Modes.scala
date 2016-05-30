@@ -36,9 +36,6 @@ abstract class Env {
   /** For debug logging. */
   def log :Logger = msvc.log
 
-  /** For executing operations on the UI thread and background threads. */
-  def exec :Executor = msvc.exec
-
   /** Returns the config scope for use by the modes resolved with this environment. */
   def configScope :Config.Scope
 }

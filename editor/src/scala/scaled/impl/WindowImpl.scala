@@ -50,8 +50,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         val view = new BufferViewImpl(buf, defWidth, defHeight)
         // TODO: move this to LineNumberMode? (and enable col number therein)
         mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
-        // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but we
-        // don't want non-real buffers (like the minimode buffer) to have global minor modes
+        // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but
+        // we don't want non-real buffers (like the minimode buffer) to have global minor modes
         val tags = "*" :: Mode.tagsHint(buf.state)
 
         // listen for buffer death and repopulate this frame as needed
@@ -155,6 +155,12 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   override def emitStatus (msg :String, ephemeral :Boolean) {
     _statusLine.setText(msg)
     if (!ephemeral) ws.recordMessage(msg)
+  }
+  override val exec = new Executor {
+    override val uiExec = ws.exec.uiExec
+    override val bgExec = ws.exec.bgExec
+    override val errHandler = WindowImpl.this
+    override def uiTimer (delay :Long) = ws.exec.uiTimer(delay)
   }
   override def emitError (err :Throwable) :Unit = err match {
     // if this is a wrapped reaction exception, unwrap
