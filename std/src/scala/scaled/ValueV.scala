@@ -5,6 +5,8 @@
 
 package scaled
 
+import java.util.concurrent.Executor
+
 /** A view of a [[Value]] which may be observed, but not updated.
   */
 abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
@@ -21,25 +23,21 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
     * value and transform the result via `f` before returning it. The mapped value will retain a
     * connection to this value for as long as it has connections of its own.
     */
-  def map[M] (f :JFunction[T, M]) :ValueV[M] = {
-    val outer = this
-    new ValueV[M]() {
-      override def get = f(outer.get)
-      // connectionAdded and connectionRemoved are only ever called with a lock held on this reactor,
-      // so we're safe in checking and mutating _conn
-      override protected def connectionAdded () {
-        super.connectionAdded()
-        if (_conn == null) _conn = outer.onChange((v,o) => notifyEmit(f(v), f(o)))
-      }
-      override protected def connectionRemoved () {
-        super.connectionRemoved()
-        if (!hasConnections && _conn != null) {
-          _conn.close()
-          _conn = null
-        }
-      }
-      protected var _conn :Connection = _
-    }
+  def map[M] (f :JFunction[T, M]) :ValueV[M] = new DelegateValueV[T,M](this) {
+    override def get = f(parent.get)
+    override def onParentChange (value :T, ovalue :T) = notifyEmit(f(value), f(ovalue))
+  }
+
+  /** Returns a value equivalent to this value except that listeners are notified via the supplied
+    * executor. This is useful for ensuring that regardless of which thread on which a value is
+    * updated, the listeners are always notified on a particular thread (or in a particular
+    * execution context).
+    */
+  def via (exec :Executor) :ValueV[T] = new DelegateValueV[T,T](this) {
+    override def get = parent.get
+    override def onParentChange (value :T, ovalue :T) = exec.execute(new Runnable() {
+      def run () = notifyEmit(value, ovalue)
+    })
   }
 
   override def hashCode = get match {
@@ -83,4 +81,25 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
     * @return the previously stored value.
     */
   protected def updateLocal (value :T) :T = throw new UnsupportedOperationException
+}
+
+private abstract class DelegateValueV[D,T] (protected val parent :ValueV[D]) extends ValueV[T] {
+
+  /** Called when our parent's value changes. */
+  def onParentChange (value :D, ovalue :D) :Unit
+
+  // connectionAdded and connectionRemoved are only ever called with a lock held on this reactor,
+  // so we're safe in checking and mutating _conn
+  override protected def connectionAdded () {
+    super.connectionAdded()
+    if (_conn == null) _conn = parent.onChange(onParentChange)
+  }
+  override protected def connectionRemoved () {
+    super.connectionRemoved()
+    if (!hasConnections && _conn != null) {
+      _conn.close()
+      _conn = null
+    }
+  }
+  protected var _conn :Connection = _
 }

@@ -5,6 +5,8 @@
 
 package scaled
 
+import java.util.concurrent.Executor
+
 /** Represents an asynchronous result. Unlike Java or Scala futures, you cannot block on this
   * result. You can [[map]] or [[flatMap]] it, and listen for success or failure via the
   * [[Future.success]] and [[Future.failure]] signals.
@@ -98,6 +100,10 @@ class Future[+T] protected (_result :ValueV[Try[T]]) {
     }}
     new Future[R](mapped)
   }
+
+  /** Returns a future which is completed when this future completes, but which notifies listeners
+    * on the supplied executor. */
+  def via (exec :Executor) = new Future(_result.via(exec))
 
   private def foreachFailure (t :Try[_], slot :JConsumer[Throwable]) = t match {
     case Failure(e) => slot.accept(e)
