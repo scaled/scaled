@@ -102,8 +102,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   /** Used to resolve modes in this window/frame. */
   def resolver (frame :FrameImpl, buf :BufferImpl) = new ModeResolver(ws.app.svcMgr, this, frame) {
     override def modes (major :Boolean) = Set() ++ ws.app.pkgMgr.modes(major)
-    override def minorModes (tags :Seq[String], stateTypes :Set[Class[_]]) =
-      ws.app.pkgMgr.minorModes(tags, stateTypes)
+    override def tagMinorModes (tags :Seq[String]) = ws.app.pkgMgr.tagMinorModes(tags)
+    override def stateMinorModes (stypes :Set[Class[_]]) = ws.app.pkgMgr.stateMinorModes(stypes)
 
     override protected def locate (major :Boolean, mode :String) =
       ws.app.pkgMgr.mode(major, mode) match {

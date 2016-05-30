@@ -37,6 +37,8 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   private var _dispatchTyped = false
   private var _escapeNext = false
 
+  private var _minorStateResolver :Connection = Connection.Noop
+
   /** The buffer area for which we're dispatching events. */
   val area = createBufferArea()
 
@@ -54,18 +56,40 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     // set up our new major mode
     _majorMeta = new MajorModeMeta(major)
     _metas = List(_majorMeta)
-    // automatically activate any minor modes that match our major mode's tags
-    resolver.minorModes(major.tags ++ tags, view.buffer.state.keys) foreach { mode =>
-      try addMode(false)(resolver.resolveMinor(mode, view, mline, this, major, Nil))
+
+    // activate any minor modes that match our major mode's tags and buffer state
+    maybeAddMinors(resolver.tagMinorModes(major.tags ++ tags))
+    maybeAddMinors(resolver.stateMinorModes(view.buffer.state.keys))
+    modesChanged()
+
+    // if we were replacing an existing major mode, give feedback to the user
+    if (hadMajor) window.popStatus("${major.name} activated.")
+
+    // if the buffer state changes, maybe add new minor modes
+    _minorStateResolver.close()
+    _minorStateResolver = view.buffer.state.keyAdded.onEmit {
+      if (maybeAddMinors(resolver.stateMinorModes(view.buffer.state.keys)) > 0) {
+        modesChanged()
+      }
+    }
+  }
+
+  private def maybeAddMinors (minors :Unordered[String]) :Int = {
+    var count = 0
+    val activeModes = _metas.map(_.name).toSet
+    val iter = minors.iterator ; while (iter.hasNext) {
+      val mode = iter.next
+      if (!activeModes.contains(mode)) try {
+        addMode(false)(resolver.resolveMinor(mode, view, mline, this, major(), Nil))
+        count += 1
+      }
       catch {
         case e :Throwable =>
           window.emitError(e)
           window.emitStatus(s"Failed to resolve minor mode '$mode'. See *messages* for details.")
       }
     }
-    modesChanged()
-    // if we were replacing an existing major mode, give feedback to the user
-    if (hadMajor) window.popStatus("${major.name} activated.")
+    count
   }
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
@@ -141,6 +165,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     _metas foreach(_.dispose(true, bufferDisposing))
     _metas = Nil // render ourselves useless
     _prefixes = Set()
+    _minorStateResolver.close()
   }
 
   override def willInvoke = _willInvoke

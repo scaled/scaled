@@ -64,6 +64,12 @@ class RState (inits :State.Init[_]*) extends State {
   }}
   inits foreach { _.apply(this) }
 
+  /** A signal emitted when a new type of state is added. */
+  val keyAdded = Signal[Class[_]]()
+
+  /** A signal emitted when a type of state that was mapped is cleared. */
+  val keyCleared = Signal[Class[_]]()
+
   /** Returns the state value associated with the specified type, if any. */
   def apply[T] (key :Class[T]) :OptValue[T] = _states.get(key).asInstanceOf[OptValue[T]]
 
@@ -82,8 +88,18 @@ class RState (inits :State.Init[_]*) extends State {
     if (opt.isDefined) opt.get
     else throw Errors.feedback(msg)
   }
-  override def set[T] (key :Class[T], value :T) :Unit = apply(key).update(Some(value))
-  override def clear[T] (key :Class[T]) :Unit = apply(key).update(None)
+  override def set[T] (key :Class[T], value :T) {
+    val opt = apply(key)
+    val had = opt.isDefined
+    opt.update(Some(value))
+    if (!had) keyAdded.emit(key)
+  }
+  override def clear[T] (key :Class[T]) {
+    val opt = apply(key)
+    val had = opt.isDefined
+    opt.update(None)
+    if (had) keyCleared.emit(key)
+  }
 
   override def toString = keys.map(k => s"$k=${apply(k)}").toString
 }

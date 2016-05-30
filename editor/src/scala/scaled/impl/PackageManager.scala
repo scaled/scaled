@@ -68,9 +68,12 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   }
   private val skipToks = Set("", "usr", "local", "bin", "env", "opt")
 
-  /** Returns the set of minor modes that should be auto-activated for `tags` and `stateTypes`. */
-  def minorModes (tags :Seq[String], stateTypes :Set[Class[_]]) :Set[String] =
-    (tags.flatMap(minorTags.get _) ++ stateTypes.map(_.getName).flatMap(minorTypes.get _)).toSet
+  /** Returns the set of minor modes that should be auto-activated for `tags`. */
+  def tagMinorModes (tags :Seq[String]) :Set[String] = tags.flatMap(minorTags.get _).toSet
+
+  /** Returns the set of minor modes that should be auto-activated for `stateTypes`. */
+  def stateMinorModes (stateTypes :Set[Class[_]]) :Set[String] =
+    stateTypes.map(_.getName).flatMap(minorTypes.get _).toSet
 
   override def didStartup () {} // not used
   override def willShutdown () {} // not used

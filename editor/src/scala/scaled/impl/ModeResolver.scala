@@ -14,8 +14,11 @@ abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Fr
   /** Returns the names of all known modes, major if `major`, minor if not. */
   def modes (major :Boolean) :Set[String] = Set()
 
-  /** Returns the names of all minor modes that match `tags` or `stateTypes`. */
-  def minorModes (tags :Seq[String], stateTypes :Set[Class[_]]) :Set[String] = Set()
+  /** Returns the names of all minor modes that match `tags`. */
+  def tagMinorModes (tags :Seq[String]) :Set[String] = Set()
+
+  /** Returns the names of all minor modes that match `stateTypes`. */
+  def stateMinorModes (stateTypes :Set[Class[_]]) :Set[String] = Set()
 
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
   def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
