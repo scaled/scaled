@@ -7,6 +7,7 @@ package scaled
 import java.io.{File, FileNotFoundException, FileReader, FileWriter, Reader, Writer}
 import java.io.{BufferedReader, BufferedWriter, InputStreamReader, StringReader}
 import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.attribute.PosixFileAttributeView
 import java.util.zip.ZipFile
 
 /** A place from which to read and optionally to which to write data. This is slightly more general
@@ -110,7 +111,8 @@ class FileStore private (val path :Path) extends Store {
     Files.createDirectories(path.getParent) // make sure our parent directory exists
     // TODO: file encoding?
     val temp = path.resolveSibling(name + "~")
-    val perms = if (exists) Files.getPosixFilePermissions(path) else null
+    val canPosix = Files.getFileAttributeView(path, classOf[PosixFileAttributeView]) != null
+    val perms = if (exists && canPosix) Files.getPosixFilePermissions(path) else null
     val out = new BufferedWriter(new FileWriter(temp.toFile))
     try {
       val iter = lines.iterator ; while (iter.hasNext) {
