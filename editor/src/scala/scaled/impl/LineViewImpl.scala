@@ -54,9 +54,13 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
       private var last :Int = 0
 
       def add (start :Int, end :Int, styles :Seq[Tag[String]]) {
-        val text = _line.sliceString(start, end)
+        var text = _line.sliceString(start, end)
         assert(end > start)
-        assert(text.indexOf('\n') == -1, s"Text cannot have newlines: $text")
+        val nlidx = text.indexOf('\n')
+        if (nlidx != -1) {
+          new Exception(s"Text cannot have newlines: $text").printStackTrace(System.err);
+          text = text.substring(0, nlidx)
+        }
         val tnode = new FillableText(text)
         tnode.setFontSmoothingType(FontSmoothingType.LCD)
         val sc = tnode.getStyleClass
