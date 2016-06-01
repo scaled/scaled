@@ -483,24 +483,32 @@ object Line {
   /** Creates a line builder with `s` as the line text. */
   def builder (s :String) = new Builder(s.toCharArray)
 
-  /** Splits `text` into lines, handling both CR and CRLF style line separators. */
-  def splitText (text :String) :Seq[String] = {
-    var lineBuf = new StringBuilder()
-    var lines = Seq.builder[String]()
-    var ii = 0
+  /** Calls `fn` on each line of `text`, handling both CR and CRLF style line separators. The
+    * second argument to `fn` is the line's offset in characters from the start of `text`. */
+  def onLines (text :String)(fn :(String, Int) => Unit) {
+    var ii = 0 ; var ss = 0
     while (ii < text.length) {
       val c = text.charAt(ii)
-      if (c == '\n') {
-        lines += lineBuf.toString()
-        lineBuf.setLength(0)
+      if (c == '\r' || c == '\n') {
+        fn(text.substring(ss, ii), ss)
+        ss = ii+1
+        // if we just saw CR and it's immediately followed by NL, skip the NL
+        if (c == '\r' && ss < text.length && text.charAt(ss) == '\n') {
+          ii += 1
+          ss += 1
+        }
       }
-      // just skip over '\r' and allow the '\n' that follows to break the line
-      else if (c != '\r') lineBuf.append(c)
       ii += 1
     }
-    // always append the remaining line, even if blank; this matches the behavior of
-    // String.split('\n') on a string with a trailing newline
-    lines += lineBuf.toString()
+    // always report the final line, even if blank; this matches the behavior of String.split('\n')
+    // on a string with a trailing newline
+    fn(text.substring(ss, text.length), ss);
+  }
+
+  /** Splits `text` into lines, handling both CR and CRLF style line separators. */
+  def splitText (text :String) :Seq[String] = {
+    var lines = Seq.builder[String]()
+    onLines(text) { (line, pos) => lines += line }
     lines.build()
   }
 
