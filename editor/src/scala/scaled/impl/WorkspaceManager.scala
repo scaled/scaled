@@ -170,7 +170,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     else {
       // create or recreate the *messages* buffer as needed
       val mb = buffers.find(_.name == MessagesName) || getMessages()
-      mb.append(Line.fromText(msg + System.lineSeparator))
+      mb.append(Line.fromTextNL(msg))
     }
   }
 
@@ -235,7 +235,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     _pendingMessages = Nil
     val mbuf = createBuffer(Store.scratch(MessagesName, cwd), State.inits(Mode.Hint("log")), true)
     _pendingMessages foreach { msg =>
-      mbuf.append(Line.fromText(msg + System.lineSeparator))
+      mbuf.append(Line.fromTextNL(msg))
     }
     _pendingMessages = null
     mbuf
