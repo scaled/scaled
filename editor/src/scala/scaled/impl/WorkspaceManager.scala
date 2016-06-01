@@ -293,7 +293,10 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
     val scene = new Scene(win)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
-    val os = System.getProperty("os.name").replaceAll(" ", "").toLowerCase
+    val os = System.getProperty("os.name").replaceAll(" ", "").toLowerCase match {
+      case os if (os.contains("windows")) => "windows"
+      case os => os
+    }
     val oscss = getClass.getResource(s"/$os.css")
     if (oscss != null) scene.getStylesheets().add(oscss.toExternalForm)
     else app.logger.log(s"Unable to locate /$os.css")
