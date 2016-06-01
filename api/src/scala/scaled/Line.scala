@@ -483,11 +483,31 @@ object Line {
   /** Creates a line builder with `s` as the line text. */
   def builder (s :String) = new Builder(s.toCharArray)
 
-  /** Creates one or more lines from the supplied text. Newlines are assumed to be equal to
-    * [[System.lineSeparator]]. */
+  /** Splits `text` into lines, handling both CR and CRLF style line separators. */
+  def splitText (text :String) :Seq[String] = {
+    var lineBuf = new StringBuilder()
+    var lines = Seq.builder[String]()
+    var ii = 0
+    while (ii < text.length) {
+      val c = text.charAt(ii)
+      if (c == '\n') {
+        lines += lineBuf.toString()
+        lineBuf.setLength(0)
+      }
+      // just skip over '\r' and allow the '\n' that follows to break the line
+      else if (c != '\r') lineBuf.append(c)
+      ii += 1
+    }
+    // always append the remaining line, even if blank; this matches the behavior of
+    // String.split('\n') on a string with a trailing newline
+    lines += lineBuf.toString()
+    lines.build()
+  }
+
+  /** Creates one or more lines from the supplied text. */
   def fromText (text :String) :Seq[Line] =
     // TODO: remove tab hackery when we support tabs
-    text.split(System.lineSeparator, -1).mkSeq.map(_.replace('\t', ' ')).map(apply)
+    splitText(text).map(_.replace('\t', ' ')).map(apply)
 
   /** Calls [[fromText]] on `text` and tacks on a blank line. */
   def fromTextNL (text :String) = fromText(text) :+ Empty
