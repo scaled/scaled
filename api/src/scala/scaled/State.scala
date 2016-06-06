@@ -59,11 +59,6 @@ abstract class State extends StateV {
   */
 class RState (inits :State.Init[_]*) extends State {
 
-  private val _states = Mutable.cacheMap { key :Class[_] => new OptValue[Any](null) {
-    override def emptyFail = throw new NoSuchElementException(s"No state for $key")
-  }}
-  inits foreach { _.apply(this) }
-
   /** A signal emitted when a new type of state is added. */
   val keyAdded = Signal[Class[_]]()
 
@@ -88,20 +83,22 @@ class RState (inits :State.Init[_]*) extends State {
     if (opt.isDefined) opt.get
     else throw Errors.feedback(msg)
   }
-  override def set[T] (key :Class[T], value :T) {
-    val opt = apply(key)
-    val had = opt.isDefined
-    opt.update(Some(value))
-    if (!had) keyAdded.emit(key)
-  }
-  override def clear[T] (key :Class[T]) {
-    val opt = apply(key)
-    val had = opt.isDefined
-    opt.update(None)
-    if (had) keyCleared.emit(key)
-  }
+  override def set[T] (key :Class[T], value :T) :Unit = apply(key).update(Some(value))
+  override def clear[T] (key :Class[T]) :Unit = apply(key).update(None)
 
   override def toString = keys.map(k => s"$k=${apply(k)}").toString
+
+  private val _states = Mutable.cacheMap { key :Class[_] =>
+    val opt = new OptValue[Any](null) {
+      override def emptyFail = throw new NoSuchElementException(s"No state for $key")
+    }
+    opt.onChange((nval, oval) => {
+      if (nval.isDefined && !oval.isDefined) keyAdded.emit(key)
+      else if (!nval.isDefined && oval.isDefined) keyCleared.emit(key)
+    })
+    opt
+  }
+  inits foreach { _.apply(this) }
 }
 
 /** Static [[State]] bits. */
