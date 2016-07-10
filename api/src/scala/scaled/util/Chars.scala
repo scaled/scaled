@@ -5,7 +5,7 @@
 package scaled.util
 
 import scala.annotation.switch
-import scaled.Syntax
+import scaled._
 
 /** Provides functions for efficiently testing the nature of characters. Specifically, whether they
   * are whitespace, word or punctuation characters.
@@ -66,6 +66,23 @@ object Chars {
   }
   /** The upper-case category. */
   case object UpperCase extends Category(isUpperCase, isNotUpperCase)
+
+  /** Returns the start and end of the "word" at the specified location in the buffer. This scans
+    * backward and forward from `pos` for all characters that match the [[isWord]] predicate. */
+  def wordBoundsAt (buffer :Buffer, pos :Loc) :(Loc, Loc) = {
+    val pstart = buffer.scanBackward(isNotWord, pos)
+    val start = if (isWord(buffer.charAt(pstart))) pstart else buffer.forward(pstart, 1)
+    val end = if (!isWord(buffer.charAt(start))) start
+              else buffer.scanForward(isNotWord, pos)
+    (start, end)
+  }
+
+  /** Returns the "word" at the specified location in the buffer. This scans backward and forward
+    * from `pos` for all characters that match the [[isWord]] predicate. */
+  def wordAt (buffer :Buffer, pos :Loc) :String = {
+    val (start, end) = wordBoundsAt(buffer, pos)
+    buffer.region(start, end).map(_.asString).mkString
+  }
 
   abstract class Pred extends Function1[Char,Boolean] with Function2[Char,Syntax,Boolean] {
     private[this] val masks = new Array[Long](4)
