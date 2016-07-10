@@ -20,6 +20,12 @@ trait Undoer {
     * @return the point that should be restored to the view if an action was redone, `None` if the
     * redo stack was empty. */
   def redo () :Option[Loc]
+
+  /** Tells the undoer that an accumulable edit is incoming. The undoer normally assumes that edits
+    * cannot be accumulated onto a single edit, but when entering text character by character (aka
+    * typing it) we want to allow those myriad small edits to be grouped into larger chunks for
+    * undo purposes. */
+  def accumNextEdit () :Unit
 }
 
 /** A trait implemented by undoable edits. */

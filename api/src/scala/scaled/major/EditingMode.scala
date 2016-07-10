@@ -228,6 +228,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     }
     // re-read view.point() here because breakForAutofill() may have changed it
     val np = view.point()
+    // tell the undoer that this is an accumulable edit
+    buffer.undoer.accumNextEdit()
     // insert the typed character at the point
     if (typed.length != 1) view.buffer.insert(np, Line(typed))
     else view.buffer.insert(np, typed.charAt(0), Syntax.Default)

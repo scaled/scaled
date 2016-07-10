@@ -52,6 +52,8 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
       accumTo(_redoEdits, _redoActions)
       // if we just undid to the last clean pointer, mark the buffer clean
       if (_cleanUndoIdx == _actions.size) buffer.dirtyV() = false
+      // reset our action point to the undone point
+      _point = action.point
       // finally return the point associated with this undone action
       Some(action.point)
     }
@@ -74,6 +76,10 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
     }
   }
 
+  override def accumNextEdit () {
+    _accumNextEdit = true
+  }
+
   private def pop (actions :SeqBuffer[Action]) = {
     val action = actions.last ; actions.trimEnd(1) ; action
   }
@@ -86,8 +92,11 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   private def accumTo (edits :SeqBuffer[Buffer.Edit], actions :SeqBuffer[Action]) {
     if (!edits.isEmpty) {
       // if we can't accumulate these edits with the most recent action, add a new action
-      if (actions.isEmpty || !actions.last.accum(edits)) actions += toAction(_point, edits)
+      if (!_accumNextEdit || actions.isEmpty || !actions.last.accum(edits)) {
+        actions += toAction(_point, edits)
+      }
       edits.clear()
+      _accumNextEdit = false
     }
   }
 
@@ -98,6 +107,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   private val _redoEdits = SeqBuffer[Buffer.Edit]()
   private val _redoActions = SeqBuffer[Action]()
   private var _point = Loc(0, 0)
+  private var _accumNextEdit = false
   private var _undoing = false
   private var _redoing = false
   private var _cleanUndoIdx = 0
