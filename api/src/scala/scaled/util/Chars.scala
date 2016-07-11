@@ -67,6 +67,12 @@ object Chars {
   /** The upper-case category. */
   case object UpperCase extends Category(isUpperCase, isNotUpperCase)
 
+  /** Retursn whether `cs` has any upper-case characters. */
+  def mixedCase (cs :CharSequence, ii :Int = 0) :Boolean =
+    if (ii == cs.length) false
+    else if (isUpperCase(cs.charAt(ii))) true
+    else mixedCase(cs, ii+1)
+
   /** Returns the start and end of the "word" at the specified location in the buffer. This scans
     * backward and forward from `pos` for all characters that match the [[isWord]] predicate. */
   def wordBoundsAt (buffer :Buffer, pos :Loc) :(Loc, Loc) = {

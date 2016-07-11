@@ -166,11 +166,6 @@ object Matcher {
   def on (sought :CharSequence) :Matcher =
     if (mixedCase(sought, 0)) exact(sought) else loose(sought)
 
-  private def mixedCase (cs :CharSequence, ii :Int) :Boolean =
-    if (ii == cs.length) false
-    else if (Character.isUpperCase(cs.charAt(ii))) true
-    else mixedCase(cs, ii+1)
-
   // TODO: if it turns out to be worth it performance-wise, we can create specialized matchers on
   // Line which operate directly on the _chars array; it's probably not worth it...
 
