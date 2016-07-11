@@ -69,7 +69,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap.
-    bind("reindent",               "TAB").
+    bind("reindent-or-complete",   "TAB").
     bind("electric-newline",       "ENTER", "S-ENTER").
     bind("electric-open-bracket",  "{", "(", "[").
     bind("electric-close-bracket", "}", ")", "]").
@@ -91,6 +91,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** A helper class for dealing with comments. */
   val commenter :Commenter
+
+  /** Used to complete code/strings. */
+  val completer :Completer = Completer.completerFor(window.workspace, buffer)
 
   /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
   val curBlock = OptValue[Block]()
@@ -131,23 +134,64 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     * computed indentation. This is true as one generally wants that if the user is interactively
     * requesting indentation on the current line, but if one is bulk indenting a region, then its
     * preferable not to introduce whitespace on blank lines.
+    *
+    * @return true if the line's indentation was changed, or if we advanced the point to the first
+    * non-whitespace character on the line (i.e. did something meaningful).
     */
-  def reindent (pos :Loc, indentBlanks :Boolean = true) {
+  def reindent (pos :Loc, indentBlanks :Boolean = true) :Boolean = {
     val indent = computeIndent(pos.row)
+    var acted = false
     if (indent >= 0 && (indentBlanks || buffer.line(pos).length > 0)) {
       // shift the line, if needed
       val delta = indent - Indenter.readIndent(buffer, pos)
       if (delta > 0) buffer.insert(pos.atCol(0), Line(" " * delta))
       else if (delta < 0) buffer.delete(pos.atCol(0), -delta)
+      // make a note of whether we changed anything
+      acted = (delta != 0)
       // if the point is now in the whitespace preceding the indent, move it to line-start
       val p = view.point()
-      if (p.row == pos.row && p.col < indent) view.point() = Loc(p.row, indent)
+      if (p.row == pos.row && p.col < indent) {
+        view.point() = Loc(p.row, indent)
+        acted = true
+      }
     } else if (indent < 0) window.emitStatus(
       s"Indenter has lost the plot [pos=$pos, indent=$indent]. Ignoring.")
+    acted
   }
 
-  /** Reindents the line at the point. */
-  def reindentAtPoint () :Unit = reindent(view.point())
+  /** Reindents the line at the point.
+    * @return whether the line's indentation or the point was changed. */
+  def reindentAtPoint () :Boolean = reindent(view.point())
+
+  /** Triggers a completion at the specified point. */
+  def completeAt (pos :Loc) {
+    // if there's a currently active completion just prior to pos, advance it
+    buffer.tagAt(classOf[Completer.Result], pos.prevC) match {
+      case Some(res) => // advance
+        val next = res.next
+        val line = Line.builder(next.active).withTag(next).
+          // withStyle(variableStyle).
+          build()
+        // undo the previous completion and insert a new onel this avoids polluting the undo stack
+        // with completion candidates but still behaves otherwise sensibly
+        undo()
+        buffer.replace(res.start, res.length, line)
+
+      case None =>
+        completer.completeAt(buffer, pos).onFailure(window.emitError).onSuccess { res =>
+          if (res.comps.isEmpty) window.emitStatus("No completions.")
+          else {
+            val line = Line.builder(res.active).withTag(res).
+              // withStyle(variableStyle).
+              build()
+            buffer.replace(res.start, res.length, line)
+          }
+        }
+    }
+  }
+
+  /** Triggers a completion at the current point. */
+  def completeAtPoint () :Unit = completeAt(view.point())
 
   /** Returns the close bracket for the supplied open bracket.
     * `?` is returned if the open bracket is unknown. */
@@ -232,6 +276,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          adjusts its indentation accordingly.""")
   def reindent () {
     reindentAtPoint()
+  }
+
+  @Fn("""Adjusts the current line's indentation based on the code mode's indentation rules, or
+         triggers completion if the line is currently properly indented.""")
+  def reindentOrComplete () {
+    if (!reindentAtPoint()) completeAtPoint();
   }
 
   @Fn("""Inserts a newline and performs any other configured automatic actions. This includes
