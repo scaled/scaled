@@ -57,7 +57,7 @@ class TokenCompleter (val wspace :Workspace) extends Completer {
         val word = iter.next()
         if (word.startsWith(prefix)) {
           tokens.get(word) foreach sb.add
-          loop()
+          if (iter.hasNext()) loop()
         }
       }
       loop()
