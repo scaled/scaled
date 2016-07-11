@@ -68,10 +68,6 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
           Mode.nameHint(buf.state, ws.app.pkgMgr.detectMode(buf.store.name, buf.lines(0).asString)),
           Mode.argsHint(buf.state), tags)
 
-        // TODO: rename this buffer to name<2> (etc.) if its name conflicts with an existing buffer;
-        // also set up a listener on it such that if it is written to a new file and that new file
-        // has a name that conflicts with an existing buffer, we name<2> it then as well
-
         setCenter(disp.area)
         setBottom(mline)
         focus()
