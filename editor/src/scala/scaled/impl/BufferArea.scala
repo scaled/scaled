@@ -320,18 +320,24 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       val viewLines = bview.height()+1 ; val top = bview.scrollTop()
       val lines = bview.lines ; val bot = math.min(top + viewLines, lines.size)
       val preChildCount = lineNodes.getChildren.size
-      // println(s"updateVizLines otop=$otop top=$top bot=$bot lines=${lines.size} " +
-      //   s"vlines=$viewLines ccount=$preChildCount")
 
-      // trim or add lines at the top, as needed
-      if (otop < top) removeLines(0, top-otop)
-      else if (otop > top) addLines(0, lines.slice(top, math.min(otop, bot)))
+      try {
+        // trim or add lines at the top, as needed
+        if (otop < top) removeLines(0, top-otop)
+        else if (otop > top) addLines(0, lines.slice(top, math.min(otop, bot)))
 
-      val childCount = lineNodes.getChildren.size
-      if (childCount > viewLines) removeLines(viewLines, childCount)
-      else if (childCount < viewLines) addLines(childCount, lines.slice(top+childCount, bot))
+        val childCount = lineNodes.getChildren.size
+        if (childCount > viewLines) removeLines(viewLines, childCount)
+        else if (childCount < viewLines) addLines(childCount, lines.slice(top+childCount, bot))
 
-      requestLayout()
+        requestLayout()
+
+      } catch {
+        case e :Throwable =>
+          throw new RuntimeException(
+            s"updateVizLines otop=$otop top=$top bot=$bot lines=${lines.size} " +
+              s"vlines=$viewLines ccount=$preChildCount", e)
+      }
     }
 
     def addLines (index :Int, lines :SeqV[LineViewImpl]) {
