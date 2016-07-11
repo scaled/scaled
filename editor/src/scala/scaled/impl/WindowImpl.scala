@@ -14,7 +14,7 @@ import javafx.stage.Stage
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.major.TextMode
-import scaled.util.Errors
+import scaled.util.{Close, Errors}
 
 /** The editor pane groups together the various UI components that are needed to edit a single
   * buffer. This includes the code area, status line and minibuffer area. It also manages the
@@ -28,7 +28,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     extends Region with Window {
 
   class FrameImpl extends BorderPane with Frame {
-    var onKill :Connection = _
+    var toClose = Close.bag()
+    var onStale = Connection.Noop
     var disp :DispatcherImpl = _
     var prevStore :Option[Store] = None // this also implements 'def prevStore' in Frame
 
@@ -54,9 +55,17 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         // we don't want non-real buffers (like the minimode buffer) to have global minor modes
         val tags = "*" :: Mode.tagsHint(buf.state)
 
+        // close our listeners for the old buffer
+        toClose.close()
+
+        // listen for buffer staleness and reload or freakout as appropriate
+        toClose += buf.stale.onEmit {
+          if (!buf.dirty) revisitFile()
+          else popStatus("File visited by this buffer was modified externally!")
+        }
+
         // listen for buffer death and repopulate this frame as needed
-        if (onKill != null) onKill.close()
-        onKill = buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch(), true) }
+        toClose += buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch(), true) }
 
         if (disp != null) {
           prevStore = Some(this.view.buffer.store)
@@ -84,7 +93,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
       }
 
     def dispose (willHibernate :Boolean) {
-      if (onKill != null) onKill.close()
+      toClose.close()
       // if we're going to hibernate, then our buffers are all going away; let the dispatcher know
       // that so that it can clean up active modes more efficiently
       disp.dispose(willHibernate)

@@ -355,15 +355,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   def reloadBuffer () {
     if (buffer.dirty) window.popStatus("Cannot reload modified buffer.")
     else if (!buffer.store.exists) window.popStatus("Cannot reload ephemeral buffers.")
-    else {
-      val file = buffer.store ; val p = view.point()
-      val top = view.scrollTop() ; val left = view.scrollLeft()
-      buffer.kill()
-      val nv = frame.visitFile(file)
-      nv.scrollTop() = top
-      nv.scrollLeft() = left
-      nv.point() = p
-    }
+    else frame.revisitFile()
   }
 
   //

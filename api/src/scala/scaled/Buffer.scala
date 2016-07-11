@@ -584,6 +584,10 @@ abstract class RBuffer extends Buffer {
   /** A signal that is emitted when this buffer is about to be saved. */
   def willSave :SignalV[Buffer]
 
+  /** A signal emitted when this buffer has become stale (its backing file is newer than the data
+    * loaded into the buffer). */
+  def stale :SignalV[Buffer]
+
   /** A signal emitted when this buffer has been killed. */
   def killed :SignalV[Buffer]
 

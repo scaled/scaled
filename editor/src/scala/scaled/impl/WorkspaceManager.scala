@@ -249,8 +249,25 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     // it immediately because we may end up trying to re-change the name while the current name
     // change was being dispatched
     buf.nameV.onValue { name => exec.runOnUI(checkNameConflict(name)) }
-    bufferOpened.emit(buf)
+    // when this buffer is killed, remove it from our list
     buf.killed.onEmit(buffers.remove(buf))
+    // create an object to watch this buffer's file and check it for staleness
+    new Object() {
+      val watchSvc = app.svcMgr.service(classOf[WatchService])
+      var watch :AutoCloseable = null
+      buf.killed.onEmit(close)
+      buf.storeV.onValue { store => close() ; open(store) }
+      open(buf.store)
+      def open (store :Store) :Unit = store.file.ifDefined { path =>
+        watch = watchSvc.watchFile(path, path => buf.checkStale())
+      }
+      def close () :Unit = if (watch != null) {
+        watch.close()
+        watch = null
+      }
+    }
+    // let interested parties know that we have a new buffer
+    bufferOpened.emit(buf)
     buf
   }
 

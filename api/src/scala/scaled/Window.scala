@@ -34,6 +34,20 @@ trait Window extends Executor.ErrorHandler {
     /** Opens a buffer for `store` and visits it.
       * @return the view for the buffer. */
     def visitFile (store :Store) = visit(window.workspace.openBuffer(store))
+
+    /** Closes and reloads the current buffer, preserving the scroll position and point.
+      * Note: any modifications to the current buffer will be lost. Be careful.
+      * @return the view for the buffer. */
+    def revisitFile () :BufferView = {
+      val file = view.buffer.store ; val p = view.point()
+      val top = view.scrollTop() ; val left = view.scrollLeft()
+      view.buffer.kill()
+      val nv = visitFile(file)
+      nv.scrollTop() = top
+      nv.scrollLeft() = left
+      nv.point() = p
+      nv
+    }
   }
 
   /** A reactive mapping of window-wide state. */

@@ -52,9 +52,14 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   private[this] val _editable = Value(true)
   private[this] val _dirty = Value(false)
   private[this] val _willSave = Signal[Buffer]()
+  private[this] val _stale = Signal[Buffer]()
   private[this] val _killed = Signal[Buffer]()
   private[this] val _edited = Signal[Edit]()
   private[this] val _lineStyled = Signal[Loc]()
+
+  /** The "expected" last modified time of this buffer's backing store (if any).
+    * Used to detect files changed by external programs. */
+  private[this] var _lastModified :Long = initStore.lastModified
 
   val undoStack = new UndoStack(this)
 
@@ -63,11 +68,18 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     * most recently saved state. */
   var viewState :ViewState = ViewState(Loc.Zero, 0, 0)
 
+  /** Checks whether this buffer has become stale (i.e. the file it is editing has been modified
+    * more recently than it was loaded into this buffer). Emits [[stale]] if so. */
+  def checkStale () {
+    if (store.lastModified > _lastModified) _stale.emit(this)
+  }
+
   //
   // from Buffer and RBuffer API
 
   override def nameV = _name
   override def storeV = _store
+  override def stale = _stale
   override def killed = _killed
   override def markV = _mark
   override def mark_= (loc :Loc) = _mark() = Some(bound(loc))
@@ -97,6 +109,8 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     }
     // write our contents to the store
     store.write(lines)
+    // update our last modified time
+    _lastModified = store.lastModified
     // if the store changed, update our name to the new store's name
     if (this.store != store) _name() = store.name
     _dirty() = false

@@ -60,6 +60,14 @@ abstract class Store {
   def write (lines :Iterable[Store.Writable]) :Unit =
     throw new UnsupportedOperationException(s"$name is not writable.")
 
+  /** Returns last modified time of backing file, or 0L for non-file stores. */
+  def lastModified :Long = file.map { path =>
+    try if (Files.exists(path)) Files.getLastModifiedTime(path).toMillis else 0L
+    catch {
+      case e :Throwable => System.err.println(s"lastModified failed $path: $e") ; 0L
+    }
+  } || 0L
+
   // re-abstract these methods to be sure we don't forget to implement them
   override def equals (other :Any) :Boolean
   override def hashCode :Int
