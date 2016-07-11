@@ -107,7 +107,10 @@ class TokenCompleter (val wspace :Workspace) extends Completer {
     val (pstart, pend) = Chars.wordBoundsAt(buffer, pos)
     val token = buffer.region(pstart, pend).map(_.asString).mkString
     val prefix = token.toLowerCase
-    val comps = if (prefix.length < 2) Seq() else {
+    // don't complete single char prefixes & don't complete if we're at the start of the token (you
+    // should be at the end, but we'll also allow being in the middle; otherwise this ends up
+    // re-completing the first token on a line if you press tab repeatedly from column zero)
+    val comps = if (prefix.length < 2 || pos == pstart) Seq() else {
       val matches = new LinkedHashSet[String]()
       // first add completions from the same buffer
       tokener(buffer).addCompletions(prefix, matches)
