@@ -58,8 +58,8 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     _metas = List(_majorMeta)
 
     // activate any minor modes that match our major mode's tags and buffer state
-    maybeAddMinors(resolver.tagMinorModes(major.tags ++ tags))
-    maybeAddMinors(resolver.stateMinorModes(view.buffer.state.keys))
+    val allTags = (major.tags ++ tags).toSeq
+    maybeAddMinors(resolver.tagMinorModes(allTags))
     modesChanged()
 
     // if we were replacing an existing major mode, give feedback to the user
@@ -68,7 +68,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     // if the buffer state changes, maybe add new minor modes
     _minorStateResolver.close()
     _minorStateResolver = view.buffer.state.keyAdded.onEmit {
-      if (maybeAddMinors(resolver.stateMinorModes(view.buffer.state.keys)) > 0) {
+      if (maybeAddMinors(resolver.tagMinorModes(allTags)) > 0) {
         modesChanged()
       }
     }
@@ -80,8 +80,10 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     val iter = minors.iterator ; while (iter.hasNext) {
       val mode = iter.next
       if (!activeModes.contains(mode)) try {
-        addMode(false)(resolver.resolveMinor(mode, view, mline, this, major(), Nil))
-        count += 1
+        resolver.resolveMinor(mode, view, mline, this, major(), Nil) ifDefined { minst =>
+          addMode(false)(minst)
+          count += 1
+        }
       }
       catch {
         case e :Throwable =>
@@ -186,7 +188,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
         removeMode(minor)
         window.popStatus(s"$mode mode deactivated.")
       case _ =>
-        addMode(true)(resolver.resolveMinor(mode, view, mline, this, major(), Nil))
+        resolver.resolveMinor(mode, view, mline, this, major(), Nil) ifDefined addMode(true)
     }
   }
 

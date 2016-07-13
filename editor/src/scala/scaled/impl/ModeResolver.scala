@@ -17,9 +17,6 @@ abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Fr
   /** Returns the names of all minor modes that match `tags`. */
   def tagMinorModes (tags :Seq[String]) :Set[String] = Set()
 
-  /** Returns the names of all minor modes that match `stateTypes`. */
-  def stateMinorModes (stateTypes :Set[Class[_]]) :Set[String] = Set()
-
   /** Resolves and instantiates the major mode `mode` with the supplied environment. */
   def resolveMajor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
                     args :List[Any]) :MajorMode =
@@ -27,8 +24,15 @@ abstract class ModeResolver (msvc :MetaService, window :Window, frame :Window#Fr
 
   /** Resolves and instantiates the minor mode `mode` with the supplied environment. */
   def resolveMinor (mode :String, view :BufferViewImpl, mline :ModeLine, disp :DispatcherImpl,
-                    major :MajorMode, args :List[Any]) :MinorMode =
-    resolve(mode, view, mline, disp, major :: args, requireMinor(mode))
+                    major :MajorMode, args :List[Any]) :Option[MinorMode] = {
+    val modeClass = requireMinor(mode)
+    val modeAnn = modeClass.getAnnotation(classOf[Minor])
+    // ensure that all of the state classes required by this mode are available
+    val stateKeys = view.buffer.state.keys
+    if (Seq.from(modeAnn.stateTypes) forall stateKeys) Some(
+      resolve(mode, view, mline, disp, major :: args, modeClass))
+    else None
+  }
 
   protected def locate (major :Boolean, mode :String) :Class[_]
   protected def configScope :Config.Scope

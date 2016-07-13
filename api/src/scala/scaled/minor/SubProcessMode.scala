@@ -7,7 +7,7 @@ package scaled.minor
 import scaled._
 import scaled.util.{Errors, SubProcess}
 
-@Minor(name="subproc", stateTypes=Array(classOf[SubProcess]),
+@Minor(name="subproc", tags=Array("*"), stateTypes=Array(classOf[SubProcess]),
        desc="""Provides a means to interact with a sub-process bound to a buffer.""")
 class SubProcessMode (env :Env) extends MinorMode(env) {
 

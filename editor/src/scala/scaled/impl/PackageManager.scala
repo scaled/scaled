@@ -71,10 +71,6 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   /** Returns the set of minor modes that should be auto-activated for `tags`. */
   def tagMinorModes (tags :Seq[String]) :Set[String] = tags.flatMap(minorTags.get _).toSet
 
-  /** Returns the set of minor modes that should be auto-activated for `stateTypes`. */
-  def stateMinorModes (stateTypes :Set[Class[_]]) :Set[String] =
-    stateTypes.map(_.getName).flatMap(minorTypes.get _).toSet
-
   override def didStartup () {} // not used
   override def willShutdown () {} // not used
 
@@ -99,8 +95,7 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
                            "Plugins: "     -> fmt(meta.plugins.asMap.entrySet),
                            "Patterns: "    -> fmt(meta.patterns.asMap.entrySet),
                            "Interps: "     -> fmt(meta.interps.asMap.entrySet),
-                           "Minor tags: "  -> fmt(meta.minorTags.asMap.entrySet),
-                           "Minor types: " -> fmt(meta.minorTypes.asMap.entrySet)
+                           "Minor tags: "  -> fmt(meta.minorTags.asMap.entrySet)
                            ).filter(_._2 != ""))
     }
   }
@@ -133,9 +128,8 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
       }
     }}
     meta.interps.asMap.toMapV foreach { (m, is) => is foreach { i => interps.put(i, m) }}
-    // map the tags & types defined by this pattern's minor modes
+    // map the tags defined by this pattern's minor modes
     minorTags.putAll(meta.minorTags)
-    minorTypes.putAll(meta.minorTypes)
     // tell any interested parties about this new package module
     PackageManager.this.moduleAdded.emit(meta)
   }
@@ -155,7 +149,6 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   private val patterns   = SeqBuffer[(Pattern,String)]()
   private val interps    = HashMultimap.create[String,String]()
   private val minorTags  = HashMultimap.create[String,String]()
-  private val minorTypes = HashMultimap.create[String,String]()
 
   private val ScaledAPI = Source.parse("git:https://github.com/scaled/scaled.git#api")
   private val ScaledEditor = Source.parse("git:https://github.com/scaled/scaled.git#editor")

@@ -40,9 +40,14 @@ public @interface Minor {
     String[] tags () default {};
 
     /**
-     * Zero or more classes of buffer state objects which, if present on a bufer, indicate that this
-     * minor mode should be automatically enabled. For example, {@code SubProcessMode} is
-     * automatically activated when a {@code SubProcess} instance is added to buffer state.
+     * Zero or more types of buffer state objects which must be present on a buffer for this mode to
+     * be enabled. If any of these types are missing from the state, the mode will not be enabled.
+     * For example, {@code SubProcessMode} is automatically activated when a {@code SubProcess}
+     * instance is added to buffer state.
+     *
+     * <p>Note: a mode will not be automatically enabled based on state types alone, the minor mode
+     * must also match at least one major mode tag. If a minor mode really should be enabled in all
+     * cases where its state is satisfied, use {@code "*"} as the mode's tags.
      */
     Class<?>[] stateTypes () default {};
 }
