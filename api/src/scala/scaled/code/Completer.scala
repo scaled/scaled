@@ -47,11 +47,25 @@ object Completer {
 
 class TokenCompleter (val wspace :Workspace) extends Completer {
 
-  class Tokener (val buffer :Buffer) {
+  final val MinRefreshInterval = 3000L
+
+  class Tokener (val buffer :RBuffer) {
     val tokens = TreeMultimap.create[String,String]()
+    var needsRefresh = true
+    var lastRefresh = 0L
+
+    buffer.edited.onEmit { needsRefresh = true }
 
     def addCompletions (prefix :String, sb :LinkedHashSet[String]) {
-      if (tokens.isEmpty) refresh()
+      if (needsRefresh) {
+        val now = System.currentTimeMillis
+        if (now - lastRefresh > MinRefreshInterval) {
+          refresh()
+          lastRefresh = now
+          needsRefresh = false
+        }
+      }
+
       val iter = tokens.keySet.tailSet(prefix, true).iterator
       def loop () {
         val word = iter.next()
@@ -65,40 +79,40 @@ class TokenCompleter (val wspace :Workspace) extends Completer {
 
     private def refresh () {
       tokens.clear()
-      buffer.lines foreach tokenize
-    }
-    private def tokenize (line :LineV) {
-      val IsWord = Chars.isWord
-      var sb = new java.lang.StringBuilder() // don't use Scala's retarded SB
-      def flush () {
-        if (sb.length > 0) {
-          // ignore short tokens, not much point in completing a three letter word
-          if (sb.length > 3) {
-            val word = sb.toString
-            val key = word.toLowerCase
-            tokens.put(key, word)
+      buffer.lines foreach { line =>
+        val IsWord = Chars.isWord
+        val sb = new java.lang.StringBuilder() // don't use Scala's retarded SB
+        def flush () {
+          if (sb.length > 0) {
+            // ignore short tokens, not much point in completing a three letter word
+            if (sb.length > 3) {
+              val word = sb.toString
+              val key = word.toLowerCase
+              tokens.put(key, word)
+            }
+            sb.setLength(0)
           }
-          sb.setLength(0)
         }
+        var ii = 0 ; val ll = line.length ; while (ii < ll) {
+          val c = line.charAt(ii)
+          val isToken = IsWord(c) || c == '_' // TODO: pluggable tokenizers?
+          if (isToken) sb.append(c)
+          else flush()
+          ii += 1
+        }
+        flush()
       }
-      var ii = 0 ; val ll = line.length ; while (ii < ll) {
-        val c = line.charAt(ii)
-        val isToken = IsWord(c) || c == '_' // TODO: pluggable tokenizers?
-        if (isToken) sb.append(c)
-        else flush()
-        ii += 1
-      }
-      flush()
     }
   }
 
   private val tokeners = new HashMap[Buffer,Tokener]()
   private def tokener (buffer :Buffer) = tokeners.get(buffer) match {
     case null =>
-      val ntok = new Tokener(buffer)
-      tokeners.put(buffer, ntok)
       // note: fix naughtiness (have Workspace give out RBuffer?)
-      buffer.asInstanceOf[RBuffer].killed.onEmit { tokeners.remove(buffer) }
+      val rbuffer = buffer.asInstanceOf[RBuffer]
+      val ntok = new Tokener(rbuffer)
+      tokeners.put(buffer, ntok)
+      rbuffer.killed.onEmit { tokeners.remove(buffer) }
       ntok
     case tok => tok
   }
