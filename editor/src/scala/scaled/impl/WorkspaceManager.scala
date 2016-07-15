@@ -42,17 +42,24 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   /** Visits `paths` in the appropriate workspace windows, creating them as needed.
     * The first window created will inherit the supplied default stage. */
   def visit (stage :Stage, paths :JList[String]) {
-    val ws2paths = ((paths map resolve) groupBy workspaceFor).toSeq
-    // the first workspace (chosen arbitrarily) gets the default stage
-    ws2paths.take(1) foreach { case (ws, paths) =>
-      paths foreach { ws.open(stage).visitPath _ }
+    try {
+      val ws2paths = ((paths map resolve) groupBy workspaceFor).toSeq
+      // the first workspace (chosen arbitrarily) gets the default stage
+      ws2paths.take(1) foreach { case (ws, paths) =>
+        paths foreach { ws.open(stage).visitPath _ }
+      }
+      // the remaining workspaces (if any) create new stages
+      ws2paths.drop(1) foreach { case (ws, paths) =>
+        paths foreach { ws.open().visitPath _ }
+      }
+      // if we have no arguments, open the default workspace with a scratch buffer
+      if (ws2paths.isEmpty) defaultWS.open(stage).visitScratchIfEmpty()
+    } catch {
+      case e :Throwable =>
+        val win = defaultWS.open(stage)
+        win.visitScratchIfEmpty()
+        win.emitError(e)
     }
-    // the remaining workspaces (if any) create new stages
-    ws2paths.drop(1) foreach { case (ws, paths) =>
-      paths foreach { ws.open().visitPath _ }
-    }
-    // if we have no arguments, open the default workspace with a scratch buffer
-    if (ws2paths.isEmpty) defaultWS.open(stage).visitScratchIfEmpty()
   }
 
   /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
