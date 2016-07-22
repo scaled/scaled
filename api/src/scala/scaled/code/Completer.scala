@@ -74,7 +74,7 @@ class TokenCompleter (val wspace :Workspace) extends Completer {
           if (iter.hasNext()) loop()
         }
       }
-      loop()
+      if (iter.hasNext()) loop()
     }
 
     private def refresh () {
