@@ -99,4 +99,6 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
       case _ => // nada
     }
   }
+
+  override def toString = s"$line:${_valid}"
 }

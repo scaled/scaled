@@ -229,6 +229,8 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
   // contains our line nodes and other decorative nodes (cursor, selection, etc.)
   class ContentNode extends Region {
+    private var vizTop = 0
+
     getStyleClass.add("content")
 
     // forward mouse events to the control
@@ -250,9 +252,32 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
         event.consume()
       }
     })
+
     // move our lines when scrollTop/Left change
-    bview.scrollTop onChange { (ntop, otop) => updateVizLines(otop) }
+    bview.scrollTop onChange { (ntop, otop) => updateVizLines() }
     bview.scrollLeft onValue { left => contentNode.setLayoutX(-left*charWidth) }
+
+    // listen for addition and removal of lines
+    bview.changed onValue { change =>
+      // println(s"Lines @${change.row} ${change.delta}")
+      val top = bview.scrollTop() ; val bot = top+bview.height()+1
+      val tstart = math.max(top, change.row)
+      if (change.delta < 0) {
+        // if the change overlaps the visible area, remove the visible lines
+        val tend = math.min(change.row-change.delta, bot)
+        if (tend > tstart) removeLines(tstart-top, tend-top)
+      } else if (change.delta > 0) {
+        // if the change overlaps the visible area, add the visible lines
+        val tend = math.min(change.row+change.delta, bot)
+        if (tend > tstart) addLines(tstart-top, bview.lines.slice(tstart, tend))
+      }
+      // if the change happened before the vizTop, it must be adjusted
+      if (change.row < vizTop) vizTop += change.delta
+      updateVizLines()
+    }
+
+    // if the buffer view height changes, update our viz lines as well
+    bview.height onValue { height => updateVizLines() }
 
     def updateCursor (point :Loc) {
       val line = bview.buffer.line(point)
@@ -316,10 +341,11 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       checkPopup(true)(bview.popup.getOption)
     }
 
-    def updateVizLines (otop :Int) {
+    def updateVizLines () {
       val viewLines = bview.height()+1 ; val top = bview.scrollTop()
       val lines = bview.lines ; val bot = math.min(top + viewLines, lines.size)
       val preChildCount = lineNodes.getChildren.size
+      val otop = vizTop
 
       try {
         // trim or add lines at the top, as needed
@@ -330,6 +356,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
         if (childCount > viewLines) removeLines(viewLines, childCount)
         else if (childCount < viewLines) addLines(childCount, lines.slice(top+childCount, bot))
 
+        vizTop = top
         requestLayout()
 
       } catch {
@@ -363,30 +390,8 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   // move the cursor when the point is updated
   bview.point onValueNotify contentNode.updateCursor
 
-  // listen for addition and removal of lines
-  bview.changed onValue { change =>
-    // println(s"Lines @${change.row} ${change.delta}")
-    val top = bview.scrollTop() ; val bot = top+bview.height()+1
-    val tstart = math.max(top, change.row)
-    if (change.delta < 0) {
-      // if the change overlaps the visible area, remove the visible lines
-      val tend = math.min(change.row-change.delta, bot)
-      if (tend > tstart) contentNode.removeLines(tstart-top, tend-top)
-    } else if (change.delta > 0) {
-      // if the change overlaps the visible area, add the visible lines
-      val tend = math.min(change.row+change.delta, bot)
-      if (tend > tstart) contentNode.addLines(tstart-top, bview.lines.slice(tstart, tend))
-    }
-    contentNode.updateVizLines(top)
-  }
-
-  // if the buffer view height changes, update our viz lines as well
-  bview.height onValue { height =>
-    contentNode.updateVizLines(bview.scrollTop())
-  }
-
   // display the lines visible at the top of the buffer
-  contentNode.updateVizLines(0)
+  contentNode.updateVizLines()
 
   // request relayout when our view width/height changes
   bview.width onValue { _ => requestLayout() }
