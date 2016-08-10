@@ -171,7 +171,8 @@ object Set {
   def from[A <: AnyRef] (elems :Array[A]) :Set[A] = mkSet(
     elems.asInstanceOf[Array[Any]], elems.length)
 
-  private def mkSet[A] (elems :Array[Any], size :Int) :Set[A] = OpenHashSet.make(elems, size)
+  private def mkSet[A] (elems :Array[Any], size :Int) :Set[A] =
+    if (size == 0) empty else OpenHashSet.make(elems, size)
 
   /** Returns a view of the Java `set` as a [[Set]]. `set` is assumed to be effectively immutable
     * for the lifetime of this view. Violate this assumption at your peril. */
