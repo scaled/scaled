@@ -383,10 +383,10 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
     val p = view.point()
     val line = buffer.line(p)
     val info = (line.lineTags ++ line.tags) match {
-      case Nil  => List("No tags.")
-      case tags => tags.map(_.toString)
+      case Nil  => List(Line("No tags."))
+      case tags => tags.flatMap(t => Line.fromText(t.toString))
     }
-    view.popup() = Popup.text(info, Popup.UpRight(p))
+    view.popup() = Popup.lines(info, Popup.UpRight(p))
   }
 
   //
