@@ -43,6 +43,7 @@ object Chars {
 
   /** Returns true for characters that are punctuation. */
   lazy val isPunctuation = new Pred() {
+    // small hack here to include ` and ^ in the punctuation class
     protected def slowApply (c :Char) = isPunctuationClass(c)
     override def toString = "isPunctuation"
   }
@@ -117,10 +118,11 @@ object Chars {
   private def isWordClass (c :Char) :Boolean = {
     import Character._
     (getType(c) : @switch) match {
+      // small hack here to exclude ` and ^ from the word class
       case UNASSIGNED|UPPERCASE_LETTER|LOWERCASE_LETTER|TITLECASE_LETTER|MODIFIER_LETTER|
            OTHER_LETTER|NON_SPACING_MARK|ENCLOSING_MARK|COMBINING_SPACING_MARK|
            DECIMAL_DIGIT_NUMBER|LETTER_NUMBER|OTHER_NUMBER|PRIVATE_USE|SURROGATE|
-           CURRENCY_SYMBOL|MODIFIER_SYMBOL|OTHER_SYMBOL => true
+           CURRENCY_SYMBOL|MODIFIER_SYMBOL|OTHER_SYMBOL => !(c == '`' || c == '^')
       case _ => false
     }
   }
@@ -130,7 +132,8 @@ object Chars {
     (getType(c) : @switch) match {
       case DASH_PUNCTUATION|START_PUNCTUATION|END_PUNCTUATION|CONNECTOR_PUNCTUATION|
            OTHER_PUNCTUATION|INITIAL_QUOTE_PUNCTUATION|FINAL_QUOTE_PUNCTUATION|MATH_SYMBOL => true
-      case _ => false
+      // small hack here to include ` and ^ in the punctutation class
+      case _ => (c == '`' || c == '^')
     }
   }
 }
