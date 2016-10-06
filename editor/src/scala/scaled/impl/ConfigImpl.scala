@@ -7,7 +7,7 @@ package scaled.impl
 import java.util.{HashMap, HashSet}
 import java.nio.file.{Path, Files}
 import scaled._
-import scaled.util.Properties
+import scaled.util.{Filler, Properties}
 
 class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
                   defs :List[Config.Defs], parent :Option[ConfigImpl])
@@ -18,13 +18,15 @@ class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
 
   override def toProperties :Seq[String] = {
     val buf = Seq.builder[String]()
-    buf += s"# Scaled '$name' config vars"
-    buf += s"#"
-    buf += s"# This file is managed by Scaled. Uncomment and customize the value of any"
-    buf += s"# desired config vars. Other changes will be ignored."
+    buf += s"## Scaled '$name' config vars"
+    buf += s"##"
+    buf += s"## This file is managed by Scaled. Uncomment and customize the value of any"
+    buf += s"## desired config vars. Other changes will be ignored."
     _vars.values.toSeq.sortBy(_.name) foreach { case cvar :Config.Var[t] =>
       buf += "" // preceed each var by a blank link and its description
-      buf += s"# ${cvar.descrip}"
+      val filler = new Filler(77)
+      filler.append(cvar.descrip)
+      filler.filled foreach { line => buf += s"## $line" }
       val cval = resolve(cvar.key)
       val curval = cval.value.get ; val defval = cvar.key.defval(this)
       val (pre, showval) = if (cval.isSet && curval != defval) ("", curval) else ("# ", defval)
