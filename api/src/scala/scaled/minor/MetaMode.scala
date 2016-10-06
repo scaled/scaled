@@ -304,7 +304,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
   @Fn("Opens the configuration file for the specified mode in a buffer.")
   def editModeConfig () {
     val comp = Completer.from(disp.modes)(_.name)
-    window.mini.read("Mode:", name, modeHistory(wspace), comp) map(_.config) onSuccess(editConfig)
+    val mname = disp.modes.last.name // default to major mode name
+    window.mini.read("Mode:", mname, modeHistory(wspace), comp) map(_.config) onSuccess(editConfig)
   }
 
   @Fn("Opens the configuration file for the specified service in a buffer.")
