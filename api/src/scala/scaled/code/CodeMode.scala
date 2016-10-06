@@ -235,19 +235,22 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     if (syn.isComment) commenter.mkParagrapher(syn, buffer)
     else super.mkParagrapher(syn)
 
-  override def fillParagraph () {
-    // make sure we're "looking at" something fillable on this line
+  private def pointAtNonWS = {
     val p = view.point()
-    val wp = buffer.line(p).indexOf(isNotWhitespace, p.col) match {
+    buffer.line(p).indexOf(isNotWhitespace, p.col) match {
       case -1 => p
       case ii => p.atCol(ii)
     }
-    if (canAutoFill(wp)) super.fillParagraph()
+  }
+
+  override def fillParagraph () {
+    // make sure we're "looking at" something fillable on this line
+    if (canAutoFill(pointAtNonWS)) super.fillParagraph()
     else window.popStatus(s"$name-mode doesn't know how to fill this paragraph.")
   }
 
   override def refillLinesIn (start :Loc, end :Loc) =
-    if (!commenter.inComment(buffer, view.point())) super.refillLinesIn(start, end)
+    if (!commenter.inComment(buffer, pointAtNonWS)) super.refillLinesIn(start, end)
     else {
       val cend = trimEnd(end)
       buffer.replace(start, cend, commenter.refilled(buffer, fillColumn, start, cend))
