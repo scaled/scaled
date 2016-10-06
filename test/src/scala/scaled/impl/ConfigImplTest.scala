@@ -34,16 +34,16 @@ class ConfigImplTest {
     val impl = new ConfigImpl("editor", null, null, TestConfig :: Nil, None)
 
     val allDefaults = Seq(
-      "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",
-      "", "# The default height of editor views, in characters.", "# view-height: 40",
-      "", "# The default width of editor views, in characters.", "# view-width: 100")
+      "", "## The number of entries retained by the kill ring.", "# kill-ring-size: 40",
+      "", "## The default height of editor views, in characters.", "# view-height: 40",
+      "", "## The default width of editor views, in characters.", "# view-width: 100")
     assertTrue(impl.toProperties containsSlice allDefaults)
 
     impl(TestConfig.viewWidth) = 15
     val viewWidthChanged = Seq(
-      "", "# The number of entries retained by the kill ring.", "# kill-ring-size: 40",
-      "", "# The default height of editor views, in characters.", "# view-height: 40",
-      "", "# The default width of editor views, in characters.", "view-width: 15")
+      "", "## The number of entries retained by the kill ring.", "# kill-ring-size: 40",
+      "", "## The default height of editor views, in characters.", "# view-height: 40",
+      "", "## The default width of editor views, in characters.", "view-width: 15")
     assertTrue(impl.toProperties containsSlice viewWidthChanged)
   }
 }
