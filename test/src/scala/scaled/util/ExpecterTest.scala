@@ -9,22 +9,7 @@ import org.junit._
 import scaled._
 
 class ExpecterTest {
-
-  class AccumExec extends Executor {
-    private val rs = SeqBuffer[Runnable]()
-    val uiExec = new java.util.concurrent.Executor() {
-      override def execute (op :Runnable) :Unit = rs += op
-    }
-    val bgExec = uiExec
-    val errHandler = new Executor.ErrorHandler() {
-      override def emitError (err :Throwable) = err.printStackTrace(System.err)
-    }
-    override def uiTimer (delay :Long) = Future.failure(new Exception("Not implemented"))
-    def executeAll () = {
-      rs foreach { _.run() }
-      rs.clear()
-    }
-  }
+  import TestUtil._
 
   @Test def testUnexpected () {
     val exec = new AccumExec()
