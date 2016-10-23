@@ -71,7 +71,11 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   /** Checks whether this buffer has become stale (i.e. the file it is editing has been modified
     * more recently than it was loaded into this buffer). Emits [[stale]] if so. */
   def checkStale () {
-    if (store.lastModified > _lastModified) _stale.emit(this)
+    if (store.lastModified > _lastModified) {
+      // TEMP: if no one is listening for us to become stale then just go away
+      // TODO: maybe just reload the contents of this buffer from our store?
+      if (_stale.hasConnections) _stale.emit(this) else kill()
+    }
   }
 
   //
