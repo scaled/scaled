@@ -273,6 +273,12 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
       view.buffer.undoStack.delimitAction(view.point())
       didInvokeFn()
 
+      // if the fn returned a future, listen for errors on it and report them to the window
+      res match {
+        case future :Future[_] => future.onFailure(window.emitError)
+        case _ => // never mind
+      }
+
       // if the fn returns anything other than false, we assume it handled the key
       if (res != java.lang.Boolean.FALSE) return true
 
