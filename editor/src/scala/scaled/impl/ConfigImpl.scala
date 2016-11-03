@@ -56,7 +56,7 @@ class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
     fn { (key, value) => _vars.get(key) match {
       case None => log.log(s"$name config contains unknown/stale setting '$key: $value'.")
       case Some(cvar) => try {
-        resolve(cvar.key).init(cvar.key.converter.read(value))
+        resolve(cvar.key).initFrom(value)
         initted.add(key)
       } catch {
         case e :Exception => log.log(s"$name config contains invalid setting: '$key: $value': $e")
@@ -78,6 +78,7 @@ class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
     reset()
 
     def isSet :Boolean = conn == null
+    def initFrom (value :String) :Unit = init(key.converter.read(value))
     def init (newval :T) {
       value() = newval
       if (conn != null) { conn.close() ; conn = null }
