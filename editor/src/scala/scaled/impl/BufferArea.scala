@@ -23,7 +23,6 @@ import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
 import java.util.concurrent.Callable
-import scala.collection.JavaConversions._
 import scaled._
 
 /** Displays a buffer and passes events through to a dispatcher. */
