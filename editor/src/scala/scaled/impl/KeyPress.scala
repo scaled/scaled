@@ -18,12 +18,12 @@ class KeyPress (
   /** Returns true if this key press is modified by a function key (ctrl, alt, meta). */
   def isModified :Boolean = ctrl || alt || meta
 
-  /** Whether or not this key press represents a character that the user might actually want inserted
-    * into their buffer. */
+  /** Whether or not this key press represents a character that the user might actually want
+    * inserted into their buffer. */
   def isPrintable :Boolean = !isModified && text != KeyEvent.CHAR_UNDEFINED
 
-  /** Forces `meta` to true if `wantMeta` is true; if `meta` is already true or `wantMeta` is false,
-    * returns `this` key press. This is used to 'metafy' the key press following ESC. */
+  /** Forces `meta` to true if `wantMeta` is true; if `meta` is already true or `wantMeta` is
+    * false, returns `this` key press. This is used to 'metafy' the key press following ESC. */
   def metafy (wantMeta :Boolean) :KeyPress =
     if (!wantMeta || meta) this else new KeyPress(id, text, shift, ctrl, alt, true)
 
@@ -63,11 +63,9 @@ object KeyPress {
 
   /** Converts a key pressed event into a `KeyPress`. */
   def fromPressed (kev :KeyEvent) :KeyPress = {
-    // TEMP: on JavaFX on Linux Alt is Meta and Windows is Alt, but Emacs assigns Alt to Meta and
-    // Windows to Super, and Meta is super important so we want to be Emacs-like there
     // TODO: should this be done with a more complex key remapping scheme?
-    val isAltDown = if (IsLinux) kev.isMetaDown else kev.isAltDown
-    val isMetaDown = if (IsLinux) kev.isAltDown else kev.isMetaDown
+    val isAltDown = if (SwapAltMeta) kev.isMetaDown else kev.isAltDown
+    val isMetaDown = if (SwapAltMeta) kev.isAltDown else kev.isMetaDown
     new KeyPress(toKeyId(kev.getCode), kev.getCharacter,
                  kev.isShiftDown, kev.isControlDown, isAltDown, isMetaDown)
   }
@@ -364,4 +362,8 @@ object KeyPress {
   })
 
   private val IsLinux = System.getProperty("os.name") equalsIgnoreCase "linux"
+  private val IsWindows = System.getProperty("os.name") startsWith "Windows"
+  // on Linux & Windows, Emacs assigns Alt to Meta and Windows to Super (not that we ever get those
+  // keystrokes); Meta is super important so we want to be Emacs-like there
+  private val SwapAltMeta = IsLinux || IsWindows
 }
