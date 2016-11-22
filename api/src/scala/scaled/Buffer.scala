@@ -62,7 +62,8 @@ abstract class BufferV extends Region {
 
   /** Returns a location for the specified character offset into the buffer. If `offset` is greater
     * than the length of the buffer, the returned `Loc` will be positioned after the buffer's final
-    * character. */
+    * character. Note that line separators 'consume' a single character regardless of the line
+    * endings used by the file from which the buffer data came. */
   def loc (offset :Int) :Loc = {
     assert(offset >= 0)
     val lls = lines
@@ -72,7 +73,6 @@ abstract class BufferV extends Region {
       if (idx >= lls.length) Loc(lls.length-1, lls.last.length)
       else {
         val len = lls(idx).length
-        // TODO: this assumes a single character line terminator, what about \r\n?
         if (off > len) seek(off-len-1, idx+1)
         else Loc(idx, off)
       }
@@ -80,11 +80,12 @@ abstract class BufferV extends Region {
     seek(offset, 0)
   }
 
-  /** Returns the character offset into the buffer of `loc`. */
+  /** Returns the character offset into the buffer of `loc`. Note that line separators are treated
+    * as a single character regardless of the line endings used by the file from which the buffer
+    * data came. */
   def offset (loc :Loc) :Int = {
-    val lineSep = System.lineSeparator // TODO: buffer should know its own line separator?
     @tailrec def offset (row :Int, off :Int) :Int =
-      if (row < 0) off else offset(row-1, lines(row).length+lineSep.length+off)
+      if (row < 0) off else offset(row-1, lines(row).length+1+off)
     offset(loc.row-1, 0) + loc.col
   }
 

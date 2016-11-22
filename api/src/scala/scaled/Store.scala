@@ -36,13 +36,14 @@ abstract class Store {
   /** Reads the contents of this store line by line, applying `fn` to each line in the store. `fn`
     * is also passed the character offset of the start of the line. */
   def readLines (fn :(String, Int) => Unit) {
+    val lineSep = System.lineSeparator
     read({ r =>
       val buffed = new BufferedReader(r)
       var offset = 0
       var line :String = buffed.readLine()
       while (line != null) {
         fn(line, offset)
-        offset += line.length + 1 // TODO: handle \r\n?
+        offset += line.length + lineSep.length
         line = buffed.readLine()
       }
     })
