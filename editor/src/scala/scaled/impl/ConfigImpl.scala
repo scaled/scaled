@@ -25,7 +25,7 @@ class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
     _vars.values.toSeq.sortBy(_.name) foreach { case cvar :Config.Var[t] =>
       buf += "" // preceed each var by a blank link and its description
       val filler = new Filler(77)
-      filler.append(cvar.descrip)
+      filler.append(Filler.flatten(cvar.descrip))
       filler.filled foreach { line => buf += s"## $line" }
       val cval = resolve(cvar.key)
       val curval = cval.value.get ; val defval = cvar.key.defval(this)
