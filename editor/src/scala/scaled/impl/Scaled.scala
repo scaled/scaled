@@ -4,8 +4,10 @@
 
 package scaled.impl
 
+import java.io.File
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
+import java.util.{List => JList, ArrayList}
 import javafx.animation.{KeyFrame, Timeline}
 import javafx.application.{Application, Platform}
 import javafx.event.{ActionEvent, EventHandler}
@@ -15,7 +17,6 @@ import scaled._
 import scaled.util.Errors
 
 class Scaled extends Application with Editor {
-
   private val pool = Executors.newFixedThreadPool(4) // TODO: config
 
   /** A signal emitted when a message is appended to the log. Because logging is app-global, but
@@ -70,12 +71,14 @@ class Scaled extends Application with Editor {
     // we have to defer resolution of auto-load services until the above constructors have
     // completed; always there are a twisty maze of initialization dependencies
     svcMgr.resolveAutoLoads()
-    // create the starting editor and visit therein the files specified on the command line
-    wspMgr.visit(stage, getParameters.getRaw)
+    // create the starting editor and visit therein the starting files
+    if (Scaled.IsMacOS) Scaled.instance = this
+    if (Scaled.IsMacOS && !Scaled.launchFiles.isEmpty) wspMgr.visit(stage, Scaled.launchFiles)
+    else wspMgr.resolveAndVisit(stage, Seq.view(getParameters.getRaw))
     // start our command server
     server.start()
     // now that our main window is created, we can tweak the quit menu shortcut key
-    tweakQuitMenuItem()
+    Scaled.tweakQuitMenuItem()
   }
 
   override def stop () {
@@ -93,18 +96,50 @@ class Scaled extends Application with Editor {
     if (System.getProperty("os.name") != "Mac OS X") getHostServices.showDocument(url)
     else Runtime.getRuntime.exec(Array("open", url))
   }
+}
+
+object Scaled {
+  import com.apple.eawt.{Application => MacApplication, _}
+
+  /** The port on which [Server] listens for commands. */
+  final val Port = (Option(System.getenv("SCALED_PORT")) getOrElse "32323").toInt
+
+  /** Whether or not we're running on MacOS. */
+  final val IsMacOS = System.getProperty("os.name").contains("OS X");
+
+  /** Stores MacOS launch files which come in before we have our singleton. */
+  var launchFiles = Seq.empty[Path]
+
+  /** Stores our JavaFX app once launch, so that the MacOS OpenFilesHandler can talk to it. */
+  var instance :Scaled = null
+
+  /** Handles MacOS application events. */
+  lazy val MacOSHandler = new Object with OpenFilesHandler with OpenURIHandler {
+    override def openFiles (event :AppEvent.OpenFilesEvent) {
+      val paths = Seq.view(event.getFiles).map(_.toPath)
+      if (instance == null) launchFiles = paths
+      else onMainThread { paths.foreach(instance.wspMgr.visit) }
+    }
+    override def openURI (event :AppEvent.OpenURIEvent) {
+      println("Got open URI " + event.getURI)
+    }
+  }
 
   // tweaks the shortcut on the quit menu to avoid conflict with M-q
-  private def tweakQuitMenuItem () :Unit = try {
+  def tweakQuitMenuItem () :Unit = try {
     import com.sun.glass.{events => gevents, ui}
     val app = ui.Application.GetApplication
     val getAppleMenu = app.getClass.getMethod("getAppleMenu")
     if (getAppleMenu != null) {
       getAppleMenu.setAccessible(true)
       val menu = getAppleMenu.invoke(app).asInstanceOf[ui.Menu]
-      val items = menu.getItems
-      val quit = items.get(items.size-1).asInstanceOf[ui.MenuItem]
-      quit.setShortcut('q', gevents.KeyEvent.MODIFIER_COMMAND|gevents.KeyEvent.MODIFIER_SHIFT)
+      if (menu != null) {
+        val items = menu.getItems
+        val quit = items.get(items.size-1).asInstanceOf[ui.MenuItem]
+        quit.setShortcut('q', gevents.KeyEvent.MODIFIER_COMMAND|gevents.KeyEvent.MODIFIER_SHIFT)
+      } else {
+        // TODO: this no longer seems to work, what to do?
+      }
     }
 
   } catch {
@@ -113,14 +148,15 @@ class Scaled extends Application with Editor {
       println("Failed to tweak Quit menu item")
       t.printStackTrace(System.err)
   }
-}
-
-object Scaled {
-
-  /** The port on which [Server] listens for commands. */
-  final val Port = (Option(System.getenv("SCALED_PORT")) getOrElse "32323").toInt
 
   def main (args :Array[String]) {
+    // if we're running on Mac, wire up an open files handler; this has to happen immediately or
+    // we'll miss events delivered right after startup
+    if (IsMacOS){
+      val macApp = MacApplication.getApplication
+      macApp.setOpenFileHandler(MacOSHandler)
+      macApp.setOpenURIHandler(MacOSHandler)
+    }
     // if there's already a Scaled instance running, pass our args to it and exit; otherwise launch
     // our fully operational mothership
     if (!sendFiles(args)) Application.launch(classOf[Scaled], args :_*)

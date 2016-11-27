@@ -39,11 +39,21 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name))
   }}
 
+  /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
+  def resolveAndVisit (path :String) :Unit = visit(resolve(path))
+
   /** Visits `paths` in the appropriate workspace windows, creating them as needed.
     * The first window created will inherit the supplied default stage. */
-  def visit (stage :Stage, paths :JList[String]) {
+  def resolveAndVisit (stage :Stage, paths :SeqV[String]) :Unit = visit(stage, paths map resolve)
+
+  /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
+  def visit (path :Path) :Unit = workspaceFor(path).open().visitPath(path)
+
+  /** Visits `paths` in the appropriate workspace windows, creating them as needed.
+    * The first window created will inherit the supplied default stage. */
+  def visit (stage :Stage, paths :SeqV[Path]) {
     try {
-      val ws2paths = ((paths map resolve) groupBy workspaceFor).toSeq
+      val ws2paths = (paths groupBy workspaceFor).toSeq
       // the first workspace (chosen arbitrarily) gets the default stage
       ws2paths.take(1) foreach { case (ws, paths) =>
         paths foreach { ws.open(stage).visitPath _ }
@@ -60,12 +70,6 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
         win.visitScratchIfEmpty()
         win.emitError(e)
     }
-  }
-
-  /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
-  def visit (path :String) {
-    val p = resolve(path)
-    workspaceFor(p).open().visitPath(p)
   }
 
   private def resolve (path :String) :Path = {
