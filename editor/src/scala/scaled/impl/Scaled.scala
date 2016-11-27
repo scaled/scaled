@@ -77,8 +77,6 @@ class Scaled extends Application with Editor {
     else wspMgr.resolveAndVisit(stage, Seq.view(getParameters.getRaw))
     // start our command server
     server.start()
-    // now that our main window is created, we can tweak the quit menu shortcut key
-    Scaled.tweakQuitMenuItem()
   }
 
   override def stop () {
@@ -123,30 +121,6 @@ object Scaled {
     override def openURI (event :AppEvent.OpenURIEvent) {
       println("Got open URI " + event.getURI)
     }
-  }
-
-  // tweaks the shortcut on the quit menu to avoid conflict with M-q
-  def tweakQuitMenuItem () :Unit = try {
-    import com.sun.glass.{events => gevents, ui}
-    val app = ui.Application.GetApplication
-    val getAppleMenu = app.getClass.getMethod("getAppleMenu")
-    if (getAppleMenu != null) {
-      getAppleMenu.setAccessible(true)
-      val menu = getAppleMenu.invoke(app).asInstanceOf[ui.Menu]
-      if (menu != null) {
-        val items = menu.getItems
-        val quit = items.get(items.size-1).asInstanceOf[ui.MenuItem]
-        quit.setShortcut('q', gevents.KeyEvent.MODIFIER_COMMAND|gevents.KeyEvent.MODIFIER_SHIFT)
-      } else {
-        // TODO: this no longer seems to work, what to do?
-      }
-    }
-
-  } catch {
-    case nsme :NoSuchMethodException => // nothing to see here, move it along
-    case t :Throwable =>
-      println("Failed to tweak Quit menu item")
-      t.printStackTrace(System.err)
   }
 
   def main (args :Array[String]) {
