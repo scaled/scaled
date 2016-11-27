@@ -58,7 +58,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     override protected def invalidated () {
       // if font is changed by calling setFont, then css might need to be reapplied since font size
       // affects calculated values for styles with relative values
-      if (!fontSetByCss) Dep.reapplyCSS(BufferArea.this);
+      if (!fontSetByCss) Dep.reapplyCSS(BufferArea.this)
     }
   }
   font.addListener(new InvalidationListener() {
@@ -444,6 +444,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
 /** [BufferArea] helper classes and whatnot. */
 object BufferArea {
+  import java.util.{List => JList, ArrayList, Collections}
 
   object StyleableProperties {
     val FONT = new FontCssMetaData[BufferArea]("-fx-font", Font.getDefault()) {
@@ -451,14 +452,27 @@ object BufferArea {
       override def getStyleableProperty (n :BufferArea) :StyleableProperty[Font] = n.font
     }
 
-    val STYLEABLES :java.util.List[CssMetaData[_ <: Styleable, _]] = {
-      val styleables = new java.util.ArrayList[CssMetaData[_ <: Styleable, _]](
+    val STYLEABLES :JList[CssMetaData[_ <: Styleable, _]] = {
+      val styleables = new ArrayList[CssMetaData[_ <: Styleable, _]](
         Region.getClassCssMetaData())
       styleables.add(FONT)
-      java.util.Collections.unmodifiableList(styleables)
+      Collections.unmodifiableList(styleables)
     }
   }
 
-  def getClassCssMetaData :java.util.List[CssMetaData[_ <: Styleable, _]] =
+  def getClassCssMetaData :JList[CssMetaData[_ <: Styleable, _]] =
     StyleableProperties.STYLEABLES
+
+  // HACK: terrible hack to work around JavaFX bug or my misunderstanding + misuse
+  def resetStyleHelper (area :BufferArea) :Unit = StyleHelperField.set(area, null)
+  private val StyleHelperField = find(classOf[BufferArea], "styleHelper")
+  private def find (cl :Class[_], nm :String) :java.lang.reflect.Field = {
+    for (field <- cl.getDeclaredFields) {
+      if (field.getName == nm) {
+        field.setAccessible(true)
+        return field
+      }
+    }
+    find(cl.getSuperclass, nm)
+  }
 }

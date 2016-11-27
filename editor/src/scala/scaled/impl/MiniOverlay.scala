@@ -34,6 +34,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
       // completions are displayed
     }
   }
+  BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
 
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
@@ -45,16 +46,17 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
         val maxComps = ((2*window.getHeight/3)/plabel.getHeight-1).toInt
         val fcomps = formatCompletions(comps)
         val tcomps = if (fcomps.size <= maxComps) fcomps else fcomps.take(maxComps-1)
-        cview.buffer.replace(cview.buffer.start, cview.buffer.end, tcomps.map(Line.apply))
+        val buffer = cview.buffer
+        buffer.replace(buffer.start, buffer.end, tcomps.map(Line.apply))
         if (tcomps.size < fcomps.size) {
-          cview.buffer.split(cview.buffer.end)
-          cview.buffer.insert(cview.buffer.end, Line(s"...(${comps.size} total matches)..."))
+          buffer.split(buffer.end)
+          buffer.insert(buffer.end, Line(s"...(${comps.size} total matches)..."))
         }
         cview.point() = Loc(0, 0)
         cview.width() = tcomps.map(_.length).max
         cview.height() = math.min(maxComps, fcomps.length)
+        BufferArea.resetStyleHelper(carea) // HACK: JavaFX le sigh
         setBottom(carea)
-        BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
       }
     }
   }
