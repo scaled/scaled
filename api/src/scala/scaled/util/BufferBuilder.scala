@@ -122,16 +122,16 @@ class BufferBuilder (val fillWidth :Int) {
 
   /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
     * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
-  def addKeysValues (kvs :(String,Any)*) :this.type = {
-    val padWidth = (0 /: kvs)((m, kv) => math.max(m, kv._1.length))
+  def addKeysValues (kvs :(String,Any)*) :this.type = addKeysValues(Iterable.view(kvs))
+
+  /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
+    * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
+  def addKeysValues (kvs :Iterable[(String,Any)]) :this.type = {
+    val padWidth = kvs.fold(0)((m, kv) => math.max(m, kv._1.length))
     def pad (key :String) = key + (" " * (padWidth-key.length))
     kvs foreach { case (k, v) => addKeyValue(pad(k), v) }
     this
   }
-
-  /** Adds `keyvalue` for each key/value pair in `kvs`, where `key` is styled in
-    * [[TextConfig.prefixStyle]] and all keys are padded to the width of the widest key. */
-  def addKeysValues (kvs :Seq[(String,Any)]) :this.type = addKeysValues(kvs.toScala :_*)
 
   private def styledLine (text :CharSequence, styles :scala.Seq[String]) =
     ((Line.builder(text) /: styles)(_.withStyle(_))).build()
