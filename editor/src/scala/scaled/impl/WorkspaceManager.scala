@@ -39,12 +39,16 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     new WorkspaceImpl(app, WorkspaceManager.this, name, wsdir.resolve(name))
   }}
 
-  /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
-  def resolveAndVisit (path :String) :Unit = visit(resolve(path))
-
-  /** Visits `paths` in the appropriate workspace windows, creating them as needed.
-    * The first window created will inherit the supplied default stage. */
-  def resolveAndVisit (stage :Stage, paths :SeqV[String]) :Unit = visit(stage, paths map resolve)
+  /** Resolves `path` to a fully qualified path. Tries to do something sensible if the path refers
+    * to a non-existent file (i.e. one the user probably wants to create). */
+  def resolve (path :String) :Path = {
+    val p = Paths.get(path)
+    // attempt to absolute-ize the path; if it does not exist and is not already absolute, fall
+    // back to tacking in onto the cwd so that we a chance at properly deducing workspace
+    val ap = if (p.isAbsolute) p else if (Files.exists(p)) p.toAbsolutePath else cwd.resolve(p)
+    // finally normalize the resulting path to get rid of funny business
+    ap.normalize
+  }
 
   /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
   def visit (path :Path) :Unit = workspaceFor(path).open().visitPath(path)
@@ -70,15 +74,6 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
         win.visitScratchIfEmpty()
         win.emitError(e)
     }
-  }
-
-  private def resolve (path :String) :Path = {
-    val p = Paths.get(path)
-    // attempt to absolute-ize the path; if it does not exist and is not already absolute, fall
-    // back to tacking in onto the cwd so that we a chance at properly deducing workspace
-    val ap = if (p.isAbsolute) p else if (Files.exists(p)) p.toAbsolutePath else cwd.resolve(p)
-    // finally normalize the resulting path to get rid of funny business
-    ap.normalize
   }
 
   def checkExit () {
