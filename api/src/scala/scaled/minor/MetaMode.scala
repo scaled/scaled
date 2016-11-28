@@ -254,6 +254,26 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
     env.msvc.service[PackageService].describePackages(bb)
 
+    def defang (text :String) = text.replace("\n", "\\n")
+    bb.addHeader("System Properties")
+    val sysprops = System.getProperties
+    val spKeys = Ordered.view(sysprops.stringPropertyNames).sorted
+    bb.addKeysValues(spKeys.map(name => (s"$name ", defang(sysprops.getProperty(name)))))
+
+    bb.addHeader("Environment")
+    val sysenv = System.getenv
+    val seKeys = Ordered.view(sysenv.keySet).sorted
+    bb.addKeysValues(seKeys.map(name => (s"$name ", defang(sysenv.get(name)))))
+
+    bb.addHeader("Runtime")
+    val rt = Runtime.getRuntime
+    bb.addKeysValues(
+      "Max memory: " -> rt.maxMemory,
+      "Total memory: " -> rt.totalMemory,
+      "Free memory: " -> rt.freeMemory,
+      "Processors: " -> rt.availableProcessors
+    )
+
     val hbuf = wspace.createBuffer(Store.scratch(s"*editor*", buffer.store),
                                    reuse=true, state=State.inits(Mode.Hint("help")))
     frame.visit(bb.applyTo(hbuf))
