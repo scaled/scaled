@@ -84,9 +84,10 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
     bb.addKeysValues("Root: " -> metaDir.toString,
                      "Modules: " -> modmetas.size.toString)
 
+    val ignoreModuleJar = Props.ignoreModuleJar
     for (meta <- modmetas) {
       bb.addSubHeader(meta.mod.toString)
-      val codeDir = metaDir.relativize(meta.loader.mod.classpath)
+      val codeDir = metaDir.relativize(meta.loader.mod.classpath(ignoreModuleJar))
       bb.addKeysValues(Seq("Code: "        -> s"%root%/$codeDir",
                            "Majors: "      -> fmt(meta.majors),
                            "Minors: "      -> fmt(meta.minors),
