@@ -36,8 +36,8 @@ abstract class Workspace extends Executor.ErrorHandler {
     // pre-populate our state with our workspace config scope
     State.init(Config.Scope("workspace", root, None)))
 
-  /** A bag of closeables that will be closed when this workspace hibernates. When all of a
-    * workspace's windows are closed, it hibernates, i.e. unloads everything it can from memory.
+  /** A bag of closeables that will be closed when this workspace is closed. When all of a
+    * workspace's windows are closed, it is closed and unloads everything it can from memory.
     * Entities can participate in the workspace lifecycle by coming to life when
     * [Editor.workspaceOpened] is emitted and then registering to be closed via this bag. */
   val toClose = Close.bag()

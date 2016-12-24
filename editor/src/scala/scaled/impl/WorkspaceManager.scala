@@ -149,18 +149,17 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
     windows.remove(win)
     try {
-      // if we're about to close our last window, this workspace will hibernate and all of its
+      // if we're about to close our last window, this workspace will be closed and all of its
       // buffers will go away; we let the window know that so that when it closes its frames it can
       // clean things up more efficiently
-      val willHibernate = (windows.size == 1)
-      win.dispose(willHibernate)
+      val willClose = (windows.size == 1)
+      win.dispose(willClose)
       win.stage.close()
     } catch {
       case e :Throwable => log.log(s"Internal error closing $win", e)
     }
 
-    // if we just closed our last window, "hibernate" (we're not actually a reffed, but we're doing
-    // a largely similar thing; we just want to control our lifecycle more carefully)
+    // if we just closed our last window, close this workspace
     if (windows.isEmpty) {
       toClose.close()
       buffers.clear() // TODO: dispose?

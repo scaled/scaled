@@ -92,11 +92,11 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         view
       }
 
-    def dispose (willHibernate :Boolean) {
+    def dispose (workspaceClosing :Boolean) {
       toClose.close()
-      // if we're going to hibernate, then our buffers are all going away; let the dispatcher know
+      // if the workspace is closing, then our buffers are all going away; let the dispatcher know
       // that so that it can clean up active modes more efficiently
-      disp.dispose(willHibernate)
+      disp.dispose(workspaceClosing)
     }
 
     override def geometry = Geometry(disp.area.width, disp.area.height, 0, 0) // TODO: x/y pos
