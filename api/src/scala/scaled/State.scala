@@ -5,10 +5,10 @@
 package scaled
 
 import scala.reflect.ClassTag
-import scaled.util.Errors
+import scaled.util.{BufferBuilder, Describable, Errors}
 
 /** Provides a read-only view of buffer state. See [[State]]. */
-abstract class StateV {
+abstract class StateV extends Describable {
 
   /** Returns the current state value associated with `key`, if any. */
   def get[T] (key :Class[T]) :Option[T]
@@ -34,6 +34,19 @@ abstract class StateV {
 
   /** Returns the keys for all currently defined state. */
   def keys :Set[Class[_]]
+
+  /** Adds a description of this state to `bb`. */
+  def describeSelf (bb :BufferBuilder) {
+    val kvs = keys.toSeq.flatMap(k => get(k).map(_.toString).map(v => (s"${k.getName}: " -> v)))
+    if (!kvs.isEmpty) {
+      bb.addSection("State")
+      bb.addKeysValues(kvs)
+    }
+
+    // append the description of any Describable piece of state
+    keys.toSeq.flatMap(k => get(k)).collect({ case d :Describable => d }).
+      foreach(_.describeSelf(bb))
+  }
 }
 
 /** Provides a mutable, but non-reactive view of buffer state. See [[RState]]. */

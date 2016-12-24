@@ -7,6 +7,12 @@ package scaled.util
 import scaled._
 import scaled.major.TextConfig
 
+/** A trait used to dynamically include elements in `describe-foo` buffers. */
+trait Describable {
+  /** Appends a description of `this` to `bb`. */
+  def describeSelf (bb :BufferBuilder) :Unit
+}
+
 /** A helper class for programmatically populating a buffer. This makes it easy to create a styled
   * buffer with headers, text wrapped to a particular width, text in multiple columns, etc. It's
   * used by `describe-mode` and is useful for similar "generate a buffer describing something"

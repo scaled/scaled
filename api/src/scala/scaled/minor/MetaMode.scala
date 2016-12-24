@@ -227,30 +227,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
   @Fn("Describes the current state of the editor. This is mainly for debugging and the curious.")
   def describeEditor () {
     val bb = new BufferBuilder(this.view.width()-1)
-    def addState (state :StateV) {
-      val kvs = state.keys.toSeq.flatMap(
-        k => state.get(k).map(_.toString).map(v => (s"${k.getName}: " -> v)))
-      if (!kvs.isEmpty) {
-        bb.addSection("State")
-        bb.addKeysValues(kvs)
-      }
-    }
     bb.addHeader("Editor")
-    addState(editor.state)
-
-    bb.addHeader("Workspace")
-    bb.addKeysValues("Name: " -> wspace.name,
-                     "Root: " -> wspace.root.toString,
-                     "Buffers: " -> wspace.buffers.size.toString)
-    addState(wspace.state)
-
-    bb.addHeader("Buffers")
-    wspace.buffers.foreach { buf =>
-      bb.addSubHeader(buf.name)
-      bb.addKeysValues("Store: " -> buf.store.toString,
-                       "Length: " -> buf.offset(buf.end).toString)
-      addState(buf.state)
-    }
+    editor.state.describeSelf(bb)
 
     env.msvc.service[PackageService].describePackages(bb)
 
