@@ -88,7 +88,10 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     bind("undo", "C-S--").
 
     // replacing commands
-    // TODO: "replace-string", "replace-regepx"
+    bind("replace-string", "M-r").
+    bind("replace-regexp", "C-M-r").
+    bind("query-replace", "S-M-5").
+    // TODO: bind("query-replace-regepx", "C-S-M-5").
 
     // buffer commands
     bind("save-buffer", "C-x C-s").
