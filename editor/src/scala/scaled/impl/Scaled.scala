@@ -114,10 +114,11 @@ object Scaled {
 
   private def sendFiles (args :Array[String]) :Boolean = {
     import java.io.{IOException, OutputStreamWriter, PrintWriter}
-    import java.net.{ConnectException, Socket}
+    import java.net.{ConnectException, Socket, InetSocketAddress}
 
     try {
-      val sock = new Socket("localhost", Port)
+      val sock = new Socket()
+      sock.connect(new InetSocketAddress("localhost", Port), 2000)
       val out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), "UTF-8"))
       val cwd = Paths.get(System.getProperty("user.dir"))
       args foreach { file => out.println(s"open ${cwd.resolve(Paths.get(file))}") }
