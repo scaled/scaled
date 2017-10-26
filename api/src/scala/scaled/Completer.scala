@@ -27,8 +27,8 @@ abstract class Completion[+T] (
     * `comps` to contain only those elements which [[FuzzyMatch]] `prefix`. */
   def refine (prefix :String) :Completion[T]
 
-  /** Returns the default value to use when committed with a non-matching value. */
-  def onNonMatch :Option[T] = comps.headOption.flatMap(apply)
+  /** Returns the first completion, if any. */
+  def first :Option[T] = comps.headOption.flatMap(apply)
 
   override def toString = s"Completion($comps)"
 }
@@ -134,7 +134,12 @@ abstract class Completer[T] {
   }
 
   /** Returns the value identified by `curval` given the current completion `comp`. */
-  def commit (comp :Completion[T], curval :String) :Option[T] = comp(curval) orElse comp.onNonMatch
+  def commit (comp :Completion[T], curval :String) :Option[T] =
+    comp(curval) orElse onNonMatch(comp, curval)
+
+  /** Returns the default value to use when committed with a non-matching value. */
+  def onNonMatch (comp :Completion[T], curval :String) :Option[T] =
+    if (comp.comps.size == 1) comp.first else None
 
   /** If the value being completed is a path, this separator will be used to omit the path elements
     * shared by the currently displayed prefix and the current completions. */
@@ -198,6 +203,8 @@ object Completer {
         val bufs = bb.build()
         Completion(prefix, bufs.map(_.name), bufs.mapBy(_.name))
       }
+      override def onNonMatch (comp :Completion[Buffer], curval :String) =
+        if (curval.length == 0) comp.first else super.onNonMatch(comp, curval)
     }
 
   /** Returns true if `full` starts with `prefix`, ignoring case, false otherwise. */
