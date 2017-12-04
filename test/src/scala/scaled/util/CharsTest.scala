@@ -18,8 +18,8 @@ class CharsTest {
     test(false, Chars.isNotWord, 'b')
     test(true, Chars.isNotWord, ' ')
 
-    test(true, Chars.isPunctuation, ''')
-    test(false, Chars.isNotPunctuation, ''')
+    test(true, Chars.isPunctuation, '\'')
+    test(false, Chars.isNotPunctuation, '\'')
     test(true, Chars.isNotPunctuation, ' ')
   }
 
