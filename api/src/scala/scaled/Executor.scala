@@ -4,7 +4,7 @@
 
 package scaled
 
-import java.util.concurrent.{Executor => JExecutor}
+import java.util.concurrent.{Executor => JExecutor, ExecutorService}
 
 /** Static bits for [[Executor]]. */
 object Executor {
@@ -28,6 +28,11 @@ abstract class Executor {
 
   /** The handler to which uncaught exceptions thrown by operations are reported. */
   val errHandler :ErrorHandler
+
+  /** A Java `ExecutorService` which runs operations on a background thread pool. This is exposed
+    * as a full executor service to provide its more robust API, but do not shut this service down.
+    * That is handled by the editor. */
+  def bgExecService :ExecutorService = throw new UnsupportedOperationException()
 
   /** Invokes `op` on the next UI tick. This can be invoked from the UI thread to defer an
     * operation until the next tick, or it can be invoked from a background thread to process

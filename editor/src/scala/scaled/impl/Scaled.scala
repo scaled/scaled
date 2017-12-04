@@ -43,6 +43,7 @@ class Scaled extends Application with Editor {
       override def execute (op :Runnable) = Platform.runLater(op)
     }
     override val bgExec = pool
+    override def bgExecService = pool
     override val errHandler = new Executor.ErrorHandler() {
       def emitError (err :Throwable) = logger.log(Errors.stackTraceToString(err))
     }
