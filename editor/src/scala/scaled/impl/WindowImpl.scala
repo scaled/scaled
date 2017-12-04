@@ -100,7 +100,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     }
 
     override def geometry = Geometry(disp.area.width, disp.area.height, 0, 0) // TODO: x/y pos
-    override def view = disp.area.bview
+    override def view :BufferViewImpl = if (disp != null) disp.area.bview else null
     override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl], false)
   }
 

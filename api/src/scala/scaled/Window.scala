@@ -19,7 +19,7 @@ trait Window extends Executor.ErrorHandler {
     /** Returns the window that contains this frame. */
     def window :Window = Window.this
 
-    /** Returns the buffer view that currently occupies this frame. */
+    /** Returns the buffer view that currently occupies this frame. May be `null`. */
     def view :BufferView
 
     /** Returns the store for the buffer edited previous to the current buffer in this frame.
