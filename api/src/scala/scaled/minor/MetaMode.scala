@@ -55,19 +55,19 @@ class MetaMode (env :Env) extends MinorMode(env) {
     // if the current frame has a previous buffer, and it is still open, use that as our default
     // buffer, otherwise fallback to the top buffer in the window buffers list (skipping our
     // current buffer), and if all else fails, just use our current buffer
-    val defb = window.focus.prevStore.flatMap(s => wspace.buffers.find(_.store == s)) orElse
-      wspace.buffers.filter(_ != curb).headOption getOrElse curb
-    val comp = Completer.buffer(wspace, defb, Set(curb))
-    window.mini.read(s"Switch to buffer (default ${defb.name}):", "", bufferHistory(wspace),
-                     comp) onSuccess frame.visit
+    val defb = window.focus.prevStore.flatMap(s => window.buffers.find(_.store == s)) orElse
+      window.buffers.filter(_ != curb).headOption getOrElse curb
+    val comp = Completer.buffer(window.buffers, defb, Set(curb))
+    window.mini.read(s"Switch to buffer (default ${defb.name}):", "", bufferHistory, comp).
+      onSuccess(frame.visit)
   }
 
   @Fn("Reads a buffer name from the minibuffer and kills (closes) it.")
   def killBuffer () {
     val current = buffer
     val prompt = s"Kill buffer (default ${current.name}):"
-    val comp = Completer.buffer(wspace, current)
-    window.mini.read(prompt, "", bufferHistory(wspace), comp) onSuccess(_.kill())
+    val comp = Completer.buffer(window.buffers, current)
+    window.mini.read(prompt, "", bufferHistory, comp).onSuccess(_.kill())
 
     // TODO: document our process when we have one:
 
@@ -312,9 +312,10 @@ class MetaMode (env :Env) extends MinorMode(env) {
     window.mini.read("Service:", "", serviceHistory, comp) map(_._2) onSuccess(editConfig)
   }
 
-  private def configScopeHistory = historyRing(wspace, "config-scope")
-  private def shellCommandHistory = historyRing(wspace, "shell-command")
-  private def serviceHistory = historyRing(wspace, "service")
+  private def bufferHistory = window.historyRing("buffer")
+  private def configScopeHistory = wspace.historyRing("config-scope")
+  private def shellCommandHistory = wspace.historyRing("shell-command")
+  private def serviceHistory = wspace.historyRing("service")
 
   private def editConfig (config :Config) {
     val scopes = config.scope.toList ; val comp = Completer.from(scopes)(_.name)

@@ -68,6 +68,7 @@ object TestData {
     def focus = ???
     def workspace = TestData.workspace
     def close () {}
+    def buffers = Seq()
     def exec = workspace.exec
     def emitError (err :Throwable) = err.printStackTrace(System.err)
     def popStatus (msg :String, subtext :String) {

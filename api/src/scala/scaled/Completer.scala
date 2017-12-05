@@ -183,22 +183,23 @@ object Completer {
   }
 
   /** Returns a completer on buffer name. */
-  def buffer (wspace :Workspace, defbuf :Buffer) :Completer[Buffer] = buffer(wspace, defbuf, Set())
+  def buffer (buffers :SeqV[Buffer], defbuf :Buffer) :Completer[Buffer] =
+    buffer(buffers, defbuf, Set())
 
   /** Returns a completer on buffer name. This behaves specially in that the empty completion omits
     * transient buffers (buffers named `*foo*`).
     * @param except a set of buffers to exclude from completion.
     */
-  def buffer (wspace :Workspace, defbuf :Buffer, except :Set[Buffer]) :Completer[Buffer] =
+  def buffer (buffers :SeqV[Buffer], defbuf :Buffer, except :Set[Buffer]) :Completer[Buffer] =
     new Completer[Buffer] {
       def complete (prefix :String) = {
         val bb = Seq.builder[Buffer]()
         bb += defbuf
         // add the non-scratch buffers, sorted by name
-        bb ++= wspace.buffers.filter(
+        bb ++= buffers.filter(
           b => !except(b) && !Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
         // add the scratch buffers after the non-scratch buffers, also sorted by name
-        bb ++= wspace.buffers.filter(
+        bb ++= buffers.filter(
           b => !except(b) && Buffer.isScratch(b.name) && b != defbuf).sortBy(_.name)
         val bufs = bb.build()
         Completion(prefix, bufs.map(_.name), bufs.mapBy(_.name))

@@ -86,6 +86,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         // what emacs does and who are we to question five decades of hard won experience
         if (buf.store.file.isDefined && !buf.store.exists) emitStatus("(New file)")
 
+        // make a note that we visited this buffer in our window
+        noteVisitedBuffer(buf)
+
         // make sure our window is visible and up front
         WindowImpl.this.toFront()
 
@@ -150,6 +153,14 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
 
   override val onClose = Signal[Window]()
   override def close () = ws.close(this)
+
+  private val _visitedBuffers = SeqBuffer[Buffer]()
+  private def noteVisitedBuffer (buffer :RBuffer) {
+    val hadBuffer = _visitedBuffers remove buffer
+    _visitedBuffers prepend buffer
+    if (!hadBuffer) buffer.killed.onEmit(_visitedBuffers remove buffer)
+  }
+  override def buffers = _visitedBuffers
 
   override def popStatus (msg :String, subtext :String) {
     _statusPopup.showStatus(msg, subtext)

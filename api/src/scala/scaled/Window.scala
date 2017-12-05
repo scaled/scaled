@@ -77,6 +77,10 @@ trait Window extends Executor.ErrorHandler {
   /** Closes this window. When all windows in all workspaces are closed, the process will exit. */
   def close () :Unit
 
+  /** Returns the subset of the workspace buffers that have ever been visited in this window, in
+    * order of most recent activation. */
+  def buffers :SeqV[Buffer]
+
   /** An executor which reports errors to this window. */
   def exec :Executor
 
@@ -108,6 +112,13 @@ trait Window extends Executor.ErrorHandler {
 
   /** Requests that this window be brought to the front of the window stack by the OS. */
   def toFront () :Unit
+
+  /** Returns the (window-scoped) history ring with the specified name. The ring will be created
+    * on-demand. */
+  def historyRing (name :String) = Mutable.getOrPut(
+    Rings(state), name, new Ring(workspace.config(EditorConfig.historySize)) {
+      override def toString = s"$name-history"
+    })
 }
 
 /** Describes the geometry of a [[Window]] or [[Frame]].

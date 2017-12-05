@@ -249,7 +249,7 @@ class ISearchMode (
   }
 
   /** The ring in which recent searches are stored. */
-  protected def isearchRing = Workspace.historyRing(wspace, "isearch")
+  protected def isearchRing = wspace.historyRing("isearch")
 
   protected def setFromHistory (idx :Int) :Unit = isearchRing.entry(0) match {
     case Some(sought) => setContents(sought)

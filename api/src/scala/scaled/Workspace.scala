@@ -106,6 +106,13 @@ abstract class Workspace extends Executor.ErrorHandler {
 
   /** Reports an unexpected error to the user. It is appended to the `*messages*` buffer. */
   def emitError (err :Throwable) :Unit
+
+  /** Returns the (workspace-scoped) history ring with the specified name. The ring will be created
+    * on-demand. Note the history ring names in `Workspace`, which are used by Scaled. */
+  def historyRing (name :String) = Mutable.getOrPut(
+    Rings(state), name, new Ring(config(EditorConfig.historySize)) {
+      override def toString = s"$name-history"
+    })
 }
 
 /** Static [[Workspace]] stuffs. */
@@ -115,26 +122,17 @@ object Workspace {
   val DefaultName = "Default"
 
   /** The history ring for file names (find-file, write-file, etc.). */
-  def fileHistory (ws :Workspace) = historyRing(ws, "file")
-  /** The history ring for buffer names (switch-to-buffer, kill-buffer, etc.). */
-  def bufferHistory (ws :Workspace) = historyRing(ws, "buffer")
+  def fileHistory (ws :Workspace) = ws.historyRing("file")
   /** The history ring for replace fns (replace-string, replace-regexp, query-replace, etc.). */
-  def replaceHistory (ws :Workspace) = historyRing(ws, "replace")
+  def replaceHistory (ws :Workspace) = ws.historyRing("replace")
   /** The history ring used for mode names. */
-  def modeHistory (ws :Workspace) = historyRing(ws, "mode")
+  def modeHistory (ws :Workspace) = ws.historyRing("mode")
   /** The history ring used for fns. */
-  def fnHistory (ws :Workspace) = historyRing(ws, "fn")
+  def fnHistory (ws :Workspace) = ws.historyRing("fn")
   /** The history ring used for config var names. */
-  def varHistory (ws :Workspace) = historyRing(ws, "var")
+  def varHistory (ws :Workspace) = ws.historyRing("var")
   /** The history ring used for config var values. */
-  def setVarHistory (ws :Workspace) = historyRing(ws, "set-var")
-
-  /** Returns the (workspace-wide) history ring with the specified name. The ring will be created
-    * on-demand. Note the history ring names above, which are used by Scaled. */
-  def historyRing (ws :Workspace, name :String) = Mutable.getOrPut(
-    Rings(ws.state), name, new Ring(ws.config(EditorConfig.historySize)) {
-      override def toString = s"$name-history"
-    })
+  def setVarHistory (ws :Workspace) = ws.historyRing("set-var")
 }
 
 /** Provides workspace services. */

@@ -398,5 +398,5 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   }
 
   /** The history ring used for config var values. */
-  protected def gotoLineHistory = Workspace.historyRing(wspace, "goto-line")
+  protected def gotoLineHistory = wspace.historyRing("goto-line")
 }

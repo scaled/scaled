@@ -737,5 +737,5 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   /** The history ring used for replace-rectangle strings. */
-  protected def replaceRectHistory = Workspace.historyRing(wspace, "replace-rectangle")
+  protected def replaceRectHistory = wspace.historyRing("replace-rectangle")
 }

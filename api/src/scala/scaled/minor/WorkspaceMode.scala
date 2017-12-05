@@ -53,7 +53,7 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
   }
 
   /** The history ring for workspace names. */
-  protected def nameHistory = Workspace.historyRing(wspace, "workspace-name")
+  protected def nameHistory = wspace.historyRing("workspace-name")
 
   private val wsvc = env.msvc.service[WorkspaceService]
 }
