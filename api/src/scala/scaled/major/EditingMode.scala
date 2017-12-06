@@ -717,7 +717,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          in the specified directory.""")
   def writeFile () {
     val bufwd = buffer.store.parent
-    window.mini.read("Write file:", bufwd, fileHistory(wspace), Completer.file) onSuccess { store =>
+    val fcomp = Completer.file(editor.exec)
+    window.mini.read("Write file:", bufwd, fileHistory(wspace), fcomp) onSuccess { store =>
       // require confirmation if another buffer is visiting the specified file; if they proceed,
       // the buffer will automatically be renamed (by internals) after it is saved
       (if (!wspace.buffers.exists(_.store == store)) Future.success(true)

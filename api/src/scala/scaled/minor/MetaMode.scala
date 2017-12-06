@@ -81,7 +81,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   @Fn("Reads a filename from the minibuffer and visits it in a buffer.")
   def findFile () {
     window.mini.read("Find file:", buffer.store.parent, fileHistory(wspace),
-                     Completer.file) onSuccess frame.visitFile
+                     Completer.file(editor.exec)) onSuccess frame.visitFile
   }
 
   @Fn("Reads a filename from the minibuffer and visits it in a buffer. The file need not exist.")

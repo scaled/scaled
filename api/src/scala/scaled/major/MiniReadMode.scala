@@ -24,8 +24,8 @@ class MiniReadMode[T] (
   setContents(initText)
 
   private def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
-  private var _comp = completer(current)
-  display()
+  private var _comp :Completion[T] = _
+  setCompletion(completer(current))
 
   // machinery for handling coalesced search string refreshing
   private var _refreshConn = null :Connection
@@ -33,10 +33,7 @@ class MiniReadMode[T] (
     if (_refreshConn != null) _refreshConn.close()
     _refreshConn = window.exec.uiTimer(75).connectSuccess { _ =>
       val glob = current ; val oglob = _comp.glob
-      if (glob != oglob) {
-        _comp = completer.refine(_comp, glob)
-        display()
-      }
+      if (glob != oglob) setCompletion(completer.refine(_comp, glob))
       _refreshConn = null
     }
   }
@@ -97,20 +94,23 @@ class MiniReadMode[T] (
     historyAge = age
   }
 
-  // don't display completions if we're not completing (TODO: have this be a member on Completer;
-  // comparing against a global seems pretty hacky)
-  private def display () :Unit = if (completer != Completer.none) {
-    setContents(_comp.glob)
-    val comps = _comp.comps
-    if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
-    else {
-      // if we have a path separator, strip off the path prefix shared by the current completion;
-      // this results in substantially smaller and more readable completions when we're completing
-      // things like long file system paths
-      val pre = _comp.glob
-      val preLen = completer.pathSeparator map(sep => pre.lastIndexOf(sep)+1) getOrElse 0
-      val stripped = if (preLen > 0) comps.map(_.substring(preLen)) else comps
-      miniui.showCompletions(stripped)
+  private def setCompletion (compF :Future[Completion[T]]) = compF.onSuccess(comp => {
+    _comp = comp
+    // don't display completions if we're not completing
+    // (TODO: have this be a member on Completer; comparing against a global is pretty hacky)
+    if (completer != Completer.none) {
+      setContents(comp.glob)
+      val comps = comp.comps
+      if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
+      else {
+        // if we have a path separator, strip off the path prefix shared by the current completion;
+        // this results in substantially smaller and more readable completions when we're
+        // completing things like long file system paths
+        val pre = comp.glob
+        val preLen = completer.pathSeparator map(sep => pre.lastIndexOf(sep)+1) getOrElse 0
+        val stripped = if (preLen > 0) comps.map(_.substring(preLen)) else comps
+        miniui.showCompletions(stripped)
+      }
     }
-  }
+  })
 }
