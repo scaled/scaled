@@ -24,7 +24,7 @@ class MiniReadMode[T] (
   setContents(initText)
 
   private def current = Line.toText(view.buffer.region(view.buffer.start, view.buffer.end))
-  private var _comp :Completion[T] = _
+  private var _comp = Completion.empty[T]("")
   setCompletion(completer(current))
 
   // machinery for handling coalesced search string refreshing
