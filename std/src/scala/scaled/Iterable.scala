@@ -101,6 +101,10 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
     acc
   }
 
+  /** Applies `f` to each element of this list and returns a collection that contains the
+    * "concatenation" of the results. */
+  def flatMap[B] (f :A => JIterable[B]) :Iterable[B] = foldBuild[B]((b, a) => b ++= f(a))
+
   /** Applies `op` to each element of this collection, in iteration order. */
   def foreach[U] (op :A => U) :Unit = {
     val iter = iterator() ; while (iter.hasNext) op(iter.next)
@@ -209,6 +213,19 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
     val iter = iterator() ; var acc :A1 = iter.next
     while (iter.hasNext) acc = op(acc, iter.next)
     acc
+  }
+
+  /** Returns a lazily computed filtered view of this collection.
+    * This chiefly exists to support Scala's for comprehension syntax. */
+  def withFilter (pred :(A => Boolean)) :Filtered[A] = {
+    class FilteredIterable(source :Iterable[A], pred :(A => Boolean)) extends Filtered[A] {
+      def map[B] (fn :(A => B)) = source.filter(pred).map(fn)
+      def flatMap[B] (fn :(A => JIterable[B])) = source.filter(pred).flatMap(fn)
+      def foreach[U] (fn :(A => U)) = source.filter(pred).foreach(fn)
+      def withFilter (pred :(A => Boolean)) =
+        new FilteredIterable(source, a => this.pred(a) && pred(a))
+    }
+    new FilteredIterable(this, pred)
   }
 
   /** Converts this collection into an (immutable) [[Seq]].

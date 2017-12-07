@@ -156,7 +156,7 @@ abstract class SeqV[+A] extends Ordered[A] {
   override def filter (pred :A => Boolean) :Seq[A] = super.filter(pred).toSeq
   override def filterNot (pred :A => Boolean) :Seq[A] = super.filterNot(pred).toSeq
 
-  override def flatMap[B] (f :A => Iterable[B]) :Seq[B] = super.flatMap(f).toSeq
+  override def flatMap[B] (f :A => JIterable[B]) :Seq[B] = super.flatMap(f).toSeq
 
   override def foldBuild[B] (op :(Unordered.Builder[B],A) => Unit) :Seq[B] = {
     val sb = Seq.builder[B]()

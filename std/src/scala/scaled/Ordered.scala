@@ -89,10 +89,6 @@ abstract class Ordered[+A] extends Unordered[A] {
     }
   }
 
-  /** Applies `f` to each element of this list and returns a collection that contains the
-    * "concatenation" of the results. */
-  def flatMap[B] (f :A => Iterable[B]) :Ordered[B] = foldBuild[B]((b, a) => b ++= f(a))
-
   /** Folds `op` over this collection, from left to right. */
   def foldLeft[B] (zero :B)(op :(B,A) => B) :B = fold(zero)(op)
   /** Folds `op` over this collection, from left to right. */
@@ -220,14 +216,6 @@ abstract class Ordered[+A] extends Unordered[A] {
     (b1.build(), b2.build())
   }
 
-  /** Returns a filtered view of this collection. **Note**: the view is lazily computed. This
-    * chiefly exists to support Scala's for comprehension syntax, but cal also be used directly if
-    * one wants to avoid creating an intermediate collection when doing `map`, `flatMap` or
-    * `foreach` on the filtered collection. */
-  def withFilter (pred :A => Boolean) :Filtered[A] = new Filtered[A](this, pred) {
-    override protected def newBuilder[B] () = Ordered.this.newBuilder[B]()
-  }
-
   /** Zips `this` with `that`. The result will contain `(a0,b0), (a1,b1), ...` and will have length
     * equal to that of the shorter of `this` and `that`. */
   def zip[B] (that :Ordered[B]) :Ordered[(A,B)] = {
@@ -279,11 +267,51 @@ abstract class Ordered[+A] extends Unordered[A] {
     super.filter(pred).asInstanceOf[Ordered[A]]
   override def filterNot (pred :A => Boolean) :Ordered[A] =
     super.filterNot(pred).asInstanceOf[Ordered[A]]
+  override def flatMap[B] (f :A => JIterable[B]) :Ordered[B] =
+    super.flatMap(f).asInstanceOf[Ordered[B]]
   override def foldBuild[B] (op :(Unordered.Builder[B],A) => Unit) :Ordered[B] =
     super.foldBuild(op).asInstanceOf[Ordered[B]]
   override def foldBuildJ[B] (op :BiConsumer[_ >: Unordered.Builder[B],_ >: A]) :Ordered[B] =
     super.foldBuildJ(op).asInstanceOf[Ordered[B]]
-  override def map[B] (f :A => B) :Ordered[B] = super.map(f).asInstanceOf[Ordered[B]]
+  override def map[B] (f :A => B) :Ordered[B] =
+    super.map(f).asInstanceOf[Ordered[B]]
+
+  override def withFilter (pred :A => Boolean) :Filtered[A] = {
+    abstract class FilteredOrdered (source :Ordered[A], pred :(A => Boolean)) extends Filtered[A] {
+      def map[B] (fn :(A => B)) :Ordered[B] = {
+        val bb = newBuilder[B]()
+        val iter = source.iterator() ; while (iter.hasNext) {
+          val elem = iter.next
+          if (pred(elem)) bb += fn(elem)
+        }
+        bb.build()
+      }
+      def flatMap[B] (fn :(A => JIterable[B])) :Ordered[B] = {
+        val bb = newBuilder[B]()
+        val iter = source.iterator() ; while (iter.hasNext) {
+          val elem = iter.next
+          if (pred(elem)) bb ++= fn(elem)
+        }
+        bb.build()
+      }
+      def foreach[U] (fn :(A => U)) {
+        val iter = source.iterator() ; while (iter.hasNext) {
+          val elem = iter.next
+          if (pred(elem)) fn(elem)
+        }
+      }
+      def withFilter (pred :(A => Boolean)) :Filtered[A] = {
+        val outer = this
+        new FilteredOrdered(source, a => this.pred(a) && pred(a)) {
+          override protected def newBuilder[B] () = outer.newBuilder[B]()
+        }
+      }
+      protected def newBuilder[B] () :Ordered.Builder[B]
+    }
+    new FilteredOrdered(this, pred) {
+      override protected def newBuilder[B] () = Ordered.this.newBuilder[B]()
+    }
+  }
 
   override def newBuilder[B] (expectedSize :Int = 4) :Builder[B]
   override def newEmpty[B] :Ordered[B]

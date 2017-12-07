@@ -47,7 +47,7 @@ abstract class Map[K,+V] extends Unordered[(K,V)] with (K => V) {
 
   /** Applies `f` to each `(k,v)` mapping in this map and returns a [[Seq]] that contains the
     * concatenation of the results. */
-  def flatMap[B] (f :((K,V)) => JIterable[B]) :Seq[B] = foldBuild[B]((b, a) => b ++= f(a)).toSeq
+  override def flatMap[B] (f :((K,V)) => JIterable[B]) :Seq[B] = super.flatMap(f).toSeq
 
   /** Applies `f` to each `(k,v)` mapping in this map and returns a [[Seq]] that contains the
     * concatenation of the results. */

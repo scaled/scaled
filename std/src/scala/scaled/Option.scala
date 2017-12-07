@@ -6,15 +6,21 @@ package scaled
 
 import java.util.{NoSuchElementException, Optional}
 
-/** Represents an optional value. An option is also a collection with zero or one elements. */
-sealed abstract class Option[+A] extends Unordered[A] {
+/** Represents an optional value. */
+sealed abstract class Option[+A] {
 
   /** Returns the option's value.
     * @throws NoSuchElementException if called on `None`. */
   def get :A
 
-  /** Returns true if this option contains a value, false otherwise. */
-  def isDefined :Boolean = !isEmpty
+  /** Returns `true` if this option contains a value, `false` otherwise. */
+  def isDefined :Boolean
+
+  /** Returns `false` if this option contains a value, `true` otherwise. */
+  def isEmpty :Boolean = !isDefined
+
+  /** Applies `f` to this option's value, if defined, wrapping the result in an option. */
+  @inline final def map[B] (f :A => B) :Option[B] = if (isDefined) Some(f(get)) else None
 
   /** Returns `None` if this option is empty, otherwise `f(get)`.
     * This is monadic bind for the `Option` monad. */
@@ -24,7 +30,7 @@ sealed abstract class Option[+A] extends Unordered[A] {
   @inline final def fold[B] (ifEmpty : =>B)(f :A => B) :B = if (isDefined) f(get) else ifEmpty
 
   /** Applies `op` to this option, if it is defined. */
-  @inline final override def foreach[U] (op :A => U) :Unit = if (isDefined) op(get) else None
+  @inline final def foreach[U] (op :A => U) :Unit = if (isDefined) op(get) else None
 
   /** Returns `get` if this option is defined, `other` if not. Note that `other` is lazy. */
   @inline final def getOrElse[B >: A] (other : =>B) :B = if (isDefined) get else other
@@ -49,22 +55,21 @@ sealed abstract class Option[+A] extends Unordered[A] {
   @inline final def orRight[B] (right : =>B) :Either[A,B] =
     if (isDefined) Left(get) else Right(right)
 
+  /** Views this option as an `Iterable`. */
+  def toIterable :Iterable[A] = toSeq
+
+  /** Converts this option to a `List`. */
+  def toList :List[A] = if (isDefined) get :: Nil else Nil
+
+  /** Converts this option to a `Seq`. */
+  def toSeq :Seq[A] = if (isDefined) Std.seq(get) else Seq.empty
+
   /** Converts this Scaled `Option` to a Scala `Option`. */
   def toScala :SOption[A] = if (isDefined) SSome(get) else SNone
-
-  override def map[B] (f :A => B) :Option[B] = super.map(f).asInstanceOf[Option[B]]
-  override def newBuilder[B] (expectedSize :Int) = new Option.Builder[B](expectedSize)
-  override def newEmpty[B] = Option.none
-  override protected def toStringType = "Option"
 }
 
 /** Static [[Option]] things. */
 object Option {
-
-  /** Used to build [[Option]]s. */
-  class Builder[A] (esize :Int) extends SeqBuffer[A](esize) with Unordered.Builder[A] {
-    override def build () :Option[A] = Option.build(elemsForBuild, size)
-  }
 
   /** Returns an option which contains `value`. */
   def some[A] (value :A) :Option[A] = new Some(value)
@@ -89,14 +94,6 @@ object Option {
   }
 
   private final class Some[+A] (value :A) extends Option[A] {
-    override def iterator = new JIterator[A @uV] {
-      private var _seen = false
-      override def hasNext = !_seen
-      override def next = if (_seen) throw new NoSuchElementException()
-                          else { _seen = true ; get }
-    }
-    override def copyInto (target :Array[Any], offset :Int) = target(offset) = value
-    override def size = 1
     override def isDefined = true
     override def get = value
     override def hashCode = if (value == null) 0 else value.hashCode
@@ -105,11 +102,6 @@ object Option {
       case _ => false
     }
     override def toString = s"Some($value)"
-    // overrides for performance
-    override def fold[B] (zero :B)(op :(B,A) => B) = op(zero, value)
-    override def map[B] (f :A => B) = Some(f(value))
-    override def toList = value :: Nil
-    override def toSeq = Std.seq(value)
   }
 }
 
@@ -125,17 +117,10 @@ object Some {
 
 /** The [[Option]] that contains no value. */
 case object None extends Option[Nothing] {
-  override def iterator = Nil.iterator()
-  override def copyInto (target :Array[Any], offset :Int) {}
-  override def size = 0
+
   override def get = throw new NoSuchElementException("Called get on empty Option.")
   override def isDefined = false
   override def hashCode = 0
   override def equals (other :Any) = this eq other.asInstanceOf[AnyRef]
   override def toString = "None"
-  // overrides for performance
-  override def fold[B] (zero :B)(op :(B,Nothing) => B) = zero
-  override def map[B] (f :Nothing => B) = None
-  override def toList = Nil
-  override def toSeq = Seq.empty
 }

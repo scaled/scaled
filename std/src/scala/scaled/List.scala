@@ -108,7 +108,7 @@ sealed abstract class List[+A] extends Ordered[A] {
   override def filter (pred :A => Boolean) :List[A] = super.filter(pred).toList
   override def filterNot (pred :A => Boolean) :List[A] = super.filterNot(pred).toList
 
-  override def flatMap[B] (f :A => Iterable[B]) :List[B] = super.flatMap(f).toList
+  override def flatMap[B] (f :A => JIterable[B]) :List[B] = super.flatMap(f).toList
 
   override def foldBuild[B] (op :(Unordered.Builder[B],A) => Unit) :List[B] = {
     val lb = List.builder[B]() ; var ll = this

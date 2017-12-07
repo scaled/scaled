@@ -73,6 +73,7 @@ package object scaled {
   }
 
   // some implicit conversions to make working with Scala collections easier
+  implicit def optToIterable[A] (opt :Option[A]) :Iterable[A] = opt.toIterable
   implicit class SeqOps[A] (private val as :SSeq[A]) extends AnyVal {
     // we can't use toSeq here because that's already defined on scala.Seq &c
     def fromScala = Seq(as :_*)
