@@ -520,9 +520,13 @@ object Line {
   /** Calls [[fromText]] on `text` and tacks on a blank line. */
   def fromTextNL (text :String) = fromText(text) :+ Empty
 
-  /** Converts `lines` to a string which will contain line separators between lines. */
-  def toText (lines :Ordered[LineV]) :String = lines.foldLeft(new JStringBuilder())(
-    (sb, l) => sb.append(l).append(System.lineSeparator)).toString
+  /** Appends `lines` to `buf`, separated by `sep`. */
+  def toText (lines :Ordered[LineV], buf :JStringBuilder, sep :String) :JStringBuilder =
+    lines.foldLeft(buf)((b, l) => if (b.length > 0) b.append(sep).append(l) else b.append(l))
+
+  /** Converts `lines` to a string, separated by the platform line separator. */
+  def toText (lines :Ordered[LineV]) :String =
+    toText(lines, new JStringBuilder(), System.lineSeparator).toString
 
   /** Converts `cs` into an array of `Char`. */
   def toCharArray (cs :CharSequence) :Array[Char] = {
