@@ -5,6 +5,7 @@
 
 package scaled
 
+import java.io.Closeable
 import java.util.concurrent.Executor
 
 /** A view of a [[Signal]] on which one may listen but via which one cannot emit value. */
@@ -29,6 +30,53 @@ class SignalV[+T] extends Reactor {
       override def run ()  = notifyEmit(value)
     })
   }
+
+  /** Returns a signal which emits values from `this` only when `timeout` milliseconds elapse
+    * without subsequent values being emitted. If a new value is emitted in the timeout window, the
+    * earlier value is dropped and the timeout is restarted with the new value.
+    * @param scheduler used to schedule delays. Note that emissions of the debounced value will
+    * necessarily happen on the thread(s) used by the scheduler. Use [via] to reroute to a
+    * different thread if necessary.
+    */
+  def debounce (timeout :Long, scheduler :Scheduler) :SignalV[T] = new DelegateSignalV[T,T](this) {
+    var pending :Closeable = null
+    override def onParentValue (value :T) = {
+      if (pending != null) pending.close()
+      pending = scheduler.schedule(timeout, new Runnable() {
+        override def run () {
+          pending = null
+          notifyEmit(value)
+        }
+      })
+    }
+  }
+
+  /** Returns a signal which emits batches of values from `this` when `timeout` milliseconds elapse
+    * after the emission of the final value in a batch. If a new value is emitted in the timeout
+    * window, it is added to the batch and the timeout is restarted.
+    * @param scheduler used to schedule delays. Note that emissions of the batches will necessarily
+    * happen on the thread(s) used by the scheduler. Use [via] to reroute to a different thread if
+    * necessary.
+    */
+  def debounceBatched (timeout :Long, scheduler :Scheduler) :SignalV[Seq[T]] =
+    new DelegateSignalV[T,Seq[T]](this) {
+      var pending :Closeable = null
+      var batch = Seq.builder[T]()
+      override def onParentValue (value :T) = {
+        if (pending != null) pending.close()
+        batch.synchronized { batch += value }
+        pending = scheduler.schedule(timeout, new Runnable() {
+          override def run () {
+            pending = null
+            notifyEmit(batch.synchronized {
+              val built = batch.build()
+              batch = Seq.builder[T]()
+              built
+            })
+          }
+        })
+      }
+    }
 
   /** Connects the supplied slot (side-effecting function) with priorty zero. When a value is
     * emitted, the slot will be invoked with the value.
