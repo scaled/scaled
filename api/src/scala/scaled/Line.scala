@@ -521,14 +521,13 @@ object Line {
   def fromTextNL (text :String) = fromText(text) :+ Empty
 
   /** Converts `lines` to a string which will contain line separators between lines. */
-  def toText (lines :Ordered[LineV]) :String = lines.map(_.asString).mkString(System.lineSeparator)
+  def toText (lines :Ordered[LineV]) :String = lines.foldLeft(new JStringBuilder())(
+    (sb, l) => sb.append(l).append(System.lineSeparator)).toString
 
   /** Converts `cs` into an array of `Char`. */
   def toCharArray (cs :CharSequence) :Array[Char] = {
     val arr = new Array[Char](cs.length)
-    var ii = 0 ; while (ii < arr.length) {
-      arr(ii) = cs.charAt(ii) ; ii += 1
-    }
+    var ii = 0 ; while (ii < arr.length) { arr(ii) = cs.charAt(ii) ; ii += 1 }
     arr
   }
 }
