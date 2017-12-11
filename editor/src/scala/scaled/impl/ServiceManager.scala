@@ -16,7 +16,7 @@ class ServiceInjector (val log :Logger, val exec :Executor, editor :Editor)
   def metaFile (name: String) :Path = ??? // implemented by ServiceManager
 
   def service[T] (clazz :Class[T]) :T = resolveService(clazz).asInstanceOf[T]
-  def process[P] (thunk: => P) :Pipe[P] = new Plumbing(exec.bgExec, thunk)
+  def process[P] (thunk: => P) :Pipe[P] = new Plumbing(exec.bg, thunk)
   def injectInstance[T] (clazz :Class[T], args :List[Any]) :T = {
     def fail (t :Throwable) = throw new InstantiationException(
       s"Unable to inject $clazz [args=$args]").initCause(t)

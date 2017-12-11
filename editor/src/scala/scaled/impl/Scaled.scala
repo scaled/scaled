@@ -4,10 +4,10 @@
 
 package scaled.impl
 
-import java.io.File
+import java.io.{Closeable, File}
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
-import java.util.{List => JList, ArrayList}
+import java.util.{List => JList, ArrayList, Timer, TimerTask}
 import javafx.animation.{KeyFrame, Timeline}
 import javafx.application.{Application, Platform}
 import javafx.event.{ActionEvent, EventHandler}
@@ -38,21 +38,32 @@ class Scaled extends Application with Editor {
     }
   }
 
+  val timer = new Timer("Scaled Timer", true)
+
   override val exec = new Executor {
-    override val uiExec = new java.util.concurrent.Executor {
+    override val ui = new Scheduler {
       override def execute (op :Runnable) = Platform.runLater(op)
+      override def schedule (delay :Long, op :Runnable) = {
+        var canceled = false
+        new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {
+          override def handle (event :ActionEvent) = if (!canceled) op.run()
+        })).play()
+        new Closeable() {
+          def close () = canceled = true
+        }
+      }
     }
-    override val bgExec = pool
-    override def bgExecService = pool
+    override val bg = new Scheduler() {
+      override def execute (op :Runnable) = pool.execute(op)
+      override def schedule (delay :Long, op :Runnable) = {
+        val task = new TimerTask() { override def run () = op.run() }
+        timer.schedule(task, delay)
+        new Closeable() { def close () = task.cancel() }
+      }
+    }
+    override def bgService = pool
     override val errHandler = new Executor.ErrorHandler() {
       def emitError (err :Throwable) = logger.log(Errors.stackTraceToString(err))
-    }
-    override def uiTimer (delay :Long) = {
-      val result = Promise[Unit]()
-      new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {
-        override def handle (event :ActionEvent) = result.succeed(())
-      })).play()
-      result
     }
   }
 

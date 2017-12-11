@@ -44,7 +44,7 @@ abstract class Workspace extends Executor.ErrorHandler {
 
   /** A signal via which a background service can emit a status message which will be displayed by
     * all windows open in this workspace. */
-  val statusMsg = Signal[String](editor.exec.uiExec)
+  val statusMsg = Signal[String](editor.exec.ui)
 
   /** The global editor in which this workspace is contained. */
   def editor :Editor

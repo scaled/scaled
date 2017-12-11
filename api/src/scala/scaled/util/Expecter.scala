@@ -19,7 +19,7 @@ import scaled._
 abstract class Expecter (exec :Executor, config :SubProcess.Config) {
   import SubProcess._
 
-  private val events = Signal[SubProcess.Event](exec.uiExec)
+  private val events = Signal[SubProcess.Event](exec.ui)
   events.onValue { _ match {
     case Output(text, isErr) =>
       if (_responder == null) onUnexpected(text, isErr)

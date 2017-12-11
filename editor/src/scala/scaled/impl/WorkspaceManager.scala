@@ -217,10 +217,9 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
   override val exec = new Executor {
-    override val uiExec = app.exec.uiExec
-    override val bgExec = app.exec.bgExec
+    override val ui = app.exec.ui
+    override val bg = app.exec.bg
     override val errHandler = WorkspaceImpl.this
-    override def uiTimer (delay :Long) = app.exec.uiTimer(delay)
   }
   override def emitError (err :Throwable) {
     if (!Errors.isFeedback(err)) {

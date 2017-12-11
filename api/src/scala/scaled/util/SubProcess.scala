@@ -42,7 +42,7 @@ object SubProcess {
     * failure, `true` if it's closed normally. */
   def apply (config :Config, exec :Executor, buffer :Buffer,
              onExit :Boolean => Unit = noopOnExit) :SubProcess = {
-    val events = Signal[Event](exec.uiExec)
+    val events = Signal[Event](exec.ui)
     events.onValue { _ match {
       case Output(text, _) => buffer.append(Line.fromTextNL(text))
       case Complete(isErr) => if (!isErr) onExit(true)

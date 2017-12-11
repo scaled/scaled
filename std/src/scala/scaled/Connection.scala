@@ -5,11 +5,13 @@
 
 package scaled
 
+import java.io.Closeable
+
 /**
  * Provides a mechanism to cancel a slot or listener registration, or to perform post-registration
  * adjustment like making the registration single-shot.
  */
-trait Connection extends java.io.Closeable {
+trait Connection extends Closeable {
 
   /**
    * Disconnects this registration. Subsequent events will not be dispatched to the associated slot
@@ -31,5 +33,10 @@ object Connection {
   val Noop :Connection = new Connection() {
     override def close () {}
     override def once () = this
+  }
+
+  /** A closeable that does nothing. */
+  val NoopCloseable :Closeable = new Closeable() {
+    override def close () {}
   }
 }

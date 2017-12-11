@@ -10,14 +10,14 @@ object TestUtil {
 
   class AccumExec extends Executor {
     private val rs = SeqBuffer[Runnable]()
-    val uiExec = new java.util.concurrent.Executor() {
+    val ui = new Scheduler() {
       override def execute (op :Runnable) :Unit = rs += op
+      override def schedule (delay :Long, op :Runnable) = throw new UnsupportedOperationException()
     }
-    val bgExec = uiExec
+    val bg = ui
     val errHandler = new Executor.ErrorHandler() {
       override def emitError (err :Throwable) = err.printStackTrace(System.err)
     }
-    override def uiTimer (delay :Long) = Future.failure(new Exception("Not implemented"))
     def executeAll () = {
       rs foreach { _.run() }
       rs.clear()

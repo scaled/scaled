@@ -172,10 +172,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     if (!ephemeral) ws.recordMessage(msg)
   }
   override val exec = new Executor {
-    override val uiExec = ws.exec.uiExec
-    override val bgExec = ws.exec.bgExec
+    override val ui = ws.exec.ui
+    override val bg = ws.exec.bg
     override val errHandler = WindowImpl.this
-    override def uiTimer (delay :Long) = ws.exec.uiTimer(delay)
   }
   override def emitError (err :Throwable) :Unit = err match {
     // if this is a wrapped reaction exception, unwrap
