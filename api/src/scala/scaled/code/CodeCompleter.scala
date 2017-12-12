@@ -10,31 +10,35 @@ import scaled._
 import scaled.util.Chars
 
 /** Provides a pluggable mechanism for code completion. */
-abstract class Completer {
+abstract class CodeCompleter {
 
   /** Generates a list of completions for the code at `pos`. */
-  def completeAt (buffer :Buffer, pos :Loc) :Future[Completer.Result]
+  def completeAt (buffer :Buffer, pos :Loc) :Future[CodeCompletion]
+
+  /** Helper method to create a result to return from [[completeAt]. */
+  protected def completion (start :Loc, length :Int, comps :SeqV[String]) =
+    CodeCompletion(start, length, comps, 0)
 }
 
-object Completer {
+/** Encapsulates the result of a completion request.
+  * @param start the start of the 'prefix' that was used by the completer.
+  * @param length the length of the 'prefix' used by the completer.
+  * @param comps the completions for the prefix previously specified.
+  * @param index the index of the completion to use (generally starts at zero & is used by
+  * CodeMode to track position when cycling through completions).
+  */
+case class CodeCompletion (start :Loc, length :Int, comps :SeqV[String], index :Int) {
+  /** The currently active completion. */
+  def active :String = comps(index)
+  /** Returns a result configured with the next completion active. */
+  def next :CodeCompletion = copy(index = (index+1) % comps.length)
+}
 
-  /** Encapsulates the result of a completion request.
-    * @param start the start of the 'prefix' that was used by the completer.
-    * @param length the length of the 'prefix' used by the completer.
-    * @param comps the completions for the prefix previously specified.
-    * @param index the index of the completion to use (generally starts at zero & is used by
-    * CodeMode to track position when cycling through completions).
-    */
-  case class Result (start :Loc, length :Int, comps :SeqV[String], index :Int) {
-    /** The currently active completion. */
-    def active :String = comps(index)
-    /** Returns a result configured with the next completion active. */
-    def next :Result = copy(index = (index+1) % comps.length)
-  }
+object CodeCompleter {
 
   /** Returns a completer for use with `buffer`. */
-  def completerFor (wspace :Workspace, buffer :Buffer) :Completer =
-    buffer.state.get[Completer] match {
+  def completerFor (wspace :Workspace, buffer :Buffer) :CodeCompleter =
+    buffer.state.get[CodeCompleter] match {
       case Some(comp) => comp
       case None       => tokenCompleter(wspace)
     }
@@ -49,7 +53,7 @@ object Completer {
   }
 }
 
-class TokenCompleter (val wspace :Workspace) extends Completer {
+class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
 
   final val MinRefreshInterval = 3000L
 
@@ -146,6 +150,6 @@ class TokenCompleter (val wspace :Workspace) extends Completer {
       if (matches.size() > 0) matches.add(token)
       Seq.builder[String]().append(matches).build()
     }
-    Future.success(Completer.Result(pstart, prefix.length, comps, 0))
+    Future.success(CodeCompletion(pstart, prefix.length, comps, 0))
   }
 }

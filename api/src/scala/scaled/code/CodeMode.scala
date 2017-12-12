@@ -93,8 +93,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** A helper class for dealing with comments. */
   val commenter :Commenter
 
-  /** Used to complete code/strings. */
-  val completer :Completer = Completer.completerFor(window.workspace, buffer)
+  /** Used to complete code. */
+  def completer :CodeCompleter = CodeCompleter.completerFor(window.workspace, buffer)
 
   /** Indicates the current block, if any. Updated when bracket is inserted or the point moves. */
   val curBlock = OptValue[Block]()
@@ -173,7 +173,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Triggers a completion at the specified point. */
   def completeAt (pos :Loc) {
     // if there's a currently active completion just prior to pos, advance it
-    buffer.tagAt(classOf[Completer.Result], pos.prevC) match {
+    buffer.tagAt(classOf[CodeCompletion], pos.prevC) match {
       case Some(res) => // advance
         val next = res.next
         val line = Line.builder(next.active).withTag(next).
