@@ -308,6 +308,29 @@ object Line {
     /** Returns the current length of this builder's line. */
     def length = _length
 
+    /** Appends `c` to this line builder. */
+    def append (c :Char) :Builder = {
+      val olength = _length
+      expand(1)
+      _cs(olength) = c
+      this
+    }
+    /** A synonym for [[append(Char)]]. */
+    def += (c :Char) = append(c)
+
+    /** Appends `text` to this line builder. */
+    def append (text :CharSequence) :Builder = {
+      val olength = _length
+      var ll = text.length ; expand(text.length)
+      var ii = 0 ; while (ii < ll) {
+        _cs(olength+ii) = text.charAt(ii)
+        ii += 1
+      }
+      this
+    }
+    /** A synonym for [[append(CharSequence)]]. */
+    def += (text :CharSequence) = append(text)
+
     /** Appends `text` to this line builder. */
     def append (text :String) :Builder = {
       val olength = _length

@@ -139,7 +139,9 @@ class LineTest {
     val lb = Line.builder("Test")
     lb += " foo"
     lb += " bar"
-    assertEquals(Line("Test foo bar"), lb.build())
+    lb += '!'
+    lb += Line(" Wow!")
+    assertEquals(Line("Test foo bar! Wow!"), lb.build())
   }
 
   @Test def testSplitLines () {
