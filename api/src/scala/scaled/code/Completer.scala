@@ -33,15 +33,19 @@ object Completer {
   }
 
   /** Returns a completer for use with `buffer`. */
-  def completerFor (wspace :Workspace, buffer :Buffer) :Completer = {
-    // TODO: something more pluggable
-    wspace.state.get[TokenCompleter] match {
+  def completerFor (wspace :Workspace, buffer :Buffer) :Completer =
+    buffer.state.get[Completer] match {
       case Some(comp) => comp
-      case None =>
-        val comp = new TokenCompleter(wspace)
-        wspace.state.set[TokenCompleter](comp)
-        comp
+      case None       => tokenCompleter(wspace)
     }
+
+  /** Returns a completer over all tokens in all buffers in `wspace`. */
+  def tokenCompleter (wspace :Workspace) = wspace.state.get[TokenCompleter] match {
+    case Some(comp) => comp
+    case None =>
+      val comp = new TokenCompleter(wspace)
+      wspace.state.set[TokenCompleter](comp)
+      comp
   }
 }
 
