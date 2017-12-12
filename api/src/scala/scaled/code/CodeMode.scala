@@ -82,6 +82,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     bind("indent-region",    "C-M-\\").
     bind("comment-region",   "C-c C-c").
     bind("uncomment-region", "C-c C-u"). // TODO: prefix args?
+    bind("quote-region",     "C-c C-q").
 
     bind("show-syntax", "M-A-s");
 
@@ -105,6 +106,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Enumerates the close brackets that will be matched when tracking blocks.
     * These must match the order of [[openBrackets]] exactly. */
   def closeBrackets = "})]"
+
+  /** The character used by [[quoteRegion]]. */
+  def quoteChar = '"'
+
+  /** The line separator used by [[quoteRegion]]. */
+  def quotedLineSeparator = ","
 
   // as the point moves around, track the active block
   view.point onValue { p => curBlock() = blocker(p) }
@@ -440,4 +447,26 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       }
     }
   }
+
+  @Fn("""Places quotes around the region. If the start and end of the region are in column zero,
+         quotes are placed at the start and end of each line in the region, and the quoted line
+         separator is inserted between each quoted line. If the start or end of the region are
+         not in column zero, a quote character is placed only at the region start and end.""")
+  def quoteRegion () {
+    withRegion { (start, end) =>
+      if (start.col == 0 && end.col == 0) {
+        val lastEnd = buffer.backward(end, 1)
+        val lines = buffer.region(start, lastEnd)
+        buffer.replace(start, lastEnd, lines.map(l => quoteLine(l, l != lines.last)))
+      } else {
+        buffer.insert(end, quoteChar, Syntax.Default)
+        buffer.insert(start, quoteChar, Syntax.Default)
+      }
+    }
+  }
+
+  private def quoteLine (line :LineV, addSep :Boolean) =
+    if (line.length == 0) line
+    else Line.builder("").append(quoteChar).append(line).append(quoteChar).
+      append(if (addSep) quotedLineSeparator else "").build()
 }
