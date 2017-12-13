@@ -172,27 +172,33 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** Triggers a completion at the specified point. */
   def completeAt (pos :Loc) {
+    import CodeCompleter._
+    def show (comp :Completion) {
+      val active = comp.choices(comp.index)
+      val line = Line.builder(active.text).withTag(comp).build()
+      buffer.replace(comp.start, comp.length, line)
+
+      // TODO: truncate list if it's too long to fit on screen (then truncate above and below the
+      // active completion so we show a sliding window around that completion...)
+      val avail = comp.choices.map(c => {
+        val b = Line.builder(c.text)
+        if (c == active) b.withStyle(keywordStyle)
+        b.build()
+      })
+      view.popup() = Popup.lines(avail, Popup.DnRight(comp.start))
+    }
+
     // if there's a currently active completion just prior to pos, advance it
-    buffer.tagAt(classOf[CodeCompletion], pos.prevC) match {
-      case Some(res) => // advance
-        val next = res.next
-        val line = Line.builder(next.active).withTag(next).
-          // withStyle(variableStyle).
-          build()
-        // undo the previous completion and insert a new onel this avoids polluting the undo stack
+    buffer.tagAt(classOf[Completion], pos.prevC) match {
+      case Some(res) =>
+        // undo the previous completion and insert a new one; this avoids polluting the undo stack
         // with completion candidates but still behaves otherwise sensibly
         undo()
-        buffer.replace(res.start, res.length, line)
-
+        show(res.copy(index = (res.index+1) % res.choices.length))
       case None =>
         completer.completeAt(buffer, pos).onFailure(window.emitError).onSuccess { res =>
-          if (res.comps.isEmpty) window.emitStatus("No completions.")
-          else {
-            val line = Line.builder(res.active).withTag(res).
-              // withStyle(variableStyle).
-              build()
-            buffer.replace(res.start, res.length, line)
-          }
+          if (res.choices.isEmpty) window.emitStatus("No completions.")
+          else show(res)
         }
     }
   }

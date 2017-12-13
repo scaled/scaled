@@ -11,30 +11,28 @@ import scaled.util.Chars
 
 /** Provides a pluggable mechanism for code completion. */
 abstract class CodeCompleter {
+  import CodeCompleter._
 
   /** Generates a list of completions for the code at `pos`. */
-  def completeAt (buffer :Buffer, pos :Loc) :Future[CodeCompletion]
-
-  /** Helper method to create a result to return from [[completeAt]. */
-  protected def completion (start :Loc, length :Int, comps :SeqV[String]) =
-    CodeCompletion(start, length, comps, 0)
-}
-
-/** Encapsulates the result of a completion request.
-  * @param start the start of the 'prefix' that was used by the completer.
-  * @param length the length of the 'prefix' used by the completer.
-  * @param comps the completions for the prefix previously specified.
-  * @param index the index of the completion to use (generally starts at zero & is used by
-  * CodeMode to track position when cycling through completions).
-  */
-case class CodeCompletion (start :Loc, length :Int, comps :SeqV[String], index :Int) {
-  /** The currently active completion. */
-  def active :String = comps(index)
-  /** Returns a result configured with the next completion active. */
-  def next :CodeCompletion = copy(index = (index+1) % comps.length)
+  def completeAt (buffer :Buffer, pos :Loc) :Future[Completion]
 }
 
 object CodeCompleter {
+
+  /** Contains info on a single completion choice.
+    * @param text the text of the completion (inserted into the buffer).
+    * @param details optional details to show when choice is active.
+    */
+  case class Choice (text :String, details :SeqV[LineV])
+
+  /** Encapsulates the result of a completion request.
+    * @param start the start of the 'prefix' that was used by the completer.
+    * @param length the length of the 'prefix' used by the completer.
+    * @param choices the completions for the prefix previously specified.
+    * @param index the index of the completion to use (generally starts at zero & is used by
+    * CodeMode to track position when cycling through completions).
+    */
+  case class Completion (start :Loc, length :Int, choices :SeqV[Choice], index :Int = 0)
 
   /** Returns a completer for use with `buffer`. */
   def completerFor (wspace :Workspace, buffer :Buffer) :CodeCompleter =
@@ -54,7 +52,7 @@ object CodeCompleter {
 }
 
 class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
-
+  import CodeCompleter._
   final val MinRefreshInterval = 3000L
 
   class Tokener (val buffer :RBuffer) {
@@ -150,6 +148,6 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
       if (matches.size() > 0) matches.add(token)
       Seq.builder[String]().append(matches).build()
     }
-    Future.success(CodeCompletion(pstart, prefix.length, comps, 0))
+    Future.success(Completion(pstart, prefix.length, comps.map(Choice(_, Seq())), 0))
   }
 }
