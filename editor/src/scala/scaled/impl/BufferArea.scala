@@ -22,6 +22,7 @@ import javafx.scene.paint.{Color, Paint}
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.{Font, Text, TextBoundsType}
 
+import java.util.HashMap
 import java.util.concurrent.Callable
 import scaled._
 
@@ -175,8 +176,8 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
     def clear () {
       // TODO: fade the popup out?
-      popup.getChildren.clear()
-      popup.setVisible(false)
+      getChildren.clear()
+      setVisible(false)
       _pos = null
     }
 
@@ -218,13 +219,28 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     }
   }
 
-  private val popup = new PopWin()
+  private val mainPopup = new PopWin()
   private def checkPopup (force :Boolean)(popOpt :Option[Popup]) = popOpt match {
-    case None      => popup.clear()
+    case None      => mainPopup.clear()
     // if our content node is not currently laid out, it will recheck the popup when it's done
-    case Some(pop) => if (!contentNode.isNeedsLayout || force) popup.display(pop)
+    case Some(pop) => if (!contentNode.isNeedsLayout || force) mainPopup.display(pop)
   }
   bview.popup onValue checkPopup(false)
+
+  private val auxPopups = new HashMap[Popup, PopWin]()
+  bview.popupAdded.onValue { popup =>
+    val win = new PopWin()
+    auxPopups.put(popup, win)
+    contentNode.getChildren.add(win)
+    win.display(popup)
+  }
+  bview.popupCleared.onValue { popup =>
+    val win = auxPopups.get(popup)
+    if (win != null) {
+      win.clear()
+      contentNode.getChildren.remove(win)
+    } else println(s"No popwin for popup? $popup")
+  }
 
   // contains our line nodes and other decorative nodes (cursor, selection, etc.)
   class ContentNode extends Region {
@@ -383,7 +399,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   contentNode.setManaged(false)
 
   // put our scene graph together
-  contentNode.getChildren.addAll(lineNodes, cursor, uncursor, popup)
+  contentNode.getChildren.addAll(lineNodes, cursor, uncursor, mainPopup)
   getChildren.add(contentNode)
 
   // move the cursor when the point is updated
