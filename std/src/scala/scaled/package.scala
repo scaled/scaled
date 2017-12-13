@@ -28,6 +28,7 @@ package object scaled {
 
   // TODO: make these aliases if SI-8079 is ever fixed; sigh
   trait JConsumer[-T] extends juf.Consumer[T @uV]
+  trait JPredicate[-T] extends juf.Predicate[T @uV]
   trait JFunction[-T,+R] extends juf.Function[T @uV, R @uV]
 
   // for great Scala interop

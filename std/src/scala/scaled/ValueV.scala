@@ -40,6 +40,26 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
     })
   }
 
+  /** Returns a signal which emits a value whenever `this` value changes. */
+  def asSignal :SignalV[T] = {
+    new SignalV[T] {
+      // connectionAdded and connectionRemoved are only ever called with a lock held on this
+      // reactor, so we're safe in checking and mutating _conn
+      override protected def connectionAdded () {
+        super.connectionAdded()
+        if (_conn == null) _conn = ValueV.this.onValue(notifyEmit)
+      }
+      override protected def connectionRemoved () {
+        super.connectionRemoved()
+        if (!hasConnections && _conn != null) {
+          _conn.close()
+          _conn = null
+        }
+      }
+      protected var _conn :Connection = _
+    }
+  }
+
   override def hashCode = get match {
     case null => 0
     case v    => v.hashCode

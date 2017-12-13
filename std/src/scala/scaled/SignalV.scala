@@ -19,6 +19,14 @@ class SignalV[+T] extends Reactor {
     override def onParentValue (value :T) = notifyEmit(f(value));
   }
 
+  /** Filters the output of this signal via `f`. When this signal emits a value, the filtered
+    * signal will only emit a value if the value passes the supplied predicate. The filtered value
+    * will retain a connection to this signal for as long as it has connections of its own.
+    */
+  def filter (f :JPredicate[T]) :SignalV[T] = new DelegateSignalV[T,T](this) {
+    override def onParentValue (value :T) = if (f.test(value)) notifyEmit(value)
+  }
+
   /** Returns a signal which emits whenever this signal emits except that listeners are notified
     * via the supplied executor. This is useful for ensuring that regardless of which thread from
     * which a signal is emitted, the listeners are always notified on a particular thread (or in a
