@@ -17,16 +17,16 @@ trait ModeLine {
     * @param value the reactive value to be displayed.
     * @param tooltip a tooltip to be displayed to the user when they hover over the datum.
     *
-    * @return an [[AutoCloseable]] which will remove the datum from the modeline when closed.
+    * @return an [[Closeable]] which will remove the datum from the modeline when closed.
     * A mode is advised to `note()` this closeable so that it will automatically be removed if
     * the mode is deactivated. Fire and forget!
     */
-  def addDatum (value :ValueV[String], tooltip :String) :AutoCloseable =
+  def addDatum (value :ValueV[String], tooltip :String) :Closeable =
     addDatum(value, Value(new Tooltip(tooltip)))
 
   /** Like [[addDatum(ValueV[String],ValueV[String])]] but which takes a reactive value containing
     * a fully realized tooltip (which can contain an arbitrary scene graph). */
-  def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) :AutoCloseable
+  def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) :Closeable
 }
 
 object ModeLine {
@@ -35,9 +35,7 @@ object ModeLine {
     * linee (like minibuffer modes) or when testing.
     */
   val Noop = new ModeLine() {
-    override def addDatum (value :ValueV[String], tooltip :String) = NoopCloseable
-    override def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) = NoopCloseable
+    override def addDatum (value :ValueV[String], tooltip :String) = Closeable.Noop
+    override def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) = Closeable.Noop
   }
-
-  private val NoopCloseable = new AutoCloseable() { def close () {} }
 }

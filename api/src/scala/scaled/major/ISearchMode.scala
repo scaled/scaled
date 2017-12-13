@@ -118,12 +118,12 @@ class ISearchMode (
 
   // tracks the styles added for a complete set of matches
   private var _clearMatches = () => ()
-  private var _pendingShow = Connection.NoopCloseable
+  private var _pendingShow = Closeable.Noop
   private def showMatches (matches :Seq[Loc], sought :Seq[LineV]) {
     clearMatches()
     // defer actually showing these matches for 250ms
     _pendingShow = env.msvc.exec.ui.schedule(250, () => {
-      _pendingShow = Connection.NoopCloseable
+      _pendingShow = Closeable.Noop
       matches foreach { l => mainBuffer.addStyle(matchStyle, l, l + sought) }
       _clearMatches = { () =>
         matches foreach { l => mainBuffer.removeStyle(matchStyle, l, l + sought) }

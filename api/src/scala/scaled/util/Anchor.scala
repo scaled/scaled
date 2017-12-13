@@ -59,7 +59,7 @@ object Anchor {
     * If the anchor set is no longer needed but the buffer on which it operates will live longer,
     * the anchor set must be [[close]]d.
     */
-  class Set (buffer :RBuffer) extends AutoCloseable {
+  class Set (buffer :RBuffer) extends Closeable {
 
     private[this] val _anchors = new ArrayList[Anchor]()
 

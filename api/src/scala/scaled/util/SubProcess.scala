@@ -63,8 +63,7 @@ object SubProcess {
   * UI executor. Note also that events may be emitted *during* the construction of this SubProcess,
   * so any listeners should already be in place before the signal is passed into this constructor.
   */
-class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event])
-    extends AutoCloseable {
+class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) extends Closeable {
   import SubProcess._
 
   /** Sends `line` to the subprocess's stdin. A newline is automatically appended. */
@@ -84,7 +83,7 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event])
 
   /** Closes this subprocess's output stream. This may trigger termination if it expects that sort
     * of thing. This must only be called after [[start]]. */
-  def close () {
+  override def close () {
     process.getOutputStream.close()
   }
 

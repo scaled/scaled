@@ -13,17 +13,15 @@ class ModeLineImpl extends HBox(8) with ModeLine {
   getStyleClass.add("modeLine")
   setMaxWidth(Double.MaxValue)
 
-  def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) :AutoCloseable = {
+  def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) :Closeable = {
     val label = new Label()
     val vconn = value onValueNotify(label.setText)
     val tconn = tooltip onValueNotify(label.setTooltip)
     getChildren.add(label)
-    new AutoCloseable() {
-      def close () {
-        getChildren.remove(label)
-        vconn.close()
-        tconn.close()
-      }
-    }
+    Closeable({
+      getChildren.remove(label)
+      vconn.close()
+      tconn.close()
+    })
   }
 }

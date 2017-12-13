@@ -28,13 +28,13 @@ class MiniReadMode[T] (
   setCompletion(completer(current))
 
   // machinery for handling coalesced search string refreshing
-  private var _refreshConn = null :java.io.Closeable
+  private var _refreshConn = Closeable.Noop
   private def queueRefresh () {
-    if (_refreshConn != null) _refreshConn.close()
+    _refreshConn.close()
     _refreshConn = window.exec.ui.schedule(75, () => {
       val glob = current ; val oglob = _comp.glob
       if (glob != oglob) setCompletion(completer.refine(_comp, glob))
-      _refreshConn = null
+      _refreshConn = Closeable.Noop
     })
   }
   buffer.edited onEmit queueRefresh

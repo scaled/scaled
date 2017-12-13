@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import java.io.{Closeable, File}
+import java.io.File
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
 import java.util.{List => JList, ArrayList, Timer, TimerTask}
@@ -48,9 +48,7 @@ class Scaled extends Application with Editor {
         new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {
           override def handle (event :ActionEvent) = if (!canceled) op.run()
         })).play()
-        new Closeable() {
-          def close () = canceled = true
-        }
+        Closeable({ canceled = true })
       }
     }
     override val bg = new Scheduler() {
@@ -58,7 +56,7 @@ class Scaled extends Application with Editor {
       override def schedule (delay :Long, op :Runnable) = {
         val task = new TimerTask() { override def run () = op.run() }
         timer.schedule(task, delay)
-        new Closeable() { def close () = task.cancel() }
+        Closeable({ task.cancel() })
       }
     }
     override def bgService = pool

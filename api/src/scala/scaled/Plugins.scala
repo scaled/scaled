@@ -5,7 +5,7 @@
 package scaled
 
 /** Scaled plugins must extend this class and have a name of the form `FooPlugin`. */
-abstract class AbstractPlugin extends AutoCloseable {
+abstract class AbstractPlugin extends Closeable {
 
   /** Called when this plugin is unloaded. This happens either when the plugin set of which it is a
     * part is closed, or when the package that defines this plugin is removed. */
@@ -19,7 +19,7 @@ abstract class AbstractPlugin extends AutoCloseable {
   * Scaled due to packages being installed or removed. When a plugin set is no longer needed, it
   * should be [[close]]d.
   */
-abstract class PluginSet[T <: AbstractPlugin] (val tag: String) extends AutoCloseable {
+abstract class PluginSet[T <: AbstractPlugin] (val tag: String) extends Closeable {
 
   /** A signal emitted when a plugin is added to this set.
     * The plugin will be visible in [[plugins]] at the time this event is emitted. */

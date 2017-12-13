@@ -4,7 +4,6 @@
 
 package scaled
 
-import java.io.Closeable
 import java.util.PriorityQueue
 
 import org.junit._

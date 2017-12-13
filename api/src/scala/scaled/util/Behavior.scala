@@ -4,10 +4,12 @@
 
 package scaled.util
 
+import scaled._
+
 /** Encapsulates a reactive behavior and simplifies the process of wiring up a bunch of reactions
   * when the behavior is enabled and clearing those reactions when the behavior is disabled.
   */
-abstract class Behavior extends AutoCloseable {
+abstract class Behavior extends Closeable {
 
   /** Activate or deactivates this behavior, as appropriate. */
   def setActive (active :Boolean) {

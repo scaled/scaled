@@ -27,10 +27,10 @@ trait WatchService {
   /** Registers a watch on `file`. `watcher` will be invoked (on the main JavaFX thread) when `file`
     * is modified or deleted.
     * @return a handle that can be used to terminate the watch. */
-  def watchFile (file :Path, watcher :Path => Unit) :AutoCloseable
+  def watchFile (file :Path, watcher :Path => Unit) :Closeable
 
   /** Registers a watch on `dir`. `watcher` will be invoked (on the main JavaFX thread) when any
     * files are created, modified or deleted in `dir`.
     * @return a handle that can be used to terminate the watch. */
-  def watchDir (dir :Path, watcher :Watcher) :AutoCloseable
+  def watchDir (dir :Path, watcher :Watcher) :Closeable
 }
