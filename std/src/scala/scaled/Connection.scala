@@ -5,8 +5,6 @@
 
 package scaled
 
-import java.io.Closeable
-
 /**
  * Provides a mechanism to cancel a slot or listener registration, or to perform post-registration
  * adjustment like making the registration single-shot.
@@ -29,14 +27,10 @@ trait Connection extends Closeable {
 
 object Connection {
 
-  /** A connection that does nothing. */
+  /** A connection that does nothing when closed. Simplifies situations where you close an old
+    * connection and replace it with a new one. */
   val Noop :Connection = new Connection() {
     override def close () {}
     override def once () = this
-  }
-
-  /** A closeable that does nothing. */
-  val NoopCloseable :Closeable = new Closeable() {
-    override def close () {}
   }
 }

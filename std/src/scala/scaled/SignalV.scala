@@ -5,7 +5,6 @@
 
 package scaled
 
-import java.io.Closeable
 import java.util.concurrent.Executor
 
 /** A view of a [[Signal]] on which one may listen but via which one cannot emit value. */
