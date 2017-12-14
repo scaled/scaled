@@ -65,7 +65,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         }
 
         // listen for buffer death and repopulate this frame as needed
-        toClose += buf.killed.onEmit { setBuffer(ws.buffers.headOption || ws.getScratch(), true) }
+        toClose += buf.killed.onEmit {
+          setBuffer(_visitedBuffers.headOption || ws.getScratch(), true)
+        }
 
         if (disp != null) {
           prevStore = Some(this.view.buffer.store)
@@ -154,8 +156,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   override val onClose = Signal[Window]()
   override def close () = ws.close(this)
 
-  private val _visitedBuffers = SeqBuffer[Buffer]()
-  private def noteVisitedBuffer (buffer :RBuffer) {
+  private val _visitedBuffers = SeqBuffer[BufferImpl]()
+  private def noteVisitedBuffer (buffer :BufferImpl) {
     val hadBuffer = _visitedBuffers remove buffer
     _visitedBuffers prepend buffer
     if (!hadBuffer) buffer.killed.onEmit(_visitedBuffers remove buffer)
