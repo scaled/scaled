@@ -194,11 +194,16 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       val startPos = comp.start
       buffer.replace(startPos, comp.length, Line(active.text))
 
-      // TODO: truncate list if it's too long to fit on screen (then truncate above and below the
-      // active completion so we show a sliding window around that completion...)
-      val avail = comp.choices.map(c => {
+      // TODO: get actual available space instead of hardcoding
+      val MaxChoices = 20
+      // truncate list to max choices, trimming above and below the active completion so we show a
+      // sliding window around it
+      def trimStart = Math.min(Math.max(0, activeIndex-2), comp.choices.length-MaxChoices)
+      val choices = if (comp.choices.size <= MaxChoices) comp.choices
+                    else comp.choices.drop(trimStart).take(MaxChoices)
+      val avail = choices.map(c => {
         val b = Line.builder(c.text)
-        if (c == active) b.withStyle(keywordStyle)
+        if (c eq active) b.withStyle(keywordStyle)
         b.build()
       })
 
