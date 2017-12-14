@@ -170,13 +170,27 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     * @return whether the line's indentation or the point was changed. */
   def reindentAtPoint () :Boolean = reindent(view.point())
 
-  /** Triggers a completion at the specified point. */
-  def completeAt (pos :Loc) {
-    import CodeCompleter._
-    def show (comp :Completion) {
-      val active = comp.choices(comp.index)
-      val line = Line.builder(active.text).withTag(comp).build()
-      buffer.replace(comp.start, comp.length, line)
+  import CodeCompleter._
+  class ActiveComp (val comp :Completion) {
+    var activeIndex = 0
+    def active = comp.choices(activeIndex)
+
+    var deetOptPop :OptValue[Popup] = null
+    def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
+
+    env.disp.didHandle.filter(fn => !completeFns(fn)).onEmit({ clear() }).once()
+
+    def advance () {
+      activeIndex = (activeIndex + 1) % comp.choices.length
+      // undo the previous completion and insert a new one; this avoids polluting the undo stack
+      // with completion candidates but still behaves otherwise sensibly
+      undo()
+      show()
+    }
+
+    def show () {
+      val startPos = comp.start
+      buffer.replace(startPos, comp.length, Line(active.text))
 
       // TODO: truncate list if it's too long to fit on screen (then truncate above and below the
       // active completion so we show a sliding window around that completion...)
@@ -185,21 +199,39 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
         if (c == active) b.withStyle(keywordStyle)
         b.build()
       })
-      view.popup() = Popup.lines(avail, Popup.DnRight(comp.start))
+
+      // if we have details, show those above the completion
+      if (!active.details.isEmpty) {
+        if (deetOptPop == null) deetOptPop = view.addPopup(deetPopup)
+        else deetOptPop() = deetPopup
+      } else if (deetOptPop != null) {
+        deetOptPop.clear()
+        deetOptPop = null;
+      }
+
+      view.popup() = Popup.lines(avail, Popup.DnRight(startPos))
     }
 
-    // if there's a currently active completion just prior to pos, advance it
-    buffer.tagAt(classOf[Completion], pos.prevC) match {
-      case Some(res) =>
-        // undo the previous completion and insert a new one; this avoids polluting the undo stack
-        // with completion candidates but still behaves otherwise sensibly
-        undo()
-        show(res.copy(index = (res.index+1) % res.choices.length))
-      case None =>
-        completer.completeAt(buffer, pos).onFailure(window.emitError).onSuccess { res =>
-          if (res.choices.isEmpty) window.emitStatus("No completions.")
-          else show(res)
-        }
+    def clear () {
+      if (deetOptPop != null) deetOptPop.clear()
+      activeComp = null
+    }
+  }
+
+  var activeComp :ActiveComp = null
+  val completeFns = Set("reindent-or-complete")
+
+  /** Triggers a completion at the specified point. */
+  def completeAt (pos :Loc) {
+    // if there's a currently active completion, advance it
+    if (activeComp != null) activeComp.advance()
+    // otherwise compute a completion at the point, then show it
+    else completer.completeAt(buffer, pos).onFailure(window.emitError).onSuccess { comp =>
+      if (comp.choices.isEmpty) window.emitStatus("No completions.")
+      else {
+        activeComp = new ActiveComp(comp)
+        activeComp.show()
+      }
     }
   }
 
