@@ -70,6 +70,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap.
     bind("reindent-or-complete",   "TAB").
+    bind("previous-completion",    "S-TAB").
     bind("electric-newline",       "ENTER", "S-ENTER").
     bind("electric-open-bracket",  "{", "(", "[").
     bind("electric-close-bracket", "}", ")", "]").
@@ -178,10 +179,11 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     var deetOptPop :OptValue[Popup] = null
     def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
 
+    // clear ourselves out on any fn other than one which cycles through our completions
     env.disp.didHandle.filter(fn => !completeFns(fn)).onEmit({ clear() }).once()
 
-    def advance () {
-      activeIndex = (activeIndex + 1) % comp.choices.length
+    def advance (delta :Int) {
+      activeIndex = (activeIndex + comp.choices.length + delta) % comp.choices.length
       // undo the previous completion and insert a new one; this avoids polluting the undo stack
       // with completion candidates but still behaves otherwise sensibly
       undo()
@@ -219,12 +221,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   var activeComp :ActiveComp = null
-  val completeFns = Set("reindent-or-complete")
+  val completeFns = Set("reindent-or-complete", "previous-completion")
 
   /** Triggers a completion at the specified point. */
   def completeAt (pos :Loc) {
     // if there's a currently active completion, advance it
-    if (activeComp != null) activeComp.advance()
+    if (activeComp != null) activeComp.advance(1)
     // otherwise compute a completion at the point, then show it
     else completer.completeAt(buffer, pos).onFailure(window.emitError).onSuccess { comp =>
       if (comp.choices.isEmpty) window.emitStatus("No completions.")
@@ -330,6 +332,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          triggers completion if the line is currently properly indented.""")
   def reindentOrComplete () {
     if (!reindentAtPoint()) completeAtPoint();
+  }
+
+  @Fn("Advances any current completion backwards to the previous completion.")
+  def previousCompletion () {
+    if (activeComp == null) window.popStatus("No active completion.")
+    else activeComp.advance(-1)
   }
 
   @Fn("""Inserts a newline and performs any other configured automatic actions. This includes
