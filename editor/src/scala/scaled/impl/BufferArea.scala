@@ -158,7 +158,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     private[this] var _pos :Popup.Pos = _
 
     def display (pop :Popup) {
-      clear() // clear any previous bits
+      getChildren.clear() // clear any previous bits
 
       if (pop.isError) getStyleClass.add("errpop")
       else getStyleClass.remove("errpop")
@@ -227,19 +227,13 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   }
   bview.popup onValue checkPopup(false)
 
-  private val auxPopups = new HashMap[Popup, PopWin]()
-  bview.popupAdded.onValue { popup =>
+  bview.popupAdded.onValue { popopt =>
     val win = new PopWin()
-    auxPopups.put(popup, win)
     contentNode.getChildren.add(win)
-    win.display(popup)
-  }
-  bview.popupCleared.onValue { popup =>
-    val win = auxPopups.get(popup)
-    if (win != null) {
-      win.clear()
-      contentNode.getChildren.remove(win)
-    } else println(s"No popwin for popup? $popup")
+    popopt.onValueNotify {
+      case Some(popup) => win.display(popup)
+      case None        => win.clear() ; contentNode.getChildren.remove(win)
+    }
   }
 
   // contains our line nodes and other decorative nodes (cursor, selection, etc.)
