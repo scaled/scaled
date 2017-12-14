@@ -17,6 +17,13 @@ abstract class Dispatcher {
     * just-invoked fn for undo purposes. */
   def didInvoke :SignalV[String]
 
+  /** A signal that is emitted with the name of the `fn` that was just invoked, and which reported
+    * that it successfully handled the key input. A `fn` may be invoked (and trigger `willInvoke`
+    * and `didInvoke`) but not actually handle the key input, allowing any other `fn` registered
+    * for the same binding to handle it. This signal is only emitted for the `fn` that reports
+    * successful processing. */
+  def didHandle :SignalV[String]
+
   /** The name of the currently executing fn. Is null when no fn is executing. */
   def curFn :String
 

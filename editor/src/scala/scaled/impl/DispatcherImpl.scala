@@ -25,6 +25,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
   private val _willInvoke = Signal[String]()
   private val _didInvoke = Signal[String]()
+  private val _didHandle = Signal[String]()
   private var _curFn :String = _
   private var _prevFn :String = _
 
@@ -172,6 +173,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
   override def willInvoke = _willInvoke
   override def didInvoke = _didInvoke
+  override def didHandle = _didHandle
   override def curFn = _curFn
   override def prevFn = _prevFn
 
@@ -280,7 +282,10 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
       }
 
       // if the fn returns anything other than false, we assume it handled the key
-      if (res != java.lang.Boolean.FALSE) return true
+      if (res != java.lang.Boolean.FALSE) {
+        _didHandle.emit(fn.name)
+        return true
+      }
 
       // otherwise try the next fn in the list
       ll = ll.tail
