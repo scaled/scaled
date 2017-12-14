@@ -52,12 +52,16 @@ class MetaMode (env :Env) extends MinorMode(env) {
   @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
   def switchToBuffer () {
     val curb = buffer
+    // if we're the only window in the workspace, use the workspace buffer list (so we get
+    // potentially never visited buffers like *messages*), otherwise use this window's visited
+    // buffers list
+    val buffers = if (wspace.windows.size == 1) wspace.buffers else window.buffers
     // if the current frame has a previous buffer, and it is still open, use that as our default
     // buffer, otherwise fallback to the top buffer in the window buffers list (skipping our
     // current buffer), and if all else fails, just use our current buffer
-    val defb = window.focus.prevStore.flatMap(s => window.buffers.find(_.store == s)) orElse
-      window.buffers.filter(_ != curb).headOption getOrElse curb
-    val comp = Completer.buffer(window.buffers, defb, Set(curb))
+    val defb = window.focus.prevStore.flatMap(s => buffers.find(_.store == s)) orElse
+      buffers.filter(_ != curb).headOption getOrElse curb
+    val comp = Completer.buffer(buffers, defb, Set(curb))
     window.mini.read(s"Switch to buffer (default ${defb.name}):", "", bufferHistory, comp).
       onSuccess(frame.visit)
   }
