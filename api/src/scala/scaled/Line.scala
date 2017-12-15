@@ -351,6 +351,16 @@ object Line {
     /** A synonym for [[append(Array[Char])]]. */
     def += (text :Array[Char]) = append(text)
 
+    /** Appends `line` to this line builder. */
+    def append (line :LineV) :Builder = {
+      val olength = _length
+      expand(line.length)
+      line.sliceInto(0, line.length, _cs, _xs, _ts, _lts, olength)
+      this
+    }
+    /** A synonym for [[append(LineV)]]. */
+    def += (line :LineV) = append(line)
+
     /** Appends `text` and assigns its syntax to `syntax`. */
     def appendWithSyntax[T] (text :String, syntax :Syntax) :Builder = {
       val start = length
