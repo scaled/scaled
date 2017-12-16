@@ -59,6 +59,9 @@ object CodeConfig extends Config.Defs {
   val blockDelimStyle = "blockDelimFace"
   /** The CSS style applied to the current block delimiters when mismatched. */
   val blockErrorStyle = "blockErrorFace"
+
+  /** The CSS style applied to the active completion choice. */
+  val activeChoiceStyle = "activeChoiceFace"
 }
 
 /** A base class for major modes which edit program code. */
@@ -69,8 +72,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap.
-    bind("reindent-or-complete",   "TAB").
-    bind("previous-completion",    "S-TAB").
+    bind("complete-or-reindent", "TAB").
+    bind("cancel-complete",      "C-g").
+
     bind("electric-newline",       "ENTER", "S-ENTER").
     bind("electric-open-bracket",  "{", "(", "[").
     bind("electric-close-bracket", "}", ")", "]").
@@ -114,8 +118,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** The line separator used by [[quoteRegion]]. */
   def quotedLineSeparator = ","
 
-  // as the point moves around, track the active block
-  view.point onValue { p => curBlock() = blocker(p) }
+  // as the point moves around...
+  view.point onValue { p =>
+    curBlock() = blocker(p) // track the active block
+    checkClearActiveComp()  // maybe clear the active completion
+  }
+
   // as the active block changes, highlight the delimiters
   curBlock onChange { (nb, ob) =>
     ob.map { b =>
@@ -167,45 +175,33 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     acted
   }
 
-  /** Reindents the line at the point.
-    * @return whether the line's indentation or the point was changed. */
-  def reindentAtPoint () :Boolean = reindent(view.point())
-
   import CodeCompleter._
   class ActiveComp (val comp :Completion) {
+    // the current refined choices
+    var choices = comp.choices
+
     var activeIndex = 0
-    def active = comp.choices(activeIndex)
+    def active = choices(activeIndex)
 
-    var deetOptPop :OptValue[Popup] = null
-    def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
-
-    // clear ourselves out on any fn other than one which cycles through our completions
-    env.disp.didHandle.filter(fn => !completeFns(fn)).onEmit({ clear() }).once()
-
-    def advance (delta :Int) {
-      activeIndex = (activeIndex + comp.choices.length + delta) % comp.choices.length
-      // undo the previous completion and insert a new one; this avoids polluting the undo stack
-      // with completion candidates but still behaves otherwise sensibly
-      undo()
-      show()
-    }
-
-    def show () {
-      val startPos = comp.start
-      buffer.replace(startPos, comp.length, Line(active.text))
-
+    val compsOptPop :OptValue[Popup] = view.addPopup(compsPopup)
+    def compsPopup = {
+      // figure out the max width of choices + sigs
+      def siglen (c :Choice, gap :Int) = c.sig.map(_.length + gap) getOrElse 0
+      val width = choices.map(c => c.insert.length + siglen(c, 1)).max
       // TODO: get actual available space instead of hardcoding
-      val MaxChoices = 20
+      val MaxChoices = 30
       // truncate list to max choices, trimming above and below the active completion so we show a
       // sliding window around it
-      def trimStart = Math.min(Math.max(0, activeIndex-2), comp.choices.length-MaxChoices)
-      val choices = if (comp.choices.size <= MaxChoices) comp.choices
-                    else comp.choices.drop(trimStart).take(MaxChoices)
-      val avail = choices.map(c => {
-        val b = Line.builder(c.text)
-        if (c eq active) b.withStyle(keywordStyle)
+      def trimStart = Math.min(Math.max(0, activeIndex-2), choices.length-MaxChoices)
+      val trimmed = if (choices.size <= MaxChoices) choices
+                    else choices.drop(trimStart).take(MaxChoices)
+      val avail = trimmed.map { c =>
+        val b = Line.builder(c.insert)
+        b += " " * (width-c.insert.length-siglen(c, 0))
+        c.sig.map(b.append)
+        if (c eq active) b.withStyle(activeChoiceStyle)
         b.build()
-      })
+      }
 
       // if we have details, show those above the completion
       if (!active.details.isEmpty) {
@@ -216,34 +212,85 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
         deetOptPop = null;
       }
 
-      view.popup() = Popup.lines(avail, Popup.DnRight(startPos))
+      Popup.lines(avail, Popup.DnRight(comp.start))
+    }
+
+    var deetOptPop :OptValue[Popup] = null
+    def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
+
+    def advance (delta :Int) {
+      activeIndex = (activeIndex + choices.length + delta) % choices.length
+      compsOptPop() = compsPopup
+    }
+
+    // checks that the letters of glob (which must be lowercase) occur in comp, in order, but
+    // potentially skipping other letters along the way
+    def matches (glob :String, comp :String) :Boolean = {
+      var pp = 0 ; var cc = 0 ; while (cc < comp.length) {
+        val pc = glob.charAt(pp) ; val cp = comp.charAt(cc)
+        if (pc == Character.toLowerCase(cp)) {
+          pp += 1
+        }
+        if (pp == glob.length) return true
+        cc += 1
+      }
+      false
+    }
+
+    def refine () {
+      val endCol = view.point().col
+      val startCol = comp.start.col
+      if (endCol < startCol) clearActiveComp()
+      else {
+        val glob = buffer.line(comp.start).sliceString(startCol, endCol).toLowerCase
+        var ochoices = choices
+        choices = comp.choices.filter(c => matches(glob, c.insert))
+        if (choices.isEmpty) clearActiveComp()
+        else {
+          if (choices != ochoices) activeIndex = 0
+          compsOptPop() = compsPopup
+        }
+      }
+    }
+
+    def commit () {
+      buffer.replace(comp.start, view.point(), Seq(Line(active.insert)))
+      clearActiveComp()
     }
 
     def clear () {
+      compsOptPop.clear()
       if (deetOptPop != null) deetOptPop.clear()
-      activeComp = null
     }
+
+    def containsPoint (p :Loc) = p.row == comp.start.row && p.col >= comp.start.col
   }
 
   var activeComp :ActiveComp = null
   val completeFns = Set("reindent-or-complete", "previous-completion")
 
-  /** Triggers a completion at the specified point. */
+  /** Activates a completion at `pos`. */
   def completeAt (pos :Loc) {
-    // if there's a currently active completion, advance it
-    if (activeComp != null) activeComp.advance(1)
-    // otherwise compute a completion at the point, then show it
-    else completer.completeAt(buffer, pos).onFailure(window.emitError).onSuccess { comp =>
-      if (comp.choices.isEmpty) window.emitStatus("No completions.")
-      else {
+    if (activeComp != null) clearActiveComp()
+    completer.completeAt(buffer, pos).onFailure(wspace.emitError).onSuccess { comp =>
+      if (!comp.choices.isEmpty) {
         activeComp = new ActiveComp(comp)
-        activeComp.show()
       }
     }
   }
 
-  /** Triggers a completion at the current point. */
-  def completeAtPoint () :Unit = completeAt(view.point())
+  /** Clears the active completion, if any. */
+  def clearActiveComp () {
+    if (activeComp != null) {
+      activeComp.clear()
+      activeComp = null
+    }
+  }
+
+  /** Clears the active completion if the point has moved away from it. */
+  def checkClearActiveComp () {
+    if (activeComp != null && !activeComp.containsPoint(view.point())) clearActiveComp()
+  }
 
   /** Returns the close bracket for the supplied open bracket.
     * `?` is returned if the open bracket is unknown. */
@@ -318,6 +365,38 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
   }
 
+  // customize some fns to work with code completion
+  override def selfInsertCommand (typed :String) {
+    super.selfInsertCommand(typed)
+    if (completer.shouldActivate(typed)) {
+      completeAtPoint();
+    } else if (activeComp != null) {
+      activeComp.refine();
+    }
+  }
+
+  override def newline () {
+    if (activeComp == null) super.newline();
+    else activeComp.commit();
+  }
+
+  override def deleteBackwardChar () {
+    super.deleteBackwardChar()
+    if (activeComp != null) {
+      activeComp.refine()
+    }
+  }
+
+  override def previousLine () {
+    if (activeComp == null) super.previousLine()
+    else activeComp.advance(-1)
+  }
+
+  override def nextLine () {
+    if (activeComp == null) super.nextLine()
+    else activeComp.advance(1)
+  }
+
   //
   // FNs
 
@@ -329,20 +408,21 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   @Fn("""Recomputes the current line's indentation based on the code mode's indentation rules and
          adjusts its indentation accordingly.""")
-  def reindent () {
-    reindentAtPoint()
+  def reindentAtPoint () :Unit = reindent(view.point())
+
+  @Fn("Activates a completion at the current point.")
+  def completeAtPoint () :Unit = completeAt(view.point())
+
+  @Fn("""Commits the current active completion, if there is one. Otherwise, adjusts the current
+         line's indentation based on the code mode's indentation rules.""")
+  def completeOrReindent () {
+    if (activeComp == null) reindentAtPoint();
+    else activeComp.commit()
   }
 
-  @Fn("""Adjusts the current line's indentation based on the code mode's indentation rules, or
-         triggers completion if the line is currently properly indented.""")
-  def reindentOrComplete () {
-    if (!reindentAtPoint()) completeAtPoint();
-  }
-
-  @Fn("Advances any current completion backwards to the previous completion.")
-  def previousCompletion () {
-    if (activeComp == null) window.popStatus("No active completion.")
-    else activeComp.advance(-1)
+  @Fn("Clears and abandons any active completion.")
+  def cancelComplete () {
+    clearActiveComp();
   }
 
   @Fn("""Inserts a newline and performs any other configured automatic actions. This includes

@@ -13,6 +13,10 @@ import scaled.util.Chars
 abstract class CodeCompleter {
   import CodeCompleter._
 
+  /** Used to auto-trigger a completion when the user types a character. Defaults to triggering
+    * complete on `.` but custom completers may override for different languages. */
+  def shouldActivate (typed :String) :Boolean = typed == "."
+
   /** Generates a list of completions for the code at `pos`. */
   def completeAt (buffer :Buffer, pos :Loc) :Future[Completion]
 }
@@ -20,10 +24,11 @@ abstract class CodeCompleter {
 object CodeCompleter {
 
   /** Contains info on a single completion choice.
-    * @param text the text of the completion (inserted into the buffer).
-    * @param details optional details to show when choice is active.
+    * @param insert the text that is inserted into the buffer.
+    * @param sig an optional signature shown to the right of the completion in the list.
+    * @param details optional details to show when choice is active (e.g. method docs).
     */
-  case class Choice (text :String, details :SeqV[LineV])
+  case class Choice (insert :String, sig :Option[LineV], details :SeqV[LineV])
 
   /** Encapsulates the result of a completion request.
     * @param start the start of the 'prefix' that was used by the completer.
@@ -148,6 +153,6 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
       if (matches.size() > 0) matches.add(token)
       Seq.builder[String]().append(matches).build()
     }
-    Future.success(Completion(pstart, prefix.length, comps.map(Choice(_, Seq())), 0))
+    Future.success(Completion(pstart, prefix.length, comps.map(t => Choice(t, None, Seq())), 0))
   }
 }
