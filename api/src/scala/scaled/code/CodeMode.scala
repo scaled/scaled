@@ -6,7 +6,7 @@ package scaled.code
 
 import scaled._
 import scaled.major.EditingMode
-import scaled.util.Chars
+import scaled.util.{Chars, Errors}
 
 object CodeConfig extends Config.Defs {
 
@@ -72,7 +72,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   override def configDefs = CodeConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/code.css") :: super.stylesheets
   override def keymap = super.keymap.
-    bind("complete-or-reindent", "TAB").
+    bind("reindent-or-complete", "TAB").
+    bind("previous-completion",  "S-TAB").
     bind("cancel-complete",      "C-g").
 
     bind("electric-newline",       "ENTER", "S-ENTER").
@@ -178,7 +179,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   import CodeCompleter._
   class ActiveComp (val comp :Completion) {
     // the current refined choices
-    var choices = comp.choices
+    var choices = refined
 
     var activeIndex = 0
     def active = choices(activeIndex)
@@ -218,6 +219,28 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     var deetOptPop :OptValue[Popup] = null
     def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
 
+    def extendOrAdvance () {
+      // sanity check that the point isn't somewhere crazy
+      val point = view.point()
+      if (point.row != comp.start.row) throw Errors.feedback("Point not on completion line?")
+      val endCol = point.col
+      val startCol = comp.start.col
+      if (endCol < startCol) throw Errors.feedback("Point to left of completion start?")
+      // compute the longest shared prefix among our available completions
+      val longestPrefix = Completer.longestPrefix(choices.map(_.insert))
+      val typedPrefix = buffer.line(comp.start).sliceString(startCol, endCol)
+      val atLongest = typedPrefix equalsIgnoreCase longestPrefix
+      // if the prefix in the buffer is itself a prefix of the longest prefix (meaning we're not
+      // doing funny interspersed letter matching), and the longest prefix is longer than the
+      // prefix in the buffer, then extend to the longest prefix
+      if (longestPrefix.startsWith(typedPrefix) && !atLongest)
+        buffer.replace(comp.start, endCol-startCol, Line(longestPrefix))
+      // if we still have more than one choice, advance to the next choice
+      else if (choices.size > 1) advance(1)
+      // otherwise we've whittled down to a single completion, we're done
+      else clearActiveComp()
+    }
+
     def advance (delta :Int) {
       activeIndex = (activeIndex + choices.length + delta) % choices.length
       compsOptPop() = compsPopup
@@ -226,6 +249,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     // checks that the letters of glob (which must be lowercase) occur in comp, in order, but
     // potentially skipping other letters along the way
     def matches (glob :String, comp :String) :Boolean = {
+      if (glob.length == 0) return true
       var pp = 0 ; var cc = 0 ; while (cc < comp.length) {
         val pc = glob.charAt(pp) ; val cp = comp.charAt(cc)
         if (pc == Character.toLowerCase(cp)) {
@@ -237,19 +261,24 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       false
     }
 
-    def refine () {
+    def refined = {
       val endCol = view.point().col
       val startCol = comp.start.col
-      if (endCol < startCol) clearActiveComp()
+      if (endCol < startCol) Seq()
       else {
         val glob = buffer.line(comp.start).sliceString(startCol, endCol).toLowerCase
-        var ochoices = choices
-        choices = comp.choices.filter(c => matches(glob, c.insert))
-        if (choices.isEmpty) clearActiveComp()
-        else {
-          if (choices != ochoices) activeIndex = 0
-          compsOptPop() = compsPopup
-        }
+        comp.choices.filter(c => matches(glob, c.insert))
+      }
+    }
+
+    def refine () {
+      var ochoices = choices
+      choices = refined
+      if (choices.isEmpty) clearActiveComp()
+      else {
+        println(s"Refined to ${choices.size} choices")
+        if (choices != ochoices) activeIndex = 0
+        compsOptPop() = compsPopup
       }
     }
 
@@ -263,16 +292,22 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       if (deetOptPop != null) deetOptPop.clear()
     }
 
-    def containsPoint (p :Loc) = p.row == comp.start.row && p.col >= comp.start.col
+    def containsPoint (p :Loc) = {
+      val maxlen = choices.map(_.insert.length).max
+      p.row == comp.start.row && p.col >= comp.start.col && p.col < comp.start.col + maxlen
+    }
   }
 
   var activeComp :ActiveComp = null
   val completeFns = Set("reindent-or-complete", "previous-completion")
 
-  /** Activates a completion at `pos`. */
+  /** Activates a completion at `pos`. *Note*: this moves the point to the end of the completion
+    * prefix detected at `pos`. This is necessary for completion refinement to work properly. */
   def completeAt (pos :Loc) {
+    val (pstart, pend) = Chars.wordBoundsAt(buffer, pos)
+    view.point() = pend // move the point to the end of the to-be-completed prefix
     if (activeComp != null) clearActiveComp()
-    completer.completeAt(buffer, pos).onFailure(wspace.emitError).onSuccess { comp =>
+    completer.completeAt(buffer, pstart, pend).onFailure(wspace.emitError).onSuccess { comp =>
       if (!comp.choices.isEmpty) {
         activeComp = new ActiveComp(comp)
       }
@@ -413,11 +448,19 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   @Fn("Activates a completion at the current point.")
   def completeAtPoint () :Unit = completeAt(view.point())
 
-  @Fn("""Commits the current active completion, if there is one. Otherwise, adjusts the current
-         line's indentation based on the code mode's indentation rules.""")
-  def completeOrReindent () {
-    if (activeComp == null) reindentAtPoint();
-    else activeComp.commit()
+  @Fn("""If there is an active completion, extends the current match, or advances to the next
+         option if the buffer already contains the longest completion prefix. If no active
+         completion, reindents the current line. If the current line is properly indented,
+         starts a new completion at the point. In other words attempt to 'DWIM' when the tab
+         key is pressed.""")
+  def reindentOrComplete () {
+    if (activeComp != null) activeComp.extendOrAdvance()
+    else if (!reindent(view.point())) completeAtPoint()
+  }
+
+  @Fn("If there is an active completion, selects the previous choice.")
+  def previousCompletion () {
+    if (activeComp != null) activeComp.advance(-1)
   }
 
   @Fn("Clears and abandons any active completion.")

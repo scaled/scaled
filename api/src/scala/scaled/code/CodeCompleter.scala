@@ -17,8 +17,11 @@ abstract class CodeCompleter {
     * complete on `.` but custom completers may override for different languages. */
   def shouldActivate (typed :String) :Boolean = typed == "."
 
-  /** Generates a list of completions for the code at `pos`. */
-  def completeAt (buffer :Buffer, pos :Loc) :Future[Completion]
+  /** Generates a list of completions given at the supplied completion `pos`. This may not be the
+    * current buffer `point` (also supplied) if the user has manually requested to complete an
+    * existing token (series of word characters). The completer may inspect the text between `pos`
+    * and `point` and obtain its completion based on that prefix. */
+  def completeAt (buffer :Buffer, pos :Loc, point :Loc) :Future[Completion]
 }
 
 object CodeCompleter {
@@ -32,12 +35,11 @@ object CodeCompleter {
 
   /** Encapsulates the result of a completion request.
     * @param start the start of the 'prefix' that was used by the completer.
-    * @param length the length of the 'prefix' used by the completer.
     * @param choices the completions for the prefix previously specified.
     * @param index the index of the completion to use (generally starts at zero & is used by
     * CodeMode to track position when cycling through completions).
     */
-  case class Completion (start :Loc, length :Int, choices :SeqV[Choice], index :Int = 0)
+  case class Completion (start :Loc, choices :SeqV[Choice], index :Int = 0)
 
   /** Returns a completer for use with `buffer`. */
   def completerFor (wspace :Workspace, buffer :Buffer) :CodeCompleter =
@@ -128,14 +130,11 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
     case tok => tok
   }
 
-  override def completeAt (buffer :Buffer, pos :Loc) = {
-    val (pstart, pend) = Chars.wordBoundsAt(buffer, pos)
-    val token = buffer.region(pstart, pend).map(_.asString).mkString
+  override def completeAt (buffer :Buffer, pos :Loc, point :Loc) = {
+    val token = buffer.region(pos, point).map(_.asString).mkString
     val prefix = token.toLowerCase
-    // don't complete single char prefixes & don't complete if we're at the start of the token (you
-    // should be at the end, but we'll also allow being in the middle; otherwise this ends up
-    // re-completing the first token on a line if you press tab repeatedly from column zero)
-    val comps = if (prefix.length < 2 || pos == pstart) Seq() else {
+    // we need at least a two char prefix to do our completion (TODO: maybe one?)
+    val comps = if (prefix.length < 2) Seq() else {
       val matches = new LinkedHashSet[String]()
       // first add completions from the same buffer
       tokener(buffer).addCompletions(prefix, matches)
@@ -153,6 +152,6 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
       if (matches.size() > 0) matches.add(token)
       Seq.builder[String]().append(matches).build()
     }
-    Future.success(Completion(pstart, prefix.length, comps.map(t => Choice(t, None, Seq())), 0))
+    Future.success(Completion(pos, comps.map(t => Choice(t, None, Seq())), 0))
   }
 }
