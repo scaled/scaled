@@ -228,7 +228,8 @@ object Completer {
   }
 
   /** Returns the longest shared prefix of all the strings in `strs`. */
-  def longestPrefix (strs :Iterable[String]) = strs reduce sharedPrefix
+  def longestPrefix (strs :Iterable[String]) =
+    if (strs.iterator.hasNext) strs reduce sharedPrefix else ""
 
   /** Returns the longest shared prefix of `a` and `b`. Matches case loosely, using uppercase
     * only when both strings have the character in uppercase, lowercase otherwise. */
