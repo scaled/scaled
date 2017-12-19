@@ -189,7 +189,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       // already typed in a refinement that matches none of the completions, but we can't clear
       // ourselves out just yet because we're in the middle of our constructor; kinda messy but
       // we'll just punt for now and show a "No matches." popup briefly
-      compsPopup(if (choices.isEmpty) Seq(Line("No matches.")) else comps)
+      compsPopup(if (choices.isEmpty) Seq(Line("No completions.")) else comps)
     })
 
     def compsPopup (comps :Seq[LineV]) = Popup.lines(comps, Popup.DnRight(comp.start))
@@ -248,7 +248,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       else clearActiveComp()
     }
 
-    def advance (delta :Int) {
+    def advance (delta :Int) :Unit = if (!choices.isEmpty) {
       activeIndex = (activeIndex + choices.length + delta) % choices.length
       compsOptPop() = compsPopup(comps)
       checkDeets()
@@ -300,7 +300,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
 
     def containsPoint (p :Loc) = {
-      val maxlen = choices.map(_.insert.length).max
+      val maxlen = choices.map(_.insert.length).foldLeft(0)(_ + _)
       p.row == comp.start.row && p.col >= comp.start.col && p.col < comp.start.col + maxlen
     }
   }
@@ -461,8 +461,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          starts a new completion at the point. In other words attempt to 'DWIM' when the tab
          key is pressed.""")
   def reindentOrComplete () {
+    val point = view.point()
     if (activeComp != null) activeComp.extendOrAdvance()
-    else if (!reindent(view.point())) completeAtPoint()
+    else if (!reindent(point) && Chars.isWhitespace(buffer.charAt(point))) completeAtPoint()
   }
 
   @Fn("If there is an active completion, selects the previous choice.")
