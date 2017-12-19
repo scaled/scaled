@@ -184,8 +184,16 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     var activeIndex = 0
     def active = choices(activeIndex)
 
-    val compsOptPop :OptValue[Popup] = view.addPopup(compsPopup)
-    def compsPopup = {
+    val compsOptPop :OptValue[Popup] = view.addPopup({
+      // we might end up in a situation where the first time a completion pops up, the user has
+      // already typed in a refinement that matches none of the completions, but we can't clear
+      // ourselves out just yet because we're in the middle of our constructor; kinda messy but
+      // we'll just punt for now and show a "No matches." popup briefly
+      compsPopup(if (choices.isEmpty) Seq(Line("No matches.")) else comps)
+    })
+
+    def compsPopup (comps :Seq[LineV]) = Popup.lines(comps, Popup.DnRight(comp.start))
+    def comps = {
       // figure out the max width of choices + sigs
       def siglen (c :Choice, gap :Int) = c.sig.map(_.length + gap) getOrElse 0
       val width = choices.map(c => c.insert.length + siglen(c, 1)).max
@@ -195,7 +203,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       // sliding window around it
       def trimStart = Math.min(Math.max(0, activeIndex-2), choices.length-MaxChoices)
       val trimmed = if (choices.size <= MaxChoices) choices
-                    else choices.drop(trimStart).take(MaxChoices)
+      else choices.drop(trimStart).take(MaxChoices)
       val avail = trimmed.map { c =>
         val b = Line.builder(c.insert)
         b += " " * (width-c.insert.length-siglen(c, 0))
@@ -203,21 +211,20 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
         if (c eq active) b.withStyle(activeChoiceStyle)
         b.build()
       }
-
-      // if we have details, show those above the completion
-      if (!active.details.isEmpty) {
-        if (deetOptPop == null) deetOptPop = view.addPopup(deetPopup)
-        else deetOptPop() = deetPopup
-      } else if (deetOptPop != null) {
-        deetOptPop.clear()
-        deetOptPop = null;
-      }
-
-      Popup.lines(avail, Popup.DnRight(comp.start))
+      avail
     }
 
+    // if we have details, show those above the completion
     var deetOptPop :OptValue[Popup] = null
     def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
+    def checkDeets () :Unit = if (!active.details.isEmpty) {
+      if (deetOptPop == null) deetOptPop = view.addPopup(deetPopup)
+      else deetOptPop() = deetPopup
+    } else if (deetOptPop != null) {
+      deetOptPop.clear()
+      deetOptPop = null;
+    }
+    if (!choices.isEmpty) checkDeets()
 
     def extendOrAdvance () {
       // sanity check that the point isn't somewhere crazy
@@ -243,7 +250,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
     def advance (delta :Int) {
       activeIndex = (activeIndex + choices.length + delta) % choices.length
-      compsOptPop() = compsPopup
+      compsOptPop() = compsPopup(comps)
+      checkDeets()
     }
 
     // checks that the letters of glob (which must be lowercase) occur in comp, in order, but
@@ -276,9 +284,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       choices = refined
       if (choices.isEmpty) clearActiveComp()
       else {
-        println(s"Refined to ${choices.size} choices")
         if (choices != ochoices) activeIndex = 0
-        compsOptPop() = compsPopup
+        compsOptPop() = compsPopup(comps)
       }
     }
 
@@ -403,7 +410,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   // customize some fns to work with code completion
   override def selfInsertCommand (typed :String) {
     super.selfInsertCommand(typed)
-    if (completer.shouldActivate(typed)) {
+    if (completer.shouldActivate(buffer, view.point(), typed)) {
       completeAtPoint();
     } else if (activeComp != null) {
       activeComp.refine();
