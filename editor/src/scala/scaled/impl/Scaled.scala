@@ -40,30 +40,26 @@ class Scaled extends Application with Editor {
 
   val timer = new Timer("Scaled Timer", true)
 
-  override val exec = new Executor {
-    override val ui = new Scheduler {
-      override def execute (op :Runnable) = Platform.runLater(op)
-      override def schedule (delay :Long, op :Runnable) = {
-        var canceled = false
-        new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {
-          override def handle (event :ActionEvent) = if (!canceled) op.run()
-        })).play()
-        Closeable({ canceled = true })
-      }
-    }
-    override val bg = new Scheduler() {
-      override def execute (op :Runnable) = pool.execute(op)
-      override def schedule (delay :Long, op :Runnable) = {
-        val task = new TimerTask() { override def run () = op.run() }
-        timer.schedule(task, delay)
-        Closeable({ task.cancel() })
-      }
-    }
-    override def bgService = pool
-    override val errHandler = new Executor.ErrorHandler() {
-      def emitError (err :Throwable) = logger.log(Errors.stackTraceToString(err))
+  val uiScheduler = new Scheduler {
+    override def execute (op :Runnable) = Platform.runLater(op)
+    override def schedule (delay :Long, op :Runnable) = {
+      var canceled = false
+      new Timeline(new KeyFrame(Duration.millis(delay), new EventHandler[ActionEvent]() {
+        override def handle (event :ActionEvent) = if (!canceled) op.run()
+      })).play()
+      Closeable({ canceled = true })
     }
   }
+  val bgScheduler = new Scheduler() {
+    override def execute (op :Runnable) = pool.execute(op)
+    override def schedule (delay :Long, op :Runnable) = {
+      val task = new TimerTask() { override def run () = op.run() }
+      timer.schedule(task, delay)
+      Closeable({ task.cancel() })
+    }
+  }
+  override val exec = new Executor(
+    uiScheduler, bgScheduler, err => logger.log(Errors.stackTraceToString(err)), Some(pool))
 
   val server = new Server(this)
   val pkgMgr = new PackageManager(logger)

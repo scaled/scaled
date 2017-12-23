@@ -8,7 +8,7 @@ package scaled
   * A window starts with a single frame, consuming all of its space, but those frames can be split
   * horizontally or vertically to introduce more frames into a window.
   */
-trait Window extends Executor.ErrorHandler {
+trait Window {
 
   /** A single frame in a window. */
   trait Frame {

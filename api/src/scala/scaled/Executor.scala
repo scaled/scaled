@@ -6,33 +6,27 @@ package scaled
 
 import java.util.concurrent.{Executor => JExecutor, ExecutorService}
 
-/** Static bits for [[Executor]]. */
-object Executor {
+/** Handles invoking execution units on the UI thread and background threads.
+  * @param ui runs operations on the UI thread.
+  * @param bg runs operations on a background thread pool.
+  * @param errHandler handles.reports errors that occur on executed actions.
+  * @param bgSvc the executor service that backs the `bg` scheduler, if available.
+  */
+class Executor (
+  val ui :Scheduler,
+  val bg :Scheduler,
+  errHandler :Throwable => Unit,
+  bgSvc :Option[ExecutorService]
+) {
 
-  /** Used to report errors for actions queued for execution on the UI thread. */
-  trait ErrorHandler {
-    /** Reports an unexpected error to the user. */
-    def emitError (err :Throwable) :Unit
-  }
-}
-
-/** Handles invoking execution units on the UI thread and background threads. */
-abstract class Executor {
-  import Executor._
-
-  /** Runs operations on the UI thread. */
-  val ui :Scheduler
-
-  /** Runs operations on a background thread pool. */
-  val bg :Scheduler
-
-  /** The handler to which uncaught exceptions thrown by operations are reported. */
-  val errHandler :ErrorHandler
+  /** Creates a new executor that redirects errors to the supplied handler but otherwise uses the
+    * same schedulers as this executor. */
+  def handleErrors (handler :Throwable => Unit) :Executor = new Executor(ui, bg, handler, bgSvc)
 
   /** A Java `ExecutorService` which runs operations on a background thread pool. This is exposed
     * as a full executor service to provide its more robust API, but do not shut this service down.
     * That is handled by the editor. */
-  def bgService :ExecutorService = throw new UnsupportedOperationException()
+  def bgService :ExecutorService = bgSvc || { throw new UnsupportedOperationException() }
 
   /** Invokes `op` on the next UI tick. This can be invoked from the UI thread to defer an
     * operation until the next tick, or it can be invoked from a background thread to process
@@ -40,7 +34,7 @@ abstract class Executor {
     */
   def runOnUI (op :Runnable) :Unit = ui.execute(new Runnable() {
     override def run () = try op.run() catch {
-      case t :Throwable => errHandler.emitError(t)
+      case t :Throwable => errHandler(t)
     }
   })
 
@@ -54,7 +48,7 @@ abstract class Executor {
   /** A Scala-friendly [[runOnUI(Runnable)]]. */
   def runOnUI[U] (op : => U) :Unit = ui.execute(new Runnable() {
     override def run () = try op catch {
-      case t :Throwable => errHandler.emitError(t)
+      case t :Throwable => errHandler(t)
     }
   })
 

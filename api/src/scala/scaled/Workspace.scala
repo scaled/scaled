@@ -20,7 +20,7 @@ import scaled.util.Close
   * dependencies specially for projects that are added to the workspace, and to provide
   * workspace-wide searching and navigation functionality.
   */
-abstract class Workspace extends Executor.ErrorHandler {
+abstract class Workspace {
 
   /** The user supplied name for this workspace. */
   val name :String

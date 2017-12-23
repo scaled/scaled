@@ -8,16 +8,13 @@ import scaled._
 
 object TestUtil {
 
-  class AccumExec extends Executor {
-    private val rs = SeqBuffer[Runnable]()
-    val ui = new Scheduler() {
-      override def execute (op :Runnable) :Unit = rs += op
-      override def schedule (delay :Long, op :Runnable) = throw new UnsupportedOperationException()
-    }
-    val bg = ui
-    val errHandler = new Executor.ErrorHandler() {
-      override def emitError (err :Throwable) = err.printStackTrace(System.err)
-    }
+  def exec (rs :SeqBuffer[Runnable]) = new Scheduler() {
+    override def execute (op :Runnable) :Unit = rs += op
+    override def schedule (delay :Long, op :Runnable) = throw new UnsupportedOperationException()
+  }
+  class AccumExec private (rs :SeqBuffer[Runnable]) extends Executor(
+    exec(rs), exec(rs), _.printStackTrace(System.err), None) {
+    def this () = this(SeqBuffer[Runnable]())
     def executeAll () = {
       rs foreach { _.run() }
       rs.clear()

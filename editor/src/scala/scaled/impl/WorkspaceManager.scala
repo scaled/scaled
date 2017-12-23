@@ -216,11 +216,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
   override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
-  override val exec = new Executor {
-    override val ui = app.exec.ui
-    override val bg = app.exec.bg
-    override val errHandler = WorkspaceImpl.this
-  }
+  override val exec = app.exec.handleErrors(emitError)
   override def emitError (err :Throwable) {
     if (!Errors.isFeedback(err)) {
       val trace = Errors.stackTraceToString(err)

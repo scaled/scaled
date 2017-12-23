@@ -173,11 +173,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     _statusLine.setText(msg)
     if (!ephemeral) ws.recordMessage(msg)
   }
-  override val exec = new Executor {
-    override val ui = ws.exec.ui
-    override val bg = ws.exec.bg
-    override val errHandler = WindowImpl.this
-  }
+  override val exec = ws.exec.handleErrors(emitError)
   override def emitError (err :Throwable) :Unit = err match {
     // if this is a wrapped reaction exception, unwrap
     case re :ReactionException => re.getSuppressed foreach(emitError)
