@@ -165,6 +165,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
       val pbuffer = BufferImpl.scratch("*popup*")
       pbuffer.insert(pbuffer.start, pop.lines)
+      pop.styler(pbuffer)
       val pview = new BufferViewImpl(pbuffer, pop.lines.map(_.length).max, pop.lines.size)
       getChildren.add(new BufferArea(pview, disp))
 
