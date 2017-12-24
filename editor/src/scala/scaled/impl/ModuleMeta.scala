@@ -21,6 +21,11 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   def loader :ModuleLoader = mod.loader(repo.resolver)
   /** Loads the class `name` via this module's class loader. */
   def loadClass (name :String) :Class[_] = loader.loadClass(name)
+  /** Loads the class `name` via this module's class loader. Handles class loading errors by
+    * logging them and returning `None`. */
+  def safeLoadClass (name :String) :Option[Class[_]] =
+    try Some(loadClass(name))
+    catch { case e :Throwable => log.log(s"loadClass($name) failed") ; None }
 
   /** Loads and returns the class for the major mode named `name`. */
   def major (name :String) :Class[_] = loadClass(majors(name))
@@ -29,7 +34,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   /** Loads and returns the class for the service with class name `name`. */
   def service (name :String) :Class[_] = loadClass(services(name))
   /** Loads and returns all plugin classes with tag `tag`. */
-  def plugins (tag :String) :Set[Class[_]] = plugins.get(tag).toSet.map(loadClass)
+  def plugins (tag :String) :Set[Class[_]] = plugins.get(tag).toSet.flatMap(safeLoadClass)
 
   val majors = MMap[String,String]() // mode -> classname for this package's major modes
   val minors = MMap[String,String]() // mode -> classname for this package's minor modes
