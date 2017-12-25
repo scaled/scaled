@@ -54,6 +54,9 @@ Note: Cygwin users can't use `dirname $0` so they'll have to replace that with t
 
 - Make the `spam` script executable: `chmod u+x ~/bin/spam`
 
+*Note*: if you're using OpenJDK on Linux, you need to be sure that you've also installed the
+OpenJFX package as Scaled uses JavaFX for its UI.
+
 ### Windows
 
 - Download [scaled-pacman.jar] and put it into some directory that's in your shell search path.
