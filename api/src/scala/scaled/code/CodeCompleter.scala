@@ -22,7 +22,7 @@ abstract class CodeCompleter {
     * current buffer `point` (also supplied) if the user has manually requested to complete an
     * existing token (series of word characters). The completer may inspect the text between `pos`
     * and `point` and obtain its completion based on that prefix. */
-  def completeAt (buffer :Buffer, pos :Loc, point :Loc) :Future[Completion]
+  def completeAt (win :Window, buffer :Buffer, pos :Loc, point :Loc) :Future[Completion]
 }
 
 object CodeCompleter {
@@ -138,7 +138,7 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
     case tok => tok
   }
 
-  override def completeAt (buffer :Buffer, pos :Loc, point :Loc) = {
+  override def completeAt (win :Window, buffer :Buffer, pos :Loc, point :Loc) = {
     val token = buffer.region(pos, point).map(_.asString).mkString
     val prefix = token.toLowerCase
     // we need at least a two char prefix to do our completion (TODO: maybe one?)

@@ -317,11 +317,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     val (pstart, pend) = Chars.wordBoundsAt(buffer, pos)
     view.point() = pend // move the point to the end of the to-be-completed prefix
     if (activeComp != null) clearActiveComp()
-    completer.completeAt(buffer, pstart, pend).onFailure(wspace.emitError).onSuccess { comp =>
-      if (!comp.choices.isEmpty) {
-        activeComp = new ActiveComp(comp)
-      }
-    }
+    completer.completeAt(window, buffer, pstart, pend).
+      onFailure(wspace.exec.handleError).
+      onSuccess(comp => if (!comp.choices.isEmpty) activeComp = new ActiveComp(comp))
   }
 
   /** Clears the active completion, if any. */
