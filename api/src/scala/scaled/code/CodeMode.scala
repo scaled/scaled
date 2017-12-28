@@ -196,7 +196,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     def comps = {
       // figure out the max width of choices + sigs
       def siglen (c :Choice, gap :Int) = c.sig.map(_.length + gap) getOrElse 0
-      val width = choices.map(c => c.insert.length + siglen(c, 1)).max
+      val width = choices.map(c => c.label.length + siglen(c, 1)).max
       // TODO: get actual available space instead of hardcoding
       val MaxChoices = 30
       // truncate list to max choices, trimming above and below the active completion so we show a
@@ -205,8 +205,8 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       val trimmed = if (choices.size <= MaxChoices) choices
       else choices.drop(trimStart).take(MaxChoices)
       val avail = trimmed.map { c =>
-        val b = Line.builder(c.insert)
-        b += " " * (width-c.insert.length-siglen(c, 0))
+        val b = Line.builder(c.label)
+        b += " " * (width-c.label.length-siglen(c, 0))
         c.sig.map(b.append)
         if (c eq active) b.withStyle(activeChoiceStyle)
         b.build()
@@ -216,13 +216,16 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
     // if we have details, show those above the completion
     var deetOptPop :OptValue[Popup] = null
-    def deetPopup = Popup.lines(active.details, Popup.UpRight(comp.start))
-    def checkDeets () :Unit = if (!active.details.isEmpty) {
-      if (deetOptPop == null) deetOptPop = view.addPopup(deetPopup)
-      else deetOptPop() = deetPopup
-    } else if (deetOptPop != null) {
-      deetOptPop.clear()
-      deetOptPop = null;
+    def checkDeets () = active.details(view.width()) match {
+      case Some(buffer) =>
+        val popup = Popup.buffer(buffer, Popup.UpRight(comp.start))
+        if (deetOptPop == null) deetOptPop = view.addPopup(popup)
+        else deetOptPop() = popup
+      case None =>
+        if (deetOptPop != null) {
+          deetOptPop.clear()
+          deetOptPop = null
+        }
     }
     if (!choices.isEmpty) checkDeets()
 
@@ -234,7 +237,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       val startCol = comp.start.col
       if (endCol < startCol) throw Errors.feedback("Point to left of completion start?")
       // compute the longest shared prefix among our available completions
-      val longestPrefix = Completer.longestPrefix(choices.map(_.insert))
+      val longestPrefix = Completer.longestPrefix(choices.map(_.label))
       val typedPrefix = buffer.line(comp.start).sliceString(startCol, endCol)
       val atLongest = typedPrefix equalsIgnoreCase longestPrefix
       // if the prefix in the buffer is itself a prefix of the longest prefix (meaning we're not
@@ -275,7 +278,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       if (endCol < startCol) Seq()
       else {
         val glob = buffer.line(comp.start).sliceString(startCol, endCol).toLowerCase
-        comp.choices.filter(c => matches(glob, c.insert))
+        comp.choices.filter(c => matches(glob, c.label))
       }
     }
 

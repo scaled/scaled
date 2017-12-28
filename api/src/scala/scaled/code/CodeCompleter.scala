@@ -29,10 +29,17 @@ object CodeCompleter {
 
   /** Contains info on a single completion choice.
     * @param insert the text that is inserted into the buffer.
-    * @param sig an optional signature shown to the right of the completion in the list.
-    * @param details optional details to show when choice is active (e.g. method docs).
     */
-  case class Choice (insert :String, sig :Option[LineV], details :SeqV[LineV])
+  class Choice (val insert :String) {
+    /** The label to display for this choice. Defaults to the `insert` text. */
+    def label :String = insert
+    /** An optional signature shown to the right of the completion in the list. */
+    def sig :Option[LineV] = None
+    /** Optional details to show when choice is active (e.g. method docs).
+      * @param viewWidth the width of the current view (in characters) which should be used to
+      * wrap the detail text to fit. */
+    def details (viewWidth :Int) :Option[Buffer] = None
+  }
 
   /** Encapsulates the result of a completion request.
     * @param start the start of the 'prefix' that was used by the completer.
@@ -153,6 +160,6 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
       if (matches.size() > 0) matches.add(token)
       Seq.builder[String]().append(matches).build()
     }
-    Future.success(Completion(pos, comps.map(t => Choice(t, None, Seq())), 0))
+    Future.success(Completion(pos, comps.map(t => new Choice(t)), 0))
   }
 }
