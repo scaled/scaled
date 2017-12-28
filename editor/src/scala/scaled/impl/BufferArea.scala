@@ -163,10 +163,8 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       if (pop.isError) getStyleClass.add("errpop")
       else getStyleClass.remove("errpop")
 
-      val pbuffer = BufferImpl.scratch("*popup*")
-      pbuffer.insert(pbuffer.start, pop.lines)
-      pop.styler(pbuffer)
-      val pview = new BufferViewImpl(pbuffer, pop.lines.map(_.length).max, pop.lines.size)
+      val pbuffer = pop.buffer.asInstanceOf[BufferImpl]
+      val pview = new BufferViewImpl(pbuffer, pbuffer.lines.map(_.length).max, pbuffer.lines.size)
       getChildren.add(new BufferArea(pview, disp))
 
       val line = bview.lines(math.min(pop.pos.y, bview.lines.size-1))

@@ -6,10 +6,8 @@ package scaled
 
 /** Defines a popup, displayed over a buffer. */
 case class Popup (
-  /** The contents of the popup. */
-  lines :Ordered[LineV],
-  /** A styler function that will be called on the buffer created to display this popup. */
-  styler :Buffer => Unit,
+  /** The buffer to be displayed by this popup. */
+  buffer :Buffer,
   /** Controls the position of the popup and its extent. */
   pos :Popup.Pos,
   /** Indicates that this popup is ephemeral, which means it is automatically cleared the next time
@@ -19,8 +17,6 @@ case class Popup (
   /** Indicates that this popup is displaying an error. Error popups are styled in a more attention
     * getting manner than non-error (informatinonal) popups. */
   isError :Boolean) {
-
-  assert(!lines.isEmpty, "Popup must contain at least one line.")
 
   /** Returns a copy of this popup that is persistent, not ephemeral. */
   def toPersistent :Popup = copy(isEphemeral=false)
@@ -32,15 +28,19 @@ case class Popup (
 /** [[Popup]] types and whatnot. */
 object Popup {
 
-  /** The default styler. */
-  val NoopStyler = (buffer :Buffer) => {}
-
   /** Creates a popup with `text` as its contents. */
   def text (text :Ordered[String], pos :Popup.Pos) :Popup = lines(text map Line.apply, pos)
 
   /** Creates a popup with `lines` as its contents. */
-  def lines (lines :Ordered[LineV], pos :Popup.Pos) :Popup =
-    apply(lines, NoopStyler, pos, true, false)
+  def lines (lines :Ordered[LineV], pos :Popup.Pos) :Popup = {
+    assert(!lines.isEmpty, "Popup must contain at least one line.")
+    val buffer = Buffer.scratch("*popup*")
+    buffer.insert(Loc.Zero, lines)
+    apply(buffer, pos, true, false)
+  }
+
+  /** Creates a popup with `buffer` as its contents. */
+  def buffer (buffer :Buffer, pos :Popup.Pos) :Popup = apply(buffer, pos, true, false)
 
   /** Defines the position and orientation of a popup. */
   sealed trait Pos {

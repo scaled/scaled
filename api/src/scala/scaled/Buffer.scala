@@ -4,6 +4,7 @@
 
 package scaled
 
+import scaled.impl.BufferImpl
 import scaled.util.Chars
 
 /** Manages a sequence of characters, providing a line-by-line view and the means to translate
@@ -548,6 +549,9 @@ object Buffer {
   /** Returns true if `name` is a temporary buffer name. */
   def isScratch (name :String) = (name startsWith "*") && (name endsWith "*")
 
+  /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
+  def scratch (name :String) :Buffer = BufferImpl.scratch(name)
+
   /** Creates a read-only buffer view. Mainly useful for testing. */
   def apply (name :String, text :String) :BufferV = apply(name, Line.fromText(text))
 
@@ -561,6 +565,9 @@ object Buffer {
     val state = new RState()
     def lines = _lines
   }
+
+  /** Reads the contents of `store` info a buffer. */
+  def apply (store :Store) :RBuffer = BufferImpl(store)
 }
 
 /** The reactive version of [Buffer]. */

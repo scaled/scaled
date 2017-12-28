@@ -95,7 +95,8 @@ object Store {
   def apply (path :Path) :Store = FileStore(path)
 
   /** Creates a scratch store with the supplied name and working directory. */
-  def scratch (name :String, cwd :Path) = new TextStore(name, cwd.toString + File.separator, "")
+  def scratch (name :String, cwd :Path = Paths.get(System.getProperty("user.dir"))) =
+    new TextStore(name, cwd.toString + File.separator, "")
 
   /** Creates a scratch store with the supplied name and which inherits its working directory
     * from `inherit`. This is often appropriate when opening a scratch buffer while viewing an

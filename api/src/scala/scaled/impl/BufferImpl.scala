@@ -14,10 +14,13 @@ import scaled.util.Errors
 // - Buffer.Anchor which demarks a point in a buffer which is automatically adjusted as the buffer
 // is edited (and likely reports to listeners when its location changes)
 
-/** [BufferImpl] related types and utilities. */
 object BufferImpl {
 
-  /** Reads the contents of `store` info a buffer. */
+  /** Used to track the view state for a buffer when it's not visible. */
+  case class ViewState (point :Loc, scrollTop :Int, scrollLeft :Int)
+
+  def scratch (name :String) :BufferImpl = apply(Store.scratch(name))
+
   def apply (store :Store) :BufferImpl = {
     val buf = new BufferImpl(store)
     // TODO: remove tab hackery when we support tabs
@@ -26,12 +29,6 @@ object BufferImpl {
     buf.addLine(MutableLine.NoChars)
     buf
   }
-
-  /** Returns a blank buffer to be used by scratch views (e.g. the minibuffer). */
-  def scratch (name :String) :BufferImpl = apply(Store.scratch(name, cwd))
-
-  /** Used to track the view state for a buffer when it's not visible. */
-  case class ViewState (point :Loc, scrollTop :Int, scrollLeft :Int)
 
   /** An empty line sequence used for edits that delete no lines. */
   private final val NoLines = Seq[Line]()
