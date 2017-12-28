@@ -135,7 +135,7 @@ abstract class Mode (env :Env) {
   def dispose () {
     try _toClose.close()
     catch {
-      case e :Exception => window.emitError(e)
+      case e :Exception => window.exec.handleError(e)
     }
   }
 

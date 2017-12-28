@@ -682,7 +682,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
         replaceAll(search, Line.fromText(to), search.min)
       } catch {
         case pse :PatternSyntaxException =>
-          window.emitError(Errors.feedback(s"Invalid regexp: $from\n${pse.getMessage}"))
+          window.exec.handleError(Errors.feedback(s"Invalid regexp: $from\n${pse.getMessage}"))
       }
     })
   }

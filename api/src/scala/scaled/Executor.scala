@@ -19,10 +19,6 @@ class Executor (
   bgSvc :Option[ExecutorService]
 ) {
 
-  /** Creates a new executor that redirects errors to the supplied handler but otherwise uses the
-    * same schedulers as this executor. */
-  def handleErrors (handler :Throwable => Unit) :Executor = new Executor(ui, bg, handler, bgSvc)
-
   /** A Java `ExecutorService` which runs operations on a background thread pool. This is exposed
     * as a full executor service to provide its more robust API, but do not shut this service down.
     * That is handled by the editor. */
@@ -33,9 +29,7 @@ class Executor (
     * results back on the UI thread.
     */
   def runOnUI (op :Runnable) :Unit = ui.execute(new Runnable() {
-    override def run () = try op.run() catch {
-      case t :Throwable => errHandler(t)
-    }
+    override def run () = try op.run() catch { case t :Throwable => handleError(t) }
   })
 
   /** Invokes `op` on a background thread. There are a pool of background threads, so multiple
@@ -47,9 +41,7 @@ class Executor (
 
   /** A Scala-friendly [[runOnUI(Runnable)]]. */
   def runOnUI[U] (op : => U) :Unit = ui.execute(new Runnable() {
-    override def run () = try op catch {
-      case t :Throwable => errHandler(t)
-    }
+    override def run () = try op catch { case t :Throwable => handleError(t) }
   })
 
   /** A Scala-friendly [[runInBG(Runnable)]]. */
@@ -81,4 +73,15 @@ class Executor (
       def run () = superFail(cause)
     })
   }
+
+  /** Handles an error by dispatching it to this executor's error handler. */
+  def handleError (err :Throwable) :Unit = err match {
+    // if this is a wrapped reaction exception, unwrap
+    case re :ReactionException => re.getSuppressed foreach handleError
+    case _ => errHandler(err)
+  }
+
+  /** Creates a new executor that redirects errors to the supplied handler but otherwise uses the
+    * same schedulers as this executor. */
+  def handleErrors (handler :Throwable => Unit) :Executor = new Executor(ui, bg, handler, bgSvc)
 }

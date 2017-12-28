@@ -81,12 +81,8 @@ trait Window {
     * order of most recent activation. */
   def buffers :SeqV[Buffer]
 
-  /** An executor which reports errors to this window. */
+  /** An executor which reports errors via this window. */
   def exec :Executor
-
-  /** Reports an unexpected error to the user.
-    * The message will also be appended to the `*messages*` buffer. */
-  def emitError (err :Throwable) :Unit
 
   /** Briefly displays a status message to the user in a popup.
     * The status message will also be appended to the `*messages*` buffer. */

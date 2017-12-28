@@ -101,11 +101,8 @@ abstract class Workspace {
   /** Removes `path` from this workspace's list of hint paths. */
   def removeHintPath (path :Path) :Unit
 
-  /** An executor which reports errors via [[emitError]]. */
+  /** An executor which reports errors by appending to `*messages*` buffer. */
   def exec :Executor
-
-  /** Reports an unexpected error to the user. It is appended to the `*messages*` buffer. */
-  def emitError (err :Throwable) :Unit
 
   /** Returns the (workspace-scoped) history ring with the specified name. The ring will be created
     * on-demand. Note the history ring names in `Workspace`, which are used by Scaled. */

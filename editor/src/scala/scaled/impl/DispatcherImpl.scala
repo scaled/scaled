@@ -88,7 +88,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
       }
       catch {
         case e :Throwable =>
-          window.emitError(e)
+          window.exec.handleError(e)
           window.emitStatus(s"Failed to resolve minor mode '$mode'. See *messages* for details.")
       }
     }
@@ -220,7 +220,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
   private def resolveMajorOrText = try resolveMajor catch {
     case t :Throwable =>
-      window.emitError(t)
+      window.exec.handleError(t)
       resolver.resolveMajor("text", view, mline, this, Nil) // fall back to text mode
   }
   private def resolveMajor = resolver.resolveMajor(majorMode, view, mline, this, modeArgs)
@@ -265,7 +265,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
       val res = try fn.invoke(typed)
       catch {
-        case e :InvocationTargetException => window.emitError(e.getCause) ; false
+        case e :InvocationTargetException => window.exec.handleError(e.getCause) ; false
       }
 
       // finish up after invoking our fn
@@ -277,7 +277,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
       // if the fn returned a future, listen for errors on it and report them to the window
       res match {
-        case future :Future[_] => future.onFailure(window.emitError)
+        case future :Future[_] => future.onFailure(window.exec.handleError)
         case _ => // never mind
       }
 

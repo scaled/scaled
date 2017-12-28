@@ -173,18 +173,14 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     _statusLine.setText(msg)
     if (!ephemeral) ws.recordMessage(msg)
   }
-  override val exec = ws.exec.handleErrors(emitError)
-  override def emitError (err :Throwable) :Unit = err match {
-    // if this is a wrapped reaction exception, unwrap
-    case re :ReactionException => re.getSuppressed foreach(emitError)
-    case _ =>
-      // TODO: color the status label red or something
-      popStatus(err.getMessage match {
-        case null => err.toString
-        case msg  => msg
-      })
-      ws.emitError(err)
-    }
+  override val exec = ws.exec.handleErrors(err => {
+    // TODO: color the status label red or something
+    popStatus(err.getMessage match {
+      case null => err.toString
+      case msg  => msg
+    })
+    ws.exec.handleError(err)
+  })
 
   override def clearStatus () = {
     _statusPopup.clear()

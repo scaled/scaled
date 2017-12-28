@@ -72,7 +72,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
       case e :Throwable =>
         val win = defaultWS.open(stage)
         win.visitScratchIfEmpty()
-        win.emitError(e)
+        win.exec.handleError(e)
     }
   }
 
@@ -216,14 +216,13 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)
   override def removeHintPath (path :Path) :Unit = mgr.removeHintPath(name, path)
 
-  override val exec = app.exec.handleErrors(emitError)
-  override def emitError (err :Throwable) {
+  override val exec = app.exec.handleErrors(err => {
     if (!Errors.isFeedback(err)) {
       val trace = Errors.stackTraceToString(err)
       app.debugLog(trace)
       recordMessage(trace)
     }
-  }
+  })
 
   override def toString = s"ws:$name"
 

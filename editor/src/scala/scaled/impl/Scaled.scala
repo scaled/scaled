@@ -58,8 +58,8 @@ class Scaled extends Application with Editor {
       Closeable({ task.cancel() })
     }
   }
-  override val exec = new Executor(
-    uiScheduler, bgScheduler, err => logger.log(Errors.stackTraceToString(err)), Some(pool))
+  private def handleError (err :Throwable) = logger.log(Errors.stackTraceToString(err))
+  override val exec = new Executor(uiScheduler, bgScheduler, handleError, Some(pool))
 
   val server = new Server(this)
   val pkgMgr = new PackageManager(logger)
