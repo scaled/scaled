@@ -74,6 +74,8 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   override def didStartup () {} // not used
   override def willShutdown () {} // not used
 
+  override def installDir (source :String) = metas.get(Source.parse(source)).mod.root
+
   override def classpath (source :String) =
     metas.get(Source.parse(source)).mod.depends(pkgRepo.resolver).classpath.toSeq
 
