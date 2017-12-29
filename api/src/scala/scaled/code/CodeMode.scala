@@ -216,8 +216,9 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
     // if we have details, show those above the completion
     var deetOptPop :OptValue[Popup] = null
-    def checkDeets () = active.details(view.width()) match {
+    def checkDeets () = active.details(view.width()).onSuccess(_ match {
       case Some(buffer) =>
+        // TODO: double check that `active` is still the `active` we started with...
         val popup = Popup.buffer(buffer, Popup.UpRight(comp.start))
         if (deetOptPop == null) deetOptPop = view.addPopup(popup)
         else deetOptPop() = popup
@@ -226,7 +227,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
           deetOptPop.clear()
           deetOptPop = null
         }
-    }
+    })
     if (!choices.isEmpty) checkDeets()
 
     def extendOrAdvance () {

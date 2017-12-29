@@ -38,7 +38,7 @@ object CodeCompleter {
     /** Optional details to show when choice is active (e.g. method docs).
       * @param viewWidth the width of the current view (in characters) which should be used to
       * wrap the detail text to fit. */
-    def details (viewWidth :Int) :Option[Buffer] = None
+    def details (viewWidth :Int) :Future[Option[Buffer]] = Future.success(None)
   }
 
   /** Encapsulates the result of a completion request.
