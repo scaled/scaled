@@ -70,7 +70,7 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
     } catch {
       case e :Exception =>
         result.fail(e)
-        window.exec.handleError(e)
+        window.emitError(e)
     }
     result
   }

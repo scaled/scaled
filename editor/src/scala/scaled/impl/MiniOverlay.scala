@@ -109,7 +109,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
     } catch {
       case e :Exception =>
         result.fail(e)
-        window.exec.handleError(e)
+        window.emitError(e)
     }
     result
   }

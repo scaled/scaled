@@ -72,7 +72,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
       case e :Throwable =>
         val win = defaultWS.open(stage)
         win.visitScratchIfEmpty()
-        win.exec.handleError(e)
+        win.emitError(e)
     }
   }
 

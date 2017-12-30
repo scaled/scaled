@@ -319,7 +319,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     view.point() = pend // move the point to the end of the to-be-completed prefix
     if (activeComp != null) clearActiveComp()
     completer.completeAt(window, buffer, pstart, pend).
-      onFailure(wspace.exec.handleError).
+      onFailure(window.emitError).
       onSuccess(comp => if (!comp.choices.isEmpty) activeComp = new ActiveComp(comp))
   }
 

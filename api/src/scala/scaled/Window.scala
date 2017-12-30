@@ -93,6 +93,10 @@ trait Window {
     * buffer; if true, it disappears forever in a poof of quantum decoherence. */
   def emitStatus (msg :String, ephemeral :Boolean = false) :Unit
 
+  /** Reports an unexpected error to the user.
+    * The message will also be appended to the `*messages*` buffer. */
+  def emitError (err :Throwable) :Unit = exec.handleError(err)
+
   /** Clears any lingering status message. A status message usually remains visible until the user
     * types the next key, so this allows any buffer which receives key input to clear the last
     * status message. */
