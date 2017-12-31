@@ -4,6 +4,7 @@
 
 package scaled.util
 
+import scala.annotation.varargs;
 import scaled._
 import scaled.major.TextConfig
 
@@ -49,15 +50,15 @@ class BufferBuilder (val fillWidth :Int) {
   }
 
   /** Appends a single line of `text` to the buffer, styled by `styles`. */
-  def add (text :String, styles :String*) :this.type = add(styledLine(text, styles))
+  @varargs def add (text :String, styles :String*) :this.type = add(styledLine(text, styles))
 
   /** Appends `text` to the buffer, filling it at this builder's fill width. */
-  def addFilled (text :String, styles :String*) :this.type =
+  @varargs def addFilled (text :String, styles :String*) :this.type =
     addPreFilled("", text, styles :_*)
 
   /** Appends `text` to the buffer, prefixing every line with `prefix`, and filling it at this
     * builder's fill width (minus the width of the prefix). */
-  def addPreFilled (prefix :String, text :String, styles :String*) :this.type = {
+  @varargs def addPreFilled (prefix :String, text :String, styles :String*) :this.type = {
     val filler = new Filler(math.max(fillWidth-prefix.length, MinFillWidth))
     filler.append(Filler.flatten(text))
     if (prefix.length > 0) filler.filled.foreach { f => f.insert(0, prefix) }
