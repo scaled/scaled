@@ -24,8 +24,13 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
     * connection to this value for as long as it has connections of its own.
     */
   def map[M] (f :JFunction[T, M]) :ValueV[M] = new DelegateValueV[T,M](this) {
-    override def get = f(parent.get)
-    override def onParentChange (value :T, ovalue :T) = notifyEmit(f(value), f(ovalue))
+    private[this] var mapped = f(parent.get)
+    override def get = mapped
+    override def onParentChange (value :T, ovalue :T) = {
+      val omapped = mapped
+      mapped = f(value)
+      notifyEmit(mapped, omapped)
+    }
   }
 
   /** Returns a value equivalent to this value except that listeners are notified via the supplied
