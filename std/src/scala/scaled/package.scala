@@ -86,4 +86,16 @@ package object scaled {
   implicit class SOptOps[A] (private val opt :SOption[A]) extends AnyVal {
     def fromScala = Option.from(opt)
   }
+
+  // a Scala reimplementation of Java 8's try-with-resources
+  @inline def using[R <: AutoCloseable, T] (rsrc :R)(block :(R => T)) :T = {
+    var exn :Throwable = null
+    try block(rsrc)
+    catch { case t :Throwable => exn = t ; throw t }
+    finally {
+      if (exn == null) rsrc.close()
+      else try rsrc.close()
+      catch { case t :Throwable => exn.addSuppressed(t) }
+    }
+  }
 }
