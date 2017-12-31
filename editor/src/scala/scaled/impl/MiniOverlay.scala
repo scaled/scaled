@@ -36,6 +36,8 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   }
   BorderPane.setMargin(carea, new Insets(5, 0, 0, 0))
 
+  private var curDisp :DispatcherImpl = null
+
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
     override def getPrompt = plabel.getText
@@ -71,6 +73,11 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   /** Called when this minibuffer is cleared. */
   def onClear () :Unit
 
+  /** Aborts any active mini-mode. */
+  def abort () {
+    if (curDisp != null) curDisp.invoke("abort")
+  }
+
   override def apply[R] (mode :String, args :Any*) :Future[R] = {
     val result = window.exec.uiPromise[R]
     try {
@@ -96,11 +103,13 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
       toFront()
       onShow()
       disp.area.requestFocus()
+      curDisp = disp
       result onComplete { _ =>
         ui.setPrompt("")
         ui.showCompletions(Seq())
         view.popup.clear() // clear any active popup
         disp.dispose(true)
+        curDisp = null
         setCenter(null)
         setVisible(false)
         onClear()

@@ -58,6 +58,10 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         // close our listeners for the old buffer
         toClose.close()
 
+        // if our buffer is changing, we need to clear out any active mini-modes
+        _mini.abort()
+        _statusMini.abort()
+
         // listen for buffer staleness and reload or freakout as appropriate
         toClose += buf.stale.onEmit {
           if (!buf.dirty) revisitFile()

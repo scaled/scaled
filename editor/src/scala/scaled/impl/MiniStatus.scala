@@ -30,6 +30,8 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
     override def showCompletions (comps :SeqV[String]) {} // not supported presently
   }
 
+  private var curDisp :DispatcherImpl = null
+
   /** Called to check whether we can show this minibuffer.
     * Should throw a feedback exception (with explanation) if showing is not currently allowed. */
   def willShow () :Unit
@@ -39,6 +41,11 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
 
   /** Called when this minibuffer is cleared. */
   def onClear () :Unit
+
+  /** Aborts any active mini-mode. */
+  def abort () {
+    if (curDisp != null) curDisp.invoke("abort")
+  }
 
   override def apply[R] (mode :String, args :Any*) :Future[R] = {
     val result = window.exec.uiPromise[R]
@@ -57,11 +64,13 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
       toFront()
       onShow()
       disp.area.requestFocus()
+      curDisp = disp
       result onComplete { _ =>
         ui.setPrompt("")
         ui.showCompletions(Seq())
         view.popup.clear() // clear any active popup
         disp.dispose(true)
+        curDisp = null
         setCenter(null)
         setVisible(false)
         onClear()
