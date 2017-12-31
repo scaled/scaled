@@ -25,6 +25,11 @@ public class Std {
     return new Seq<A>(elems, elems.length);
   }
 
+  /** Returns a two-tuple containing {@code a} and {@code b}. */
+  public static <A, B> scala.Tuple2<A, B> pair (A a, B b) {
+    return new scala.Tuple2<A, B>(a, b);
+  }
+
   /** Returns a {@link List} containing {@code e0}. */
   public static <A> List<A> list (A e0) { return List.apply(e0); }
   /** Returns a {@link List} containing {@code e0, e1}. */
