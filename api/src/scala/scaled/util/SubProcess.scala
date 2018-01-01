@@ -8,6 +8,7 @@ import java.io.{BufferedReader, Reader, PrintWriter}
 import java.io.{InputStream, InputStreamReader, OutputStreamWriter}
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.{Executor => JExecutor}
+import java.util.function.Consumer
 import scaled._
 
 /** Factory methods &c for [[SubProcess]. */
@@ -41,14 +42,14 @@ object SubProcess {
     * @param onExit a function that will be called with `false` if stdout is closed due to
     * failure, `true` if it's closed normally. */
   def apply (config :Config, exec :Executor, buffer :Buffer,
-             onExit :Boolean => Unit = noopOnExit) :SubProcess = {
+             onExit :Consumer[Boolean] = noopOnExit) :SubProcess = {
     val events = Signal[Event](exec.ui)
     events.onValue { _ match {
       case Output(text, _) => buffer.append(Line.fromTextNL(text))
-      case Complete(isErr) => if (!isErr) onExit(true)
+      case Complete(isErr) => if (!isErr) onExit.accept(true)
       case Failure(cause, isErr) =>
         buffer.append(Line.fromTextNL(Errors.stackTraceToString(cause)))
-        if (!isErr) onExit(false)
+        if (!isErr) onExit.accept(false)
     }}
     new SubProcess(config, events)
   }
