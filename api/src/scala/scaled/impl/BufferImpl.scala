@@ -181,7 +181,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     dline
   }
 
-  override def replace (start :Loc, until :Loc, lines :Ordered[LineV]) :Loc = {
+  override def replace (start :Loc, until :Loc, lines :Ordered[_ <: LineV]) :Loc = {
     if (until < start) replace(until, start, lines) else {
       // if this is an exact replacement, handle it specially; this is mainly for efficient undoing
       // of transforms; overkill perhaps, but whatever, it's four lines of code

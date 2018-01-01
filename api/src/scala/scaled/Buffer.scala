@@ -424,7 +424,7 @@ abstract class Buffer extends BufferV {
   /** Appends `region` to the end of this buffer.
     * @return the buffer location just after the end of the appended region.
     */
-  def append (region :Ordered[LineV]) :Loc = insert(end, region)
+  def append (region :Ordered[_ <: LineV]) :Loc = insert(end, region)
 
   /** Deletes `count` characters from the line at `loc`.
     * @return the deleted chars as a line. */
@@ -440,10 +440,10 @@ abstract class Buffer extends BufferV {
   def replace (loc :Loc, count :Int, line :LineV) :Line
   /** Replaces the region between `[start, until)` with `lines`.
     * @return the buffer location just after the replaced region. */
-  def replace (start :Loc, until :Loc, lines :Ordered[LineV]) :Loc
+  def replace (start :Loc, until :Loc, lines :Ordered[_ <: LineV]) :Loc
   /** Replaces the region `r` with `lines`.
     * @return the buffer location just after the replaced region. */
-  def replace (r :Region, lines :Ordered[LineV]) :Loc = replace(r.start, r.end, lines)
+  def replace (r :Region, lines :Ordered[_ <: LineV]) :Loc = replace(r.start, r.end, lines)
 
   /** Transforms the characters between `[start, until)` using `fn`.
     * @return the buffer location just after the transformed region. */
