@@ -94,16 +94,23 @@ object Store {
   /** Creates a store for `path`. */
   def apply (path :Path) :Store = FileStore(path)
 
-  /** Creates a scratch store with the supplied name and working directory. */
-  def scratch (name :String, cwd :Path = Paths.get(System.getProperty("user.dir"))) =
-    new TextStore(name, cwd.toString + File.separator, "")
+  /** Creates a scratch store with the supplied name and parent directory. */
+  def scratch (name :String, pdir :Path = userDir) = new TextStore(parent(pdir), name, "")
 
   /** Creates a scratch store with the supplied name and which inherits its working directory
     * from `inherit`. This is often appropriate when opening a scratch buffer while viewing an
     * existing buffer. */
-  def scratch (name :String, inherit :Store) = new TextStore(name, inherit.parent, "")
+  def scratch (name :String, inherit :Store) = new TextStore(inherit.parent, name, "")
 
+  /** Creates a read-only text store with the supplied `name` and `text`. */
+  def text (name :String, text :String, pdir :Path = userDir) =
+    new TextStore(parent(pdir), name, text)
+
+  /** Returns the real path of `path` iff it exists. Otherwise returns `path` as is. */
   def realPath (path :Path) = if (Files.exists(path)) path.toRealPath() else path
+
+  private def userDir = Paths.get(System.getProperty("user.dir"))
+  private def parent (pdir :Path) = pdir.toString + File.separator
 }
 
 /** A store that represents a normal file. */
@@ -181,7 +188,7 @@ object ZipEntryStore {
   def unapply (store :ZipEntryStore) :Option[(Path,String)] = Some((store.zipFile, store.entry))
 }
 
-class TextStore (val name :String, val parent :String, val text :String) extends Store {
+class TextStore (val parent :String, val name :String, val text :String) extends Store {
 
   override def exists = false
   override def readOnly = true
