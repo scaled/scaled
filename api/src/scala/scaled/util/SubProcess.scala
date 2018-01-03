@@ -54,6 +54,54 @@ object SubProcess {
     new SubProcess(config, events)
   }
 
+  // filter out CR to avoid wonkiness on Windows: TODO: make this optional?
+  private class FilterCRReader (source :Reader) extends Reader {
+    override def read :Int = source.read match {
+      case '\r' => this.read
+      case c    => c
+    }
+    override def read (cbuf :Array[Char], offset :Int, length :Int) = {
+      var read = source.read(cbuf, offset, length)
+      var filtered = 0
+      var ii = 0; while (ii < read) {
+        val pos = offset+ii
+        if (cbuf(pos) == '\r') {
+          System.arraycopy(cbuf, pos+1, cbuf, pos, read-ii-1)
+          ii -= 1
+          read -= 1
+          filtered += 1
+        }
+        ii += 1
+      }
+      read
+    }
+    override def close () = source.close()
+  }
+
+  /**
+   * Creates a daemon thread that reads all lines from `in` and calls `onLine` with each line.
+   * *Note*: the thread is not started by default, call `start` on the returned `Thread`. `onLine`
+   * will be called with `null` when the input reaches end of stream. `onError` will be called if
+   * an error occurs reading the stream, in which case no additional `onLine` calls will be made
+   * and the thread will exit.
+   */
+  def reader (in :InputStream, onLine :String => Unit, onError :Throwable => Unit) :Thread = {
+    val reader = new BufferedReader(new FilterCRReader(new InputStreamReader(in, "UTF-8")))
+    val thread = new Thread("Subproc: stdin") {
+      setDaemon(true)
+      override def run () :Unit = try {
+        var line :String = null
+        do {
+          line = reader.readLine
+          onLine(line)
+        } while (line != null)
+      } catch {
+        case err :Throwable => onError(err)
+      }
+    }
+    thread
+  }
+
   private def noopOnExit (success :Boolean) {}
 }
 
@@ -116,19 +164,6 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) e
 
   override def toString = s"SubProcess(${config.cmd.mkString(" ")})"
 
-  private def read (reader :BufferedReader, isErr :Boolean) :Unit = try {
-    while (true) {
-      val line = reader.readLine
-      if (line == null) {
-        events.emit(Complete(isErr))
-        return
-      }
-      events.emit(Output(line, isErr))
-    }
-  } catch {
-    case e :Exception => events.emit(Failure(e, isErr))
-  }
-
   private lazy val process = {
     val pb = new ProcessBuilder(config.cmd :_*)
     pb.directory(config.cwd.toFile)
@@ -139,49 +174,16 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) e
   protected lazy val out =
     new PrintWriter(new OutputStreamWriter(process.getOutputStream, "UTF-8"))
 
-  // filter out CR to avoid wonkiness on Windows: TODO: make this optional?
-  private class FilterCRReader(source :Reader) extends Reader {
-    override def read :Int = {
-      val c = source.read()
-      if (c == '\r') this.read
-      else c
-    }
-
-    override def read (cbuf :Array[Char], offset :Int, length :Int) = {
-      var read = source.read(cbuf, offset, length)
-      var filtered = 0
-      var ii = 0; while (ii < read) {
-        val pos = offset+ii
-        if (cbuf(pos) == '\r') {
-          System.arraycopy(cbuf, pos+1, cbuf, pos, read-ii-1)
-          ii -= 1
-          read -= 1
-          filtered += 1
-        }
-        ii += 1
-      }
-      read
-    }
-
-    override def close () = source.close()
-  }
-
-  private def lineReader (is :InputStream) =
-    new BufferedReader(new FilterCRReader(new InputStreamReader(is, "UTF-8")))
-
   // kick things off immediately; if the process fails to start, an exception will be thrown before
   // these threads are started; otherwise they'll run until the process's streams are closed
   try {
-    val in  = lineReader(process.getInputStream)
-    val err = lineReader(process.getErrorStream)
-    new Thread("Subproc: stdin") {
-      setDaemon(true)
-      override def run () = read(in, false)
-    }.start()
-    new Thread("Subproc: stderr") {
-      setDaemon(true)
-      override def run () = read(err, true)
-    }.start()
+    def startReader (isErr :Boolean, in :InputStream) :Unit = reader(
+      process.getInputStream,
+      line  => events.emit(if (line == null) Complete(isErr) else Output(line, isErr)),
+      error => events.emit(Failure(error, isErr))
+    ).start()
+    startReader(false, process.getInputStream)
+    startReader(true , process.getErrorStream)
   } catch {
     case err :Throwable => events.emit(Failure(err, true))
   }
