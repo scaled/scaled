@@ -36,7 +36,7 @@ sealed abstract class Option[+A] {
   @inline final def getOrElse[B >: A] (other : =>B) :B = if (isDefined) get else other
 
   /** Applies `op` to this option, if it is defined. */
-  @inline final def ifDefined[U] (op :A => U) :Unit = if (isDefined) op(get) else None
+  @inline final def ifDefined[U] (op :A => U) :Unit = if (isDefined) op(get)
 
   /** Returns `this` if non-empty, `opt` otherwise. Note that `opt` is lazy. */
   @inline final def orElse[B >: A] (opt : =>Option[B]) :Option[B] = if (isDefined) this else opt
