@@ -48,7 +48,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), "* indicates unsaved changes")
         mline.addDatum(buf.nameV, "Name of the current buffer")
 
-        val view = new BufferViewImpl(buf, defWidth, defHeight)
+        val view = new BufferViewImpl(WindowImpl.this, buf, defWidth, defHeight)
         // TODO: move this to LineNumberMode? (and enable col number therein)
         mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
         // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but

@@ -24,7 +24,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   BorderPane.setMargin(plabel, new Insets(0, 0, 5, 0))
   setTop(plabel)
 
-  val cview = new BufferViewImpl(BufferImpl.scratch("*completions*"), 40, 0)
+  val cview = new BufferViewImpl(window, BufferImpl.scratch("*completions*"), 40, 0)
   val carea = new BufferArea(cview, null) {
     override protected def wasResized (widthChars :Int, heightChars :Int) {
       // we don't save our layout width/height back into our view width/height here because we
@@ -84,7 +84,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
       willShow() // make sure it's OK to activate ourselves
 
       val buffer = BufferImpl.scratch("*minibuffer*")
-      val view = new BufferViewImpl(buffer, 40, 1)
+      val view = new BufferViewImpl(window, buffer, 40, 1)
       val modeArgs = ui :: result :: List.copyOf(args)
       val disp = new DispatcherImpl(window, window.resolver(null, buffer), view, ModeLine.Noop,
                                     s"mini-$mode", modeArgs, Nil) {

@@ -10,7 +10,7 @@ import scaled.util.Close
 /** Implements [[BufferView]] and [[RBufferView]]. This class mainly defines the model, and
   * [[BufferArea]] etc. actually visualize the model and handle UX.
   */
-class BufferViewImpl (_buffer :BufferImpl, initWidth :Int, initHeight :Int)
+class BufferViewImpl (val window :WindowImpl, _buffer :BufferImpl, initWidth :Int, initHeight :Int)
     extends RBufferView(initWidth, initHeight) {
 
   private val _lines = new SeqBuffer[LineViewImpl](_buffer.lines.size)

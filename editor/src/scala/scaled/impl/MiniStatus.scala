@@ -53,7 +53,7 @@ abstract class MiniStatus (window :WindowImpl) extends BorderPane with Minibuffe
       willShow() // make sure it's OK to activate ourselves
 
       val buffer = BufferImpl.scratch("*minibuffer*")
-      val view = new BufferViewImpl(buffer, 40, 1)
+      val view = new BufferViewImpl(window, buffer, 40, 1)
       val modeArgs = ui :: result :: List.copyOf(args)
       val disp = new DispatcherImpl(window, window.resolver(null, buffer), view, ModeLine.Noop,
                                     s"mini-$mode", modeArgs, Nil) {

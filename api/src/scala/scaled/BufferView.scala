@@ -27,6 +27,9 @@ abstract class BufferView {
   /** The buffer being displayed by this view. */
   def buffer :Buffer
 
+  /** The window in which this buffer view is displayed. */
+  def window :Window
+
   /** Views for the lines in this buffer. */
   def lines :SeqV[LineView]
 
