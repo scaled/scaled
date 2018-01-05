@@ -131,18 +131,12 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Navigates to the next entry in the current visit list, if any.")
   def visitNext () {
-    window.visits.getOption match {
-      case None     => window.popStatus("No visit list is currently configured.")
-      case Some(vs) => vs.next(window)
-    }
+    window.visits().next(window)
   }
 
   @Fn("Navigates to the previous entry in the current visit list, if any.")
   def visitPrev () {
-    window.visits.getOption match {
-      case None     => window.popStatus("No visit list is currently configured.")
-      case Some(vs) => vs.prev(window)
-    }
+    window.visits().prev(window)
   }
 
   @Fn("Pops the top location from the visit stack and returns to it.")

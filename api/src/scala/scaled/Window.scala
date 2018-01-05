@@ -54,7 +54,7 @@ trait Window {
   val state :RState = new RState()
 
   /** The active [[Visit.List]] (if any). */
-  val visits = OptValue[Visit.List]()
+  val visits = Value(new Visit.List("configured visit", Seq()))
 
   /** A stack of visits made from within this window. */
   val visitStack = new Visit.Stack()

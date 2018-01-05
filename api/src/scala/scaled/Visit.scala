@@ -36,9 +36,12 @@ object Visit {
     */
   class List (val thing :String, val visits :SeqV[Visit]) {
 
+    /** Whether this list is empty. */
+    def isEmpty = visits.isEmpty
+
     /** Visits the next visit in the list in `frame`. */
     def next (window :Window) {
-      if (visits.isEmpty) window.popStatus(onNone)
+      if (isEmpty) window.popStatus(onNone)
       else {
         _current += 1
         if (_current < visits.size) go(window)
@@ -51,7 +54,7 @@ object Visit {
 
     /** Visits the previous visit in the list in `frame`. */
     def prev (window :Window) {
-      if (visits.isEmpty) window.popStatus(onNone)
+      if (isEmpty) window.popStatus(onNone)
       else if (_current == -1) {
         _current = visits.size-1
         go(window)
@@ -62,6 +65,17 @@ object Visit {
         _current -= 1
         go(window)
       }
+    }
+
+    /** Creates a new visit list, setting its position to this list's current position if the new
+      * list's `thing` matches this list's and it contains this list's current element. */
+    def update (thing :String, visits :SeqV[Visit]) :List = {
+      val updated = new List(thing, visits)
+      if (thing == this.thing && _current != -1) {
+        updated._current = visits.indexOf(this.visits(_current))
+        updated._lastLoc = _lastLoc
+      }
+      updated
     }
 
     private var _current = -1
