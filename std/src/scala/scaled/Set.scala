@@ -37,7 +37,7 @@ abstract class Set[A] extends Unordered[A] with (A => Boolean) {
   /** An alias for [[intersect]]. */
   def & (that :Set[A]) :Set[A] = this intersect that
 
-  /** Returns the difference of `this` set and `that` set. */
+  /** Returns all elements in `this` set that are not in `that` set. */
   def diff (that :Set[A]) :Set[A] = {
     val sb = Set.builder[A](size)
     val iter = iterator() ; while (iter.hasNext) {
