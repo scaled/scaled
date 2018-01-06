@@ -14,7 +14,7 @@ import java.util.zip.ZipFile
   * than file in that it allows Scaled to seamlessly read data from `.zip`. and `.jar` file entries,
   * and could conceivably be extended to allow reading and writing of files over the network.
   */
-abstract class Store {
+abstract class Store extends Comparable[Store] {
 
   /** The name of this store. */
   def name :String
@@ -68,6 +68,11 @@ abstract class Store {
       case e :Throwable => System.err.println(s"lastModified failed $path: $e") ; 0L
     }
   } || 0L
+
+  override def compareTo (other :Store) :Int = parent.compareTo(other.parent) match {
+    case 0 => name.compareTo(other.name)
+    case n => n
+  }
 
   // re-abstract these methods to be sure we don't forget to implement them
   override def equals (other :Any) :Boolean
