@@ -8,7 +8,7 @@ package scaled
 /** Provides a read-only view of a property. This is useful if you want to expose reading of a
   * [[ValueV]] without providing the ability to register reactions.
   */
-trait PropertyV[T] {
+trait PropertyV[+T] {
 
   /** Returns the current value of this property. */
   def get :T
