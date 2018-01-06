@@ -267,7 +267,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
         "# An info window has a geometry and a set of matching tags. The name only matters to",
         "# connect a geometry to a set of tags. Tags must appear in only one window definition.",
         "",
-        "# example.tags: test, exec, summary",
+        "# example.tags: tests, exec, summary",
         "# example.geom: 100x35+500+30"
       ) map Line.apply)
     }
