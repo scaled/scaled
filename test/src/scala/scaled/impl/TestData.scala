@@ -46,6 +46,8 @@ object TestData {
     def createBuffer (store :Store, state :List[State.Init[_]], reuse :Boolean) = BufferImpl(store)
     def openBuffer (store :Store) = BufferImpl(store)
     def openWindow (geom :Option[Geometry]) = null
+    def getInfoWindow (tag :String) = null
+    def visitWindowConfig (window :Window) {}
     def killBuffer (buffer :Buffer) {}
     def addHintPath (path :Path) {}
     def removeHintPath (path :Path) {}

@@ -4,20 +4,21 @@
 
 package scaled.impl
 
+import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.HashMultimap
 import java.io.IOException
 import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, Path, Paths}
 import java.util.stream.Collectors
-import java.util.{List => JList}
+import java.util.{List => JList, HashMap}
 import javafx.application.Platform
 import javafx.scene.Scene
 import javafx.stage.Stage
 import scala.io.Source
 import scaled._
 import scaled.pacman.Filez
-import scaled.util.{Close, Errors}
+import scaled.util.{Close, Errors, Properties}
 
 /** Manages workspaces, and the creation of editors therein. */
 class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceService {
@@ -26,7 +27,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   // the directory in which we store workspace metadata
   private val wsdir = Files.createDirectories(app.pkgMgr.metaDir.resolve("Workspaces"))
 
-    // a map from workspace name to hint path list
+  // a map from workspace name to hint path list
   private val wshints = Filer.fileDB[HashMultimap[String,String]](
     wsdir.resolve(".hintpaths"),
     _.fold(HashMultimap.create[String,String]()) { (m, s) =>
@@ -133,6 +134,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   import app.{logger => log}
 
   val windows = SeqBuffer[WindowImpl]()
+  val infoWindows = new HashMap[String, WindowImpl]()
   val buffers = SeqBuffer[BufferImpl]()
 
   def lastOpened = Files.getLastModifiedTime(root).toMillis
@@ -146,6 +148,9 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     catch {
       case e :Throwable => log.log(s"$win.onClose failure", e)
     }
+
+    val infoIds = infoWindows.entrySet().filter(_.getValue == win).map(_.getKey)
+    infoIds foreach { infoWindows.remove }
 
     windows.remove(win)
     try {
@@ -211,6 +216,62 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   override def openWindow (geom :Option[Geometry]) = {
     val wg = Geom(geom.map(g => (g.width, g.height)), geom.map(g => (g.x, g.y)))
     createWindow(new Stage(), wg)
+  }
+
+  case class WindowInfo (tags :Set[String], geom :Option[Geometry])
+  private val windowFile = root.resolve("windows.properties")
+  private val tagToWindowId = new HashMap[String, String]()
+  private val infoGeometry = new HashMap[String, Geometry]()
+
+  private def readWindowInfo (file :Path) :Unit = if (Files.exists(file)) {
+    tagToWindowId.clear()
+    infoGeometry.clear()
+    Properties.read(log, file) { (key, value) =>
+      val (name, ekey) = key split("\\.", 2) match {
+        case Array(name, ekey) => (name, ekey)
+        case _                 => (key, "")
+      }
+      ekey match {
+        case "tags" => value.split(",").map(_.trim).foreach(tagToWindowId.put(_, name))
+        case "geom" => Geometry(value) match {
+          case Some(geom) => infoGeometry.put(name, geom)
+          case _ => log.log(s"Invalid window geometry for $name in $file")
+        }
+        case _      => log.log(s"$file contains invalid window info key '$key' (value = $value)")
+      }
+    }
+  }
+  // read our window config and set up a file watch to re-read when it's modified
+  readWindowInfo(windowFile)
+  toClose += app.svcMgr.service(classOf[WatchService]).watchFile(windowFile, readWindowInfo(_))
+
+  override def getInfoWindow (tag :String) = {
+    val infoId = Option(tagToWindowId.get(tag)) || tag
+    println(s"$tag => $infoId")
+    infoWindows.get(infoId) match {
+      case null =>
+        val win = openWindow(Option(infoGeometry.get(infoId)))
+        infoWindows.put(infoId, win)
+        win
+      case win => win
+    }
+  }
+
+  override def visitWindowConfig (window :Window) {
+    val buffer = openBuffer(Store(windowFile))
+    // if the buffer is empty; populate it with an example configuration
+    if (buffer.start == buffer.end) {
+      buffer.append(Seq(
+        s"# Workspace '${name}': info windows",
+        "#",
+        "# An info window has a geometry and a set of matching tags. The name only matters to",
+        "# connect a geometry to a set of tags. Tags must appear in only one window definition.",
+        "",
+        "# example.tags: test, exec, summary",
+        "# example.geom: 100x35+500+30"
+      ) map Line.apply)
+    }
+    window.focus.visit(buffer)
   }
 
   override def addHintPath (path :Path) :Unit = mgr.addHintPath(name, path)

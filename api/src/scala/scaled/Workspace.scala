@@ -93,6 +93,15 @@ abstract class Workspace {
     * determined by the user's configurtion. */
   def openWindow (geom :Option[Geometry]) :Window
 
+  /** Returns (opening if necessary) the specified "info" window. Info windows are used to display
+    * auxilliary information like compiler output, test run output, documentation, etc. The end
+    * user can define info windows (along with their default geometry) and then assign one or more
+    * tags to them to route info from specific sources to their desired windows. */
+  def getInfoWindow (tag :String) :Window
+
+  /** Opens the configuration file that specifies info windows in `window` for editing. */
+  def visitWindowConfig (window :Window) :Unit
+
   /** Adds `path` to this workspace's list of hint paths. A hint path is used to trigger the
     * selection of this workspace when Scaled is first started. If the file being edited is in a
     * subdirectory of a workspace's hint path, that workspace will be automatically activated. */

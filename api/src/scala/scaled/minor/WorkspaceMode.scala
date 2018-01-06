@@ -52,6 +52,9 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
     frame.visit(bb.applyTo(hbuf))
   }
 
+  @Fn("Opens the config file for the workspace's info window specifications in a buffer.")
+  def editWindowConfig () :Unit = wspace.visitWindowConfig(window)
+
   /** The history ring for workspace names. */
   protected def nameHistory = wspace.historyRing("workspace-name")
 
