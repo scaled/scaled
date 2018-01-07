@@ -158,8 +158,12 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
   /** Adds `tag` to this line. If `tag` is of type `String` then `noteLineStyled` is emitted. */
   def addTag[T] (tag :T, start :Loc, until :Int) {
     val scol = start.col
-    if (until > scol) {
-      tags.add(tag, scol, until)
+    val ecol = if (until <= length) until else {
+      println(s"!!! Truncating line tag: '$tag' $start to $until capped at $length")
+      length
+    }
+    if (ecol > scol) {
+      tags.add(tag, scol, ecol)
       if (tag.isInstanceOf[String]) buffer.noteLineStyled(start)
     } // else NOOP!
   }
