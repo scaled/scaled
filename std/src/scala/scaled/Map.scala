@@ -103,6 +103,17 @@ abstract class Map[K,+V] extends Unordered[(K,V)] with (K => V) {
   override def newBuilder[B] (expectedSize :Int) = Seq.builder[B](expectedSize)
   override def newEmpty[B] = Seq.empty
   override protected def toStringType = "Map"
+
+  override def addString (sb :JStringBuilder, open :String, sep :String,
+                          close :String) :JStringBuilder = {
+    sb.append(open)
+    val ll = sb.length
+    fold(sb) { (sb, e) =>
+      if (sb.length > ll) sb.append(sep)
+      sb.append(e._1).append(" -> ").append(e._2)
+    }
+    sb.append(close)
+  }
 }
 
 object Map {
