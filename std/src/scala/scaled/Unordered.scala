@@ -28,6 +28,10 @@ abstract class Unordered[+A] extends Iterable[A] {
   /** Returns true if this collection is non-empty. */
   def nonEmpty :Boolean = !isEmpty
 
+  override def concat[B >: A] (that :Iterable[B]) :Unordered[B] =
+    if (isEmpty && that.isInstanceOf[Unordered[_]]) that.asInstanceOf[Unordered[B]]
+    else super.concat(that)
+
   override def sizeHint = size
 }
 
