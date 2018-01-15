@@ -33,19 +33,7 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
   @Fn("Describes the state of the current workspace.")
   def describeWorkspace () {
     val bb = new BufferBuilder(view.width()-1)
-    bb.addHeader("Workspace")
-    bb.addKeysValues("Name: " -> wspace.name,
-                     "Root: " -> wspace.root.toString,
-                     "Buffers: " -> wspace.buffers.size.toString)
-    wspace.state.describeSelf(bb)
-
-    bb.addHeader("Buffers")
-    wspace.buffers.foreach { buf =>
-      bb.addSubHeader(buf.name)
-      bb.addKeysValues("Store: " -> buf.store.toString,
-                       "Length: " -> buf.offset(buf.end).toString)
-      buf.state.describeSelf(bb)
-    }
+    wspace.describeSelf(bb)
 
     val hstore = Store.scratch(s"*workspace:${wspace.name}*", buffer.store)
     val hbuf = wspace.createBuffer(hstore, reuse=true, state=State.inits(Mode.Hint("help")))

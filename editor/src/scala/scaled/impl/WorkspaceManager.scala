@@ -18,7 +18,7 @@ import javafx.stage.Stage
 import scala.io.Source
 import scaled._
 import scaled.pacman.Filez
-import scaled.util.{Close, Errors, Properties}
+import scaled.util.{BufferBuilder, Close, Errors, Properties}
 
 /** Manages workspaces, and the creation of editors therein. */
 class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceService {
@@ -247,7 +247,6 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
 
   override def getInfoWindow (tag :String) = {
     val infoId = Option(tagToWindowId.get(tag)) || tag
-    println(s"$tag => $infoId")
     infoWindows.get(infoId) match {
       case null =>
         val win = openWindow(Option(infoGeometry.get(infoId)))
@@ -284,6 +283,13 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
       recordMessage(trace)
     }
   })
+
+  override protected def describeInternals (bb :BufferBuilder) {
+    bb.addSubHeader("Window Config")
+    val tags = Map.view(tagToWindowId).groupBy(_._2, _._1)
+    bb.addKeysValues(Map.view(infoGeometry).map(
+      (k, v) => (k, s" $v (tags: ${tags(k).mkString(" ")})")))
+  }
 
   override def toString = s"ws:$name"
 

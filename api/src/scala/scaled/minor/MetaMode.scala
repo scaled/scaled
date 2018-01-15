@@ -63,7 +63,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
       buffers.filter(_ != curb).headOption getOrElse curb
     val comp = Completer.buffer(buffers, defb, Set(curb))
     window.mini.read(s"Switch to buffer (default ${defb.name}):", "", bufferHistory, comp).
-      onSuccess(frame.visit)
+      onSuccess(buf => frame.visit(buf))
   }
 
   @Fn("Reads a buffer name from the minibuffer and kills (closes) it.")

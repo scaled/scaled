@@ -40,7 +40,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
       ws.focusedBuffer(buf) // move the focused buffer to the head of the buffers
     }
 
-    def setBuffer (buf :BufferImpl, oldBufferDisposing :Boolean) :BufferViewImpl =
+    def setBuffer (buf :BufferImpl, winFocus :Boolean, oldBufferDisposing :Boolean) :BufferViewImpl =
       // if we're already displaying this buffer, just keep it
       if (disp != null && buf == view.buffer) view else {
         // create the modeline and add some default data before anyone else sneaks in
@@ -70,7 +70,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
 
         // listen for buffer death and repopulate this frame as needed
         toClose += buf.killed.onEmit {
-          setBuffer(_visitedBuffers.headOption || ws.getScratch(), true)
+          // switch back to the first buffer in our visited (skipping the killed buffer as it may
+          // or may not have already been removed from the visited list)
+          setBuffer(_visitedBuffers.find(_ != buf) || ws.getScratch(), false, true)
         }
 
         if (disp != null) {
@@ -96,7 +98,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         noteVisitedBuffer(buf)
 
         // make sure our window is visible and up front
-        WindowImpl.this.toFront()
+        if (winFocus) WindowImpl.this.toFront()
 
         view
       }
@@ -110,7 +112,8 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
 
     override def geometry = Geometry(disp.area.width, disp.area.height, 0, 0) // TODO: x/y pos
     override def view :BufferViewImpl = if (disp != null) disp.area.bview else null
-    override def visit (buffer :Buffer) = setBuffer(buffer.asInstanceOf[BufferImpl], false)
+    override def visit (buffer :Buffer, focus :Boolean) =
+      setBuffer(buffer.asInstanceOf[BufferImpl], focus, false)
   }
 
   /** Used to resolve modes in this window/frame. */
@@ -203,7 +206,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     _frame.visitFile(Store(path))
   }
   def visitScratchIfEmpty () {
-    if (_frame.disp == null) _frame.setBuffer(ws.getScratch(), false)
+    if (_frame.disp == null) _frame.setBuffer(ws.getScratch(), true, false)
   }
 
   //

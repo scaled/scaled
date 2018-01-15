@@ -28,8 +28,9 @@ trait Window {
     def prevStore :Option[Store]
 
     /** Makes the specified buffer the active buffer for this frame.
+      * @param focus whether or not to request focus for the window as well.
       * @return the view for the buffer. */
-    def visit (buffer :Buffer) :BufferView
+    def visit (buffer :Buffer, focus :Boolean = true) :BufferView
 
     /** Opens a buffer for `store` and visits it.
       * @return the view for the buffer. */

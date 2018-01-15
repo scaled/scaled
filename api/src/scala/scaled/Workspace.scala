@@ -5,7 +5,7 @@
 package scaled
 
 import java.nio.file.Path
-import scaled.util.Close
+import scaled.util.{BufferBuilder, Close}
 
 /** Coordinates metadata and operations for a workspace. A workspace defines an environment
   * tailored to working on a particular software artifact. Each workspace is like a separate Scaled
@@ -119,6 +119,28 @@ abstract class Workspace {
     Rings(state), name, new Ring(config(EditorConfig.historySize)) {
       override def toString = s"$name-history"
     })
+
+  /** Describes the internals of this workspace. Mainly for debugging and the curious. */
+  def describeSelf (bb :BufferBuilder) {
+    bb.addHeader("Workspace")
+    bb.addKeysValues("Name: " -> name,
+                     "Root: " -> root.toString,
+                     "Buffers: " -> buffers.size.toString)
+
+    state.describeState(bb)
+    describeInternals(bb)
+    state.describeDescribables(bb)
+
+    bb.addHeader("Buffers")
+    buffers.foreach { buf =>
+      bb.addSubHeader(buf.name)
+      bb.addKeysValues("Store: " -> buf.store.toString,
+                       "Length: " -> buf.offset(buf.end).toString)
+      buf.state.describeSelf(bb)
+    }
+  }
+
+  protected def describeInternals (bb :BufferBuilder) {}
 }
 
 /** Static [[Workspace]] stuffs. */

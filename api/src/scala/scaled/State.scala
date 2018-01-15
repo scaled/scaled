@@ -37,13 +37,21 @@ abstract class StateV extends Describable {
 
   /** Adds a description of this state to `bb`. */
   def describeSelf (bb :BufferBuilder) {
+    describeState(bb)
+    describeDescribables(bb)
+  }
+
+  /** Adds a description of just this state to `bb`. */
+  def describeState (bb :BufferBuilder) {
     val kvs = keys.toSeq.flatMap(k => get(k).map(_.toString).map(v => (s"${k.getName}: " -> v)))
     if (!kvs.isEmpty) {
       bb.addSection("State")
       bb.addKeysValues(kvs)
     }
+  }
 
-    // append the description of any Describable piece of state
+  /** Adds a description of `Describable` state to `bb`. */
+  def describeDescribables (bb :BufferBuilder) {
     keys.toSeq.flatMap(k => get(k)).collect({ case d :Describable => d }).
       foreach(_.describeSelf(bb))
   }
