@@ -176,6 +176,12 @@ class MetaMode (env :Env) extends MinorMode(env) {
     }
   }
 
+  @Fn("Shows the *messages* buffer.")
+  def showMessages () = wspace.buffers.find(_.name == "*messages*") match {
+    case Some(buffer) => window.focus.visit(buffer)
+    case None => window.popStatus("Unable to find *messages* buffer?")
+  }
+
   @Fn("Describes the current major mode along with all of its key bindings.")
   def describeMode () {
     val bb = new BufferBuilder(this.view.width()-1)
