@@ -31,4 +31,7 @@ object Errors {
     exn.printStackTrace(new PrintWriter(trace))
     trace.toString
   }
+
+  /** Converts `exn`'s stack trace into lines. */
+  def stackTraceToLines (exn :Throwable) :Seq[LineV] = Line.fromTextNL(stackTraceToString(exn))
 }
