@@ -44,6 +44,7 @@ class BufferBuilder (val fillWidth :Int) {
     this
   }
 
+  /** Appends `lines` to the buffer. */
   def add (lines :Seq[LineV]) :this.type = {
     _lines ++= lines
     this
