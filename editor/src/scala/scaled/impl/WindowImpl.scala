@@ -99,6 +99,9 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
 
         // make sure our window is visible and up front
         if (winFocus) WindowImpl.this.toFront()
+        // if we're not to-fronting, then be sure that we're at least shown (we show windows
+        // lazily to avoid showing them before they have a fram that's visiting a buffer)
+        else stage.show()
 
         view
       }
