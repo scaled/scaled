@@ -4,9 +4,8 @@
 
 package scaled.impl
 
-import com.sun.javafx.css.converters.PaintConverter
-
 import javafx.beans.value.{ChangeListener, ObservableValue}
+import javafx.css.converter.PaintConverter
 import javafx.css.{CssMetaData, Styleable, StyleableObjectProperty}
 import javafx.geometry.Bounds
 import javafx.scene.paint.{Color, Paint}

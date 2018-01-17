@@ -4,6 +4,7 @@
 
 package scaled.impl
 
+import java.awt.Desktop
 import java.io.File
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.Executors
@@ -14,7 +15,6 @@ import javafx.event.{ActionEvent, EventHandler}
 import javafx.stage.Stage
 import javafx.util.Duration
 import scaled._
-import scaled.platform.OpenFilesHelper
 import scaled.util.Errors
 
 class Scaled extends Application with Editor {
@@ -78,11 +78,11 @@ class Scaled extends Application with Editor {
     // we have to defer resolution of auto-load services until the above constructors have
     // completed; always there are a twisty maze of initialization dependencies
     svcMgr.resolveAutoLoads()
-    // listen for open files events
-    OpenFilesHelper.setListener(files => onMainThread { files.foreach(wspMgr.visit) })
     // create the starting editor and visit therein the starting files
     val argvFiles = Seq.view(getParameters.getRaw) map wspMgr.resolve
-    wspMgr.visit(stage, argvFiles ++ OpenFilesHelper.launchFiles)
+    wspMgr.visit(stage, argvFiles ++ Scaled.openFiles())
+    // listen for open files events
+    Scaled.openFiles.via(uiScheduler).onValue { _.foreach(wspMgr.visit) }
     // start our command server
     server.start()
   }
@@ -109,10 +109,14 @@ object Scaled {
   /** The port on which [Server] listens for commands. */
   final val Port = (Option(System.getenv("SCALED_PORT")) getOrElse "32323").toInt
 
+  /** Files received via 'open files' events. These may arrive long before JavaFX is ready to run,
+    * so we register a handler immediately in main() and buffer files in this reactive value. This
+    * catches the event that comes in when a macOS app is opened with initial files. */
+  val openFiles = Value(Seq[Path]())
+
   def main (args :Array[String]) {
-    // if we're running on Mac, wire up an open files handler; this has to happen immediately or
-    // we'll miss events delivered right after startup
-    OpenFilesHelper.init()
+    Desktop.getDesktop.setOpenFileHandler(
+      event => openFiles() = Seq.view(event.getFiles).map(_.toPath))
     // if there's already a Scaled instance running, pass our args to it and exit; otherwise launch
     // our fully operational mothership
     if (!sendFiles(args)) Application.launch(classOf[Scaled], args :_*)

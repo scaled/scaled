@@ -52,7 +52,10 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
   }
 
   /** Visits `path` in the appropriate workspace window. If no window exists one is created. */
-  def visit (path :Path) :Unit = workspaceFor(path).open().visitPath(path)
+  def visit (path :Path) :Unit = {
+    app.log.emit(s"Visiting $path")
+    workspaceFor(path).open().visitPath(path)
+  }
 
   /** Visits `paths` in the appropriate workspace windows, creating them as needed.
     * The first window created will inherit the supplied default stage. */

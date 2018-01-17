@@ -2,7 +2,7 @@
 
 ![Travis build status](https://travis-ci.org/scaled/scaled.svg?branch=master)
 
-Scaled is a modern programmer's text editor, built atop Java 8 and JavaFX 8, mostly written in
+Scaled is a modern programmer's text editor, built atop **Java 9** and JavaFX 9, mostly written in
 Scala, and which is designed to be extensible "all the way down" like Emacs. Like Emacs, "all the
 way down" doesn't actually go all the way down, but it goes down a lot further than most other
 editors.
@@ -36,8 +36,8 @@ Scaled includes a package management system which is used to install Scaled itse
 extension packages. The Scaled package manager (spam) is desgined to bootstrap itself from a very
 simple bootstrap jar file which you can install in conjunction with a shell script or batch file.
 
-Note: the `java` executable in your path must be from a Java 8 JDK installation, otherwise replace
-`java` in the below scripts with the absolute path to `bin/java` in a Java 8 JDK installation.
+Note: the `java` executable in your path must be from a Java 9 JDK installation, otherwise replace
+`java` in the below scripts with the absolute path to `bin/java` in a Java 9 JDK installation.
 
 ### Unix / Mac OS X / Cygwin
 
@@ -114,6 +114,8 @@ you will need to install some packages. You can list the available packages via:
 spam list --all
 ```
 
+### Java
+
 If you are a Java developer, you'll probably want to:
 
 ```
@@ -122,25 +124,46 @@ spam install maven-project
 spam install xml-mode
 ```
 
+There is very rudimentary Gradle integration via `gradle-project` but keep your expectations low.
+
+Scaled also has [LSP] integration. If you have Eclipse metadata in your project, the Eclipse
+language server will be started automatically.
+
+Scaled also includes basic integration with JUnit, allowing you to run tests directly from within
+the editor and see results. `C-c C-t C-a` runs all the tests for the project and there are other
+bindings to run just the tests in the current file, just the test function under the point, or to
+re-run the last executed test.
+
+### Scala
+
 If you like the Scala, be sure to:
 
 ```
 spam install scala-mode
-spam install sbt-project
 ```
 
 Presently Scaled's integration with Maven projects is decent and its integration with SBT projects
-is the barest skeleton. Eventually SBT integration will be improved, and Gradle integration is also
-in the cards.
+leans heavily on the use of [Ensime] and its SBT integration. Be sure to generate a `.ensime` file
+before running Scaled in an SBT project.
 
-If you do happen to have a `pom.xml` with your project metadata in it, Scaled will automatically
-build your code on save and allow you to navigate through the errors in the editor (via `M-]` and
-`M-[`). The current compiler integration is somewhat primitive, and a tighter integration is
-forthcoming.
+When the Ensime language server is working more reliably, its language server will automatically be
+started when an `.ensime` file is found. In the meanwhile, one can manually set up the old
+`dragos:ensime-lsp` language server
 
-Scaled also includes basic integration with JUnit, allowing you to run tests directly from within
-the editor and see results. `C-c C-t` runs the tests in the current file if it looks like it
-contains JUnit tests, and it runs all the tests for the project otherwise.
+### JavaScript
+
+If you like JavaScript, be sure to:
+
+```
+spam install javascript-mode
+```
+
+This includes basic integration with the [Flow] type checker.
+
+### And so on
+
+There are myriad other very basic language modes with more or less (mostly less) integration with
+those language's tools: `kotlin-mode`, `ocaml-mode`, `lisp-mode`, `csharp-mode` etc.
 
 ## Using Scaled
 
@@ -214,6 +237,9 @@ Scaled is released under the New BSD License. The most recent version of the cod
 https://github.com/scaled/scaled
 
 [Emacs reference card]: http://www.gnu.org/software/emacs/refcards/pdf/refcard.pdf
-[the `spam` shell script]: https://raw.githubusercontent.com/scaled/pacman/master/bin/spam
+[Ensime]: http://ensime.github.io/
+[Flow]: https://flow.org/
+[LSP]: https://langserver.org/
 [Scaled Google Group]: https://groups.google.com/forum/#!forum/scalable-editor
 [scaled-pacman.jar]: http://scaled.github.io/scaled-pacman.jar
+[the `spam` shell script]: https://raw.githubusercontent.com/scaled/pacman/master/bin/spam

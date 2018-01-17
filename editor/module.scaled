@@ -1,4 +1,3 @@
 depend: git:https://github.com/scaled/scaled.git#api
 depend: git:https://github.com/scaled/pacman.git
-depend: mvn:org.ow2.asm:asm:5.0.1
-depend: mvn:com.samskivert.scaled:mac-open-files:1.0.2
+depend: mvn:org.ow2.asm:asm:6.0

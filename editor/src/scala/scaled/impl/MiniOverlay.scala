@@ -127,7 +127,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
     // our completion area might not have been shown yet, so we have to get the font width
     // from the prompt label and then do the pixel to char max width math ourselves; sigh...
     val fm = Toolkit.getToolkit.getFontLoader.getFontMetrics(plabel.getFont)
-    val charWidth = fm.computeStringWidth("W")
+    val charWidth = fm.getCharWidth('W')
     // add a gap of two chars between columns
     val colWid = comps.map(_.length).max+2
     // leave two columns on either side to accommodate padding

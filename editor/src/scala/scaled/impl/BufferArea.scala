@@ -56,11 +56,12 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     override def getBean = BufferArea.this
     override def getName = "font"
 
-    override protected def invalidated () {
-      // if font is changed by calling setFont, then css might need to be reapplied since font size
-      // affects calculated values for styles with relative values
-      if (!fontSetByCss) Dep.reapplyCSS(BufferArea.this)
-    }
+    // TODO: this seems to perhaps no longer be needed? we can't do it in Java 9 anyway...
+    // override protected def invalidated () {
+    //   // if font is changed by calling setFont, then css might need to be reapplied since font
+    //   // size affects calculated values for styles with relative values
+    //   if (!fontSetByCss) Dep.reapplyCSS(BufferArea.this)
+    // }
   }
   font.addListener(new InvalidationListener() {
     override def invalidated (valueModel :Observable) = updateFontMetrics()
@@ -88,7 +89,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
   private def updateFontMetrics () {
     val fm = Toolkit.getToolkit.getFontLoader.getFontMetrics(font.get)
-    charWidth = fm.computeStringWidth("W")
+    charWidth = fm.getCharWidth('W')
     // TODO: for some reason JavaFX always ends up one pixel taller when measuring text height; I
     // don't know where this magical pixel comes in, but until I can figure it out, I'm just
     // hacking in a pixel here; yay!
