@@ -69,6 +69,9 @@ object Close {
       _contents
     }
 
+    /** Returns the referent if created, `null` otherwise. Does not auto-create the referent. */
+    def peek :T = synchronized { _contents }
+
     /** Nulls out this reference. Subsequent calls to [[get]] will cause the contents to be
       * recreated. */
     def close () {
