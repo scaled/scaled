@@ -28,13 +28,16 @@ else related to Scaled or programmer's editors are welcome.
 
 ## Kick the tires
 
-Scaled is still in the early phases of active development. It is mature enough that I use it
-exclusively to develop itself, but it has rough edges. Fortunately, it's relatively easy to give it
-a whirl.
+Scaled is in daily active use by its author (for four years now). It is mature enough that I use it
+exclusively to develop itself and various other projects. It has some rough edges, and essentially
+zero user community, so it's only likely interesting to someone who wants to be able to deeply and
+easily customize their editor without having to write JavaScript or elisp.
+
+If that hasn't scared you off, here's how to give it a whirl:
 
 Scaled includes a package management system which is used to install Scaled itself as well as
-extension packages. The Scaled package manager (spam) is desgined to bootstrap itself from a very
-simple bootstrap jar file which you can install in conjunction with a shell script or batch file.
+extension packages. The Scaled package manager (spam) is desgined to bootstrap itself from a single
+jar file which you can install in conjunction with a shell script or batch file.
 
 Note: the `java` executable in your path must be from a Java 9 JDK installation, otherwise replace
 `java` in the below scripts with the absolute path to `bin/java` in a Java 9 JDK installation.
@@ -169,13 +172,12 @@ those language's tools: `kotlin-mode`, `ocaml-mode`, `lisp-mode`, `csharp-mode` 
 
 At the moment Scaled's "UI" follows Emacs where that makes sense (pretty much all of the basic
 editing key bindings). Extensions like `project-mode` introduce new interactions and I'm not making
-an effort to model those the myriad hodge-podge Emacs IDE-like extensions that exist, I'm just
+an effort to model those on the myriad hodge-podge Emacs IDE-like extensions that exist, I'm just
 trying to come up with sensible bindings.
 
 At any time, you can invoke `M-x describe-mode` (or `C-h m`) to see all of the key bindings and
 config vars for the the active major and minor modes. You can cross-reference that with the
-[Emacs reference card] to see basic editing commands organized more usefully than alphabetic order
-by key binding description.
+[Emacs reference card] to see basic editing commands organized more usefully than alphabetic order.
 
 ## Development
 
@@ -188,7 +190,7 @@ day as the Scaled core stabilizes and the facilities for developing Scaled impro
 Because Scaled checks itself and all of its extensions out directly from source, you can simply
 start hacking on the code that is checked out in `SCALED_HOME/Packages`. This is not wildly
 different than how I develop Scaled. I actually have the packages checked out elsewhere and symlink
-them into `SCALED_HOME/Packages`, but that's mainly so that I can arrange the myriad Scaled
+them into `SCALED_HOME/Packages`, but that's mainly so that I can arrange the numerous Scaled
 subprojects into a slightly less flat directory structure.
 
 I'll eventually add support to the Scaled Package Manager to make it easier to maintain a "working"
