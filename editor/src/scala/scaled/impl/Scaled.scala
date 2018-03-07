@@ -75,6 +75,8 @@ class Scaled extends Application with Editor {
                  else (msg :String) => ()
 
   override def start (stage :Stage) {
+    // round up exceptions thrown from runnables sent to Platform.runLater
+    Thread.currentThread.setUncaughtExceptionHandler((thread, err) => handleError(err))
     // we have to defer resolution of auto-load services until the above constructors have
     // completed; always there are a twisty maze of initialization dependencies
     svcMgr.resolveAutoLoads()
