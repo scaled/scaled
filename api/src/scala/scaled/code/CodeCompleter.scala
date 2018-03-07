@@ -16,7 +16,7 @@ abstract class CodeCompleter {
   /** Used to auto-trigger a completion when the user types a character. Defaults to triggering
     * complete on `.` but custom completers may override for different languages. */
   def shouldActivate (buffer :Buffer, point :Loc, typed :String) :Boolean =
-    typed == "." && Chars.isWhitespace(buffer.charAt(point))
+    typed == "." && Chars.isWhitespace(buffer.charAt(point)) && !buffer.syntaxAt(point).isComment
 
   /** Generates a list of completions given at the supplied completion `pos`. This may not be the
     * current buffer `point` (also supplied) if the user has manually requested to complete an
