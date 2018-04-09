@@ -117,8 +117,13 @@ object Scaled {
   val openFiles = Value(Seq[Path]())
 
   def main (args :Array[String]) {
-    Desktop.getDesktop.setOpenFileHandler(
-      event => openFiles() = Seq.view(event.getFiles).map(_.toPath))
+    try {
+      Desktop.getDesktop.setOpenFileHandler(
+        event => openFiles() = Seq.view(event.getFiles).map(_.toPath))
+    } catch {
+      case uoe :UnsupportedOperationException => // oh well
+      case t :Throwable => t.printStackTrace(System.err)
+    }
     // if there's already a Scaled instance running, pass our args to it and exit; otherwise launch
     // our fully operational mothership
     if (!sendFiles(args)) Application.launch(classOf[Scaled], args :_*)
