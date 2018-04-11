@@ -15,8 +15,10 @@ class Indenter (val config :Config) {
   /** Computes the indentation for the `row`th line of the buffer. */
   def apply (buffer :Buffer, row :Int) :Int = {
     val line = buffer.line(row) ; val first = line.firstNonWS
-    if (NoIndentSyntaxes(line.syntaxAt(first))) first
-    else apply(Info(buffer, row, line, line.firstNonWS))
+    // we compute the indent even if we're going to ignore it,
+    // so that the proper line states get applied
+    val indent = apply(Info(buffer, row, line, line.firstNonWS))
+    if (NoIndentSyntaxes(line.syntaxAt(first))) first else indent
   }
 
   /** Computes the indentation for the line identified by `info`. */
