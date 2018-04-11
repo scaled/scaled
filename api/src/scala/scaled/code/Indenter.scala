@@ -14,8 +14,9 @@ class Indenter (val config :Config) {
 
   /** Computes the indentation for the `row`th line of the buffer. */
   def apply (buffer :Buffer, row :Int) :Int = {
-    val line = buffer.line(row)
-    apply(Info(buffer, row, line, line.firstNonWS))
+    val line = buffer.line(row) ; val first = line.firstNonWS
+    if (NoIndentSyntaxes(line.syntaxAt(first))) first
+    else apply(Info(buffer, row, line, line.firstNonWS))
   }
 
   /** Computes the indentation for the line identified by `info`. */
@@ -30,6 +31,10 @@ class Indenter (val config :Config) {
 
   /** Issues an indentation debugging message. */
   protected def debug (msg :String) :Unit = if (config(CodeConfig.debugIndent)) println(msg)
+
+  /** When the first character of a line is one of this set of syntaxes, we preserve indentation as
+    * is instead of computing a new indentation and applying it. */
+  protected val NoIndentSyntaxes :Set[Syntax] = Set(Syntax.HereDocLiteral)
 }
 
 object Indenter {
