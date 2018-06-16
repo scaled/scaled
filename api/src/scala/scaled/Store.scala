@@ -33,22 +33,6 @@ abstract class Store extends Comparable[Store] {
   /** Returns true if this store cannot be written, false otherwise. */
   def readOnly :Boolean
 
-  /** Reads the contents of this store line by line, applying `fn` to each line in the store. `fn`
-    * is also passed the character offset of the start of the line. */
-  def readLines (fn :(String, Int) => Unit) {
-    val lineSep = System.lineSeparator
-    read({ r =>
-      val buffed = new BufferedReader(r)
-      var offset = 0
-      var line :String = buffed.readLine()
-      while (line != null) {
-        fn(line, offset)
-        offset += line.length + lineSep.length
-        line = buffed.readLine()
-      }
-    })
-  }
-
   /** Passes the contents of this store as a `Reader` to `fn`. The `Reader` is automatically closed
     * when `fn` returns. */
   def read (fn :Reader => Unit) {
@@ -113,6 +97,54 @@ object Store {
 
   /** Returns the real path of `path` iff it exists. Otherwise returns `path` as is. */
   def realPath (path :Path) = if (Files.exists(path)) path.toRealPath() else path
+
+  /** Used to read lines via [readLines]. */
+  abstract class LineReader {
+    /** Applies this reader to a single line.
+      * @param data an arbitrary buffer of characters.
+      * @param start the offset of the start of the line in `data`.
+      * @param end the offset of the end of the line in `data`.
+      * @param fileOffset othe offset of the start of the line in the entire file (not just the
+      * `data` buffer).
+      */
+    def apply (data :Array[Char], start :Int, end :Int, fileOffset :Int) :Unit
+  }
+
+  /** Returns a line by line reader for `r` that processes lines with `lr`. */
+  def reader (lr :LineReader) = (r :Reader) => {
+    val buffer = new Array[Char](32768)
+    var storeOffset = 0
+    var read = 0
+    var leftover = 0
+    while (read >= 0) {
+      read = r.read(buffer, leftover, buffer.length-leftover)
+      if (read > 0) {
+        val have = leftover + read
+        var start = 0
+        var next = start
+        while (next < have) {
+          val c = buffer(next)
+          // TEMP: hackery to remove tabs; TODO: remove when we support tabs
+          if (c == '\t') buffer(next) = ' '
+          // TODO: handle bare \r?
+          if (c == '\r' || c == '\n') {
+            lr(buffer, start, next, storeOffset)
+            next += 1
+            if (next < have-1) {
+              val nc = buffer(next)
+              if (c == '\r' && nc == '\n') next += 1
+            }
+            storeOffset += (next-start)
+            start = next
+          } else {
+            next += 1
+          }
+        }
+        leftover = have-start
+        if (leftover > 0) System.arraycopy(buffer, start, buffer, 0, leftover)
+      }
+    }
+  }
 
   private def userDir = Paths.get(System.getProperty("user.dir"))
   private def parent (pdir :Path) = pdir.toString + File.separator

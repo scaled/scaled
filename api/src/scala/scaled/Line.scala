@@ -516,6 +516,10 @@ object Line {
   /** Creates a line builder with `s` as the line text. */
   def builder (s :String) = new Builder(s.toCharArray)
 
+  /** Creates a line builder with the characters from `start` to `end` in `data`. */
+  def builder (data :Array[Char], start :Int, end :Int) =
+    new Builder(Arrays.copyOfRange(data, start, end))
+
   /** Calls `fn` on each line of `text`, handling both CR and CRLF style line separators. The
     * second argument to `fn` is the line's offset in characters from the start of `text`. */
   def onLines (text :String)(fn :(String, Int) => Unit) {

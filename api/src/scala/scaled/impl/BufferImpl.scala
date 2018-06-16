@@ -5,6 +5,7 @@
 package scaled.impl
 
 import java.io.File
+import java.util.Arrays
 import scala.collection.mutable.{Map => MMap}
 import scaled._
 import scaled.util.Errors
@@ -23,8 +24,9 @@ object BufferImpl {
 
   def apply (store :Store) :BufferImpl = {
     val buf = new BufferImpl(store)
-    // TODO: remove tab hackery when we support tabs
-    store.readLines { (ln, off) => buf.addLine(ln.replace('\t', ' ').toCharArray) }
+    store.read(Store.reader { (data, start, end, off) =>
+      buf.addLine(Arrays.copyOfRange(data, start, end))
+    })
     // TEMP: tack a blank line on the end to simulate a trailing line sep
     buf.addLine(MutableLine.NoChars)
     buf
