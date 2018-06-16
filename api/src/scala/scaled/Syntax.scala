@@ -4,6 +4,8 @@
 
 package scaled
 
+import java.util.Arrays
+
 /** Models a limited quantity of syntax information on a per-character basis in a buffer.
   * This makes life easier for various code-grokking routines, which need to know if they're
   * looking at a comment, or a string literal, or actual code.
@@ -85,5 +87,12 @@ object Syntax {
     def isComment = false
     def isLiteral = true
     override def toString = "OtherLiteral"
+  }
+
+  /** Creates a syntax array of `length`, filled with `syn`. */
+  def mkArray (length :Int, syn :Syntax) :Array[Syntax] = {
+    val syns = new Array[Syntax](length)
+    Arrays.fill(syns.asInstanceOf[Array[Object]], syn)
+    syns
   }
 }

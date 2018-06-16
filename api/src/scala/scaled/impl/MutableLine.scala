@@ -5,7 +5,6 @@
 package scaled.impl
 
 import java.io.Writer
-import java.util.Arrays
 import scaled._
 
 /** [MutableLine] related types and utilities. */
@@ -46,7 +45,7 @@ object MutableLine {
 class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
                    tags :Tags, ltags :Line.TagSet) extends LineV with Store.Writable {
   def this (buffer :BufferImpl, cs :Array[Char]) = this(
-    buffer, cs, Array.fill(cs.length)(Syntax.Default), new Tags(), new Line.TagSet())
+    buffer, cs, Syntax.mkArray(cs.length, Syntax.Default), new Tags(), new Line.TagSet())
 
   require(cs != null && xs != null && tags != null)
 
@@ -54,7 +53,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
   protected var _syns = xs
   protected def _tags = tags
   protected def _ltags = ltags
-  private[this] var _end = cs.size
+  private[this] var _end = cs.length
 
   override def length = _end
   override def view (start :Int, until :Int) = new Line(
