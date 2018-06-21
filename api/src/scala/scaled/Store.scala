@@ -144,6 +144,7 @@ object Store {
         if (leftover > 0) System.arraycopy(buffer, start, buffer, 0, leftover)
       }
     }
+    if (leftover > 0) lr(buffer, 0, leftover, storeOffset)
   }
 
   private def userDir = Paths.get(System.getProperty("user.dir"))
