@@ -39,10 +39,11 @@ class MiniReadMode[T] (
   }
   buffer.edited onEmit queueRefresh
 
-  private var nonHistoryText = initText
+  private var nonHistoryText = current
   private var historyAge = -1
+  private var historyChange = false
   // reset to historyAge -1 whenever the buffer is modified
-  buffer.edited.onEmit { historyAge = -1 }
+  buffer.edited.onEmit { if (!historyChange) historyAge = -1 }
 
   override def keymap = super.keymap.
     bind("previous-history-entry", "UP").
@@ -87,8 +88,10 @@ class MiniReadMode[T] (
     if (age == -1) setContents(nonHistoryText)
     else {
       // if we were showing non-history text, save it before overwriting it with history
-      if (historyAge == -1) nonHistoryText = buffer.region(buffer.start, buffer.end)
+      if (historyAge == -1) nonHistoryText = current
+      historyChange = true
       setContents(history.entry(age).get)
+      historyChange = false
     }
     // update historyAge after setting contents because setting contents wipes historyAge
     historyAge = age
@@ -99,7 +102,7 @@ class MiniReadMode[T] (
     // don't display completions if we're not completing
     // (TODO: have this be a member on Completer; comparing against a global is pretty hacky)
     if (completer != Completer.none) {
-      setContents(comp.glob)
+      if (comp.glob != current) setContents(comp.glob)
       val comps = comp.comps
       if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
       else {
