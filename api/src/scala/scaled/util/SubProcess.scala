@@ -178,7 +178,7 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) e
   // these threads are started; otherwise they'll run until the process's streams are closed
   try {
     def startReader (isErr :Boolean, in :InputStream) :Unit = reader(
-      process.getInputStream,
+      in,
       line  => events.emit(if (line == null) Complete(isErr) else Output(line, isErr)),
       error => events.emit(Failure(error, isErr))
     ).start()
