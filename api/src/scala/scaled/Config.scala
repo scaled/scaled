@@ -67,6 +67,17 @@ object Config {
     override def toString () = converter.toString
   }
 
+  /** Creates a simple read-only config for use in test code. */
+  def testConfig = new Config {
+    def value[T] (key :Config.Key[T]) :ValueV[T] = Value(key.defval(this))
+    def update[T] (key :Config.Key[T], value :T) = fail
+    def scope :Config.Scope = fail
+    def file :Path = fail
+    def toProperties :Seq[String] = fail
+    def atScope (scope :Config.Scope) :Config = fail
+    private def fail = throw new UnsupportedOperationException
+  }
+
   /** Converts values to and from strings. */
   abstract class Converter[T] {
     def show (value :T) :String
