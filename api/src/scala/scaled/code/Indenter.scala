@@ -50,199 +50,6 @@ object Indenter {
     def startsWith (matcher :Matcher) = line.matches(matcher, first)
   }
 
-  /** Tracks buffer elements that change the indentation state. These include things like `BlockS`
-    * (a block of code, often nested in curly braces), `ExprS` (an expression that spans multiplie
-    * lines), `ContinuedS` (a continued statement), etc..
-    *
-    * A stack of elements describes the indentation state at the start of a given line. The state
-    * is combined with information local to that line to determine the indentation of the line as
-    * well as the indentation state at the end of that line.
-    */
-  abstract class State (val next :State) extends Line.Tag {
-    /** Computes the base indentation for this state.
-      * @param top whether this state is on the top of the stack. */
-    def indent (cfg :Config, top :Boolean = false) :Int = indentWidth(cfg) + next.indent(cfg)
-
-    /** Pops this state off the stack if `f` returns true. */
-    def popIf (f :Predicate[State]) :State = if (f.test(this)) next else this
-
-    /** Pops state off the stack until it pops off a state for which `f` returns true. */
-    def popTo (f :State => Boolean) :State = if (f(this)) next else next.popTo(f)
-    /** Pops state off the stack until it pops off a state for which `f` returns true. */
-    def popTo (f :Predicate[State]) :State = if (f.test(this)) next else next.popTo(f)
-
-    /** Pops state off the stack until it pops off a block, or reaches the empty state. */
-    def popBlock (close :Char) :State = next.popBlock(close)
-
-    override def key = classOf[State]
-    override def ephemeral :Boolean = true
-
-    override def toString = {
-      val sb = new StringBuilder()
-      var ss = this ; while (ss != EmptyS) {
-        if (sb.length > 0) sb.append(" ")
-        sb.append(ss.show)
-        ss = ss.next
-      }
-      sb.toString
-    }
-
-    protected def indentWidth (config :Config) :Int = config(CodeConfig.indentWidth)
-    protected def show :String
-  }
-
-  /** An indenter that indents lines based on incrementally computed indentation state. */
-  abstract class ByState (cfg :Config) extends Indenter(cfg) {
-
-    override def apply (info :Info) :Int = {
-      val lstate = state(stater, info)
-      computeIndent(lstate, lstate.indent(config, true), info)
-    }
-
-    /** Computes the indent for `line`. The default implementation simply returns `base`.
-      * @parma state the indentation state prior to processing `line`.
-      * @param base the base indent for `line` based on braces, parens, etc.
-      * @param info the info on the line whose indentation is being computed.
-      * @return the column to which `line` should be indented.
-      */
-    protected def computeIndent (state :State, base :Int, info :Info) :Int = base
-
-    protected lazy val stater = createStater()
-    protected def createStater () :Stater
-  }
-
-  /** An indenter that indents lines based on blocks and expressions. */
-  class ByBlock (cfg :Config) extends ByState(cfg) {
-
-    override def apply (info :Info) :Int = {
-      state(stater, info) match {
-        // if this character closes the block on the top of the stack, handle it specially because
-        // the close bracket is not indented as if it were inside the block
-        case bs :BlockS if (bs.isClose(info.firstChar)) => computeCloseIndent(bs, info)
-        case st => computeIndent(st, st.indent(config, true), info)
-      }
-    }
-
-    protected def computeCloseIndent (bs :BlockS, info :Info) :Int = {
-      // by default we just indent based on the state above block state on the stack, but other
-      // languages may customize this if they need, for example, to go further up the state stack
-      // or to do other special funny business
-      bs.next.indent(config, false)
-    }
-
-    override protected def createStater () = new BlockStater()
-  }
-
-  /** The state at the start of a buffer: nothing. */
-  val EmptyS :State = new State(null) {
-    override def indent (cfg :Config, top :Boolean) = 0
-    override def popTo (f :State => Boolean) = this
-    override def popBlock (close :Char) = this
-    override def toString = show
-    override protected def show :String = "EmptyS"
-  }
-
-  /** A marker state indicating that a line's state needs to be computed. */
-  val UnknownS :State = new State(null) {
-    override def indent (cfg :Config, top :Boolean) = ???
-    override def popTo (f :State => Boolean) = ???
-    override def popBlock (close :Char) = ???
-    override def toString = show
-    override protected def show :String = "UnknownS"
-  }
-
-  /** Indicates that we're nested in a bracketed block of code. */
-  class BlockS (close :Char, col :Int, next :State) extends State(next) {
-    def isClose (close :Char) :Boolean = this.close == close
-    /** Returns a copy of this block with EOL closing column. */
-    def makeEOL = new BlockS(close, -1, next)
-    // a block bracket only affects indentation if it's at the end of a line;
-    // if we see {{, for example, we only want the last one to affect indentation
-    override def indent (cfg :Config, top :Boolean) :Int =
-      if (col >= 0) next.indent(cfg) else super.indent(cfg, top)
-    override def popBlock (close :Char) = if (this.close == close) next else next.popBlock(close)
-    override protected def show :String = s"BlockS($close, $col)"
-  }
-
-  /** Indicates that we're nested in a bracketed expression. */
-  class ExprS (close :Char, val col :Int, next :State) extends State(next) {
-    def isClose (close :Char) :Boolean = this.close == close
-    override def indent (cfg :Config, top :Boolean) :Int =
-      // an expr block only affects indentation if it's on the top of the stack
-      if (top) col+1 else next.indent(cfg)
-    override def popBlock (close :Char) = if (this.close == close) next else next.popBlock(close)
-    override protected def show :String = s"ExprS($close, $col)"
-  }
-
-  /** Incrementally computes indentation state changes. */
-  abstract class Stater {
-    /** Computes the state at the end of `line` given the starting state `start`. */
-    def compute (line :LineV, start :State) :State
-  }
-
-  /** A base [[Stater]] implementation for languages with bracketed blocks. */
-  class BlockStater extends Stater {
-
-    override def compute (line :LineV, start :State) :State = {
-      val openChars = this.openChars ; val closeChars = this.closeChars
-      val first = line.firstNonWS ; val last = lastNonWS(line)
-      var state = adjustStart(line, first, last, start)
-
-      // scan the line one character at a time, looking for open/close braces and parens
-      var cc = 0 ; val ll = line.length ; while (cc < ll) {
-        val c = line.charAt(cc) ; val s = line.syntaxAt(cc)
-        if (s.isCode) {
-          val idx = openChars.indexOf(c)
-          if (idx >= 0) state = openBlock(line, c, closeChars.charAt(idx), cc, state)
-          else if (closeChars.indexOf(c) >= 0) state = closeBlock(line, c, cc, state)
-        }
-        cc += 1
-      }
-
-      adjustEnd(line, first, last, start, state)
-    }
-
-    protected def adjustStart (line :LineV, first :Int, last :Int, start :State) :State = start
-    protected def adjustEnd (line :LineV, first :Int, last :Int,
-                             start :State, current :State) :State = current
-
-    protected def openBlock (line :LineV, open :Char, close :Char, col :Int, state :State) :State = {
-      // if the open char is the last non-comment character of the line, then we treat it like a
-      // block rather than an expression regardless of whether it's a curly brace, paren, etc.
-      val last = lastNonWS(line)
-      if (col >= last) new BlockS(close, -1, state)
-      else if (isExprOpen(open)) new ExprS(close, col, state)
-      else new BlockS(close, col, state)
-    }
-    protected def closeBlock (line :LineV, close :Char, col :Int, state :State) :State =
-      state.popBlock(close)
-
-    protected def openChars = "{(["
-    protected def closeChars = "})]"
-    protected def isExprOpen (c :Char) = (c != '{')
-  }
-
-  /** Returns the starting indentation state for `info`, computing it (and any precededing states)
-    * as necessary and storing the computed state in its associated line. */
-  def state (stater :Stater, info :Info) :State = {
-    // scan backwards until we reach the start of the buffer or a line with known state
-    val buffer = info.buffer
-    var ss = 0 ; var sstate = EmptyS ; var ll = info.row-1 ; while (ll > 0) {
-      val lstate = buffer.line(ll).lineTag(UnknownS)
-      if (lstate == UnknownS) ll -= 1
-      else { ss = ll ; sstate = lstate ; ll = 0 /*break*/ }
-    }
-
-    // now proceed forward, computing and storing line state
-    buffer.setLineTag(ss, sstate)
-    while (ss < info.row) {
-      sstate = stater.compute(buffer.line(ss), sstate)
-      buffer.setLineTag(ss+1, sstate)
-      ss += 1
-    }
-    sstate
-  }
-
   /** Returns the number of whitespace chars at the start of `line`. */
   def readIndent (line :LineV) :Int =
     // TODO: this will eventually have to handle tabs; we'll probably just scan the line oursevles
@@ -284,6 +91,108 @@ object Indenter {
       ii += 1
     }
     res
+  }
+
+  /** Tracks buffer elements that change the indentation state. For the `BlockIndenter` these
+    * include things like `BlockS` (a block of code, often nested in curly braces), `ExprS` (an
+    * expression that spans multiplie lines), `ContinuedS` (a continued statement), etc..
+    *
+    * A stack of elements describes the indentation state at the start of a given line. The state
+    * is combined with information local to that line to determine the indentation of the line as
+    * well as the indentation state at the end of that line.
+    */
+  abstract class State (val next :State) extends Line.Tag {
+    /** Computes the base indentation for this state.
+      * @param top whether this state is on the top of the stack. */
+    def indent (cfg :Config, top :Boolean = false) :Int = indentWidth(cfg) + next.indent(cfg)
+
+    /** Pops this state off the stack if `f` returns true. */
+    def popIf (f :Predicate[State]) :State = if (f.test(this)) next else this
+
+    /** Pops state off the stack until it pops off a state for which `f` returns true. */
+    def popTo (f :State => Boolean) :State = if (f(this)) next else next.popTo(f)
+    /** Pops state off the stack until it pops off a state for which `f` returns true. */
+    def popTo (f :Predicate[State]) :State = if (f.test(this)) next else next.popTo(f)
+
+    /** Pops state off the stack until it pops off a block, or reaches the empty state. */
+    def popBlock (close :Char) :State = next.popBlock(close)
+
+    override def key = classOf[State]
+    override def ephemeral :Boolean = true
+
+    override def toString = {
+      val sb = new StringBuilder()
+      var ss = this ; while (ss != EmptyS) {
+        if (sb.length > 0) sb.append(" ")
+        sb.append(ss.show)
+        ss = ss.next
+      }
+      sb.toString
+    }
+
+    protected def indentWidth (config :Config) :Int = config(CodeConfig.indentWidth)
+    protected def show :String
+  }
+
+  /** The state at the start of a buffer: nothing. */
+  val EmptyS :State = new State(null) {
+    override def indent (cfg :Config, top :Boolean) = 0
+    override def popTo (f :State => Boolean) = this
+    override def popBlock (close :Char) = this
+    override def toString = show
+    override protected def show :String = "EmptyS"
+  }
+
+  /** A marker state indicating that a line's state needs to be computed. */
+  val UnknownS :State = new State(null) {
+    override def indent (cfg :Config, top :Boolean) = ???
+    override def popTo (f :State => Boolean) = ???
+    override def popBlock (close :Char) = ???
+    override def toString = show
+    override protected def show :String = "UnknownS"
+  }
+
+  /** An indenter that uses per-line state to compute indentation. */
+  abstract class ByState (cfg :Config) extends Indenter(cfg) {
+
+    override def apply (info :Info) :Int = {
+      val lstate = state(info, computeState)
+      computeIndent(lstate, lstate.indent(config, true), info)
+    }
+
+    /** Computes the state at the end of `line` given the starting state `start`. */
+    protected def computeState (line :LineV, start :State) :State
+
+    /** Computes the indent for `line`. The default implementation simply returns `base`.
+      * @parma state the indentation state prior to processing `line`.
+      * @param base the base indent for `line` based on braces, parens, etc.
+      * @param info the info on the line whose indentation is being computed.
+      * @return the column to which `line` should be indented.
+      */
+    protected def computeIndent (state :State, base :Int, info :Info) :Int = base
+  }
+
+  /** Computes the state for a line given the supplied `stater` function. Any unstated lines prior
+    * to the target line will also have their state computed and stored in line state as
+    * indentation state is computed incrementally from the start of the buffer, reusing the state
+    * from the previous line for each successive line. */
+  def state (info :Info, stater :(LineV, State) => State) :State = {
+    // scan backwards until we reach the start of the buffer or a line with known state
+    val buffer = info.buffer
+    var ss = 0 ; var sstate = EmptyS ; var ll = info.row-1 ; while (ll > 0) {
+      val lstate = buffer.line(ll).lineTag(UnknownS)
+      if (lstate == UnknownS) ll -= 1
+      else { ss = ll ; sstate = lstate ; ll = 0 /*break*/ }
+    }
+
+    // now proceed forward, computing and storing line state
+    buffer.setLineTag(ss, sstate)
+    while (ss < info.row) {
+      sstate = stater(buffer.line(ss), sstate)
+      buffer.setLineTag(ss+1, sstate)
+      ss += 1
+    }
+    sstate
   }
 
   // /** Indents based on the innermost block that contains pos.

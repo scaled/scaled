@@ -42,15 +42,16 @@ class IndenterTest {
     /*26*/ "}")
 
   @Test def testStateCalc () {
-    val buf = Buffer("Test.java", testJavaCode.map(Line.apply))
-    val stater = new Indenter.BlockStater()
-    val states = buf.lines.scan(Indenter.EmptyS)((ss, ll) => stater.compute(ll, ss))
-    val sstrs = states.map(_.toString)
-    // for (i <- 0 until sstrs.length) println(s"$i -> ${sstrs(i)}")
-    assertEquals("BlockS(}, -1)", sstrs(6))
-    assertEquals("BlockS(}, -1) BlockS(}, -1)", sstrs(12))
-    assertEquals("ExprS(), 23) BlockS(}, -1) BlockS(}, -1)", sstrs(13));
-    assertEquals("ExprS(), 20) BlockS(}, -1)", sstrs(24))
-    assertEquals("BlockS(}, -1)", sstrs(25))
+    val buf = Buffer.scratch("Test.java")
+    buf.append(testJavaCode.map(Line.apply))
+    val indenter = new BlockIndenter(Config.testConfig, Seq())
+    for (ll <- 0 until buf.lines.length) indenter.apply(buf, ll)
+    val sstrs = buf.lines.map(line => line.lineTags.head.toString)
+    // for (ll <- 0 until sstrs.length) println(s"$ll -> ${sstrs(ll)}")
+    assertEquals("BlockS(}, -1)", sstrs(7))
+    assertEquals("BlockS(}, -1) BlockS(}, -1)", sstrs(13))
+    assertEquals("ExprS(), 23) BlockS(}, -1) BlockS(}, -1)", sstrs(14));
+    assertEquals("ExprS(), 20) BlockS(}, -1)", sstrs(25))
+    assertEquals("BlockS(}, -1)", sstrs(26))
   }
 }
