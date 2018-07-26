@@ -119,7 +119,11 @@ object Scaled {
   def main (args :Array[String]) {
     try {
       Desktop.getDesktop.setOpenFileHandler(
-        event => openFiles() = Seq.view(event.getFiles).map(_.toPath))
+        // we force an update here because the last open files request may be the exact same path
+        // in which case we still want to overwrite it and notify the listener; we could clear the
+        // value out after it's processed, but this is more expedient; rigor!
+        event => openFiles.updateForce(Seq.view(event.getFiles).map(_.toPath))
+      )
     } catch {
       case uoe :UnsupportedOperationException => // oh well
       case t :Throwable => t.printStackTrace(System.err)
