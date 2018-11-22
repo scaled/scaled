@@ -6,6 +6,14 @@ package scaled
 
 import java.util.HashMap
 
+/** An abstraction over the OS clipboard. */
+trait Clipboard {
+  /** Reads the contents of the clipboard as a string, if available. */
+  def read :Option[String]
+  /** Updates the contents of the clipboard with `text`. */
+  def set (text :String) :Unit
+}
+
 /** Provides access to data and services encapsulated by the editor. Not much is global to the
   * entire editor, most runtime state is divided into workspaces, and then further into windows,
   * frames and buffers. However, certain things (like the kill ring) are truly global.
@@ -24,12 +32,15 @@ trait Editor {
   /** Enables running code on background or UI threads. */
   def exec :Executor
 
+  /** Provides access to the OS clipoard. */
+  def clipboard :Clipboard
+
   /** Displays the supplied URL in the user's preferred web browser. */
   def showURL (url :String) :Unit
 
   /** The ring in which killed regions are stored. */
   def killRing = Mutable.getOrPut(
-    Rings(state), "kill", new KillRing(config(EditorConfig.killRingSize)))
+    Rings(state), "kill", new KillRing(this, config(EditorConfig.killRingSize)))
 
   /** The ring in which killed rectangles are stored. */
   def rectKillRing = Mutable.getOrPut(

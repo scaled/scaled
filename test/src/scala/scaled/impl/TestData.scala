@@ -32,6 +32,11 @@ object TestData {
     val config = new ConfigImpl("editor", cwd, testScope, EditorConfig :: Nil, None)
     val exec = TestData.exec
     val workspaceOpened = Signal[Workspace]()
+    val clipboard = new Clipboard {
+      private var contents :Option[String] = None
+      def read = contents
+      def set (text :String) { contents = Some(text) }
+    }
     def showURL (url :String) {}
   }
 

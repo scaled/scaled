@@ -45,12 +45,12 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
       if (disp != null && buf == view.buffer) view else {
         // create the modeline and add some default data before anyone else sneaks in
         val mline = new ModeLineImpl()
-        mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), "* indicates unsaved changes")
-        mline.addDatum(buf.nameV, "Name of the current buffer")
+        mline.addDatum(buf.dirtyV map(if (_) " *" else " -"), Value("* Indicates unsaved changes"))
+        mline.addDatum(buf.nameV, Value("Name of the current buffer"))
 
         val view = new BufferViewImpl(WindowImpl.this, buf, defWidth, defHeight)
         // TODO: move this to LineNumberMode? (and enable col number therein)
-        mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), "Current line number")
+        mline.addDatum(view.point map(p => s" L${p.row+1} C${p.col} "), Value("Current line number"))
         // add "*" to our list of tags as this is a "real" buffer; we want global minor modes, but
         // we don't want non-real buffers (like the minimode buffer) to have global minor modes
         val tags = "*" :: Mode.tagsHint(buf.state)

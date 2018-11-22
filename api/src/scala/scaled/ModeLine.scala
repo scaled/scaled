@@ -4,8 +4,6 @@
 
 package scaled
 
-import javafx.scene.control.Tooltip
-
 /** Displays mode summary information to the user. The default information includes:
   * ` - BufferName.ext  L#  [majormode]` and modes can augment the modeline with additional text.
   * This should be used sparingly, as the mode line is not infinite in length.
@@ -21,12 +19,7 @@ trait ModeLine {
     * A mode is advised to `note()` this closeable so that it will automatically be removed if
     * the mode is deactivated. Fire and forget!
     */
-  def addDatum (value :ValueV[String], tooltip :String) :Closeable =
-    addDatum(value, Value(new Tooltip(tooltip)))
-
-  /** Like [[addDatum(ValueV[String],ValueV[String])]] but which takes a reactive value containing
-    * a fully realized tooltip (which can contain an arbitrary scene graph). */
-  def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) :Closeable
+  def addDatum (value :ValueV[String], tooltip :ValueV[String]) :Closeable
 }
 
 object ModeLine {
@@ -35,7 +28,6 @@ object ModeLine {
     * linee (like minibuffer modes) or when testing.
     */
   val Noop = new ModeLine() {
-    override def addDatum (value :ValueV[String], tooltip :String) = Closeable.Noop
-    override def addDatum (value :ValueV[String], tooltip :ValueV[Tooltip]) = Closeable.Noop
+    override def addDatum (value :ValueV[String], tooltip :ValueV[String]) = Closeable.Noop
   }
 }

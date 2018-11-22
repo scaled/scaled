@@ -40,6 +40,18 @@ class Scaled extends Application with Editor {
 
   val timer = new Timer("Scaled Timer", true)
 
+  val clipboard = new Clipboard {
+    import javafx.scene.input.{Clipboard, ClipboardContent}
+    private val sysclip = Clipboard.getSystemClipboard
+    def read :Option[String] =
+      if (sysclip.hasString) Some(sysclip.getString) else None
+    def set (text :String) = {
+      val cc = new ClipboardContent()
+      cc.putString(text)
+      sysclip.setContent(cc)
+    }
+  }
+
   val uiScheduler = new Scheduler {
     override def execute (op :Runnable) = Platform.runLater(op)
     override def schedule (delay :Long, op :Runnable) = {

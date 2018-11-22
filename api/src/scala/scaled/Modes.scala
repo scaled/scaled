@@ -224,7 +224,7 @@ abstract class MajorMode (env :Env) extends Mode(env) {
   private lazy val info = getClass.getAnnotation(classOf[Major])
 
   // display our major mode name in the modeline
-  env.mline.addDatum(Value(s"[$name]"), "Active major mode")
+  env.mline.addDatum(Value(s"[$name]"), Value("Active major mode"))
 
   /** The default fn to invoke for a key press for which no mapping exists. This will only be called
     * for key presses that result in a "typed" character. Key presses that do not generate
