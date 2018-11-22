@@ -6,12 +6,6 @@
 : ${SPAM:=spam}
 : ${SCALED_LOG:=/dev/null}
 
-# if we have the curspace tool, pass that to Scaled so that it can do per-desktop stuffs
-# TODO: support Linux variants (KDE: dcop kwin KWinInterface currentDesktop, Gnome: wmctrl -d)
-if hash curspace 2>/dev/null; then
-    export SCALED_CURDESK=`which curspace`
-fi
-
 # find the Scaled package manager
 if hash $SPAM 2>/dev/null; then
     export SCALED_PORT=$PORT
