@@ -5,7 +5,7 @@
 package scaled
 
 import java.io.File
-import java.nio.file.{FileSystems, Files, Path, Paths}
+import java.nio.file.{FileSystems, Files, Path, Paths, InvalidPathException}
 import java.util.stream.Stream
 import scaled.util.{FuzzyMatch, IFuzzyMatch}
 
@@ -329,8 +329,8 @@ object Completer {
       } else (pathstr, path, endInSep)
     } catch {
       // Paths.get can fail on Windows, yay...
-      case e :Exception =>
-        exec.handleError(e)
+      case e :InvalidPathException =>
+        exec.handleError(new Exception(s"Invalid path: ${pathstr}", e))
         (pathstr, Paths.get(""), false)
     }
 
