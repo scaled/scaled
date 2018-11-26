@@ -559,7 +559,7 @@ object Line {
 
   /** Appends `lines` to `buf`, separated by `sep`. */
   def toText (lines :Ordered[LineV], buf :JStringBuilder, sep :String) :JStringBuilder =
-    lines.foldLeft(buf)((b, l) => b.append(l).append(sep)).deleteCharAt(buf.length-1)
+    lines.foldLeft(buf)((b, l) => b.append(l).append(sep)).delete(buf.length-sep.length, buf.length)
 
   /** Converts `lines` to a string, separated by the platform line separator. */
   def toText (lines :Ordered[LineV]) :String =
