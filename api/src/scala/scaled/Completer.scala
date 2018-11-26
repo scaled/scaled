@@ -5,7 +5,7 @@
 package scaled
 
 import java.io.File
-import java.nio.file.{FileSystems, Files, Path, Paths, InvalidPathException}
+import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.util.stream.Stream
 import scaled.util.{FuzzyMatch, IFuzzyMatch}
 
@@ -320,18 +320,13 @@ object Completer {
       if (Files.exists(path) && Files.isDirectory(path)) None else Some(Store(path))
     }
 
-    private def grok (pathstr :String) :(String,Path,Boolean) = try {
+    private def grok (pathstr :String) :(String,Path,Boolean) = {
       val path = Paths.get(pathstr) ; val fname = path.getFileName
       val endInSep = pathstr endsWith File.separator
       if (fname != null && fname.toString == "~") {
         val home = Paths.get(System.getProperty("user.home"))
         (s"$home${File.separator}", home, true)
       } else (pathstr, path, endInSep)
-    } catch {
-      // Paths.get can fail on Windows, yay...
-      case e :InvalidPathException =>
-        exec.handleError(new Exception(s"Invalid path: ${pathstr}", e))
-        (pathstr, Paths.get(""), false)
     }
 
     private def rootPath = FileSystems.getDefault.getRootDirectories.iterator.next
