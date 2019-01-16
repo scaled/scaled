@@ -4,11 +4,9 @@
 
 package scaled.util
 
-import com.google.common.base.Charsets
-import com.google.common.io.CharStreams
-import java.io.InputStream
-import java.io.InputStreamReader
+import java.io.{BufferedReader, InputStream, InputStreamReader}
 import java.net.URL
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths}
 import scaled._
 
@@ -71,7 +69,17 @@ object Resource {
   }
 
   /** Reads the lines from `in`, which must contain UTF8 encoded text. */
-  def readLines (in :InputStream) :SeqV[String] =
-    try CharStreams.readLines(new InputStreamReader(in, Charsets.UTF_8)).toSeqV
+  def readLines (in :InputStream) :SeqV[String] = {
+    val lines = Seq.builder[String]
+    try {
+      val reader = new BufferedReader(new InputStreamReader(in))
+      def loop (line :String) :Unit = if (line != null) {
+        lines += line
+        loop(reader.readLine)
+      }
+      loop(reader.readLine)
+    }
     finally in.close()
+    lines.build()
+  }
 }

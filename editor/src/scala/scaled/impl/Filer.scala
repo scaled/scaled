@@ -4,7 +4,7 @@
 
 package scaled.impl
 
-import com.google.common.base.Charsets
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import java.util.function.Consumer
 import scala.collection.mutable.{Set => MSet}
@@ -40,7 +40,7 @@ object Filer {
     }
     /** Writes the current value to the backing file. */
     def write () :Unit = try {
-      if (_value != null) Files.write(path, encode(_value), Charsets.UTF_8)
+      if (_value != null) Files.write(path, encode(_value), StandardCharsets.UTF_8)
     } catch {
       case e :Exception => e.printStackTrace(System.err)
     }
