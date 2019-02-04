@@ -62,10 +62,10 @@ object Indenter {
   /** Returns true if `m` matches the first non-whitespace characters of `line`. */
   def startsWith (line :LineV, m :Matcher) :Boolean = line.matches(m, line.firstNonWS)
 
-  /** Returns true if `m` matches the last non-whitespace characters of `line`. */
+  /** Returns true if `m` matches the last non-whitespace, non-comment characters of `line`. */
   def endsWith (line :LineV, m :Matcher) :Boolean = line.lastIndexOf(m) match {
     case -1 => false
-    case ii => line.indexOf(isNotWhitespace, ii+m.matchLength) == -1
+    case ii => lastNonWS(line)+1 == ii+m.matchLength
   }
 
   /** Returns the column of the last non-whitespace-or-comment character of `line`,
