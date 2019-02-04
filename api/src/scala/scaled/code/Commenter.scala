@@ -86,7 +86,7 @@ class Commenter {
   class CommentParagrapher (syn :Syntax, buf :Buffer) extends Paragrapher(syn, buf) {
     override def isDelim (row :Int) = {
       val l = line(row)
-      commentStart(l) == l.length
+      !l.syntaxAt(l.firstNonWS).isComment
     }
   }
 
