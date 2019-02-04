@@ -18,6 +18,16 @@ trait Region {
 
   /** Returns true if this region is empty (`start >= end`). */
   def isEmpty = start >= end
+
+  /** Clamps `loc` into this region. */
+  def clamp (loc :Loc) :Loc = (loc greater start) lesser end
+
+  /** Clamps `region` into this region. */
+  def clamp (region :Region) :Region = {
+    val nstart = clamp(region.start)
+    val nend = clamp(region.end)
+    if (nstart == region.start && nend == region.end) region else Region(nstart, nend)
+  }
 }
 
 object Region {
