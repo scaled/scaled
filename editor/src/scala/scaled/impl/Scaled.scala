@@ -18,7 +18,7 @@ import scaled._
 import scaled.util.Errors
 
 class Scaled extends Application with Editor {
-  private val pool = Executors.newFixedThreadPool(4) // TODO: config
+  private val pool = Executors.newCachedThreadPool() // TODO: config
 
   /** A signal emitted when a message is appended to the log. Because logging is app-global, but
     * buffers are associated with a particular editor pane, we just have every editor pane create a
