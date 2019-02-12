@@ -14,7 +14,7 @@ import java.util.stream.Collectors
 import java.util.{List => JList, HashMap}
 import javafx.application.Platform
 import javafx.scene.Scene
-import javafx.stage.Stage
+import javafx.stage.{Stage, Screen}
 import scala.io.Source
 import scaled._
 import scaled.pacman.Filez
@@ -386,6 +386,9 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     val oscss = getClass.getResource(s"/$os.css")
     if (oscss != null) scene.getStylesheets().add(oscss.toExternalForm)
     else app.logger.log(s"Unable to locate /$os.css")
+    // if the user created a custom.css file, tack that on as well
+    val customCss = app.pkgMgr.metaDir.resolve("Config").resolve("custom.css")
+    if (Files.exists(customCss)) scene.getStylesheets().add(customCss.toUri.toString)
     stage.setScene(scene)
 
     // set our stage position based on the values specified in editor config
