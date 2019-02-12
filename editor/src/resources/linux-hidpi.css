@@ -1,0 +1,20 @@
+.root, .tooltip {
+  -fx-font-size: 24px;
+  -fx-font-family: monospace;
+}
+
+.tooltip {
+  -fx-font-size: 28px;
+}
+
+.overpop .status {
+  -fx-font-size: 36px;
+}
+
+.overpop .substatus {
+  -fx-font-size: 28px;
+}
+
+.mini {
+  -fx-font-size: 30px;
+}
