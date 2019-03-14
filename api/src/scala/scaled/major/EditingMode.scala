@@ -261,8 +261,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     buffer.split(view.point())
   }
 
-  @Fn("""Opens a line above the current line.""")
-  def openLine() {
+  @Fn("""Inserts a newline at the point, leaving the point before the newline.""")
+  def openLine () {
     val was = view.point()
     newline()
     view.point() = was
