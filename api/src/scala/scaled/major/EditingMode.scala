@@ -40,7 +40,8 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
     bind("newline",                "ENTER", "S-ENTER").
     bind("indent-for-tab-command", "TAB").
-    // TODO: open-line, split-line, ...
+    bind("open-line", "C-o").
+    // TODO: split-line, ...
 
     bind("indent-rigidly",   "M-RIGHT").
     bind("unindent-rigidly", "M-LEFT").
@@ -258,6 +259,13 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          Characters after the point on the current line wil be moved to a new line.""")
   def newline () {
     buffer.split(view.point())
+  }
+
+  @Fn("""Opens a line above the current line.""")
+  def openLine() {
+    val was = view.point()
+    newline()
+    view.point() = was
   }
 
   @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
