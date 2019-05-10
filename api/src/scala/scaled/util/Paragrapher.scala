@@ -22,15 +22,20 @@ class Paragrapher (val syntax :Syntax, buffer :Buffer) {
       while (first > 0 && canPrepend(first-1)) first -= 1
       val max = buffer.lines.length-1 ; var last = row
       while (last < max && canAppend(last+1)) last += 1
+      val tfirst = trimFirst(first) ; val tlast = trimLast(last)
       // if our paragraph extends to the last line of the buffer, we have to bound at the end of
       // that line rather than the start of the next line
-      val end = if (last == max) Loc(last, buffer.line(last).length) else Loc(last+1, 0)
-      Some(Region(Loc(first, 0), end))
+      val end = if (tlast == max) Loc(tlast, buffer.line(tlast).length) else Loc(tlast+1, 0)
+      Some(Region(Loc(tfirst, 0), end))
     }
   }
 
   def line (row :Int) = buffer.line(row)
   def isDelim (row :Int) = line(row).length == 0
+
   def canPrepend (row :Int) = !isDelim(row)
   def canAppend (row :Int) = !isDelim(row)
+
+  def trimFirst (row :Int) :Int = row
+  def trimLast (row :Int) :Int = row
 }

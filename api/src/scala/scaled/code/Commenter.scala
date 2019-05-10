@@ -98,12 +98,21 @@ class Commenter {
     def atCmdRegexp = "@[a-z]+"
     /** Returns true if we're on an `@command` line (or its moral equivalent). */
     def isAtCmdLine (line :LineV) = line.matches(atCmdM, commentStart(line))
+
     // don't extend paragraph upwards if the current top is an @cmd
-    override def canPrepend (row :Int) =
-      super.canPrepend(row) && !isAtCmdLine(line(row+1))
+    override def canPrepend (row :Int) = super.canPrepend(row) && !isAtCmdLine(line(row+1))
     // don't extend paragraph downwards if the new line is at an @cmd
-    override def canAppend (row :Int) =
-      super.canAppend(row) && !isAtCmdLine(line(row))
+    override def canAppend (row :Int) = super.canAppend(row) && !isAtCmdLine(line(row))
+    // if the first line of the paragraph is a bare doc start, leave it alone
+    override def trimFirst (row :Int) = if (isBareDelim(row, docOpenM)) row+1 else row
+    // if the last line of the paragraph is a bare doc end, leave it alone
+    override def trimLast (row :Int) = if (isBareDelim(row, docCloseM)) row-1 else row
+
+    private def isBareDelim (row :Int, delimM :Matcher) = {
+      val l = line(row)
+      l.matches(delimM, l.firstNonWS) &&
+        l.indexOf(isNotWhitespace, l.firstNonWS+delimM.matchLength) == -1
+    }
   }
 
   /** Returns a paragrapher that identifies comment paragraphs. */
@@ -135,11 +144,13 @@ class Commenter {
     if (line.matches(commentDelimM, col)) commentDelimM.matchLength
     else 0
   }
-  private lazy val commentDelimM = Matcher.regexp(
-    // combine all of our delimiters into a single regexp (longest first)
-    Set(linePrefix, blockPrefix, docPrefix, blockOpen, docOpen, blockClose, docClose).
-      toSeq.sortBy(_.length)(Ordering.ordered[Int].reverse).map(Pattern.quote).mkString("|")
-  )
+
+  // combines delimiters into a single regexp (longest first)
+  private def matchAny (delims :Set[String]) :Matcher = Matcher.regexp(
+    delims.toSeq.sortBy(_.length)(Ordering.ordered[Int].reverse).map(Pattern.quote).mkString("|"))
+  private lazy val commentDelimM = matchAny(
+    Set(linePrefix, blockPrefix, docPrefix, blockOpen, docOpen, blockClose, docClose))
+  private lazy val commentEndM = matchAny(Set(blockClose, docClose))
 
   /** Generates a comment prefix given the supplied desired comment start column. This combines the
     * appropriate number of spaces with `commentPre` (which should already include trailing
@@ -160,7 +171,11 @@ class Commenter {
     val firstLine = buffer.line(start)
     val firstCol = commentStart(firstLine)
     // the first line's prefix is preserved as is, for the second+ lines we use a "repeat" prefix
-    val firstPre = firstLine.view(start.col, firstCol)
+    val firstPre = {
+      val pre = firstLine.view(start.col, firstCol)
+      if (pre.length == 0 || isWhitespace(pre.charAt(pre.length-1))) pre
+      else pre merge Line(" ")
+    }
     val repeatPre = {
       // if we have more than one row in our comment block, just use the second line's prefix as
       // our repeat prefix because it's most likely to be correct
@@ -175,7 +190,10 @@ class Commenter {
     var loc = start.nextStart ; while (loc < end) {
       val line = buffer.line(loc)
       val last = if (loc.row == end.row) end.col else line.length
-      filler.append(line.view(commentStart(line), last))
+      // if the first thing on the line is the close block comment delimiter, preserve that
+      val start = if (line.matches(commentEndM, line.firstNonWS)) line.firstNonWS
+                  else commentStart(line)
+      filler.append(line.view(start, last))
       loc = loc.nextStart
     }
 
