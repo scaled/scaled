@@ -146,8 +146,11 @@ class Commenter {
   }
 
   // combines delimiters into a single regexp (longest first)
-  private def matchAny (delims :Set[String]) :Matcher = Matcher.regexp(
-    delims.toSeq.sortBy(_.length)(Ordering.ordered[Int].reverse).map(Pattern.quote).mkString("|"))
+  private def matchAny (delims :Set[String]) :Matcher = {
+    val pats = delims.toSeq.filter(_ != "").sortBy(_.length)(Ordering.ordered[Int].reverse)
+    if (pats.isEmpty) optMatcher("")
+    else Matcher.regexp(pats.map(Pattern.quote).mkString("|"))
+  }
   private lazy val commentDelimM = matchAny(
     Set(linePrefix, blockPrefix, docPrefix, blockOpen, docOpen, blockClose, docClose))
   private lazy val commentEndM = matchAny(Set(blockClose, docClose))
@@ -274,6 +277,5 @@ class Commenter {
   }
 
   // returns a non-matching matcher if text is empty; an exact matcher otherwise
-  private def optMatcher (text :String) =
-    Matcher.exact(if (text == "") "NOTUSED" else text)
+  private def optMatcher (text :String) = Matcher.exact(if (text == "") "NOTUSED" else text)
 }
