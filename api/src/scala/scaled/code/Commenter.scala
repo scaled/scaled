@@ -182,7 +182,10 @@ class Commenter {
     val repeatPre = {
       // if we have more than one row in our comment block, just use the second line's prefix as
       // our repeat prefix because it's most likely to be correct
-      if (end.row > start.row) buffer.line(start.nextStart).sliceString(0, firstPre.length)
+      if (end.row > start.row) {
+        val nextLine = buffer.line(start.nextStart)
+        nextLine.sliceString(0, math.min(firstPre.length, nextLine.length))
+      }
       // otherwise create a prefix using the auto-fill prefix for the comment type at firstCol
       else commentPre(prefixFor(firstLine.syntaxAt(firstCol)), firstPre.length)
     }
