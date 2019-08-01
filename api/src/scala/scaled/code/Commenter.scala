@@ -85,8 +85,12 @@ class Commenter {
   /** Used to identify paragraphs in comments. */
   class CommentParagrapher (syn :Syntax, buf :Buffer) extends Paragrapher(syn, buf) {
     override def isDelim (row :Int) = {
-      val l = line(row)
-      !l.syntaxAt(l.firstNonWS).isComment
+      // if we reached a non-comment line, that delimits our paragraph
+      val l = line(row) ; val start = l.firstNonWS
+      (!l.syntaxAt(start).isComment ||
+       // or if we reach a line that has nothing but the linePrefix or docPrefix
+       (l.matches(linePrefixM, start) && (l.length == start+linePrefix.length)) ||
+       (l.matches(docPrefixM, start) && (l.length == start+docPrefix.length)))
     }
   }
 
