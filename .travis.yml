@@ -2,6 +2,6 @@ language: java
 sudo: false
 
 jdk:
-- oraclejdk9
+- openjdk11
 
 script: "./bin/travis.sh"
