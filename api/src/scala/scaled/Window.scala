@@ -78,6 +78,34 @@ trait Window {
   /** Closes this window. When all windows in all workspaces are closed, the process will exit. */
   def close () :Unit
 
+  /** Prompts to save any modified buffers, and closes the window once all are saved or abandoned.
+    * May also be aborted by the user. */
+  def saveBuffersAndClose () {
+    val opts = Seq(
+      "y"   -> "save the current buffer",
+      "n"   -> "skip the current buffer (abandon changes)",
+      "q"   -> "skip all remaining buffers",
+      "!"   -> "save all remaining buffers",
+      "."   -> "save *only* the current buffer, then close",
+      "C-g" -> "cancel this close-window command"
+      // TODO: C-r to view this buffer?
+      // TODO: d to diff this buffer against the file system version
+    )
+    def saveLoop (dirty :List[Buffer]) :Unit = dirty match {
+      case Nil => close()
+      case buf :: tail =>
+        val prompt = s"${buf.store} is modified. Save?"
+        mini.readOpt(prompt, opts) onSuccess(_ match {
+          case "y" => buf.save() ; saveLoop(tail)
+          case "n" => saveLoop(tail)
+          case "q" => saveLoop(Nil)
+          case "!" => dirty map(_.save()) ; saveLoop(Nil)
+          case "." => buf.save() ; saveLoop(Nil)
+        })
+    }
+    saveLoop(workspace.buffers.filter(_.needsSave).toList)
+  }
+
   /** Returns the subset of the workspace buffers that have ever been visited in this window, in
     * order of most recent activation. */
   def buffers :SeqV[Buffer]

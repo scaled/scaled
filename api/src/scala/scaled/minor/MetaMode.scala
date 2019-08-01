@@ -100,31 +100,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Offers to save any unsaved buffers, then closes this window.
          If this is the last open window, the editor will edit.""")
-  def saveBuffersCloseWindow () {
-    val opts = Seq(
-      "y"   -> "save the current buffer",
-      "n"   -> "skip the current buffer (abandon changes)",
-      "q"   -> "skip all remaining buffers",
-      "!"   -> "save all remaining buffers",
-      "."   -> "save *only* the current buffer, then close",
-      "C-g" -> "cancel this close-window command"
-      // TODO: C-r to view this buffer?
-      // TODO: d to diff this buffer against the file system version
-    )
-    def saveLoop (dirty :List[Buffer]) :Unit = dirty match {
-      case Nil => window.close()
-      case buf :: tail =>
-        val prompt = s"${buf.store} is modified. Save?"
-        window.mini.readOpt(prompt, opts) onSuccess(_ match {
-          case "y" => buf.save() ; saveLoop(tail)
-          case "n" => saveLoop(tail)
-          case "q" => saveLoop(Nil)
-          case "!" => dirty map(_.save()) ; saveLoop(Nil)
-          case "." => buf.save() ; saveLoop(Nil)
-        })
-    }
-    saveLoop(wspace.buffers.filter(_.needsSave).toList)
-  }
+  def saveBuffersCloseWindow () :Unit = window.saveBuffersAndClose()
 
   //
   // VISIT FNS

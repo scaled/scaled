@@ -377,6 +377,12 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     val win = new WindowImpl(stage, this, bwidth, bheight)
     // TODO: willCreateWindow
 
+    // route the close window button to the same place save-buffers-close-window goes
+    stage.setOnCloseRequest(ev => {
+      ev.consume()
+      win.saveBuffersAndClose()
+    })
+
     val scene = new Scene(win)
     scene.getStylesheets().add(getClass.getResource("/scaled.css").toExternalForm)
     val os = System.getProperty("os.name").replaceAll(" ", "").toLowerCase match {
