@@ -59,7 +59,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
 
   /** Visits `paths` in the appropriate workspace windows, creating them as needed.
     * The first window created will inherit the supplied default stage. */
-  def visit (stage :Stage, paths :SeqV[Path]) {
+  def visit (stage :Stage, paths :SeqV[Path]) :Unit = {
     try {
       val ws2paths = (paths groupBy workspaceFor).toSeq
       // the first workspace (chosen arbitrarily) gets the default stage
@@ -80,7 +80,7 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     }
   }
 
-  def checkExit () {
+  def checkExit () :Unit = {
     // if no workspaces have windows open, it's time to go
     if (wscache.asMap.values.forall(_.windows.isEmpty)) Platform.exit()
   }
@@ -97,21 +97,21 @@ class WorkspaceManager (app :Scaled) extends AbstractService with WorkspaceServi
     case e :IOException => log.log("Failed to list $wsdir", e) ; Seq.empty
   }
 
-  override def create (wsname :String) {
+  override def create (wsname :String) :Unit = {
     val root = wsdir.resolve(wsname)
     if (Files.exists(root)) throw Errors.feedback(s"Workspace named $wsname already exists.")
     Files.createDirectory(root)
     open(wsname)
   }
 
-  override def open (wsname :String) {
+  override def open (wsname :String) :Unit = {
     val root = wsdir.resolve(wsname)
     if (!Files.exists(root)) throw Errors.feedback(s"No workspace named $wsname")
     wscache.get(wsname).open().visitScratchIfEmpty()
   }
 
-  override def didStartup () {} // unused
-  override def willShutdown () {} // unused
+  override def didStartup () :Unit = {} // unused
+  override def willShutdown () :Unit = {} // unused
 
   private def defaultWS = {
     val ddir = wsdir.resolve(Workspace.DefaultName)
@@ -145,7 +145,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   def open (stage :Stage) = windows.headOption || createWindow(stage, geomSysProp)
   def open () = windows.headOption || createWindow(new Stage(), NoGeom)
 
-  def close (win :WindowImpl) {
+  def close (win :WindowImpl) :Unit = {
     // let third parties know the window is going away, but don't let them hose us
     try win.onClose.emit(win)
     catch {
@@ -176,7 +176,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   }
 
   /** Records a message to this workspace's `*messages*` buffer. */
-  def recordMessage (msg :String) {
+  def recordMessage (msg :String) :Unit = {
     // we may get a recordMessage call while we're creating the *messages* buffer, so to avoid
     // the infinite loop of doom in that case, we buffer messages during that process
     if (_pendingMessages != null) _pendingMessages = msg :: _pendingMessages
@@ -191,7 +191,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
   // circumvents their being appended then because otherwise we'd get one copy per window
   statusMsg.onValue(recordMessage)
 
-  def focusedBuffer (buffer :BufferImpl) {
+  def focusedBuffer (buffer :BufferImpl) :Unit = {
     buffers -= buffer
     buffers prepend buffer
   }
@@ -259,7 +259,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     }
   }
 
-  override def visitWindowConfig (window :Window) {
+  override def visitWindowConfig (window :Window) :Unit = {
     val buffer = openBuffer(Store(windowFile))
     // if the buffer is empty; populate it with an example configuration
     if (buffer.start == buffer.end) {
@@ -287,7 +287,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     }
   })
 
-  override protected def describeInternals (bb :BufferBuilder) {
+  override protected def describeInternals (bb :BufferBuilder) :Unit = {
     bb.addSubHeader("Window Config")
     val tags = Map.view(tagToWindowId).groupBy(_._2, _._1)
     bb.addKeysValues(Map.view(infoGeometry).map(

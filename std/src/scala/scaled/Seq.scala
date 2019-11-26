@@ -17,7 +17,7 @@ class Seq[+A] private[scaled] (_elems :Array[Any], _size :Int) extends SeqV[A] {
 
   override def size :Int = _size
   override def get (index :Int) :A = _elems(index).asInstanceOf[A]
-  override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) {
+  override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) :Unit = {
     Seq.checkBounds(start, end, _size)
     System.arraycopy(_elems, start, target, offset, end-start)
   }
@@ -95,7 +95,7 @@ object Seq {
   /** Returns a seq view of `as`. `as` is assumed to be effectively immutable for the lifetime of
     * this view. Violate this assumption at your peril. */
   def view[A] (as :JList[A]) :SeqV[A] = new SeqV[A]() {
-    override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) {
+    override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) :Unit = {
       Seq.checkBounds(start, end, size)
       if (offset == 0) as.subList(start, end).toArray(target.asInstanceOf[Array[Object]])
       else Iterables.copyInto(as, start, end, target.asInstanceOf[Array[Object]], offset)
@@ -122,13 +122,13 @@ object Seq {
 
   /** Checks that `idx` is in `[0,size)`.
     * @throws IndexOutOfBoundsException if it is not. */
-  def checkIndex (idx :Int, size :Int) {
+  def checkIndex (idx :Int, size :Int) :Unit = {
     if (idx < 0 || idx >= size) throw new IndexOutOfBoundsException(s"$idx not in [0,$size)")
   }
 
   /** Checks that `[from,until)` is a valid slice of `[0,size)`.
     * @throws IndexOutOfBoundsException if it is not. */
-  def checkBounds (from :Int, until :Int, size :Int) {
+  def checkBounds (from :Int, until :Int, size :Int) :Unit = {
     if (from < 0 || until < from || until > size)
       throw new IndexOutOfBoundsException(s"[$from,$until) not in [0,$size)")
   }

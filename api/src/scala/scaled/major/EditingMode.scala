@@ -164,7 +164,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def trimEnd (end :Loc) :Loc = if (end.col == 0) buffer.backward(end, 1) else end
 
   /** Sorts the lines in the region `[start, end)`. */
-  def sortLinesIn (start :Loc, end :Loc) {
+  def sortLinesIn (start :Loc, end :Loc) :Unit = {
     val r = trimRegion(start, end)
     val lines = buffer.region(r)
     val sorted = lines.sorted(LineV.ordering)
@@ -173,7 +173,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   /** Reverses the lines in the region `[start, end)`. */
-  def reverseLinesIn (start :Loc, end :Loc) {
+  def reverseLinesIn (start :Loc, end :Loc) :Unit = {
     val r = trimRegion(start, end)
     buffer.replace(r, buffer.region(r).reverse)
   }
@@ -184,7 +184,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   /** Refills the lines in the region `[start, end)`, wrapping them at `fill-column`. */
-  def refillLinesIn (start :Loc, end :Loc) {
+  def refillLinesIn (start :Loc, end :Loc) :Unit = {
     val r = trimRegion(start, end)
     val orig = buffer.region(r)
     val filler = new Filler(fillColumn)
@@ -211,7 +211,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     }
 
   /** Auto-breaks a line at `at`. */
-  def autoBreak (at :Loc) {
+  def autoBreak (at :Loc) :Unit = {
     buffer.split(at)
     // trim whitespace immediately preceeding `at` (but only up to the start of the line)
     val from = buffer.scanBackWhile(Chars.isWhitespace, at, at.atCol(0))
@@ -222,7 +222,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   // CHARACTER EDITING FNS
 
   @Fn("Inserts the character you typed.")
-  def selfInsertCommand (typed :String) {
+  def selfInsertCommand (typed :String) :Unit = {
     // if auto-fill is activated and we're about to insert beyond the fill column, first break
     // the current line at the previous space
     val p = view.point()
@@ -240,7 +240,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   @Fn("Deletes the character immediately previous to the point.")
-  def deleteBackwardChar () {
+  def deleteBackwardChar () :Unit = {
     val vp = view.point()
     val prev = buffer.backward(vp, 1)
     if (prev == vp) window.emitStatus("Beginning of buffer.")
@@ -248,7 +248,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   @Fn("Deletes the character at the point.")
-  def deleteForwardChar () {
+  def deleteForwardChar () :Unit = {
     val del = view.point()
     val next = buffer.forward(del, 1)
     if (del == next) window.emitStatus("End of buffer.")
@@ -257,19 +257,19 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Inserts a newline at the point.
          Characters after the point on the current line wil be moved to a new line.""")
-  def newline () {
+  def newline () :Unit = {
     buffer.split(view.point())
   }
 
   @Fn("""Inserts a newline at the point, leaving the point before the newline.""")
-  def openLine () {
+  def openLine () :Unit = {
     val was = view.point()
     newline()
     view.point() = was
   }
 
   @Fn("Indents the current line or region, or inserts a tab, as appropriate.")
-  def indentForTabCommand () {
+  def indentForTabCommand () :Unit = {
     // TODO: I suppose we'll eventually have to support real tabs... sigh
     buffer.insert(view.point(), Line.fromText("  "))
   }
@@ -298,7 +298,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
          'transposed' with the newline preceding it, effectively moving the character to the
          previous line. If the point is past the end of a line, the character at the end of the
          line will be transposed with the preceding character.""")
-  def transposeChars () {
+  def transposeChars () :Unit = {
     // the passages below are a bit twisty, but it (mostly) mimics what emacs does
     val p = view.point()
     val lineLen = buffer.lineLength(p)
@@ -345,18 +345,18 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   def downcaseRegion () = withRegion(downcase)
 
   @Fn("""Converts the following word to upper case, moving the point to the end of the word.""")
-  def upcaseWord () {
+  def upcaseWord () :Unit = {
     view.point() = upcase(view.point(), forwardWord(view.point()))
   }
 
   @Fn("""Converts the following word to lower case, moving the point to the end of the word.""")
-  def downcaseWord () {
+  def downcaseWord () :Unit = {
     view.point() = downcase(view.point(), forwardWord(view.point()))
   }
 
   @Fn("""Capitalizes the word at or following the point, moving the point to the end of the word.
          This gives the word a first character in upper case and the rest in lower case.""")
-  def capitalizeWord () {
+  def capitalizeWord () :Unit = {
     val first = buffer.scanForward(isWord, view.point())
     val start = buffer.forward(first, 1)
     val until = buffer.scanForward(isNotWord, start)
@@ -393,14 +393,14 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Causes the following command, if it kills, to append to the previous kill rather than
          creating a new kill-ring entry.""")
-  def appendNextKill () {
+  def appendNextKill () :Unit = {
     window.emitStatus("If next command is a kill, it will append.")
     // kill() will note that the prevFn is append-next-kill and append appropriately
   }
 
   @Fn("""Kills the rest of the current line, adding it to the kill ring. If the point is at the end
          of the line, the newline is killed instead.""")
-  def killLine () {
+  def killLine () :Unit = {
     val p = view.point()
     val eol = buffer.lineEnd(p)
     // if we're at the end of the line, kill to the first line of the next char (the newline)
@@ -409,25 +409,25 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   @Fn("""Kills the entire current line.""")
-  def killWholeLine () {
+  def killWholeLine () :Unit = {
     val p = view.point()
     view.point() = kill(buffer.lineStart(p), buffer.forward(buffer.lineEnd(p), 1))
   }
 
   @Fn("""Kills characters forward until encountering the end of a word.""")
-  def killWord () {
+  def killWord () :Unit = {
     kill(view.point(), forwardWord(view.point()))
   }
 
   @Fn("""Kills characters backward until encountering the beginning of a word.""")
-  def backwardKillWord () {
+  def backwardKillWord () :Unit = {
     kill(backwardWord(view.point()), view.point())
   }
 
   @Fn("""Joins this line to the previous line. Deletes from the first whitespace character at the
          end of the previous line to the last whitespace character at the start of the current
          line, including the intervening line break.""")
-  def joinLine () {
+  def joinLine () :Unit = {
     val cloc = view.point() ; val cstart = buffer.lineStart(cloc)
     if (cstart > Loc.Zero) {
       val ploc = cloc.prevStart
@@ -441,7 +441,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Reinserts the most recently killed text. The mark is set to the point and the point is
          moved to the end if the inserted text.""")
-  def yank () {
+  def yank () :Unit = {
     editor.killRing.entry(0) match {
       case None => window.popStatus("Kill ring is empty.")
       case Some(region) =>
@@ -451,7 +451,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   @Fn("""Replaces the just-yanked stretch of killed text with a different stretch.""")
-  def yankPop () {
+  def yankPop () :Unit = {
     if (!yanks(disp.prevFn)) window.popStatus(s"Previous command was not a yank (${disp.prevFn}).")
     else {
       yankCount = if (disp.prevFn == "yank-pop") yankCount + 1 else 1
@@ -524,7 +524,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   }
 
   @Fn("Replaces the contents of a rectangle with a supplied string on each line.")
-  def replaceRectangle () {
+  def replaceRectangle () :Unit = {
     window.mini.read("Replacement:", "", replaceRectHistory, Completer.none) onSuccess { str =>
       val repline = Line(str)
       withRectRegion { lines =>
@@ -547,7 +547,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     editor.rectKillRing add killed
   }
 
-  private def insertRectAt (loc :Loc, region :Seq[LineV]) {
+  private def insertRectAt (loc :Loc, region :Seq[LineV]) :Unit = {
     var pos = loc
     for (rline <- region) {
       // if we're past the end of the buffer, add a line
@@ -586,7 +586,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   /** Handles querying the user for the FROM and TO string, offering and using defaults, etc.
     * If search terms are obtained, `repFn` is invoked with them.
     */
-  def getReplaceArgs (prefix :String, repFn :(String, String) => Unit) {
+  def getReplaceArgs (prefix :String, repFn :(String, String) => Unit) :Unit = {
     val history = replaceHistory(wspace)
     val defrep = history.entries match {
       case 0 => None
@@ -619,7 +619,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * The number of replacements will be reported on completion.
     * @param preCount the number of replacements already performed prior to this call.
     */
-  def replaceAll (search :Search, to :Seq[LineV], start :Loc, preCount :Int = 0) {
+  def replaceAll (search :Search, to :Seq[LineV], start :Loc, preCount :Int = 0) :Unit = {
     @inline @tailrec def loop (loc :Loc, count :Int) :Int = {
       val next = search.findForward(loc)
       if (next != Loc.None) loop(search.replace(buffer, next, to), count+1)
@@ -634,7 +634,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     * and the user queried as to whether it should be replaced, and then the query replace is
     * repeated following that match.
     */
-  def queryReplace (search :Search, to :Seq[LineV], start :Loc) {
+  def queryReplace (search :Search, to :Seq[LineV], start :Loc) :Unit = {
     val prompt = s"Query replacing '${search.show}' with '${Line.toText(to)}': (C-h for help)"
     val opts = Seq(
       "y"  -> "replaces one match",
@@ -647,7 +647,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
     )
     def done (count :Int) :Unit = window.emitStatus(s"Replaced $count occurrence(s).")
     def clear (loc :Loc) = buffer.removeStyle(activeMatchStyle, loc, search.matchEnd(loc))
-    def loop (from :Loc, count :Int) {
+    def loop (from :Loc, count :Int) :Unit = {
       val next = search.findForward(from)
       if (next == Loc.None) done(count)
       else {
@@ -668,7 +668,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Queries the user for a FROM and TO string. Replaces all instances of FROM with TO
          from the point to the end of the buffer.""")
-  def replaceString () {
+  def replaceString () :Unit = {
     getReplaceArgs("Replace string", (from, to) => {
       // TODO: provide a way to force exact matching on lower-case strings? or just have 'em
       // use a regexp for that?
@@ -682,7 +682,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Queries the user for a FROM regexp and TO string. Replaces all instances of FROM with TO
          from the point to the end of the buffer.""")
-  def replaceRegexp () {
+  def replaceRegexp () :Unit = {
     getReplaceArgs("Replace regexp", (from, to) => {
       // TODO: transient mark mode and replacing in the region
       try {
@@ -697,7 +697,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
 
   @Fn("""Queries the user for a FROM and TO string. Replaces all instances of FROM with TO
          from the point to the end of the buffer with interactive confirmation.""")
-  def queryReplace () {
+  def queryReplace () :Unit = {
     getReplaceArgs("Query replace", (from, to) => {
       val search = Search(buffer, view.point(), buffer.end, Matcher.on(from))
       queryReplace(search, Line.fromText(to), search.min)
@@ -710,7 +710,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   // BUFFER FNS
 
   @Fn("""Saves current buffer to the currently visited file, if modified.""")
-  def saveBuffer () {
+  def saveBuffer () :Unit = {
     if (!buffer.dirty) window.emitStatus("No changes need to be saved.")
     else {
       // TODO: all sorts of checks; has the file changed (out from under us) since we loaded it?
@@ -723,7 +723,7 @@ abstract class EditingMode (env :Env) extends ReadingMode(env) {
   @Fn("""Saves the buffer to a filename read from the minibuffer. This makes the buffer visit that
          file. If you specify just a directory, the buffer will be saved to its current filename
          in the specified directory.""")
-  def writeFile () {
+  def writeFile () :Unit = {
     val bufwd = buffer.store.parent
     val fcomp = Completer.file(editor.exec)
     window.mini.read("Write file:", bufwd, fileHistory(wspace), fcomp) onSuccess { store =>

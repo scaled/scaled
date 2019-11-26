@@ -71,15 +71,15 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
   /** Returns the set of minor modes that should be auto-activated for `tags`. */
   def tagMinorModes (tags :Seq[String]) :Set[String] = tags.flatMap(minorTags.get _).toSet
 
-  override def didStartup () {} // not used
-  override def willShutdown () {} // not used
+  override def didStartup () :Unit = {} // not used
+  override def willShutdown () :Unit = {} // not used
 
   override def installDir (source :String) = metas.get(Source.parse(source)).mod.root
 
   override def classpath (source :String) =
     metas.get(Source.parse(source)).mod.depends(pkgRepo.resolver).classpath.toSeq
 
-  override def describePackages (bb :BufferBuilder) {
+  override def describePackages (bb :BufferBuilder) :Unit = {
     val modmetas = modules.filter(_.mod.name != "test").toSeq.sortBy(_.mod.toString)
 
     bb.addHeader("Packages")
@@ -109,7 +109,7 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
     case v      => v
   }).mkString(", ")
 
-  private def moduleAdded (mod :Module) {
+  private def moduleAdded (mod :Module) :Unit = {
     // create a package metadata ; there's some special hackery to handle the fact that services
     // are defined in scaled-api and implemented in scaled-editor, which is not normally allowed
     val meta = if (mod.source != ScaledAPI) new ModuleMeta(log, pkgRepo, mod)
@@ -137,7 +137,7 @@ class PackageManager (log :Logger) extends AbstractService with PackageService {
     PackageManager.this.moduleAdded.emit(meta)
   }
 
-  private def moduleRemoved (mod :Module) {
+  private def moduleRemoved (mod :Module) :Unit = {
     // TODO
   }
 

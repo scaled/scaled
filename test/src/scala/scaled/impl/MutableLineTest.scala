@@ -10,7 +10,7 @@ import scaled._
 
 class MutableLineTest {
 
-  @Test def insertDeleteReplace () {
+  @Test def insertDeleteReplace () :Unit = {
     val buf = TestData.buffer("test", "")
     val line = new MutableLine(buf, "Every good boy deserves fudge.".toCharArray)
     line.insert(Loc(0, line.asString.indexOf("fudge")), Line("tasty "))
@@ -28,7 +28,7 @@ class MutableLineTest {
     // TODO: boundary conditions?
   }
 
-  @Test def slicing () {
+  @Test def slicing () :Unit = {
     val buf = TestData.buffer("test", "")
     val line = new MutableLine(buf, "Every good boy deserves fudge.".toCharArray)
     assertEquals("good", line.slice(6, 6+4).asString)
@@ -40,7 +40,7 @@ class MutableLineTest {
     override def ephemeral = true
   }
 
-  @Test def testLineTags () {
+  @Test def testLineTags () :Unit = {
     val buf = TestData.buffer("test", "")
     val line = new MutableLine(buf, "Every good boy deserves fudge.".toCharArray)
     val ltags = line.lineTagSet

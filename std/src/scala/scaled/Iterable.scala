@@ -44,7 +44,7 @@ abstract class Iterable[+A] extends JIterable[A @uV] {
     * @throws ArrayIndexOutOfBoundsException if target does not contain enough space at offset to
     * hold the elements.
     */
-  def copyInto (target :Array[Any], offset :Int) {
+  def copyInto (target :Array[Any], offset :Int) :Unit = {
     var ii = offset ; val iter = iterator() ; while (iter.hasNext) {
       target(ii) = iter.next
       ii += 1

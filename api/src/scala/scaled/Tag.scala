@@ -66,7 +66,7 @@ class Tags {
   def isEmpty :Boolean = _root.isEmpty
 
   /** Adds a tag for the specified region denoted by `tag`. */
-  def add[T] (tag :T, start :Int, end :Int) {
+  def add[T] (tag :T, start :Int, end :Int) :Unit = {
     _root.insert(mkNode(tag, start, end))
   }
 
@@ -177,7 +177,7 @@ class Tags {
 
   /** Inserts a gap into the tag collection at `start`. Tags that overlap will be expanded,
     * tags that start at or after `start` will be shifted. */
-  def expand (start :Int, length :Int) {
+  def expand (start :Int, length :Int) :Unit = {
     // val where = s"expand(start=$start, length=$length)"
     // checkInvariant(where)
     var pnode = _root ; var node = _root.next ; while (node != null) {
@@ -205,7 +205,7 @@ class Tags {
   }
 
   /** Slices `[start, end)` from these tags into `into` at `offset`. */
-  def sliceInto (start :Int, end :Int, into :Tags, offset :Int) {
+  def sliceInto (start :Int, end :Int, into :Tags, offset :Int) :Unit = {
     // val where = s"sliceInto([$start,$end), $into, offset=$offset)"
     // checkInvariant(where)
     def clip[T] (tag :T, cstart :Int, cend :Int) = if (cend > cstart) into.add(tag, cstart, cend)
@@ -282,7 +282,7 @@ class Tags {
     res
   }
 
-  // private def checkInvariant (where :String) {
+  // private def checkInvariant (where :String) :Unit = {
   //   var node = _root.next ; while (node != null) {
   //     if (node.next != null && node.start > node.next.start) throw new IllegalStateException(
   //       s"Invalid node order: $where -> $node in $tags")
@@ -308,7 +308,7 @@ object Tags {
     def toList :List[Tag[_]] = this :: toListTail
     def toListTail :List[Tag[_]] = if (next == null) Nil else next.toList
 
-    def insert (node :Node[_]) {
+    def insert (node :Node[_]) :Unit = {
       if (next == null || node.start < next.start) next = node.setNext(next)
       else next.insert(node)
     }

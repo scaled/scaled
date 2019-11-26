@@ -22,12 +22,12 @@ object BufferImplTest {
 class BufferImplTest {
   import BufferImplTest._
 
-  @Test def testBasics () {
+  @Test def testBasics () :Unit = {
     val buffer = testBuffer(testText)
     assertEquals(5, buffer.lines.size)
   }
 
-  @Test def testLoc () {
+  @Test def testLoc () :Unit = {
     val buffer = testBuffer(testText)
     assertEquals(Loc(0, 5), buffer.loc(5))
     assertEquals(5, buffer.offset(Loc(0, 5)))
@@ -40,7 +40,7 @@ class BufferImplTest {
     assertEquals(Loc(4, 0), buffer.loc(testText.length+20))
   }
 
-  @Test def testMutate () {
+  @Test def testMutate () :Unit = {
     val buffer = testBuffer(testText)
     buffer.delete(Loc(1, 0), Loc(2, 0))
     assertEquals(EGBDF, buffer.line(1).asString)
@@ -54,7 +54,7 @@ class BufferImplTest {
     assertEquals("Every good smelling boy deserves fudge.", buffer.line(1).asString)
   }
 
-  @Test def testMotion () {
+  @Test def testMotion () :Unit = {
     val buffer = testBuffer(testText)
     val (start, end) = (buffer.start, buffer.end)
     val length = buffer.offset(end)
@@ -72,7 +72,7 @@ class BufferImplTest {
     assertEquals(start, buffer.backward(end, length+10))
   }
 
-  @Test def testRegion () {
+  @Test def testRegion () :Unit = {
     val buffer = testBuffer(testText)
 
     // slice out some regions and make sure they look sane
@@ -81,7 +81,7 @@ class BufferImplTest {
     val r2 = buffer.region(Loc(0, 16), Loc(1, 6))
     val r3 = buffer.region(Loc(0, 16), Loc(2, 5))
 
-    def checkregions () {
+    def checkregions () :Unit = {
       assertEquals(2, r0.length)
       assertEquals(WHO, r0(0).asString)
       assertEquals(0, r0(1).length)

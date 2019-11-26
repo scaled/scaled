@@ -35,21 +35,21 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
   private def expect (size :Int, count :Int) = expectAt(size, count, size)
 
   /** Called when we have expanded our internal array. Used by builders for nefarious purposes. */
-  protected def didExpand (index :Int, count :Int, ncap :Int) {}
+  protected def didExpand (index :Int, count :Int, ncap :Int) :Unit = {}
 
   /** Creates a buffer with the specified initial capacity (which must be >= 2). */
   def this (initCapacity :Int) = this(new Array[Any](math.max(2, initCapacity)), 0)
 
   /** Clears out the contents of this buffer, resetting its size to zero. Its internal array is
     * filled with nulls to ensure that spurious references are not retained. */
-  def clear () {
+  def clear () :Unit = {
     Arrays.fill(_elems.asInstanceOf[Array[Object]], 0, _size, null)
     _size = 0
   }
 
   /** Sets the `index`th element of this buffer to `elem`.
     * @throws IndexOutOfBoundsException if `index` is not in `[0,size)`. */
-  def update (index :Int, elem :A) {
+  def update (index :Int, elem :A) :Unit = {
     Seq.checkIndex(index, _size)
     _elems(index) = elem
   }
@@ -120,7 +120,7 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
 
   /** Inserts `elem` at `index`, expanding the buffer to accommodate, and shifting all elements
     * after `index` down by one. */
-  def insert (index :Int, elem :A) {
+  def insert (index :Int, elem :A) :Unit = {
     val size = _size
     expectAt(index, 1, size)(index) = elem
     _size = size + 1
@@ -128,7 +128,7 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
 
   /** Inserts `elems` at `index`, expanding the buffer to accommodate, and shifting all elements
     * after `index` down by `elems.size`. */
-  def insert (index :Int, elems :Unordered[A]) {
+  def insert (index :Int, elems :Unordered[A]) :Unit = {
     val size = _size ; val esize = elems.size
     elems.copyInto(expectAt(index, esize, size), index)
     _size = size + esize
@@ -136,7 +136,7 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
 
   /** Removes `count` elements starting at `index`, shifting any later elements up by `count`.
     * @throws IndexOutOfBoundsException if `[index,index+count)` is not in `[0,size)`. */
-  def remove (index :Int, count :Int) {
+  def remove (index :Int, count :Int) :Unit = {
     if (count > 0) {
       val size = _size ; val off = index+count
       Seq.checkBounds(index, off, size)
@@ -181,7 +181,7 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
 
   override def size = _size
 
-  override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) {
+  override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) :Unit = {
     Seq.checkBounds(start, end, _size)
     System.arraycopy(_elems, start, target, offset, end-start)
   }

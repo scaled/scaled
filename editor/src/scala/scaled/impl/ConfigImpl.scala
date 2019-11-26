@@ -51,7 +51,7 @@ class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
   }
 
   // handles the machinery of reading, factored out to enable testing... bleh
-  def read (log :Logger, fn :((String,String) => Unit) => Unit) {
+  def read (log :Logger, fn :((String,String) => Unit) => Unit) :Unit = {
     val initted = new HashSet[String]()
     fn { (key, value) => _vars.get(key) match {
       case None => log.log(s"$name config contains unknown/stale setting '$key: $value'.")
@@ -79,7 +79,7 @@ class ConfigImpl (name :String, val file :Path, val scope :Config.Scope,
 
     def isSet :Boolean = conn == null
     def initFrom (value :String) :Unit = init(key.converter.read(value))
-    def init (newval :T) {
+    def init (newval :T) :Unit = {
       value() = newval
       if (conn != null) { conn.close() ; conn = null }
     }

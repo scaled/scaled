@@ -22,7 +22,7 @@ object Fetcher {
 
   /** A `Progress` instance that ignores progress reports. */
   val Ignore = new Progress() {
-    def progress (pct :Int) {}
+    def progress (pct :Int) :Unit = {}
   }
 
   /**

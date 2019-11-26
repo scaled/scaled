@@ -46,8 +46,8 @@ class ServiceInjector (val log :Logger, val exec :Executor, editor :Editor)
     }
   }
 
-  override def didStartup () {} // unused
-  override def willShutdown () {} // unused
+  override def didStartup () :Unit = {} // unused
+  override def willShutdown () :Unit = {} // unused
 
   /** Provides stock injectables (editor, logger, and executor). */
   protected def stockArgs :List[AnyRef] = List(log, exec, editor)
@@ -81,7 +81,7 @@ class ServiceManager (app :Scaled) extends ServiceInjector(app.logger, app.exec,
   // also auto-load services in packages added after startup
   app.pkgMgr.moduleAdded.onValue(autoLoadSvcs)
 
-  def shutdown () {
+  def shutdown () :Unit = {
     services.asMap.values.foreach { svc =>
       try svc.willShutdown()
       catch {

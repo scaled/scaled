@@ -16,7 +16,7 @@ class OptValue[T] protected (init :T) extends OptValueV[T] {
     *
     * @throws $EXNDOC
     */
-  def update (value :T) {
+  def update (value :T) :Unit = {
     if (value == null) throw new IllegalArgumentException("Null values not allowed")
     updateAndNotifyIf(value)
   }
@@ -26,7 +26,7 @@ class OptValue[T] protected (init :T) extends OptValueV[T] {
     *
     * @throws $EXNDOC
     */
-  def updateForce (value :T) {
+  def updateForce (value :T) :Unit = {
     if (value == null) throw new IllegalArgumentException("Null values not allowed")
     updateAndNotify(value)
   }

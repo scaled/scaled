@@ -9,7 +9,7 @@ import org.junit.Assert._
 
 class LineTest {
 
-  @Test def testEquals () {
+  @Test def testEquals () :Unit = {
     val l1 = Line("The quick brown fox jumps over the lazy dog.")
     val l2 = Line("The quick brown fox jumps over the lazy dog.")
     val l3 = Line("The quick brown pig jumps over the lazy dog.")
@@ -22,7 +22,7 @@ class LineTest {
     assertFalse(l1.view(5, 20) == l3.view(5, 20))
   }
 
-  @Test def testCompare () {
+  @Test def testCompare () :Unit = {
     // sort is lexical
     val a = Line("abc")
     val x = Line("xyz")
@@ -44,10 +44,10 @@ class LineTest {
     assertTrue((long compare short) > 0)
   }
 
-  @Test def testIndexOf () {
+  @Test def testIndexOf () :Unit = {
     //                 0123456789012345678901234567890123456789012
     val l1 = Line("The quick brown fox jumps over the lazy dog.")
-    def test (line :Line, needle :String, start :Int) {
+    def test (line :Line, needle :String, start :Int) :Unit = {
       val s = line.asString ; val idx = s.indexOf(needle, start)
       assertEquals(s"offset (from $start) of '$needle' in '$s'", idx,
                    line.indexOf(Matcher.exact(needle), start))
@@ -69,10 +69,10 @@ class LineTest {
     test(l2, "lazy dog.", 50)
   }
 
-  @Test def testLastIndexOf () {
+  @Test def testLastIndexOf () :Unit = {
     //                 012345678901234567890123456789
     val l1 = Line("A man, a plan, a canal, Panama!")
-    def test (line :Line, needle :String, start :Int) {
+    def test (line :Line, needle :String, start :Int) :Unit = {
       val s = line.asString ; val idx = s.lastIndexOf(needle, start)
       assertEquals(s"last offset (from $start) of '$needle' in '$s'", idx,
                    line.lastIndexOf(Matcher.exact(needle), start))
@@ -93,9 +93,9 @@ class LineTest {
     test(l2, "lan", l2.length)
   }
 
-  @Test def testMatches () {
+  @Test def testMatches () :Unit = {
     val l1 = Line("The quick brown fox jumps over the lazy dog.")
-    def test (line :Line, needle :String, start :Int) {
+    def test (line :Line, needle :String, start :Int) :Unit = {
       val s = line.asString ; val matches = s.indexOf(needle, start) == start
       assertEquals(s"'$needle' matches (at $start) '$s'", matches,
                    line.matches(Matcher.exact(needle), start))
@@ -117,7 +117,7 @@ class LineTest {
     test(l2, "lazy dog.", 50)
   }
 
-  @Test def testRegexpMatcher () {
+  @Test def testRegexpMatcher () :Unit = {
     val t1 = "The quick brown fox jumps over the lazy dog."
     val l1 = Line(t1)
     assertEquals(t1.indexOf("quick"), l1.indexOf(Matcher.regexp("q.*k")))
@@ -135,7 +135,7 @@ class LineTest {
     assertEquals(t2.lastIndexOf("blah.", 14), l2.lastIndexOf(Matcher.regexp("\\bblah"), 14))
   }
 
-  @Test def testBuilderAppend () {
+  @Test def testBuilderAppend () :Unit = {
     val lb = Line.builder("Test")
     lb += " foo"
     lb += " bar"
@@ -144,7 +144,7 @@ class LineTest {
     assertEquals(Line("Test foo bar! Wow!"), lb.build())
   }
 
-  @Test def testSplitLines () {
+  @Test def testSplitLines () :Unit = {
     assertEquals(Seq(""), Line.splitText(""))
     assertEquals(Seq("Foo bar"), Line.splitText("Foo bar"))
     assertEquals(Seq("Foo bar", ""), Line.splitText("Foo bar\n"))

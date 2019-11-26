@@ -12,7 +12,7 @@ class PackageTest {
   class TestCloseable extends AutoCloseable {
     var closed = false
     var twiddle = 0
-    def close () { closed = true }
+    def close () :Unit = { closed = true }
   }
 
   class FailingCloseable extends AutoCloseable {
@@ -20,7 +20,7 @@ class PackageTest {
     def close () = throw new Exception("Oops!")
   }
 
-  @Test def testUsing () {
+  @Test def testUsing () :Unit = {
     // test normal close behavior
     val tc0 = using(new TestCloseable()) { tc =>
       tc.twiddle += 1

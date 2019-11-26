@@ -56,7 +56,7 @@ object Process {
     private val footers = Seq.builder[Seq.Builder[String]]()
     private var lineCount = 0
 
-    def slurp (in :InputStream) {
+    def slurp (in :InputStream) :Unit = {
       try {
         val bin = new BufferedReader(new InputStreamReader(in))
         var line :String = null
@@ -83,7 +83,7 @@ object Process {
       header.build()
     }
 
-    def append (line :String) {
+    def append (line :String) :Unit = {
       if (lineCount < maxLines/2) header += line
       else {
         if (footers.isEmpty || footers.last.size == BlockSize) {

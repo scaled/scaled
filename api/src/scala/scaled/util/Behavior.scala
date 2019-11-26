@@ -12,7 +12,7 @@ import scaled._
 abstract class Behavior extends Closeable {
 
   /** Activate or deactivates this behavior, as appropriate. */
-  def setActive (active :Boolean) {
+  def setActive (active :Boolean) :Unit = {
     if (!active) deactivate(false)
     else if (_toClose.isEmpty) {
       activate()
@@ -35,15 +35,15 @@ abstract class Behavior extends Closeable {
     * immediately after this behavior is deactivated. Thus the behavior may avoid unnecessary work
     * by not removing styles or doing other work it might normally do if it were deactivated and the
     * buffer were to remain operable. */
-  protected def didDeactivate (bufferDisposing :Boolean) {}
+  protected def didDeactivate (bufferDisposing :Boolean) :Unit = {}
 
   /** Notes a closeable resource. The closeable will be closed on the next call to
     * [[setActive]]`(false)`. This should only be called from [[activate]]. */
-  protected def note (ac :AutoCloseable) {
+  protected def note (ac :AutoCloseable) :Unit = {
     _toClose += ac
   }
 
-  private def deactivate (bufferDisposing :Boolean) {
+  private def deactivate (bufferDisposing :Boolean) :Unit = {
     if (!_toClose.isEmpty) {
       _toClose.close()
       didDeactivate(bufferDisposing)

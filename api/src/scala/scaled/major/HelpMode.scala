@@ -16,11 +16,11 @@ class HelpMode (env :Env) extends ReadOnlyTextMode(env) {
   // TODO: other things?
 
   private val noopVisit = Visit.Tag(new Visit() {
-    override protected def go (window :Window) {}
+    override protected def go (window :Window) :Unit = {}
   })
 
   @Fn("Visits the target of the current line, if any.")
-  def visit () {
+  def visit () :Unit = {
     buffer.line(view.point()).lineTag(noopVisit)(window)
   }
 }

@@ -15,23 +15,23 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
     bind("describe-workspace", "C-h w");
 
   @Fn("Creates a new workspace.")
-  def createWorkspace () {
+  def createWorkspace () :Unit = {
     window.mini.read(s"Name:", "", nameHistory, Completer.none) onSuccess(wsvc.create)
   }
 
   @Fn("Opens an existing workspace.")
-  def openWorkspace () {
+  def openWorkspace () :Unit = {
     val comp = Completer.from(wsvc.list)
     window.mini.read(s"Name:", "", nameHistory, comp) onSuccess(wsvc.open)
   }
 
   @Fn("Opens a new window in the current workspace.")
-  def openWindow () {
+  def openWindow () :Unit = {
     wspace.openWindow(None).focus.visit(buffer)
   }
 
   @Fn("Describes the state of the current workspace.")
-  def describeWorkspace () {
+  def describeWorkspace () :Unit = {
     val bb = new BufferBuilder(view.width()-1)
     wspace.describeSelf(bb)
 

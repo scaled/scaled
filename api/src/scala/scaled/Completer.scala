@@ -235,7 +235,7 @@ object Completer {
     * only when both strings have the character in uppercase, lowercase otherwise. */
   def sharedPrefix (a :String, b :String) = if (b startsWith a) a else {
     val buf = new StringBuilder
-    @inline @tailrec def loop (ii :Int) {
+    @inline @tailrec def loop (ii :Int) :Unit = {
       if (ii < a.length && ii < b.length) {
         val ra = a.charAt(ii) ; val la = Character.toLowerCase(ra)
         val rb = b.charAt(ii) ; val lb = Character.toLowerCase(rb)

@@ -27,7 +27,7 @@ class OpenHashMap[K,+V] (_keys :OpenHashSet[K], _values :Array[Any]) extends Map
   override def keySet = _keys
   override def values = new Seq[V](_values, size)
 
-  override def foreach[U] (op :(K, V) => U) {
+  override def foreach[U] (op :(K, V) => U) :Unit = {
     var ii = 0 ; val ss = size ; while (ii < ss) {
       op(_keys.getAt(ii), getAt(ii))
       ii += 1
@@ -83,7 +83,7 @@ object OpenHashMap {
 
     private var _values = new Array[Any](math.max(esize, 2))
     private val _ksb = new OpenHashSet.Builder[K](esize) {
-      override protected def didExpand (index :Int, count :Int, ncap :Int) {
+      override protected def didExpand (index :Int, count :Int, ncap :Int) :Unit = {
         // if we just shifted, then match the shift
         val sz = size ; val vals = _values ; val remain = sz-index
         if (ncap == vals.length) {
@@ -95,10 +95,10 @@ object OpenHashMap {
           _values = nvals
         }
       }
-      override protected def didCompact (ii :Int, nn :Int) {
+      override protected def didCompact (ii :Int, nn :Int) :Unit = {
         _values(nn) = _values(ii)
       }
-      override protected def sawDuplicate (oo :Int, dd :Int) {
+      override protected def sawDuplicate (oo :Int, dd :Int) :Unit = {
         // we want to use the last mapping for a given key, so if we see a duplicate, swap the
         // value for the duplicate key into the original key's position
         _values(oo) = _values(dd)

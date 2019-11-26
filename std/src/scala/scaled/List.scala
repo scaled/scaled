@@ -61,7 +61,7 @@ sealed abstract class List[+A] extends Ordered[A] {
   override def concat[B >: A] (that :Iterable[B]) :List[B] = super.concat(that).toList
   override def ++[B >: A] (bs :Iterable[B]) :List[B] = concat(bs)
 
-  override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) {
+  override def copyInto (start :Int, end :Int, target :Array[Any], offset :Int) :Unit = {
     if (start > 0) drop(start).copyInto(0, end-start, target, offset)
     else {
       var ll = this ; var ii = 0 ; while (ii < end) {
@@ -280,7 +280,7 @@ private final class Cons[A] (override val head :A, private[this] var _tail :List
     * [[List.Builder]] to enable lists to be built efficiently. It's public because there's no way
     * for us to make this private that will be enforced by any language other than Scala, so I'd
     * rather just make it public and document it. */
-  def unsafeSetTail (tail :List[A]) {
+  def unsafeSetTail (tail :List[A]) :Unit = {
     _tail = tail
   }
 

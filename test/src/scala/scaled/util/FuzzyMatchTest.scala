@@ -10,7 +10,7 @@ import scaled._
 
 class FuzzyMatchTest {
 
-  @Test def testScore () {
+  @Test def testScore () :Unit = {
     val m = FuzzyMatch("path")
     println(m.score("ParticleCore:tripleplay.particle.ParticleShader"))
     println(m.score("Path:playn.core"))

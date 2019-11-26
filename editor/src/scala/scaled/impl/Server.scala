@@ -14,7 +14,7 @@ import scala.io.Source
 class Server (app :Scaled) extends Thread {
   setDaemon(true)
 
-  override def run () {
+  override def run () :Unit = {
     val port = Scaled.Port
     try {
       val ssock = new ServerSocket(port)
@@ -30,7 +30,7 @@ class Server (app :Scaled) extends Thread {
     }
   }
 
-  private def process (cmd :String) {
+  private def process (cmd :String) :Unit = {
     if (cmd startsWith "open ") onMainThread {
       app.wspMgr.visit(app.wspMgr.resolve(cmd.substring(5).trim))
     }

@@ -260,7 +260,7 @@ class Commenter {
   }
 
   /** Trims line comments from the starts of every line in `[start,end)` in `buffer`. */
-  def unLineComment (buffer :Buffer, start :Loc, end :Loc) {
+  def unLineComment (buffer :Buffer, start :Loc, end :Loc) :Unit = {
     var loc = start ; while (loc < end) {
       val line = buffer.line(loc)
       val from = loc.col ; val to = if (loc.row == end.row) end.col else line.length

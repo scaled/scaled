@@ -37,7 +37,7 @@ class Anchor private[util] (initLoc :Loc) extends Comparable[Anchor] {
 
   override def compareTo (other :Anchor) = _loc.compareTo(other.loc)
 
-  private[util] def onInsert (start :Loc, end :Loc) {
+  private[util] def onInsert (start :Loc, end :Loc) :Unit = {
     if (!bindsLeft || start < loc) _loc = Loc.adjustForInsert(_loc, start, end)
   }
   private[util] def onDelete (start :Loc, end :Loc) :Boolean = {
@@ -86,7 +86,7 @@ object Anchor {
     }
 
     /** Disconnects this anchor set from its buffer and renders it inert. */
-    override def close () {
+    override def close () :Unit = {
       _conn.close()
     }
   }

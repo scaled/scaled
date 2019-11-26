@@ -76,7 +76,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
   }
 
   /** Inserts `c` into this line at `loc` with syntax `syntax`. */
-  def insert (loc :Loc, c :Char, syntax :Syntax) {
+  def insert (loc :Loc, c :Char, syntax :Syntax) :Unit = {
     prepInsert(loc.col, 1)
     _chars(loc.col) = c
     _syns(loc.col) = syntax
@@ -155,7 +155,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
   }
 
   /** Adds `tag` to this line. If `tag` is of type `String` then `noteLineStyled` is emitted. */
-  def addTag[T] (tag :T, start :Loc, until :Int) {
+  def addTag[T] (tag :T, start :Loc, until :Int) :Unit = {
     val scol = start.col
     val ecol = if (until <= length) until else {
       println(s"!!! Truncating line tag: '$tag' $start to $until capped at $length")
@@ -169,7 +169,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
 
   /** Removes `tag` to this line. If `tag` is of type `String` and a tag was found and removed, then
     * `noteLineStyled` is emitted. */
-  def removeTag[T] (tag :T, start :Loc, until :Int) {
+  def removeTag[T] (tag :T, start :Loc, until :Int) :Unit = {
     val scol = start.col
     if (until > scol && tags.remove(tag, scol, until) && tag.isInstanceOf[String]) {
       buffer.noteLineStyled(start)
@@ -178,14 +178,14 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
 
   /** Removes matching tags from this line. If `class` is `String` and at least one tag is removed,
     * then `noteLineStyled` is emitted. */
-  def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Int) {
+  def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Int) :Unit = {
     if (tags.removeAll(tclass, pred, start.col, until) && tclass == classOf[String]) {
       buffer.noteLineStyled(start)
     }
   }
 
   /** Sets the syntax of chars in `[loc,last)` to `syntax`. */
-  def setSyntax (syntax :Syntax, loc :Loc, last :Int = length) {
+  def setSyntax (syntax :Syntax, loc :Loc, last :Int = length) :Unit = {
     var p = loc.col ; while (p < last) { _syns(p) = syntax ; p += 1 }
   }
 
@@ -194,7 +194,7 @@ class MutableLine (buffer :BufferImpl, cs :Array[Char], xs :Array[Syntax],
   //
   // impl details
 
-  private def prepInsert (pos :Int, length :Int) {
+  private def prepInsert (pos :Int, length :Int) :Unit = {
     require(pos >= 0 && pos <= _end, s"0 <= $pos <= ${_end} ($length)")
     val curlen = _chars.length
     val curend = _end

@@ -87,7 +87,7 @@ abstract class ValueReactor[T] extends Reactor {
   protected def emitChange (value :T, ovalue :T) = notifyEmit(value, ovalue)
 
   /** Emits the supplied value to all connections. */
-  protected def notifyEmit (value :T, ovalue :T) {
+  protected def notifyEmit (value :T, ovalue :T) :Unit = {
     val lners = prepareNotify()
     var err :ReactionException = null
     try {

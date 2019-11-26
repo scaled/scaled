@@ -25,7 +25,7 @@ class StatusPopup extends VBox {
   getChildren.addAll(_text, _subtext)
   setVisible(false)
 
-  def showStatus (msg :String, subtext :String) {
+  def showStatus (msg :String, subtext :String) :Unit = {
     toFront()
     _text.setText(msg)
     val haveSubtext = (subtext.length > 0)
@@ -41,7 +41,7 @@ class StatusPopup extends VBox {
     setVisible(true)
   }
 
-  def clear () {
+  def clear () :Unit = {
     if (isVisible) {
       _fade.stop()
       _fade.setDuration(Duration.millis(300))
@@ -49,7 +49,7 @@ class StatusPopup extends VBox {
       _fade.setToValue(0d)
       _fade.play()
       _fade.setOnFinished(new EventHandler[ActionEvent]() {
-        override def handle (event :ActionEvent) {
+        override def handle (event :ActionEvent) :Unit = {
           setVisible(false)
         }
       })

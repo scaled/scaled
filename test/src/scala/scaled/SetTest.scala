@@ -10,7 +10,7 @@ import org.junit.Assert._
 
 class SetTest {
 
-  @Test def testBasics () {
+  @Test def testBasics () :Unit = {
     val set = Set("ant", "bob", "cat", "dog", "egg", "frog", "goat", "horse")
     assertEquals(8, set.size)
     Seq("ant", "bob", "cat", "dog", "egg", "frog", "goat", "horse") foreach { elem =>
@@ -21,7 +21,7 @@ class SetTest {
     }
   }
 
-  @Test def testRepeats () {
+  @Test def testRepeats () :Unit = {
     val set = Set("ant", "bob", "ant", "cat", "dog", "bob", "egg", "bob")
     assertEquals(5, set.size)
     Seq("ant", "bob", "cat", "dog", "egg") foreach { elem =>
@@ -32,7 +32,7 @@ class SetTest {
     }
   }
 
-  @Test def testAlgebra () {
+  @Test def testAlgebra () :Unit = {
     val set0 = Set("a", "b", "c", "d")
     val set1 = Set("e", "f", "c", "d")
     assertEquals(Set("a", "b", "c", "d", "e", "f"), set0 | set1)
@@ -46,12 +46,12 @@ class SetTest {
     assertEquals(Set.empty, Set.empty &~ set0)
   }
 
-  @Test def testFlatMap () {
+  @Test def testFlatMap () :Unit = {
     val set0 = Set("one", "two", "three")
     assertEquals(Set('o', 'n', 'e', 't', 'w', 'h', 'r'), set0.flatMap(s => Seq.from(s.toArray)))
   }
 
-  @Test def testEmptyOHS () {
+  @Test def testEmptyOHS () :Unit = {
     val set = Set.builder[String]().build()
     assertTrue(set.isInstanceOf[OpenHashSet[_]])
     assertFalse(set.contains("peanut"))
@@ -61,7 +61,7 @@ class SetTest {
     assertEquals(set, Set.empty)
   }
 
-  @Test def testSortedSet () {
+  @Test def testSortedSet () :Unit = {
     val els = Seq("one", "two", "three", "four", "five")
     val set = Set.builder[String]().append(els).buildSorted()
     assertEquals(Seq("five", "four", "one", "three", "two"), set.toSeq)

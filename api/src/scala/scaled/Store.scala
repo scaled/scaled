@@ -35,7 +35,7 @@ abstract class Store extends Comparable[Store] {
 
   /** Passes the contents of this store as a `Reader` to `fn`. The `Reader` is automatically closed
     * when `fn` returns. */
-  def read (fn :Reader => Unit) {
+  def read (fn :Reader => Unit) :Unit = {
     val r = reader
     try fn(r)
     finally r.close()
@@ -162,7 +162,7 @@ class FileStore private (val path :Path) extends Store {
 
   override def reader = if (exists) new FileReader(path.toFile) else new StringReader("")
 
-  override def write (lines :Iterable[Store.Writable]) {
+  override def write (lines :Iterable[Store.Writable]) :Unit = {
     Files.createDirectories(path.getParent) // make sure our parent directory exists
     // TODO: file encoding?
     val temp = path.resolveSibling(name + "~")

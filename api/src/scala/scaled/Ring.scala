@@ -35,7 +35,7 @@ class Ring (val size :Int) {
   }
 
   /** Adds `region` to the ring as a new entry. If full, the oldest entry will be removed. */
-  def add (region :Seq[LineV]) {
+  def add (region :Seq[LineV]) :Unit = {
     assert(!region.isEmpty)
     _pos = (_pos + 1) % size
     if (_entries.size < size) _entries += region
@@ -43,7 +43,7 @@ class Ring (val size :Int) {
   }
 
   /** Removes any regions from the ring that are equal to `region`, then [[add]]s `region`. */
-  def filterAdd (region :Seq[LineV]) {
+  def filterAdd (region :Seq[LineV]) :Unit = {
     var ii = _entries.indexOf(region)
     while (ii != -1) {
       _entries.removeAt(ii)
@@ -54,13 +54,13 @@ class Ring (val size :Int) {
   }
 
   /** Appends `region` to the youngest ring entry. */
-  def append (region :Seq[LineV]) {
+  def append (region :Seq[LineV]) :Unit = {
     if (_pos < 0) add(region)
     else _entries(_pos) = merge(_entries(_pos), region)
   }
 
   /** Prepends `region` to the youngest ring entry. */
-  def prepend (region :Seq[LineV]) {
+  def prepend (region :Seq[LineV]) :Unit = {
     if (_pos < 0) add(region)
     else _entries(_pos) = merge(region, _entries(_pos))
   }
@@ -85,22 +85,22 @@ class KillRing (editor :Editor, size :Int) extends Ring(size) {
     super.entry(age)
   }
 
-  override def add (region :Seq[LineV]) {
+  override def add (region :Seq[LineV]) :Unit = {
     super.add(region)
     copyToClipboard(region)
   }
 
-  override def append (region :Seq[LineV]) {
+  override def append (region :Seq[LineV]) :Unit = {
     super.append(region)
     copyToClipboard(entry(0).get)
   }
 
-  override def prepend (region :Seq[LineV]) {
+  override def prepend (region :Seq[LineV]) :Unit = {
     super.prepend(region)
     copyToClipboard(entry(0).get)
   }
 
-  private def copyToClipboard (region :Seq[LineV]) {
+  private def copyToClipboard (region :Seq[LineV]) :Unit = {
     lastSaved = Line.toText(region)
     editor.clipboard.set(lastSaved)
   }

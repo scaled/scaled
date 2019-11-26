@@ -167,12 +167,12 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
            successfully.
          C-g when search is successful aborts and moves point to starting point.
          """)
-  def isearchForward () {
+  def isearchForward () :Unit = {
     window.statusMini("isearch", Promise[Boolean](), view, disp, "forward")
   }
 
   @Fn("Searches incrementally backward. See the command isearch-forward for more info.")
-  def isearchBackward () {
+  def isearchBackward () :Unit = {
     window.statusMini("isearch", Promise[Boolean](), view, disp, "backward")
   }
 
@@ -180,14 +180,14 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   // MARK MANIPULATION FNS
 
   @Fn("Sets the mark to the current point.")
-  def setMarkCommand () {
+  def setMarkCommand () :Unit = {
     // TODO: push old mark onto local (buffer?) and global mark ring?
     buffer.mark = view.point()
     window.emitStatus("Mark set.")
   }
 
   @Fn("Sets the mark to the current point and moves the point to the previous mark.")
-  def exchangePointAndMark () {
+  def exchangePointAndMark () :Unit = {
     buffer.mark match {
       case Some(m) =>
         buffer.mark = view.point()
@@ -201,7 +201,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   // MOTION FNS
 
   @Fn("Moves the point forward one character.")
-  def forwardChar () {
+  def forwardChar () :Unit = {
     val old = view.point()
     // if we're at the end of the current line, move to the next line
     view.point() = buffer.forward(old, 1)
@@ -210,19 +210,19 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   }
 
   @Fn("Moves the point backward one character.")
-  def backwardChar () {
+  def backwardChar () :Unit = {
     val old = view.point()
     view.point() = buffer.backward(old, 1)
     if (old == view.point()) window.emitStatus("Beginning of buffer.")
   }
 
   @Fn("Moves the point forward one word.")
-  def forwardWord () {
+  def forwardWord () :Unit = {
     view.point() = forwardWord(view.point())
   }
 
   @Fn("Moves the point backward one word.")
-  def backwardWord () {
+  def backwardWord () :Unit = {
     view.point() = backwardWord(view.point())
   }
 
@@ -233,7 +233,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   view.point.onValue { p => desiredColumn = p.col }
 
   @Fn("Moves the point down one line.")
-  def nextLine () {
+  def nextLine () :Unit = {
     val old = view.point()
     // attempt to move into our "desired column" in the next row; in most cases the desired column
     // will be equal to the current column, but when moving from a long line, through some short
@@ -247,7 +247,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   }
 
   @Fn("Moves the point up one line.")
-  def previousLine () {
+  def previousLine () :Unit = {
     val old = view.point()
     // see nextLine() for a description of what we're doing here with desiredColumn
     val oldDesiredColumn = desiredColumn
@@ -258,7 +258,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Moves to the next paragraph. Paragraphs are currently delimited by blank lines.
          TODO: make this more emacs-like?""")
-  def nextParagraph () {
+  def nextParagraph () :Unit = {
     @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
       if (row >= buffer.lines.size) Loc(row, 0)
       else {
@@ -273,7 +273,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Moves to the previous paragraph. Paragraphs are currently delimited by blank lines.
          TODO: make this more emacs-like?""")
-  def previousParagraph () {
+  def previousParagraph () :Unit = {
     @tailrec def seek (row :Int, seenNonBlank :Boolean) :Loc = {
       if (row <= 0) Loc(0, 0)
       else {
@@ -301,7 +301,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("""Reads line number from minibuffer and goes to that line, counting from line 1 at
          beginning of buffer. Also centers the view on the requested line. If the mark is inactive,
          it will be set to the point prior to moving to the new line. """)
-  def gotoLine () {
+  def gotoLine () :Unit = {
     window.mini.read("Goto line:", "", gotoLineHistory, Completer.none) onSuccess { lstr =>
       val line = try { lstr.toInt } catch {
         case e :Throwable => 1 // this is what emacs does, seems fine to me
@@ -315,7 +315,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   @Fn("""Reads character offset from minibuffer and goes to that offset. Also centers the view on
          the requested line. If the mark is inactive, it will be set to the point prior to moving
          to the new line. """)
-  def gotoOffset () {
+  def gotoOffset () :Unit = {
     window.mini.read("Goto offset:", "", gotoLineHistory, Completer.none) onSuccess { offStr =>
       val offset = try { offStr.toInt } catch {
         case e :Throwable => 0 // this is what emacs does, seems fine to me
@@ -352,7 +352,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
          position. This is mainly useful when hacking on Scaled as it recreates the buffer from
          scratch reinitializing the major and minor modes. Note: this only works on clean buffers
          loaded from files. Modified or ephemeral buffers will refuse to be reloaded.""")
-  def reloadBuffer () {
+  def reloadBuffer () :Unit = {
     if (buffer.dirty) window.popStatus("Cannot reload modified buffer.")
     else if (!buffer.store.exists) window.popStatus("Cannot reload ephemeral buffers.")
     else frame.revisitFile()
@@ -362,14 +362,14 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   // HELP FNS
 
   @Fn("Displays the styles at the point.")
-  def showStyles () {
+  def showStyles () :Unit = {
     val p = view.point()
     val info = Seq(buffer.stylesAt(p).toString)
     view.popup() = Popup.text(info, Popup.UpRight(p))
   }
 
   @Fn("Displays the tags at the point.")
-  def showTags () {
+  def showTags () :Unit = {
     val p = view.point()
     val info = buffer.tagsAt(p) match {
       case Nil  => List("No tags.")
@@ -379,7 +379,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   }
 
   @Fn("Displays all tags on the current line.")
-  def showLineTags () {
+  def showLineTags () :Unit = {
     val p = view.point()
     val line = buffer.line(p)
     val info = (line.lineTags ++ line.tags) match {
@@ -393,7 +393,7 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
   // META FNS
 
   @Fn("Reports that a key sequence is unknown.")
-  def unknownCommand (trigger :String) {
+  def unknownCommand (trigger :String) :Unit = {
     window.popStatus(s"$trigger is undefined.")
   }
 

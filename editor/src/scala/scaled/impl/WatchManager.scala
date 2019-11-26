@@ -14,8 +14,8 @@ class WatchManager (log :Logger, exec :Executor) extends AbstractService with Wa
   import java.nio.file.StandardWatchEventKinds._
 
   // TODO...
-  override def didStartup () {}
-  override def willShutdown () {}
+  override def didStartup () :Unit = {}
+  override def willShutdown () :Unit = {}
 
   override def watchFile (file :Path, watcher :Path => Unit) = {
     val name = file.getFileName.toString
@@ -60,11 +60,11 @@ class WatchManager (log :Logger, exec :Executor) extends AbstractService with Wa
     byKey.put(key, this)
     log.log(s"Created watch: $dir")
 
-    def dispatch (ev :WatchEvent[_]) {
+    def dispatch (ev :WatchEvent[_]) :Unit = {
       signal.emit(ev)
       if (!signal.hasConnections) close()
     }
-    def close () {
+    def close () :Unit = {
       key.cancel()
       log.log(s"Cleared watch: $dir")
       byKey.remove(key)

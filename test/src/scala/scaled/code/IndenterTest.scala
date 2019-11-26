@@ -41,7 +41,7 @@ class IndenterTest {
     /*25*/ "                     int bingle, int bangle) {}",
     /*26*/ "}")
 
-  @Test def testStateCalc () {
+  @Test def testStateCalc () :Unit = {
     val buf = Buffer.scratch("Test.java")
     buf.append(testJavaCode.map(Line.apply))
     val indenter = new BlockIndenter(Config.testConfig, Seq())

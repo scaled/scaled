@@ -69,7 +69,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
 
   /** Checks whether this buffer has become stale (i.e. the file it is editing has been modified
     * more recently than it was loaded into this buffer). Emits [[stale]] if so. */
-  def checkStale () {
+  def checkStale () :Unit = {
     if (store.lastModified > _lastModified) {
       // TEMP: if no one is listening for us to become stale then just go away
       // TODO: maybe just reload the contents of this buffer from our store?
@@ -102,7 +102,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   // TODO: run buffer kill hooks
   override def kill () = killed.emit(this)
 
-  override def saveTo (store :Store) {
+  override def saveTo (store :Store) :Unit = {
     if (store.readOnly) throw Errors.feedback(s"Cannot save to read-only file: $store")
     // run our on-save hooks, but don't let them abort the save if they choke
     val exn = try {
@@ -219,28 +219,28 @@ class BufferImpl private (initStore :Store) extends RBuffer {
     noteInsert(loc, loc.nextStart)
   }
 
-  override def setSyntax (syntax :Syntax, start :Loc, until :Loc) {
+  override def setSyntax (syntax :Syntax, start :Loc, until :Loc) :Unit = {
     if (until < start) setSyntax(syntax, until, start)
     else if (until > end) setSyntax(syntax, start, end) // bound until into the buffer
     else if (start.row == until.row) line(start).setSyntax(syntax, start, until.col)
     else onRows(start, until)(_.setSyntax(syntax, _, _))
   }
 
-  override def addTag[T] (tag :T, start :Loc, until :Loc) {
+  override def addTag[T] (tag :T, start :Loc, until :Loc) :Unit = {
     if (until < start) addTag(tag, until, start)
     else if (until > end) addTag(tag, start, end) // bound until into the buffer
     else if (start.row == until.row) line(start).addTag(tag, start, until.col)
     else onRows(start, until)(_.addTag(tag, _, _))
   }
 
-  override def removeTag[T] (tag :T, start :Loc, until :Loc) {
+  override def removeTag[T] (tag :T, start :Loc, until :Loc) :Unit = {
     if (until < start) removeTag(tag, until, start)
     else if (until > end) removeTag(tag, start, end) // bound until into the buffer
     else if (start.row == until.row) line(start).removeTag(tag, start, until.col)
     else onRows(start, until)(_.removeTag(tag, _, _))
   }
 
-  override def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Loc) {
+  override def removeTags[T] (tclass :Class[T], pred :T => Boolean, start :Loc, until :Loc) :Unit = {
     if (until < start) removeTags(tclass, pred, until, start)
     else if (until > end) removeTags(tclass, pred, start, end) // bound until into the buffer
     else if (start.row == until.row) line(start).removeTags(tclass, pred, start, until.col)
@@ -258,7 +258,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
 
   /** Applies op to all rows from `start` up to (not including) `until`. `op` is passed `(line,
     * start, endCol)` which is adjusted properly for the first and last line. */
-  private def onRows (start :Loc, until :Loc)(op :(MutableLine, Loc, Int) => Unit) {
+  private def onRows (start :Loc, until :Loc)(op :(MutableLine, Loc, Int) => Unit) :Unit = {
     var loc = start
     while (loc.row < until.row) {
       val l = _lines(loc.row)
@@ -302,7 +302,7 @@ class BufferImpl private (initStore :Store) extends RBuffer {
   private def noteTransform (start :Loc, orig :Seq[Line]) =
     emit(new Transform(start, orig, this))
 
-  private[impl] def noteLineStyled (loc :Loc) {
+  private[impl] def noteLineStyled (loc :Loc) :Unit = {
     // println(s"Styles @$loc")
     _lineStyled.emit(loc)
   }

@@ -15,7 +15,7 @@ class KeyPressTest {
   val T = true
   val F = false
 
-  @Test def testToKeyPress () {
+  @Test def testToKeyPress () :Unit = {
     assertEquals(Some(fromCode(KeyCode.A, T, F, F, F)), toKeyPress("S-a"))
     assertEquals(Some(fromCode(KeyCode.A, F, T, F, F)), toKeyPress("C-a"))
     assertEquals(Some(fromCode(KeyCode.A, F, F, T, F)), toKeyPress("A-a"))

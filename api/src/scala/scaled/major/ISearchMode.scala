@@ -25,7 +25,7 @@ class ISearchMode (
                      fwd :Boolean, fail :Boolean, wrap :Boolean) extends Region {
 
     private var matches :Option[Seq[Loc]] = None
-    private def setMatches (matches :Seq[Loc]) {
+    private def setMatches (matches :Seq[Loc]) :Unit = {
       this.matches = Some(matches)
       if (curstate eq this) {
         miniui.setPrompt(prompt)
@@ -59,7 +59,7 @@ class ISearchMode (
       * @param prev the previously active state, which will be unapplied (efficiently such that if
       * this state and the previous have the same configuration, no change is made).
       */
-    def apply (prev :IState) {
+    def apply (prev :IState) :Unit = {
       if (prev.sought ne sought) {
         if (matches.isDefined) showMatches(matches.get, sought)
         setContents(sought)
@@ -119,7 +119,7 @@ class ISearchMode (
   // tracks the styles added for a complete set of matches
   private var _clearMatches = () => ()
   private var _pendingShow = Closeable.Noop
-  private def showMatches (matches :Seq[Loc], sought :Seq[LineV]) {
+  private def showMatches (matches :Seq[Loc], sought :Seq[LineV]) :Unit = {
     clearMatches()
     // defer actually showing these matches for 250ms
     _pendingShow = env.msvc.exec.ui.schedule(250, () => {
@@ -131,7 +131,7 @@ class ISearchMode (
       }
     })
   }
-  private def clearMatches () {
+  private def clearMatches () :Unit = {
     _pendingShow.close() // cancel any pending show
     _clearMatches()      // clear any currently highlighted matches
   }
@@ -150,7 +150,7 @@ class ISearchMode (
   private def curstate = _states.head
 
   // every change pushes a new state on the stack
-  private def pushState (state :IState) {
+  private def pushState (state :IState) :Unit = {
     state.apply(curstate)
     _states = state :: _states
   }
@@ -162,7 +162,7 @@ class ISearchMode (
 
   // machinery for handling coalesced search term refreshing
   private var _refreshPending = false
-  private def queueRefresh () {
+  private def queueRefresh () :Unit = {
     if (!_refreshPending) {
       _refreshPending = true
       window.exec.runOnUI {
@@ -192,19 +192,19 @@ class ISearchMode (
     // Type M-s C-e to yank rest of line onto end of search string and search for it.
     // Type C-q to quote control character to search for it.
 
-  override def dispose () {
+  override def dispose () :Unit = {
     super.dispose()
     clearMatches()
     curstate.clear() // clear active match highlight
   }
 
   // when a non-isearch key binding is pressed...
-  override def unknownCommand (trigger :String) {
+  override def unknownCommand (trigger :String) :Unit = {
     endSearch()             // terminate the search normally...
     mainDisp.press(trigger) // and "execute" the pressed key in the main buffer
   }
 
-  override def abort () {
+  override def abort () :Unit = {
     // if we're currently failing, peel back to the last successful state
     if (curstate.fail) {
       val oldcur = curstate
@@ -225,14 +225,14 @@ class ISearchMode (
   }
 
   @Fn("Cancels the last change to the isearch, reverting to the previous search.")
-  def prevSearch () {
+  def prevSearch () :Unit = {
     if (_states.tail != Nil) popState()
     else window.popStatus("No previous search.")
   }
 
   @Fn("""Moves forward to the next occurrance of the current matched text, if any.
          The point will be placed immediately after the match.""")
-  def nextMatch () {
+  def nextMatch () :Unit = {
     // if we're not at the default state, or we're changing direction, next() the current state
     if (curstate != initState || !curstate.fwd) pushState(curstate.next())
     // otherwise populate the search with the first entry from the search history ring
@@ -241,7 +241,7 @@ class ISearchMode (
 
   @Fn("""Moves backward to the previous occurrance of the current matched text, if any.
          The point will be placed at the start of the match.""")
-  def prevMatch () {
+  def prevMatch () :Unit = {
     // if we're not at the default state, or we're changing direction, prev() the current state
     if (curstate != initState || curstate.fwd) pushState(curstate.prev())
     // otherwise populate the search with the first entry from the search history ring

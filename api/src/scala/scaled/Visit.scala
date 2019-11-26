@@ -9,7 +9,7 @@ abstract class Visit {
 
   /** Visits our target in `window`'s focused frame.
     * @param push whether to push the current location onto the visit stack before we go. */
-  def apply (window :Window, push :Boolean = true) {
+  def apply (window :Window, push :Boolean = true) :Unit = {
     val obuf = window.focus.view.buffer ; val oloc = window.focus.view.point()
     go(window)
     // if requested, and we actually went anywhere, push our old loc onto the visit stack
@@ -40,7 +40,7 @@ object Visit {
     def isEmpty = visits.isEmpty
 
     /** Visits the next visit in the list in `frame`. */
-    def next (window :Window) {
+    def next (window :Window) :Unit = {
       if (isEmpty) window.popStatus(onNone)
       else {
         _current += 1
@@ -53,7 +53,7 @@ object Visit {
     }
 
     /** Visits the previous visit in the list in `frame`. */
-    def prev (window :Window) {
+    def prev (window :Window) :Unit = {
       if (isEmpty) window.popStatus(onNone)
       else if (_current == -1) {
         _current = visits.size-1
@@ -81,7 +81,7 @@ object Visit {
     private var _current = -1
     private var _lastLoc = Loc.None
 
-    private def go (window :Window) {
+    private def go (window :Window) :Unit = {
       // if we're not sitting on the position that we last visited, push the current view+loc onto
       // the visit stack; this means that the first time you start cycling through the visit list,
       // we note your loc, but if you just cycle cycle cycle, we don't push every intermediate
@@ -114,12 +114,12 @@ object Visit {
     def push (buffer :BufferV, loc :Loc) :Unit = push(buffer.store, loc)
 
     /** Pushes `(store, loc)` onto the visit stack. */
-    def push (store :Store, loc :Loc) {
+    def push (store :Store, loc :Loc) :Unit = {
       _stack += (store -> loc)
     }
 
     /** Pops the last `(store, loc)` from the stack and visits it. */
-    def pop (window :Window) {
+    def pop (window :Window) :Unit = {
       if (_stack.isEmpty) window.emitStatus(s"Visit stack is empty.")
       else {
         val (store, loc) = _stack.last
@@ -140,7 +140,7 @@ object Visit {
 
   /** Returns an instance that will visit `offset` in `store`. */
   def apply (store :Store, offset :Int) :Visit = new Visit() {
-    protected def go (window :Window) {
+    protected def go (window :Window) :Unit = {
       val view = window.focus.visitFile(store)
       view.point() = view.buffer.loc(offset)
     }
@@ -149,7 +149,7 @@ object Visit {
 
   /** Returns an instance that will visit `loc` in `store`. */
   def apply (store :Store, loc :Loc) :Visit = new Visit() {
-    protected def go (window :Window) {
+    protected def go (window :Window) :Unit = {
       val view = window.focus.visitFile(store)
       view.point() = loc
     }

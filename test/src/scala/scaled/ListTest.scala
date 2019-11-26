@@ -10,7 +10,7 @@ import org.junit.Assert._
 
 class ListTest extends OrderedTestBase {
 
-  @Test def testBuilder () {
+  @Test def testBuilder () :Unit = {
     val lb = List.builder[String]
     lb += "one"
     lb += "two"
@@ -23,21 +23,21 @@ class ListTest extends OrderedTestBase {
     assertEquals(List("one", "two", "three"), lb2.build())
   }
 
-  @Test def testReverse () {
+  @Test def testReverse () :Unit = {
     assertEquals(Nil, Nil.reverse)
     assertEquals(List("a"), List("a").reverse)
     assertEquals(List("c", "b", "a"), List("a", "b", "c").reverse)
     assertEquals(List("d", "c", "b", "a"), List("a", "b", "c", "d").reverse)
   }
 
-  @Test def testConstravariance () {
+  @Test def testConstravariance () :Unit = {
     val ints :List[Integer] = 1 :: Nil
     val nums :List[Number] = 3f :: ints
     assertEquals(1, ints.size)
     assertEquals(2, nums.size)
   }
 
-  @Test def testCopyInto () {
+  @Test def testCopyInto () :Unit = {
     val strs = List("a", "b", "c")
     val a0 = new Array[Any](3)
     strs.copyInto(0, strs.length, a0, 0)
@@ -48,26 +48,26 @@ class ListTest extends OrderedTestBase {
     assertEquals(Seq(null, "a", "b", "c", null), a1.asInstanceOf[Array[AnyRef]].mkSeq)
   }
 
-  @Test def testCovariance () {
+  @Test def testCovariance () :Unit = {
     def length (os :List[Any]) :Int = os.length
     assertEquals(5, length(List(1, 2, 3, 4, 5)))
   }
 
-  @Test def testFolds () {
+  @Test def testFolds () :Unit = {
     assertEquals("abc", ("" /: List("a", "b", "c"))(_ + _))
     assertEquals("cba", (List("a", "b", "c") :\ "")((a,b) => b+a))
   }
 
-  @Test def testFrom () {
+  @Test def testFrom () :Unit = {
     assertEquals(List(1, 2, 3), List.from(Array(1, 2, 3)))
   }
 
-  @Test def testFromScala () {
+  @Test def testFromScala () :Unit = {
     val slist = "a" :: "b" :: "c" :: SNil
     assertEquals(List("a", "b", "c"), slist.fromScala)
   }
 
-  @Test def testPatternMatch () {
+  @Test def testPatternMatch () :Unit = {
     val as = List("one", "two", "three")
     as match {
       case h :: t =>

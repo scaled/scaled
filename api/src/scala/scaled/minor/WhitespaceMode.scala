@@ -34,7 +34,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   addBehavior(showTrailingWhitespace, new Behavior() {
     private val _rethinkLines = MSet[Int]()
 
-    override protected def activate () {
+    override protected def activate () :Unit = {
       // respond to buffer edits
       note(buffer.edited onValue { edit =>
         queueRethink(edit.start.row until edit.end.row :_*)
@@ -49,17 +49,17 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
       // RBufferView.heightV; encapsulate it in a Colorizer helper class?
     }
 
-    override protected def didDeactivate (bufferDisposing :Boolean) {
+    override protected def didDeactivate (bufferDisposing :Boolean) :Unit = {
       if (!bufferDisposing) buffer.removeStyle(trailingStyle, buffer.start, buffer.end)
     }
 
-    private def queueRethink (row :Int*) {
+    private def queueRethink (row :Int*) :Unit = {
       val takeAction = _rethinkLines.isEmpty
       _rethinkLines ++= row
       if (takeAction) window.exec.runOnUI(rethink)
     }
 
-    private def rethink () {
+    private def rethink () :Unit = {
       _rethinkLines foreach tagTrailingWhitespace
       _rethinkLines.clear()
     }
@@ -82,7 +82,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   })
 
   addBehavior(requireTrailingNewline, new Behavior() {
-    override protected def activate () {
+    override protected def activate () :Unit = {
       note(buffer.willSave onValue { buf =>
         if (buf.lines.last.length > 0) buf.split(buf.end)
       })
@@ -95,7 +95,7 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   override def configDefs = WhitespaceConfig :: super.configDefs
   override def stylesheets = stylesheetURL("/whitespace.css") :: super.stylesheets
 
-  def trimTrailingWhitespaceAt (row :Int) {
+  def trimTrailingWhitespaceAt (row :Int) :Unit = {
     val line = buffer.line(row) ; val len = line.length ; val last = len-1
     var pos = last ; while (pos >= 0 && isWhitespace(line.charAt(pos))) pos -= 1
     if (pos < last) buffer.delete(Loc(row, pos+1), Loc(row, len))
@@ -113,12 +113,12 @@ class WhitespaceMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Trims trailing whitespace from the line at the point.")
-  def trimLineTrailingWhitespace () {
+  def trimLineTrailingWhitespace () :Unit = {
     trimTrailingWhitespaceAt(view.point().row)
   }
 
   @Fn("Trims trailing whitespace from all lines in the buffer.")
-  def trimBufferTrailingWhitespace () {
+  def trimBufferTrailingWhitespace () :Unit = {
     0 until buffer.lines.length foreach(trimTrailingWhitespaceAt)
   }
 }

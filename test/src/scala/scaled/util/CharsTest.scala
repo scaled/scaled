@@ -9,7 +9,7 @@ import org.junit._
 
 class CharsTest {
 
-  @Test def testPreds () {
+  @Test def testPreds () :Unit = {
     test(true, Chars.isWhitespace, ' ')
     test(false, Chars.isNotWhitespace, ' ')
     test(true, Chars.isNotWhitespace, 'b')
@@ -23,7 +23,7 @@ class CharsTest {
     test(true, Chars.isNotPunctuation, ' ')
   }
 
-  private def test (expect :Boolean, fn :(Char => Boolean), c :Char) {
+  private def test (expect :Boolean, fn :(Char => Boolean), c :Char) :Unit = {
     assertEquals(s"$fn('$c')", expect, fn(c))
   }
 }

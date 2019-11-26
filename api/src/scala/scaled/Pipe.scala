@@ -44,7 +44,7 @@ abstract class Pipe[E] extends JExecutor {
   import Pipe._
 
   /** Dispatches `f` on the target process (on the appropriate thread). $SAMECTX */
-  def tell (f :E => Unit)
+  def tell (f :E => Unit) :Unit
 
   /** Dispatches `f` on the target process (on the appropriate thread) and blocks the calling thread
     * until the response is available. If the calling thread is currently in the target process's

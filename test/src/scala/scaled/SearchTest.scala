@@ -17,7 +17,7 @@ class SearchTest {
   val text = Seq(WHO, NOW, EGBDF, ABC)
   val buffer = Buffer("test", text.map(Line.apply))
 
-  @Test def testSingleLineSearch () {
+  @Test def testSingleLineSearch () :Unit = {
     val the = Line("the")
     // search for all the thes in the whole buffer
     val allThes = Search(buffer, buffer.start, buffer.end, the).findAll()
@@ -49,5 +49,5 @@ class SearchTest {
     assertEquals(2, secondLimitThes.size)
   }
 
-  // TODO: @Test def testMultiLineSearch () {}
+  // TODO: @Test def testMultiLineSearch () :Unit = {}
 }

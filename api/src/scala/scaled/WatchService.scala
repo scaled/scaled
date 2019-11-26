@@ -10,13 +10,13 @@ import java.nio.file.Path
 abstract class Watcher {
 
   /** Notification that a file or directory named `child` was created in `dir`. */
-  def onCreate (dir :Path, child :String) {}
+  def onCreate (dir :Path, child :String) :Unit = {}
 
   /** Notification that a file or directory named `child` was deleted in `dir`. */
-  def onDelete (dir :Path, child :String) {}
+  def onDelete (dir :Path, child :String) :Unit = {}
 
   /** Notification that a file or directory named `child` was modified in `dir`. */
-  def onModify (dir :Path, child :String) {}
+  def onModify (dir :Path, child :String) :Unit = {}
 }
 
 /** Provides notifications when files or directories are modified. */

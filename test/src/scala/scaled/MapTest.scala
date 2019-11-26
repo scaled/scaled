@@ -9,14 +9,14 @@ import org.junit.Assert._
 
 class MapTest {
 
-  @Test def testEquals () {
+  @Test def testEquals () :Unit = {
     assertEquals(Map("a" -> 1, "b" -> 2),
                  Map("b" -> 2, "a" -> 1))
     assertNotEquals(Map("a" -> 1, "b" -> 2),
                     Map("b" -> 2, "a" -> 1, "c" -> 3))
   }
 
-  @Test def testDuplicatesInBuilder () {
+  @Test def testDuplicatesInBuilder () :Unit = {
     val mb = Map.builder[String,Int]()
     mb += ("a", 1)
     mb += ("b", 2)
@@ -24,12 +24,12 @@ class MapTest {
     assertEquals(Map("a" -> 3, "b" -> 2), mb.build())
   }
 
-  @Test def testKeySet () {
+  @Test def testKeySet () :Unit = {
     val map = Map("a" -> 1, "b" -> 2)
     assertEquals(Set("a", "b"), map.keySet)
   }
 
-  @Test def testContainsGet () {
+  @Test def testContainsGet () :Unit = {
     val map = Map("a" -> 1, "b" -> 2)
     assertTrue(map.contains("a"))
     assertTrue(map.contains("b"))
@@ -40,7 +40,7 @@ class MapTest {
     assertEquals(None, map.get("c"))
   }
 
-  @Test def testEmptyOHM () {
+  @Test def testEmptyOHM () :Unit = {
     val map = Map.builder[String,String]().build()
     assertTrue(map.isInstanceOf[OpenHashMap[_,_]])
     assertFalse(map.contains("peanut"))
@@ -51,7 +51,7 @@ class MapTest {
     assertEquals(map, Map.empty)
   }
 
-  @Test def testCollect () {
+  @Test def testCollect () :Unit = {
     val evens = Map("a" -> 1, "b" -> 2, "c" -> 3, "d" -> 4) collect {
       case (k, v) if (v % 2 == 0) => v
     }

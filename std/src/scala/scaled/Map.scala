@@ -190,7 +190,7 @@ object Map {
       override def keySet = Set.view(jmap.keySet)
       override def size = jmap.size
       override def values = Unordered.view(jmap.values)
-      override def foreach[U] (op :(K, V) => U) {
+      override def foreach[U] (op :(K, V) => U) :Unit = {
         val eiter = jmap.entrySet.iterator() ; while (eiter.hasNext) {
           val e = eiter.next
           op(e.getKey, e.getValue)
@@ -206,6 +206,6 @@ object Map {
     override def contains (key :Any) = false
     override def keySet = Set.empty
     override def values = Seq.empty
-    override def foreach[U] (op :(Any, Nothing) => U) {}
+    override def foreach[U] (op :(Any, Nothing) => U) :Unit = {}
   }
 }

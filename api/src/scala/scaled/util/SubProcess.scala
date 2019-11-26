@@ -102,7 +102,7 @@ object SubProcess {
     thread
   }
 
-  private def noopOnExit (success :Boolean) {}
+  private def noopOnExit (success :Boolean) :Unit = {}
 }
 
 /** Encapsulates a sub-process.
@@ -116,13 +116,13 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) e
   import SubProcess._
 
   /** Sends `line` to the subprocess's stdin. A newline is automatically appended. */
-  def send (line :String) {
+  def send (line :String) :Unit = {
     out.println(line)
     out.flush()
   }
 
   /** Sends `lines` to the subprocess's stdin. Newlines are automatically appended. */
-  def send (lines :Seq[String]) {
+  def send (lines :Seq[String]) :Unit = {
     lines foreach out.println
     out.flush()
   }
@@ -132,7 +132,7 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) e
 
   /** Closes this subprocess's output stream. This may trigger termination if it expects that sort
     * of thing. This must only be called after [[start]]. */
-  override def close () {
+  override def close () :Unit = {
     process.getOutputStream.close()
   }
 
@@ -148,12 +148,12 @@ class SubProcess (config :SubProcess.Config, events :Signal[SubProcess.Event]) e
   }
 
   /** Terminates the subprocess, less than forcibly. */
-  def terminate () {
+  def terminate () :Unit = {
     process.destroy()
   }
 
   /** Terminates the subprocess forcibly. */
-  def kill () {
+  def kill () :Unit = {
     process.destroyForcibly()
   }
 

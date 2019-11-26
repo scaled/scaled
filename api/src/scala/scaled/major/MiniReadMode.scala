@@ -29,7 +29,7 @@ class MiniReadMode[T] (
 
   // machinery for handling coalesced search string refreshing
   private var _refreshConn = Closeable.Noop
-  private def queueRefresh () {
+  private def queueRefresh () :Unit = {
     _refreshConn.close()
     _refreshConn = window.exec.ui.schedule(75, () => {
       val glob = current ; val oglob = _comp.glob
@@ -52,7 +52,7 @@ class MiniReadMode[T] (
     bind("commit-read",            "ENTER");
 
   @Fn("Extends the current completion to the longest shared prefix of the displayed completions.")
-  def extendCompletion () {
+  def extendCompletion () :Unit = {
     // if we have at least one completion which prefix-matches our current text...
     val preMatchedComps = _comp.comps.filter(Completer.startsWithI(current))
     if (!preMatchedComps.isEmpty) {
@@ -62,7 +62,7 @@ class MiniReadMode[T] (
   }
 
   @Fn("Commits the current minibuffer read with its current contents.")
-  def commitRead () {
+  def commitRead () :Unit = {
     completer.commit(_comp, current).foreach { result =>
       // only add contents to history if it's non-empty
       val lns = buffer.region(buffer.start, buffer.end)
@@ -72,19 +72,19 @@ class MiniReadMode[T] (
   }
 
   @Fn("Puts the previous history entry into the minibuffer.")
-  def previousHistoryEntry () {
+  def previousHistoryEntry () :Unit = {
     val prevAge = historyAge+1
     if (prevAge >= history.entries) window.popStatus("Beginning of history; no preceding item")
     else showHistory(prevAge)
   }
 
   @Fn("Puts the next history entry into the minibuffer.")
-  def nextHistoryEntry () {
+  def nextHistoryEntry () :Unit = {
     if (historyAge == -1) window.popStatus("End of history")
     else showHistory(historyAge-1)
   }
 
-  private def showHistory (age :Int) {
+  private def showHistory (age :Int) :Unit = {
     if (age == -1) setContents(nonHistoryText)
     else {
       // if we were showing non-history text, save it before overwriting it with history

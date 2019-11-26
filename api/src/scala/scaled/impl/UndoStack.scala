@@ -17,7 +17,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
     if (buffer.editable) accum += edit
   }
 
-  def delimitAction (point :Loc) {
+  def delimitAction (point :Loc) :Unit = {
     // first commit any edits that came in since our last delimiting
     if (!_edits.isEmpty) {
       accumTo(_edits, _actions)
@@ -76,7 +76,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
     }
   }
 
-  override def accumNextEdit () {
+  override def accumNextEdit () :Unit = {
     _accumNextEdit = true
   }
 
@@ -89,7 +89,7 @@ class UndoStack (buffer :BufferImpl) extends Undoer {
   // come in during that time are triggered by our undoing, not by user actions
   private def accum = if (_undoing) _redoEdits else _edits
 
-  private def accumTo (edits :SeqBuffer[Buffer.Edit], actions :SeqBuffer[Action]) {
+  private def accumTo (edits :SeqBuffer[Buffer.Edit], actions :SeqBuffer[Action]) :Unit = {
     if (!edits.isEmpty) {
       // if we can't accumulate these edits with the most recent action, add a new action
       if (!_accumNextEdit || actions.isEmpty || !actions.last.accum(edits)) {

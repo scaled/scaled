@@ -121,7 +121,7 @@ abstract class Mode (env :Env) {
     * buffer, it should remove it here. That way the cost of removal is avoided if the buffer itself
     * is going to be thrown away too.
     */
-  def deactivate () {
+  def deactivate () :Unit = {
     // deactivate any active behaviors now; this ensures that they're informed that the buffer is
     // not going away and they need to do extra work to leave it unmolested
     _toClose foreach {
@@ -132,7 +132,7 @@ abstract class Mode (env :Env) {
 
   /** Cleans up any external resources managed by this mode. This is called when the mode is
     * disabled or the buffer containing the mode is going away. */
-  def dispose () {
+  def dispose () :Unit = {
     try _toClose.close()
     catch {
       case e :Exception => window.emitError(e)
@@ -155,7 +155,7 @@ abstract class Mode (env :Env) {
   /** Binds `behavior` to the specified boolean configuration key. When `key` is true, the behavior
     * will be activated, when it is false it will be deactivated.
     */
-  protected def addBehavior (key :Config.Key[Boolean], behavior :Behavior) {
+  protected def addBehavior (key :Config.Key[Boolean], behavior :Behavior) :Unit = {
     // bind behavior's activation to the specified config key
     note(config.value(key) onValueNotify behavior.setActive)
     note(behavior) // deactivate the behavior (if active) when we're disposed

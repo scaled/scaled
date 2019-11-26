@@ -96,7 +96,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   }
 
   /** Processes the supplied key event, dispatching a fn if one is triggered thereby. */
-  def keyPressed (kev :KeyEvent) {
+  def keyPressed (kev :KeyEvent) :Unit = {
     // this is a hacky workaround for LINUX where the CapsLock key is reported as a CAPS keypress
     // by JavaFX even if it has been remapped to be a Control key; sigh
     if (kev.getCode() == KeyCode.CAPS) return
@@ -163,7 +163,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   }
 
   /* Called when this dispatcher and all of its associated machinery should go away. */
-  def dispose (bufferDisposing :Boolean) {
+  def dispose (bufferDisposing :Boolean) :Unit = {
     view.dispose()
     _metas foreach(_.dispose(true, bufferDisposing))
     _metas = Nil // render ourselves useless
@@ -184,7 +184,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
 
   override def modes = _metas.map(_.mode)
 
-  override def toggleMode (mode :String) {
+  override def toggleMode (mode :String) :Unit = {
     _metas map(_.mode) find(_.name == mode) match {
       case Some(minor :MinorMode) =>
         removeMode(minor)
@@ -199,7 +199,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     case fns => invoke("invoke", fns, "") ; true
   }
 
-  override def press (trigger :String) {
+  override def press (trigger :String) :Unit = {
     KeyPress.toKeyPresses(trigger) match {
       case Right(kps) =>
         val fns = resolve(kps, _metas)
@@ -225,7 +225,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   }
   private def resolveMajor = resolver.resolveMajor(majorMode, view, mline, this, modeArgs)
 
-  private def addMode (interactive :Boolean)(mode :MinorMode) {
+  private def addMode (interactive :Boolean)(mode :MinorMode) :Unit = {
     _metas = new ModeMeta(mode) :: _metas
     if (interactive) {
       modesChanged()
@@ -233,7 +233,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     }
   }
 
-  private def removeMode (minor :MinorMode) {
+  private def removeMode (minor :MinorMode) :Unit = {
     _metas = _metas.filterNot { mm =>
       if (mm.mode == minor) { mm.dispose(false, false); true }
       else false
@@ -241,7 +241,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     modesChanged()
   }
 
-  private def modesChanged () {
+  private def modesChanged () :Unit = {
     // rebuild our command prefixes
     _prefixes = _metas.map(_.prefixes).reduce(_ ++ _)
     // rebuild and emit our list of active minor modes
@@ -299,7 +299,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     case None     => _prevFn = null ; didInvokeFn()
   }
 
-  private def didInvokeFn () {
+  private def didInvokeFn () :Unit = {
     _trigger = Seq()
     _dispatchTyped = false
     _escapeNext = false
@@ -308,7 +308,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
   /** Sets a timer that displays the current command prefix in the minibuffer after a short delay.
     * Thus if a user types a command prefix, we wait for the rest of the command, but we also
     * eventually provide some feedback as to what's going on in case they did it unwittingly. */
-  private def deferDisplayPrefix (trigger :Seq[KeyPress]) {
+  private def deferDisplayPrefix (trigger :Seq[KeyPress]) :Unit = {
     window.emitStatus(trigger.mkString(" "), true)
   }
 
@@ -353,7 +353,7 @@ class DispatcherImpl (window :WindowImpl, resolver :ModeResolver, view :BufferVi
     // the global user sheets (so that the global user sheets are always last)
     addSheets(mode.stylesheets)
 
-    def dispose (windowDisposing :Boolean, bufferDisposing :Boolean) {
+    def dispose (windowDisposing :Boolean, bufferDisposing :Boolean) :Unit = {
       // if the window is not going away...
       if (!windowDisposing) {
         // remove this mode's stylesheet (if any) from the window

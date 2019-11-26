@@ -15,7 +15,7 @@ class FillerTest {
     lines.map(l => s"%-${max}s".format(l))
   }
 
-  def checkResult (lines :Seq[Line], filler :Filler) {
+  def checkResult (lines :Seq[Line], filler :Filler) :Unit = {
     val filled = filler.toLines
     if (lines != filled) {
       val exp = pad("* Expected *" +: lines.map(_.toString)) ; val epad = " " * exp(0).length
@@ -25,7 +25,7 @@ class FillerTest {
     }
   }
 
-  @Test def testFill () {
+  @Test def testFill () :Unit = {
     val filler = new Filler(40)
     val line = Line("Now is the time for all good men to come to the aid of their country. ")
     filler.append(line)
@@ -44,13 +44,13 @@ class FillerTest {
     assertEquals(7, filler.toLines.size)
   }
 
-  @Test def testCompact () {
+  @Test def testCompact () :Unit = {
     val filler = new Filler(40)
     filler.append(Line("one   two   three   "))
     checkResult(Seq(Line("one two three")), filler)
   }
 
-  @Test def testWALLOFTEXT () {
+  @Test def testWALLOFTEXT () :Unit = {
     val filler = new Filler(40)
     // TODO: should we allow WALLOFTEXT to exceed fill column...?
     filler.append(Line("IDONTLIKEOTPUTSPACESINMYTEXTITMAKESMEFEELINSCURE but"))
@@ -61,7 +61,7 @@ class FillerTest {
                     Line("much...")), filler)
   }
 
-  @Test def testLineJustFits () {
+  @Test def testLineJustFits () :Unit = {
     val lines = Seq(Line("This line just fits into forty columns."),
                     Line("Which means that we'll rebreak immediately"),
                     Line("appending the second line."))
@@ -71,7 +71,7 @@ class FillerTest {
     assertEquals(lines.head, filled.head)
   }
 
-  @Test def testNotNipLastChar () {
+  @Test def testNotNipLastChar () :Unit = {
     // this first line is exactly 40 characters long, and I was seeing a bug when the first line
     // was exactly the width of the filler it would clip the last character from the line, so this
     // test ensures that we don't regress
@@ -82,7 +82,7 @@ class FillerTest {
     checkResult(lines, filler)
   }
 
-  @Test def testLastSpacePushesOverWidth () {
+  @Test def testLastSpacePushesOverWidth () :Unit = {
     // the first line fills up while we're in "wantsSpace" mode, which causes a bug where we see
     // the 'a' after the space and add a space and the 'a' and end up blowing past our width
     val lines = Seq(Line("Blah blah blah blah blah blah blah blah a"),

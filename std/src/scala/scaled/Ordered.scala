@@ -294,7 +294,7 @@ abstract class Ordered[+A] extends Unordered[A] {
         }
         bb.build()
       }
-      def foreach[U] (fn :(A => U)) {
+      def foreach[U] (fn :(A => U)) :Unit = {
         val iter = source.iterator() ; while (iter.hasNext) {
           val elem = iter.next
           if (pred(elem)) fn(elem)

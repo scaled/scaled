@@ -11,7 +11,7 @@ import scaled._
 class ProcessTest {
   import TestUtil._
 
-  @Test def testOverflowBuffer () {
+  @Test def testOverflowBuffer () :Unit = {
     val buffer = new Process.RollingBuffer(500)
     for (ii <- 0 to 1000) {
       buffer.append(s"Line $ii")
@@ -22,7 +22,7 @@ class ProcessTest {
     assertEquals("Line 1000", out.last)
   }
 
-  @Test def testShort () {
+  @Test def testShort () :Unit = {
     val buffer = new Process.RollingBuffer(500)
     for (ii <- 0 to 100) {
       buffer.append(s"Line $ii")
@@ -33,7 +33,7 @@ class ProcessTest {
     assertEquals("Line 100", out.last)
   }
 
-  @Test def testReallyShort () {
+  @Test def testReallyShort () :Unit = {
     val buffer = new Process.RollingBuffer(500)
     for (ii <- 0 to 10) {
       buffer.append(s"Line $ii")
@@ -44,7 +44,7 @@ class ProcessTest {
     assertEquals("Line 10", out.last)
   }
 
-  @Test def testExec () {
+  @Test def testExec () :Unit = {
     val exec = new AccumExec()
     Process.exec(exec, Seq("ls", "/")).onSuccess(res => {
       assertEquals(0, res.exitCode)

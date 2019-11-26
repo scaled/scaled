@@ -16,7 +16,7 @@ object Closeable {
   /** A closeable that does nothing. Simplifies situations where you close an old closeable and
     * replace it with a new one. */
   val Noop :Closeable = new Closeable() {
-    override def close () {}
+    override def close () :Unit = {}
   }
 
   /** Creates a [[Closeable]] that invokes `thunk` when `close` is called. */

@@ -51,7 +51,7 @@ abstract class BufferView {
   /** Adjusts the scroll position of this view by `delta` lines. The scroll position will be bounded
     * based on the size of the buffer. The point will then be bounded into the visible area of the
     * buffer. */
-  def scrollVert (delta :Int) {
+  def scrollVert (delta :Int) :Unit = {
     val ctop = scrollTop()
     val h = height()
     // bound bottom first, then top; this snaps buffers that are less than one screen tall to top

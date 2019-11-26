@@ -53,7 +53,7 @@ abstract class Expecter (exec :Executor, config :SubProcess.Config) {
   def onUnexpected (line :String, isErr :Boolean) :Unit
 
   /** Called when an error occurs starting or reading from the subprocess. */
-  def onFailure (exn :Throwable, isErr :Boolean) {
+  def onFailure (exn :Throwable, isErr :Boolean) :Unit = {
     onUnexpected(Errors.stackTraceToString(exn), isErr)
   }
 

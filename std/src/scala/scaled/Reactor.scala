@@ -28,7 +28,7 @@ class Reactor {
   protected def addLink (cons :Link) :Link = synchronized {
     if (isDispatching) {
       _pendingRuns = insert(_pendingRuns, new Runs {
-        def run () {
+        def run () :Unit = {
           _listeners = insert(_listeners, cons)
           connectionAdded()
         }
@@ -62,7 +62,7 @@ class Reactor {
   protected[scaled] def disconnect (cons :Link) = synchronized {
     if (isDispatching) {
       _pendingRuns = insert(_pendingRuns, new Runs {
-        def run () {
+        def run () :Unit = {
           _listeners = remove(_listeners, cons)
           connectionRemoved()
         }
@@ -73,7 +73,7 @@ class Reactor {
     }
   }
 
-  protected def clearListeners () {
+  protected def clearListeners () :Unit = {
     _listeners = null
   }
 
@@ -83,13 +83,13 @@ class Reactor {
   }
 
   /** Called prior to mutating any underlying model allows subclasses to reject mutation. */
-  protected def checkMutate () {} // noop
+  protected def checkMutate () :Unit = {} // noop
 
   /** Called when a connection has been added to this reactor. */
-  protected def connectionAdded () {} // noop
+  protected def connectionAdded () :Unit = {} // noop
 
   /** Called when a connection may have been removed from this reactor. */
-  protected def connectionRemoved () {} // noop
+  protected def connectionRemoved () :Unit = {} // noop
 
   // always called while lock is held on this reactor
   private final def isDispatching :Boolean = (_listeners eq DISPATCHING)

@@ -28,12 +28,12 @@ class BufferViewImpl (val window :WindowImpl, _buffer :BufferImpl, initWidth :In
     popopt
   }
 
-  def clearEphemeralPopup () {
+  def clearEphemeralPopup () :Unit = {
     if (popup.isDefined && popup().isEphemeral) popup.clear()
   }
 
   /** Disconnects this view from its underlying buffer. */
-  def dispose () {
+  def dispose () :Unit = {
     _toClose.close()
     // write our view state back to the buffer
     _buffer.viewState = BufferImpl.ViewState(point(), scrollTop(), scrollLeft())

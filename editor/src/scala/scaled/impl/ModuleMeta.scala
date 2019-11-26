@@ -92,24 +92,24 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
     protected val _anns = MMap[String,HashMultimap[String,String]]()
 
     override def visit (version :Int, access :Int, name :String, signature :String,
-                        superName :String, ifcs :Array[String]) {
+                        superName :String, ifcs :Array[String]) :Unit = {
       _cname = name.replace('/', '.') // TODO: handle inner classes?
     }
 
     override def visitAnnotation (desc :String, viz :Boolean) = {
       val attrs = HashMultimap.create[String,String]()
       new AnnotationVisitor(Opcodes.ASM5) {
-        override def visit (name :String, value :AnyRef) {
+        override def visit (name :String, value :AnyRef) :Unit = {
           attrs.put(name, value.toString)
         }
         override def visitArray (name :String) = {
           new AnnotationVisitor(Opcodes.ASM5) {
-            override def visit (unused :String, value :AnyRef) {
+            override def visit (unused :String, value :AnyRef) :Unit = {
               attrs.put(name, value.toString)
             }
           }
         }
-        override def visitEnd () {
+        override def visitEnd () :Unit = {
           _anns.put(desc, attrs)
         }
       }
@@ -123,7 +123,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   }
 
   private def parseMode = parse(new Visitor() {
-    override def visitEnd () {
+    override def visitEnd () :Unit = {
       _anns.get("Lscaled/Major;") foreach { attrs =>
         val mode = attrs.get("name").iterator.next
         majors.put(mode, _cname)
@@ -139,7 +139,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   })
 
   private def parseService = parse(new Visitor() {
-    override def visitEnd () {
+    override def visitEnd () :Unit = {
       _anns.get("Lscaled/Service;") foreach { attrs =>
         val impl = attrs.get("impl")
         val pre = _cname.substring(0, _cname.lastIndexOf(".")+1)
@@ -151,7 +151,7 @@ class ModuleMeta (log :Logger, repo :PackageRepo, val mod :Module) {
   })
 
   private def parsePlugin = parse(new Visitor() {
-    override def visitEnd () {
+    override def visitEnd () :Unit = {
       _anns.get("Lscaled/Plugin;") foreach { attrs =>
         val tag = attrs.get("tag").iterator.next
         plugins.put(tag, _cname)

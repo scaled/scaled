@@ -53,7 +53,7 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
       private val kids = ArrayBuffer[Node]()
       private var last :Int = 0
 
-      def add (start :Int, end :Int, styles :Seq[Tag[String]]) {
+      def add (start :Int, end :Int, styles :Seq[Tag[String]]) :Unit = {
         var text = _line.sliceString(start, end)
         assert(end > start)
         val nlidx = text.indexOf('\n')
@@ -71,14 +71,14 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
         kids += tnode
       }
 
-      def apply (cls :Seq[Tag[String]], start :Int, end :Int) {
+      def apply (cls :Seq[Tag[String]], start :Int, end :Int) :Unit = {
         // if we skipped over any unstyled text, add it now
         if (start > last) add(last, start, Seq.empty)
         add(start, end, cls)
         last = end
       }
 
-      def finish () {
+      def finish () :Unit = {
         // if there's trailing unstyled text, add that
         if (last < _line.length) add(last, _line.length, Seq.empty)
         if (!kids.isEmpty) getChildren.addAll(kids.toArray :_*)
@@ -91,7 +91,7 @@ class LineViewImpl (_line :LineV) extends TextFlow with LineView {
     adder.finish()
   }
 
-  override def layoutChildren () {
+  override def layoutChildren () :Unit = {
     super.layoutChildren()
     val iter = getChildren.iterator
     while (iter.hasNext) iter.next match {

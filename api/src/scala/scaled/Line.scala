@@ -112,7 +112,7 @@ abstract class LineV extends CharSequence {
   /** Copies `[start, until)` from this line into `cs`/`ss` at `off`. Tags that overlap the region
     * will be added to `ts` and all line tags will be added to `lts`. */
   def sliceInto (start :Int, until :Int, cs :Array[Char], xs :Array[Syntax],
-                 ts :Tags, lts :Line.TagSet, off :Int) {
+                 ts :Tags, lts :Line.TagSet, off :Int) :Unit = {
     System.arraycopy(_chars, _offset+start, cs, off, until-start)
     System.arraycopy(_syns, _offset+start, xs, off, until-start)
     _tags.sliceInto(start, until, ts, off)
@@ -294,7 +294,7 @@ object Line {
     private var _ts = new Tags()
     private var _lts = new TagSet()
 
-    private def expand (length :Int) {
+    private def expand (length :Int) :Unit = {
       val olength = _length ; val nlength = olength + length ; val ocapacity = _cs.length
       if (nlength > ocapacity) {
         val ncapacity = (nlength + 63) & -64 // round up to multiple of 64
@@ -448,7 +448,7 @@ object Line {
 
 
     /** Sets the line tag for `tclass` to `tag`. */
-    def set[T <: Line.Tag] (tag :T) {
+    def set[T <: Line.Tag] (tag :T) :Unit = {
       val key = tag.key ; val lt = _tags
       var idx = -1 ; var ii = 0 ; while (ii < lt.length) {
         val etag = lt(ii)
@@ -465,7 +465,7 @@ object Line {
     }
 
     /** Clears any line tag which matches `key`. */
-    def clear (key :Any) {
+    def clear (key :Any) :Unit = {
       val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
         val tag = lt(ii) ; if (tag != null && tag.key == key) {
           lt(ii) = null
@@ -475,7 +475,7 @@ object Line {
     }
 
     /** Clears any line tags which are marked as `ephemeral`. */
-    def clearEphemeral () {
+    def clearEphemeral () :Unit = {
       val lt = _tags ; var ii = 0 ; while (ii < lt.length) {
         val tag = lt(ii)
         if (tag != null && tag.ephemeral) lt(ii) = null
@@ -484,7 +484,7 @@ object Line {
     }
 
     /** Adds all of our non-ephemeral tags into `into`. */
-    def addTo (into :TagSet) {
+    def addTo (into :TagSet) :Unit = {
       val lt = _tags ; var ii = 0
       while (ii < lt.length) {
         val tag = lt(ii)
@@ -522,7 +522,7 @@ object Line {
 
   /** Calls `fn` on each line of `text`, handling both CR and CRLF style line separators. The
     * second argument to `fn` is the line's offset in characters from the start of `text`. */
-  def onLines (text :String)(fn :(String, Int) => Unit) {
+  def onLines (text :String)(fn :(String, Int) => Unit) :Unit = {
     var ii = 0 ; var ss = 0
     while (ii < text.length) {
       val c = text.charAt(ii)

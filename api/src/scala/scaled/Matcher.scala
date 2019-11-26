@@ -113,7 +113,7 @@ class RegexpMatcher (pattern :String) extends Matcher {
   override def show = pattern
   override def toString = pattern + ":regex"
 
-  private def prep (haystack :Array[Char], start :Int, end :Int) {
+  private def prep (haystack :Array[Char], start :Int, end :Int) :Unit = {
     current = haystack
     m.reset(curseq)
     m.region(start, end)

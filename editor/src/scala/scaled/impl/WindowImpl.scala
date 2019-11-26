@@ -33,7 +33,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     var disp :DispatcherImpl = _
     var prevStore :Option[Store] = None // this also implements 'def prevStore' in Frame
 
-    def focus () {
+    def focus () :Unit = {
       val buf = view.buffer
       stage.setTitle(s"Scaled - ${ws.name} - ${buf.name}")
       disp.area.requestFocus()
@@ -106,7 +106,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
         view
       }
 
-    def dispose (workspaceClosing :Boolean) {
+    def dispose (workspaceClosing :Boolean) :Unit = {
       toClose.close()
       // if the workspace is closing, then our buffers are all going away; let the dispatcher know
       // that so that it can clean up active modes more efficiently
@@ -136,7 +136,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   }
 
   /** Called when this window is going away. Cleans up. */
-  def dispose (willHibernate :Boolean) {
+  def dispose (willHibernate :Boolean) :Unit = {
     _msgConn.close()
     _frames foreach { _.dispose(willHibernate) }
     _frames.clear()
@@ -167,19 +167,19 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   override def close () = ws.close(this)
 
   private val _visitedBuffers = SeqBuffer[BufferImpl]()
-  private def noteVisitedBuffer (buffer :BufferImpl) {
+  private def noteVisitedBuffer (buffer :BufferImpl) :Unit = {
     val hadBuffer = _visitedBuffers remove buffer
     _visitedBuffers prepend buffer
     if (!hadBuffer) buffer.killed.onEmit(_visitedBuffers remove buffer)
   }
   override def buffers = _visitedBuffers
 
-  override def popStatus (msg :String, subtext :String) {
+  override def popStatus (msg :String, subtext :String) :Unit = {
     _statusPopup.showStatus(msg, subtext)
     ws.recordMessage(msg)
     if (subtext.length > 0) ws.recordMessage(subtext)
   }
-  override def emitStatus (msg :String, ephemeral :Boolean) {
+  override def emitStatus (msg :String, ephemeral :Boolean) :Unit = {
     _statusLine.setText(msg)
     if (!ephemeral) ws.recordMessage(msg)
   }
@@ -198,17 +198,17 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     _focus.get.view.clearEphemeralPopup()
   }
 
-  override def toFront () {
+  override def toFront () :Unit = {
     stage.show()
     stage.toFront() // move our window to front if it's not there already
     stage.requestFocus() // and request window manager focus
   }
 
   // used internally to open files passed on the command line or via remote cmd
-  def visitPath (path :Path) {
+  def visitPath (path :Path) :Unit = {
     _frame.visitFile(Store(path))
   }
-  def visitScratchIfEmpty () {
+  def visitScratchIfEmpty () :Unit = {
     if (_frame.disp == null) _frame.setBuffer(ws.getScratch(), true, false)
   }
 
@@ -232,7 +232,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
 
   private val _mini = new MiniOverlay(this) {
     override def willShow () = checkMiniShow()
-    override def onShow () {
+    override def onShow () :Unit = {
       _miniActive() = true
     }
     override def onClear () = {
@@ -245,11 +245,11 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
 
   private val _statusMini = new MiniStatus(this) {
     override def willShow () = checkMiniShow()
-    override def onShow () {
+    override def onShow () :Unit = {
       _miniActive() = true
       _statusLine.setVisible(false)
     }
-    override def onClear () {
+    override def onClear () :Unit = {
       _statusLine.setVisible(true)
       _miniActive() = false
       _focus.get.focus() // restore buffer focus on clear
@@ -261,7 +261,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   private val _focus = Value[FrameImpl](_frame)
   _focus onValue onFocusChange
 
-  private def onFocusChange (frame :FrameImpl) {
+  private def onFocusChange (frame :FrameImpl) :Unit = {
     frame.focus()
   }
 
@@ -275,7 +275,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 
-  override def layoutChildren () {
+  override def layoutChildren () :Unit = {
     val bounds = getLayoutBounds
     val vw = bounds.getWidth ; val vh = bounds.getHeight
     val statusHeight = _statusLine.prefHeight(vw) ; val contentHeight = vh-statusHeight

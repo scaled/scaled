@@ -34,7 +34,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   val font :StyleableObjectProperty[Font] = new StyleableObjectProperty[Font](Font.getDefault()) {
     private var fontSetByCss = false
 
-    override def applyStyle (newOrigin :StyleOrigin, value :Font) {
+    override def applyStyle (newOrigin :StyleOrigin, value :Font) :Unit = {
       // if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
       try {
         // super.applyStyle calls set which might throw if value is bound. Have to make sure
@@ -48,7 +48,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       }
     }
 
-    override def set (value :Font) {
+    override def set (value :Font) :Unit = {
       if (value != get()) super.set(value)
     }
 
@@ -57,7 +57,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     override def getName = "font"
 
     // TODO: this seems to perhaps no longer be needed? we can't do it in Java 9 anyway...
-    // override protected def invalidated () {
+    // override protected def invalidated () :Unit = {
     //   // if font is changed by calling setFont, then css might need to be reapplied since font
     //   // size affects calculated values for styles with relative values
     //   if (!fontSetByCss) Dep.reapplyCSS(BufferArea.this)
@@ -79,7 +79,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
   /** Tells this buffer area that it's going into the background. This frees up some resources that
     * are easy enough to recreate if/when the buffer area is made active again. */
-  def hibernate () {
+  def hibernate () :Unit = {
     // remove all of our lines, we'll add them back in on reactivation
     contentNode.removeLines(0, lineNodes.getChildren.size)
   }
@@ -87,7 +87,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   private var charWidth  = 0d
   private var lineHeight = 0d
 
-  private def updateFontMetrics () {
+  private def updateFontMetrics () :Unit = {
     val fm = Toolkit.getToolkit.getFontLoader.getFontMetrics(font.get)
     charWidth = fm.getCharWidth('W')
     // TODO: for some reason JavaFX always ends up one pixel taller when measuring text height; I
@@ -110,7 +110,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   // listen for changes in focus
   focusTraversableProperty().setValue(true)
   focusedProperty.addListener(onChangeB(onFocusChange))
-  private def onFocusChange (focused :Boolean) {
+  private def onFocusChange (focused :Boolean) :Unit = {
     cursor.setVisible(focused)
     uncursor.setVisible(!focused)
   }
@@ -158,7 +158,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     private[this] var _ay = 0d
     private[this] var _pos :Popup.Pos = _
 
-    def display (pop :Popup) {
+    def display (pop :Popup) :Unit = {
       getChildren.clear() // clear any previous bits
 
       if (pop.isError) getStyleClass.add("errpop")
@@ -175,7 +175,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       _pos = pop.pos
     }
 
-    def clear () {
+    def clear () :Unit = {
       // TODO: fade the popup out?
       getChildren.clear()
       setVisible(false)
@@ -186,7 +186,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     // in display() because (for whatever stupid reason) our CSS font is not properly configured at
     // that point, so we have to wait for a deferred layout to come in after things are configured
     // and then if we're not at our preferred size, size, position and show ourselves
-    override def layoutChildren () {
+    override def layoutChildren () :Unit = {
       if (_pos != null) {
         val pw = prefWidth(-1) ; val ph = prefHeight(-1)
         // we can't just call resize() directly here because JavaFX doesn't take kindly to a Node
@@ -245,19 +245,19 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
 
     // forward mouse events to the control
     addEventHandler(MouseEvent.MOUSE_PRESSED, new EventHandler[MouseEvent]() {
-      override def handle (event :MouseEvent) {
+      override def handle (event :MouseEvent) :Unit = {
         mousePressed(event)
         event.consume()
       }
     })
     addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler[MouseEvent]() {
-      override def handle (event :MouseEvent) {
+      override def handle (event :MouseEvent) :Unit = {
         mouseReleased(event)
         event.consume()
       }
     })
     addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler[MouseEvent]() {
-      override def handle (event :MouseEvent) {
+      override def handle (event :MouseEvent) :Unit = {
         mouseDragged(event)
         event.consume()
       }
@@ -289,7 +289,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     // if the buffer view height changes, update our viz lines as well
     bview.height onValue { height => updateVizLines() }
 
-    def updateCursor (point :Loc) {
+    def updateCursor (point :Loc) :Unit = {
       val line = bview.buffer.line(point)
       val lineCount = bview.buffer.lines.length
 
@@ -330,7 +330,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     // make this visible
     override def getChildren = super.getChildren
 
-    override def layoutChildren () {
+    override def layoutChildren () :Unit = {
       // position our lines at the proper y offset
       val x = snappedLeftInset ; var y = snappedTopInset
       val iter = lineNodes.getChildren.iterator
@@ -351,7 +351,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       checkPopup(true)(bview.popup.getOption)
     }
 
-    def updateVizLines () {
+    def updateVizLines () :Unit = {
       val viewLines = bview.height()+1 ; val top = bview.scrollTop()
       val lines = bview.lines ; val bot = math.min(top + viewLines, lines.size)
       val preChildCount = lineNodes.getChildren.size
@@ -377,12 +377,12 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
       }
     }
 
-    def addLines (index :Int, lines :SeqV[LineViewImpl]) {
+    def addLines (index :Int, lines :SeqV[LineViewImpl]) :Unit = {
       // println(s"addLines @$index +${lines.size}")
       lines.foreach { _.validate() }
       lineNodes.getChildren.addAll(index, lines.asJList)
     }
-    def removeLines (from :Int, to :Int) {
+    def removeLines (from :Int, to :Int) :Unit = {
       val capped = math.min(to, lineNodes.getChildren.size)
       // println(s"removeLines [$from, $to/$capped)")
       lineNodes.getChildren.subList(from, capped).foreach {
@@ -415,11 +415,11 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   override protected def computeMaxWidth (height :Double) = Double.MaxValue
   override protected def computeMaxHeight (width :Double) = Double.MaxValue
 
-  override def layoutChildren () {
+  override def layoutChildren () :Unit = {
     contentNode.layoutChildren()
   }
 
-  override def resize (nw :Double, nh :Double) {
+  override def resize (nw :Double, nh :Double) :Unit = {
     super.resize(nw, nh)
 
     // resize seems to be called any time anything happens, so avoid doing a lot of extra work if
@@ -432,7 +432,7 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
     }
   }
 
-  protected def wasResized (widthChars :Int, heightChars :Int) {
+  protected def wasResized (widthChars :Int, heightChars :Int) :Unit = {
     // update our buffer view size with our resized (char) width/height; NOTE: this loops back
     // around causing this BufferArea to "prefer" this width and height if asked; we may want to
     // break that loop and separately handle current versus preferred size in BufferView
@@ -443,14 +443,14 @@ class BufferArea (val bview :BufferViewImpl, val disp :DispatcherImpl) extends R
   override def getCssMetaData = BufferArea.getClassCssMetaData
 
   // mouse events are forwarded here by the skin
-  def mousePressed (mev :MouseEvent) {
+  def mousePressed (mev :MouseEvent) :Unit = {
     // TODO: update view.point to the clicked Loc
     // TODO: also note the clicked Loc so that if we drag, we can use it to set the region
   }
-  def mouseDragged (mev :MouseEvent) {
+  def mouseDragged (mev :MouseEvent) :Unit = {
     // TODO: adjust the point and mark to set the active region to the dragged area
   }
-  def mouseReleased (mev :MouseEvent) {}
+  def mouseReleased (mev :MouseEvent) :Unit = {}
 }
 
 /** [BufferArea] helper classes and whatnot. */

@@ -37,7 +37,7 @@ class MiniReadOptMode (
   }
 
   @Fn("Displays the option descriptions in the minibuffer completion area.")
-  def showHelp () {
+  def showHelp () :Unit = {
     val maxWidth = opts.map(_._1).map(_.length).max
     miniui.showCompletions(opts map { case (k, v) =>
       String.format(s"%-${maxWidth}s - %s", k, v)

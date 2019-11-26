@@ -43,11 +43,11 @@ abstract class OptValueV[T] extends ValueReactor[Option[T]] {
       override def isDefined = outer.isDefined
       // connectionAdded and connectionRemoved are only ever called with a lock held on this reactor,
       // so we're safe in checking and mutating _conn
-      override protected def connectionAdded () {
+      override protected def connectionAdded () :Unit = {
         super.connectionAdded()
         if (_conn == null) _conn = outer.onChange((nv, ov) => notifyEmit(nv.map(f), ov.map(f)))
       }
-      override protected def connectionRemoved () {
+      override protected def connectionRemoved () :Unit = {
         super.connectionRemoved()
         if (!hasConnections && _conn != null) {
           _conn.close()
@@ -63,11 +63,11 @@ abstract class OptValueV[T] extends ValueReactor[Option[T]] {
     new SignalV[Option[T]] {
       // connectionAdded and connectionRemoved are only ever called with a lock held on this
       // reactor, so we're safe in checking and mutating _conn
-      override protected def connectionAdded () {
+      override protected def connectionAdded () :Unit = {
         super.connectionAdded()
         if (_conn == null) _conn = OptValueV.this.onValue(notifyEmit)
       }
-      override protected def connectionRemoved () {
+      override protected def connectionRemoved () :Unit = {
         super.connectionRemoved()
         if (!hasConnections && _conn != null) {
           _conn.close()

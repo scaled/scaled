@@ -12,7 +12,7 @@ class SeqBufferTest {
   val s1to4 = Seq(1, 2, 3, 4)
   val s1to40 = Seq(1 to 40 :_*)
 
-  @Test def testAppend () {
+  @Test def testAppend () :Unit = {
     val sb = SeqBuffer[Int]()
     1 to 4 foreach { sb += _ }
     assertEquals(s1to4, sb)
@@ -35,7 +35,7 @@ class SeqBufferTest {
     assertEquals(strs, sbs)
   }
 
-  @Test def testInsert () {
+  @Test def testInsert () :Unit = {
     val sb = SeqBuffer[Int]()
     1 to 4 foreach { sb += _ }
     sb.insert(2, 3)
@@ -54,7 +54,7 @@ class SeqBufferTest {
     sb.clear()
   }
 
-  @Test def testRemove () {
+  @Test def testRemove () :Unit = {
     val sb = SeqBuffer[Int]()
     sb ++= s1to4
     sb.remove(2, 1)
@@ -101,7 +101,7 @@ class SeqBufferTest {
     assertTrue("remove(2, 5) should have thrown IOOBE", threw)
   }
 
-  @Test def testUnapplySeqV () {
+  @Test def testUnapplySeqV () :Unit = {
     val as :SeqV[String] = SeqBuffer("one", "two", "three")
     as match {
       case Seq(h, _*) => assertEquals("one", h)

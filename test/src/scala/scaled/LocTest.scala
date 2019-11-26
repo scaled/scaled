@@ -9,15 +9,15 @@ import org.junit.Assert._
 
 class LocTest {
 
-  def testInsert (descrip :String, expect :Loc, loc :Loc, start :Loc, end :Loc) {
+  def testInsert (descrip :String, expect :Loc, loc :Loc, start :Loc, end :Loc) :Unit = {
     assertEquals(s"$descrip $loc +~ [$start, $end)", expect, Loc.adjustForInsert(loc, start, end))
   }
 
-  def testDelete (descrip :String, expect :Loc, loc :Loc, start :Loc, end :Loc) {
+  def testDelete (descrip :String, expect :Loc, loc :Loc, start :Loc, end :Loc) :Unit = {
     assertEquals(s"$descrip $loc -~ [$start, $end)", expect, Loc.adjustForDelete(loc, start, end))
   }
 
-  @Test def testAdjustForInsert () {
+  @Test def testAdjustForInsert () :Unit = {
     testInsert("Insert after loc should not affect it", Loc(5, 5),
                Loc(5, 5), Loc(5, 6), Loc(5, 9))
     testInsert("Insert before loc row should only affect row", Loc(7, 5),
@@ -30,7 +30,7 @@ class LocTest {
                Loc(5, 5), Loc(5, 5), Loc(5, 7))
   }
 
-  @Test def testAdjustForDelete () {
+  @Test def testAdjustForDelete () :Unit = {
     testDelete("Delete after loc should not affect it", Loc(5, 5),
                Loc(5, 5), Loc(5, 6), Loc(5, 9))
     testDelete("Delete before loc row should only affect row", Loc(3, 5),

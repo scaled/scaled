@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class TagTest {
 
-  @Test def testTagAt () {
+  @Test def testTagAt () :Unit = {
     val tags = new Tags()
     tags.add("one", 1, 5)
     tags.add("two", 4, 8)
@@ -27,7 +27,7 @@ class TagTest {
     assertEquals("", tags.tagAt(classOf[String], 8, ""))
   }
 
-  @Test def testAddOrder () {
+  @Test def testAddOrder () :Unit = {
     val tags = new Tags()
     tags.add("two", 4, 8)
     tags.add("three", 6, 8)
@@ -44,7 +44,7 @@ class TagTest {
     assertEquals("", tags.tagAt(classOf[String], 8, ""))
   }
 
-  @Test def testTagsAt () {
+  @Test def testTagsAt () :Unit = {
     val tags = new Tags()
     tags.add("one", 1, 5)
     tags.add("two", 4, 8)
@@ -61,7 +61,7 @@ class TagTest {
     assertEquals(Nil, tags.tagsAt(classOf[String], 8))
   }
 
-  @Test def testSimpleVisit () {
+  @Test def testSimpleVisit () :Unit = {
     val tags = new Tags()
     tags.add("a", 0, 4)
     tags.add("b", 10, 15)
@@ -71,7 +71,7 @@ class TagTest {
                         (20, 22, Seq("c"))))
   }
 
-  @Test def testVisitOverlaps () {
+  @Test def testVisitOverlaps () :Unit = {
     val tags = new Tags()
     tags.add("a", 0, 4)
     tags.add("b", 1, 5)
@@ -88,7 +88,7 @@ class TagTest {
                         (7, 8, Seq("e"))))
   }
 
-  @Test def testVisitEnds () {
+  @Test def testVisitEnds () :Unit = {
     val tags = new Tags()
     tags.add("a", 0, 4)
     tags.add("b", 0, 3)
@@ -110,7 +110,7 @@ class TagTest {
                         (13, 14, Seq("A"))))
   }
 
-  @Test def testRemove () {
+  @Test def testRemove () :Unit = {
     val tags = new Tags()
     tags.add("left", 2, 6)
     assertTrue(tags.remove("left", 0, 4))
@@ -129,7 +129,7 @@ class TagTest {
                         (28, 30, Seq("inner")))) // outer and exact fully removed
   }
 
-  @Test def testRemoveAll () {
+  @Test def testRemoveAll () :Unit = {
     val tags = new Tags()
     tags.add("before", 0,  3)
     tags.add("left",   2,  6)
@@ -141,7 +141,7 @@ class TagTest {
                         (14, 20, Seq("after")))) // everything but before and after removed
   }
 
-  @Test def testSlice () {
+  @Test def testSlice () :Unit = {
     val tags = new Tags()
     tags.add("R", 0, 5)
     tags.add("A", 3, 6)
@@ -162,7 +162,7 @@ class TagTest {
                  slice.tags.map(t => (t.start, t.end, t.tag.toString)))
   }
 
-  @Test def testDelete () {
+  @Test def testDelete () :Unit = {
     val tags = new Tags()
     tags.add("R", 0, 5)
     tags.add("A", 3, 6)
@@ -183,7 +183,7 @@ class TagTest {
                  tags.tags.map(t => (t.start, t.end, t.tag.toString)))
   }
 
-  @Test def testClear () {
+  @Test def testClear () :Unit = {
     val tags = new Tags()
     tags.add("R", 0, 5)
     tags.add("A", 3, 6)
@@ -204,7 +204,7 @@ class TagTest {
                  tags.tags.map(t => (t.start, t.end, t.tag.toString)))
   }
 
-  @Test def testExpand () {
+  @Test def testExpand () :Unit = {
     val tags = new Tags()
     tags.add("O", 0, 6)
     tags.add("L", 0, 2)
@@ -220,7 +220,7 @@ class TagTest {
                  tags.tags.map(t => (t.start, t.end, t.tag.toString)))
   }
 
-  private def testVisit (tags :Tags, expect :Seq[(Int,Int,Seq[String])]) {
+  private def testVisit (tags :Tags, expect :Seq[(Int,Int,Seq[String])]) :Unit = {
     val groups = SeqBuffer[(Int,Int,Seq[String])]()
     tags.visit(classOf[String])((ts, start, end) => groups += ((start, end, ts.map(_.tag))))
     assertEquals(s"$expect #= $groups", expect.size, groups.size)

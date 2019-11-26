@@ -80,7 +80,7 @@ trait Window {
 
   /** Prompts to save any modified buffers, and closes the window once all are saved or abandoned.
     * May also be aborted by the user. */
-  def saveBuffersAndClose () {
+  def saveBuffersAndClose () :Unit = {
     val opts = Seq(
       "y"   -> "save the current buffer",
       "n"   -> "skip the current buffer (abandon changes)",

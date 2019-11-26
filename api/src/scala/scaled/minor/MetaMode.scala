@@ -40,7 +40,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
     bind("execute-extended-command", "M-x");
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
-  def withConfigVar (fn :JConsumer[Config.VarBind[_]]) {
+  def withConfigVar (fn :JConsumer[Config.VarBind[_]]) :Unit = {
     val vars = disp.modes.flatMap(m => m.varBindings)
     val comp = Completer.from(vars)(_.v.name)
     window.mini.read("Var:", "", varHistory(wspace), comp) onSuccess fn
@@ -50,7 +50,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   // BUFFER FNS
 
   @Fn("""Reads a buffer name from the minibuffer and switches to it.""")
-  def switchToBuffer () {
+  def switchToBuffer () :Unit = {
     val curb = buffer
     // if we're the only window in the workspace, use the workspace buffer list (so we get
     // potentially never visited buffers like *messages*), otherwise use this window's visited
@@ -67,7 +67,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Reads a buffer name from the minibuffer and kills (closes) it.")
-  def killBuffer () {
+  def killBuffer () :Unit = {
     val current = buffer
     val prompt = s"Kill buffer (default ${current.name}):"
     val comp = Completer.buffer(window.buffers, current)
@@ -83,13 +83,13 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Reads a filename from the minibuffer and visits it in a buffer.")
-  def findFile () {
+  def findFile () :Unit = {
     window.mini.read("Find file:", buffer.store.parent, fileHistory(wspace),
                      Completer.file(editor.exec)) onSuccess frame.visitFile
   }
 
   @Fn("Reads a filename from the minibuffer and visits it in a buffer. The file need not exist.")
-  def createFile () {
+  def createFile () :Unit = {
     window.mini.read("File path:", buffer.store.parent, createFileHistory,
                      Completer.none) onSuccess { path => frame.visitFile(Store(path)) }
   }
@@ -106,17 +106,17 @@ class MetaMode (env :Env) extends MinorMode(env) {
   // VISIT FNS
 
   @Fn("Navigates to the next entry in the current visit list, if any.")
-  def visitNext () {
+  def visitNext () :Unit = {
     window.visits().next(window)
   }
 
   @Fn("Navigates to the previous entry in the current visit list, if any.")
-  def visitPrev () {
+  def visitPrev () :Unit = {
     window.visits().prev(window)
   }
 
   @Fn("Pops the top location from the visit stack and returns to it.")
-  def visitPop () {
+  def visitPop () :Unit = {
     window.visitStack.pop(window)
   }
 
@@ -124,7 +124,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   // HELP FNS
 
   @Fn("Displays the documentation for a fn.")
-  def describeFn () {
+  def describeFn () :Unit = {
     window.mini.read("Fn:", "", fnHistory(wspace), Completer.from(disp.fns)) onSuccess { fn =>
       disp.describeFn(fn) match {
         case Some(descrip) => window.popStatus(s"Fn: $fn", descrip)
@@ -134,14 +134,14 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Displays the documentation for a config var as well as its current value.")
-  def describeVar () {
+  def describeVar () :Unit = {
     withConfigVar(b => window.popStatus(
       s"Mode: ${b.m.name}\nVar: ${b.v.name} (currently: ${b.current})", b.v.descrip))
   }
 
   @Fn("""Updates the in-memory value of a config var. The value is not persisted across sessions.
          Use edit-mode-config to make permanent changes.""")
-  def setVar () {
+  def setVar () :Unit = {
     withConfigVar { b =>
       val prompt = s"Set ${b.v.name} to (current ${b.current}):"
       window.mini.read(prompt, b.current, setVarHistory(wspace), Completer.none) onSuccess { nv =>
@@ -159,9 +159,9 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Describes the current major mode along with all of its key bindings.")
-  def describeMode () {
+  def describeMode () :Unit = {
     val bb = new BufferBuilder(this.view.width()-1)
-    def describe (m :Mode) {
+    def describe (m :Mode) :Unit = {
       bb.addHeader(s"${m.name}-mode:")
       // split the description into double newline separated paragraphs, and fill those
       // individually
@@ -205,7 +205,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Describes the current state of the editor. This is mainly for debugging and the curious.")
-  def describeEditor () {
+  def describeEditor () :Unit = {
     val bb = new BufferBuilder(this.view.width()-1)
     bb.addHeader("Editor")
     editor.state.describeSelf(bb)
@@ -241,7 +241,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   // MISC FNS
 
   @Fn("Reads fn name then invokes it.")
-  def executeExtendedCommand () {
+  def executeExtendedCommand () :Unit = {
     window.mini.read("M-x", "", fnHistory(wspace), Completer.from(disp.fns)) onSuccess { fn =>
       if (!disp.invoke(fn)) window.popStatus(s"Unknown fn: $fn")
     }
@@ -249,7 +249,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("""Invokes a shell command and displays its output.
          The cwd will be the directory that contains the currently visited buffer.""")
-  def shellCommand () {
+  def shellCommand () :Unit = {
     window.mini.read("Command", "", shellCommandHistory, Completer.none) onSuccess { cmd =>
       def parseCmd (cmd :String) = cmd.split(" ") // TODO: handle quoted args
       val cfg = SubProcess.Config(parseCmd(cmd), cwd=Paths.get(buffer.store.parent))
@@ -261,17 +261,17 @@ class MetaMode (env :Env) extends MinorMode(env) {
   }
 
   @Fn("Reports the geometry of the current window.")
-  def windowGeom () {
+  def windowGeom () :Unit = {
     window.emitStatus(window.geometry.toString)
   }
 
   @Fn("Reports the geometry of the current frame.")
-  def frameGeom () {
+  def frameGeom () :Unit = {
     window.emitStatus(window.focus.geometry.toString)
   }
 
   @Fn("Toggles the activation of a minor mode.")
-  def toggleMode () {
+  def toggleMode () :Unit = {
     val comp = Completer.from(disp.minorModes)
     window.mini.read("Mode:", "", modeHistory(wspace), comp) onSuccess disp.toggleMode
   }
@@ -280,14 +280,14 @@ class MetaMode (env :Env) extends MinorMode(env) {
   def editEditorConfig () :Unit = editConfig(wspace.config)
 
   @Fn("Opens the configuration file for the specified mode in a buffer.")
-  def editModeConfig () {
+  def editModeConfig () :Unit = {
     val comp = Completer.from(disp.modes)(_.name)
     val mname = disp.modes.last.name // default to major mode name
     window.mini.read("Mode:", mname, modeHistory(wspace), comp) map(_.config) onSuccess(editConfig)
   }
 
   @Fn("Opens the configuration file for the specified service in a buffer.")
-  def editServiceConfig () {
+  def editServiceConfig () :Unit = {
     val comp = Completer.from(env.msvc.service[ConfigService].serviceConfigs)(_._1)
     window.mini.read("Service:", "", serviceHistory, comp) map(_._2) onSuccess(editConfig)
   }
@@ -297,7 +297,7 @@ class MetaMode (env :Env) extends MinorMode(env) {
   private def shellCommandHistory = wspace.historyRing("shell-command")
   private def serviceHistory = wspace.historyRing("service")
 
-  private def editConfig (config :Config) {
+  private def editConfig (config :Config) :Unit = {
     val scopes = config.scope.toList ; val comp = Completer.from(scopes)(_.name)
     window.mini.read("Scope:", scopes.head.name, configScopeHistory, comp) onSuccess { scope =>
       val target = config.atScope(scope)

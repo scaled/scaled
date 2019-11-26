@@ -22,7 +22,7 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
   }
 
   override def tell (op :P => Unit) :Unit = execute(new Runnable() {
-    override def run () { op(_process) }
+    override def run () :Unit = { op(_process) }
   })
 
   override def ask[R] (f :P => R) = {
@@ -54,7 +54,7 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
     })
   }
 
-  override def run () {
+  override def run () :Unit = {
     Pipe.curpipe.set(this)
     var op = pop()
     while (op != null) {
@@ -66,7 +66,7 @@ class Plumbing[P] (exec :Executor, process : => P) extends Pipe.Impl[P] with Run
   }
 
   /** Logs an error that happens during async action invocation. */
-  protected def reportError (t :Throwable) {
+  protected def reportError (t :Throwable) :Unit = {
     t.printStackTrace(System.err);
   }
 

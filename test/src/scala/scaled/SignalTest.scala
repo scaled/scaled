@@ -16,7 +16,7 @@ class SignalTest {
       var canceled = false
       def run () = if (!canceled) op.run()
       def compareTo (other :QOp) = when.compareTo(other.when)
-      def close () { canceled = true }
+      def close () :Unit = { canceled = true }
     }
     var now = 0L
     val queue = new PriorityQueue[QOp]()
@@ -28,7 +28,7 @@ class SignalTest {
       qop
     }
 
-    def advance (time :Long) {
+    def advance (time :Long) :Unit = {
       now += time
       def loop (next :QOp) :Unit = if (next != null && next.when <= now) {
         queue.poll().run()
@@ -38,7 +38,7 @@ class SignalTest {
     }
   }
 
-  @Test def testDebounce () {
+  @Test def testDebounce () :Unit = {
     val signal = Signal[Int]()
     val emitted = Seq.builder[Int]()
     signal.onValue { v => emitted += v }

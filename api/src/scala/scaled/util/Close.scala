@@ -34,7 +34,7 @@ object Close {
 
     /** Closes all closeables in this list and clears it. If any exceptions occur during closure,
       * they are accumulated into single [[RuntimeException]] as suppressed exceptions. */
-    def close () {
+    def close () :Unit = {
       var exn = null :RuntimeException
       val iter = _acs.iterator ; while (iter.hasNext) {
         try iter.next.close()
@@ -74,7 +74,7 @@ object Close {
 
     /** Nulls out this reference. Subsequent calls to [[get]] will cause the contents to be
       * recreated. */
-    def close () {
+    def close () :Unit = {
       try willClose(_contents)
       finally _contents = null
     }
@@ -83,19 +83,19 @@ object Close {
     protected def create () :T
 
     /** Called when our referent has been created. */
-    protected def didCreate () {
+    protected def didCreate () :Unit = {
       bag += this
     }
 
     /** Called just before we clear our referent. */
-    protected def willClose (ref :T) {}
+    protected def willClose (ref :T) :Unit = {}
   }
 
   /** A ref that holds an `AutoCloseable` which is created on demand and closed and released when
     * the box itself is closed.
     */
   abstract class Box[C >: Null <: AutoCloseable] (bag :Bag) extends Ref[C](bag) {
-    override protected def willClose (ref :C) {
+    override protected def willClose (ref :C) :Unit = {
       if (ref != null) ref.close()
     }
   }

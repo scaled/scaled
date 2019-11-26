@@ -12,7 +12,7 @@ import scaled._
 class RingTest {
   import impl.BufferImplTest._
 
-  @Test def testRingness () {
+  @Test def testRingness () :Unit = {
     val buf = testBuffer(testText)
     val ring = new Ring(8)
     val rega = buf.region(Loc(0, 0), Loc(1, 0))
@@ -36,7 +36,7 @@ class RingTest {
     0 until 8 foreach { ii => assertEquals(Some(rega), ring.entry(ii)) }
   }
 
-  @Test def testAppend () {
+  @Test def testAppend () :Unit = {
     val buf = testBuffer(testText)
     val ring = new Ring(8)
     val (l1, l2, l3) = (Loc(0, 0), Loc(1, 0), Loc(2, 0))

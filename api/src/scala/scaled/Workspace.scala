@@ -121,7 +121,7 @@ abstract class Workspace {
     })
 
   /** Describes the internals of this workspace. Mainly for debugging and the curious. */
-  def describeSelf (bb :BufferBuilder) {
+  def describeSelf (bb :BufferBuilder) :Unit = {
     bb.addHeader("Workspace")
     bb.addKeysValues("Name: " -> name,
                      "Root: " -> root.toString,
@@ -140,7 +140,7 @@ abstract class Workspace {
     }
   }
 
-  protected def describeInternals (bb :BufferBuilder) {}
+  protected def describeInternals (bb :BufferBuilder) :Unit = {}
 }
 
 /** Static [[Workspace]] stuffs. */

@@ -50,7 +50,7 @@ class SignalV[+T] extends Reactor {
     override def onParentValue (value :T) = {
       if (pending != null) pending.close()
       pending = scheduler.schedule(timeout, new Runnable() {
-        override def run () {
+        override def run () :Unit = {
           pending = null
           notifyEmit(value)
         }
@@ -73,7 +73,7 @@ class SignalV[+T] extends Reactor {
         if (pending != null) pending.close()
         batch.synchronized { batch += value }
         pending = scheduler.schedule(timeout, new Runnable() {
-          override def run () {
+          override def run () :Unit = {
             pending = null
             notifyEmit(batch.synchronized {
               val built = batch.build()
@@ -116,7 +116,7 @@ class SignalV[+T] extends Reactor {
   })
 
   /** Emits the supplied value to all connections. */
-  protected def notifyEmit[U >: T] (value :U) {
+  protected def notifyEmit[U >: T] (value :U) :Unit = {
     val lners = prepareNotify()
     var err :ReactionException = null
     try {
@@ -146,11 +146,11 @@ private abstract class DelegateSignalV[D,T] (parent :SignalV[D]) extends SignalV
 
   // connectionAdded and connectionRemoved are only ever called with a lock held on this reactor,
   // so we're safe in checking and mutating _conn
-  override protected def connectionAdded () {
+  override protected def connectionAdded () :Unit = {
     super.connectionAdded()
     if (_conn == null) _conn = parent.onValue(onParentValue)
   }
-  override protected def connectionRemoved () {
+  override protected def connectionRemoved () :Unit = {
     super.connectionRemoved()
     if (!hasConnections && _conn != null) {
       _conn.close()

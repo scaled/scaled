@@ -36,12 +36,12 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
   })
 
   @Fn("""Describes the subprocess bound to this buffer, if any.""")
-  def describeSubprocess () {
+  def describeSubprocess () :Unit = {
     message(requireProc.toString)
   }
 
   @Fn("""Sends SIGINT to the attached subprocess.""")
-  def interruptSubprocess () {
+  def interruptSubprocess () :Unit = {
     requireProc.pid match {
       case None      => throw Errors.feedback("Unable to get subprocess pid. Not on Unix?")
       case Some(pid) => Runtime.getRuntime.exec("kill -INT " + pid).waitFor()
@@ -51,7 +51,7 @@ class SubProcessMode (env :Env) extends MinorMode(env) {
   @Fn("""Attempts to quit the attached subprocess by sending SIGTERM.
          If this function is invoked a second time and the subprocess is still alive,
          it will be terminated via SIGKILL.""")
-  def killSubprocess () {
+  def killSubprocess () :Unit = {
     val proc = requireProc
     if (!proc.isAlive) throw Errors.feedback(NoActive)
     else if (termAttempted) {

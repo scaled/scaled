@@ -9,17 +9,17 @@ import org.junit.Assert._
 
 class OptionTest {
 
-  @Test def testMap () {
+  @Test def testMap () :Unit = {
     assertEquals(None, (None :Option[Int]).map(_ + 2))
     assertEquals(Some(5), Some(3).map(_ + 2))
   }
 
-  @Test def testFlatMap () {
+  @Test def testFlatMap () :Unit = {
     assertEquals(None, (None :Option[Int]).flatMap(x => Some(x + 2)))
     assertEquals(Some(5), Some(2).flatMap(x => Some(x + 3)))
   }
 
-  @Test def testPatternMatch {
+  @Test def testPatternMatch () :Unit = {
     val opt = Some(5)
     opt match {
       case None => fail()

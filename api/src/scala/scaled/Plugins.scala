@@ -9,7 +9,7 @@ abstract class AbstractPlugin extends Closeable {
 
   /** Called when this plugin is unloaded. This happens either when the plugin set of which it is a
     * part is closed, or when the package that defines this plugin is removed. */
-  override def close () {}
+  override def close () :Unit = {}
 }
 
 /** Manages the set of plugins that match a particular tag. A service that's making use of plugins

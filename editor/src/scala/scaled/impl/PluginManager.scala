@@ -32,7 +32,7 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
     // start out adding all matching plugins from known package modules
     app.pkgMgr.modules foreach moduleAdded
 
-    def moduleAdded (mod :ModuleMeta) {
+    def moduleAdded (mod :ModuleMeta) :Unit = {
       mod.plugins(tag) foreach { pclass =>
         try {
           val p = app.svcMgr.injectInstance(pclass, args).asInstanceOf[T]
@@ -45,7 +45,7 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
       }
     }
 
-    def moduleRemoved (mod :ModuleMeta) {
+    def moduleRemoved (mod :ModuleMeta) :Unit = {
       val pclasses = mod.plugins(tag)
       var ii = 0 ; while (ii < _plugins.length) {
         if (pclasses(_plugins(ii).getClass)) {
@@ -58,14 +58,14 @@ class PluginManager (app :Scaled) extends AbstractService with PluginService {
       }
     }
 
-    override def close () {
+    override def close () :Unit = {
       psets -= this
       super.close()
     }
   }
 
-  def didStartup () {} // TODO
-  def willShutdown () {} // TODO
+  def didStartup () :Unit = {} // TODO
+  def willShutdown () :Unit = {} // TODO
 
   def resolvePlugins[T <: AbstractPlugin] (tag :String, args :List[Any]) :PluginSet[T] =
     new PluginSetImpl[T](tag, args)

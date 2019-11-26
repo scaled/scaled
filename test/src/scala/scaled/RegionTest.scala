@@ -9,7 +9,7 @@ import org.junit.Assert._
 
 class RegionTest {
 
-  @Test def testFind () {
+  @Test def testFind () :Unit = {
     val r1 = Region(Loc(0, 0), Loc(0, 5))
     val r2 = Region(Loc(0, 8), Loc(0, 13))
     val r3 = Region(Loc(1, 0), Loc(1, 7))
@@ -38,7 +38,7 @@ class RegionTest {
     assertEquals(None, Region.find(Seq[Region](), Loc(3, 3)))
   }
 
-  @Test def testUnapply () {
+  @Test def testUnapply () :Unit = {
     val r1 = Region(Loc(0, 0), Loc(0, 5))
     val Region(start, end) = r1
     assertEquals(Loc(0, 0), start)

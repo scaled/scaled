@@ -83,7 +83,7 @@ class Blocker (buffer :BufferV, openers :String, closers :String) {
     }
 
     // resets this scanner and prepares it for operation
-    def reset (syntax :Syntax) {
+    def reset (syntax :Syntax) :Unit = {
       this.syntax = syntax
       Arrays.fill(counts, 0)
     }

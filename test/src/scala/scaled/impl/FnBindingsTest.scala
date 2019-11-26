@@ -11,7 +11,7 @@ import scaled.major.TextMode
 
 class FnBindingsTest {
 
-  @Test def testCollectBindings () {
+  @Test def testCollectBindings () :Unit = {
     val view = new BufferViewImpl(null, TestData.buffer("test", ""), 80, 24)
     val mode = new TextMode(TestData.env(view))
     val binds = new FnBindings(mode, System.err.println)

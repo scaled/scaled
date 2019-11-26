@@ -30,7 +30,7 @@ object Connection {
   /** A connection that does nothing when closed. Simplifies situations where you close an old
     * connection and replace it with a new one. */
   val Noop :Connection = new Connection() {
-    override def close () {}
+    override def close () :Unit = {}
     override def once () = this
   }
 }

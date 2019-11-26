@@ -35,7 +35,7 @@ class BlockerTest {
     /*19*/ "   public void test (int count) {}",
     /*20*/ "}")
 
-  @Test def testBlocker () {
+  @Test def testBlocker () :Unit = {
     val buf = Buffer("Test.java", testJavaCode.map(Line.apply))
     val blocker = new Blocker(buf, "{([", "})]")
     // println(blocker)

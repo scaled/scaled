@@ -26,7 +26,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
 
   val cview = new BufferViewImpl(window, BufferImpl.scratch("*completions*"), 40, 0)
   val carea = new BufferArea(cview, null) {
-    override protected def wasResized (widthChars :Int, heightChars :Int) {
+    override protected def wasResized (widthChars :Int, heightChars :Int) :Unit = {
       // we don't save our layout width/height back into our view width/height here because we
       // don't want the completion area to prefer ever larger sizes across uses; the active
       // minibuffer will enforce a monotonically increasing width (for that particular minibuffer
@@ -41,7 +41,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   val ui = new MiniUI() {
     override def setPrompt (prompt :String) = plabel.setText(prompt)
     override def getPrompt = plabel.getText
-    override def showCompletions (comps :SeqV[String]) {
+    override def showCompletions (comps :SeqV[String]) :Unit = {
       if (comps.isEmpty) setBottom(null)
       else {
         // we have approximately the bottom two thirds of the window for completions
@@ -74,7 +74,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
   def onClear () :Unit
 
   /** Aborts any active mini-mode. */
-  def abort () {
+  def abort () :Unit = {
     if (curDisp != null) curDisp.invoke("abort")
   }
 
@@ -90,7 +90,7 @@ abstract class MiniOverlay (window :WindowImpl) extends BorderPane with Minibuff
                                     s"mini-$mode", modeArgs, Nil) {
         override protected def fallbackToText = false
         override protected def createBufferArea () = new BufferArea(view, this) {
-          override protected def wasResized (widthChars :Int, heightChars :Int) {
+          override protected def wasResized (widthChars :Int, heightChars :Int) :Unit = {
             // only persist width; height is unfortunately delivered bogus values due to JavaFX
             // preferred size retardery
             view.width() = widthChars;

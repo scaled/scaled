@@ -77,7 +77,7 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
 
     buffer.edited.onEmit { needsRefresh = true }
 
-    def addCompletions (prefix :String, sb :LinkedHashSet[String]) {
+    def addCompletions (prefix :String, sb :LinkedHashSet[String]) :Unit = {
       if (needsRefresh) {
         val now = System.currentTimeMillis
         if (now - lastRefresh > MinRefreshInterval) {
@@ -88,7 +88,7 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
       }
 
       val iter = tokens.keySet.tailSet(prefix, true).iterator
-      def loop () {
+      def loop () :Unit = {
         val word = iter.next()
         if (word.startsWith(prefix)) {
           tokens.get(word) foreach sb.add
@@ -98,12 +98,12 @@ class TokenCompleter (val wspace :Workspace) extends CodeCompleter {
       if (iter.hasNext()) loop()
     }
 
-    private def refresh () {
+    private def refresh () :Unit = {
       tokens.clear()
       buffer.lines foreach { line =>
         val IsWord = Chars.isWord
         val sb = new java.lang.StringBuilder() // don't use Scala's retarded SB
-        def flush () {
+        def flush () :Unit = {
           if (sb.length > 0) {
             // ignore short tokens, not much point in completing a three letter word
             if (sb.length > 3) {

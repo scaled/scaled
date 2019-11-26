@@ -14,12 +14,12 @@ class BufferTest {
                  "and also don't match erroneously.")
   val buffer = Buffer("test", text.map(Line.apply))
 
-  @Test def testFindForward () {
+  @Test def testFindForward () :Unit = {
     val mp = Matcher.exact("peanut")
     assertEquals(Loc.None, buffer.findForward(mp, buffer.start))
 
     val mloc = Loc(2, 15)
-    def test (mm :Matcher) {
+    def test (mm :Matcher) :Unit = {
       assertEquals(mloc, buffer.findForward(mm, buffer.start))
       // make sure a search for "match" exactly on match does match
       assertEquals(mloc, buffer.findForward(mm, mloc))
@@ -30,12 +30,12 @@ class BufferTest {
     test(Matcher.regexp("\\bmatch\\b"))
   }
 
-  @Test def testFindBackward () {
+  @Test def testFindBackward () :Unit = {
     val mp = Matcher.exact("peanut")
     assertEquals(Loc.None, buffer.findBackward(mp, buffer.end))
 
     val mloc = Loc(2, 15)
-    def test (mm :Matcher) {
+    def test (mm :Matcher) :Unit = {
       assertEquals(s"findBackward($mm) matches", mloc, buffer.findBackward(mm, buffer.end))
       // make sure a search for "match" exactly on match does not match (findBackward starts
       // immediately prior to `start`)

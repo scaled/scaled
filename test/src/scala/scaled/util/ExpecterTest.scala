@@ -11,10 +11,10 @@ import scaled._
 class ExpecterTest {
   import TestUtil._
 
-  @Test def testUnexpected () {
+  @Test def testUnexpected () :Unit = {
     val exec = new AccumExec()
     val ex = new Expecter(exec, SubProcess.Config(Array("echo", "foo"))) {
-      override def onUnexpected (line :String, isErr :Boolean) {
+      override def onUnexpected (line :String, isErr :Boolean) :Unit = {
         assertEquals("foo", line)
       }
     }
@@ -23,10 +23,10 @@ class ExpecterTest {
     assertEquals(0, rv)
   }
 
-  @Test def testOneLineInteraction () {
+  @Test def testOneLineInteraction () :Unit = {
     val exec = new AccumExec()
     val ex = new Expecter(exec, SubProcess.Config(Array("cat"))) {
-      override def onUnexpected (line :String, isErr :Boolean) {
+      override def onUnexpected (line :String, isErr :Boolean) :Unit = {
         fail(s"Unexpected $line $isErr")
       }
     }
@@ -39,10 +39,10 @@ class ExpecterTest {
     exec.executeAll()
   }
 
-  @Test def testMultilineInteraction () {
+  @Test def testMultilineInteraction () :Unit = {
     val exec = new AccumExec()
     val ex = new Expecter(exec, SubProcess.Config(Array("cat"))) {
-      override def onUnexpected (line :String, isErr :Boolean) {
+      override def onUnexpected (line :String, isErr :Boolean) :Unit = {
         fail(s"Unexpected $line $isErr")
       }
     }

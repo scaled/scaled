@@ -27,8 +27,8 @@ class ConfigManager (editor :Editor, log :Logger, watchSvc :WatchService)
     repo(globalScope).serviceConfig(name, defs)
 
   // unused; TODO: ?
-  override def didStartup () {}
-  override def willShutdown () {}
+  override def didStartup () :Unit = {}
+  override def willShutdown () :Unit = {}
 
   private def repo (scope :Scope) :ConfigRepo = Mutable.getOrPut(
     _repos, scope, new ConfigRepo(scope, scope.next.map(repo)))
@@ -48,7 +48,7 @@ class ConfigManager (editor :Editor, log :Logger, watchSvc :WatchService)
     watchSvc.watchDir(_configDir, new Watcher() {
       override def onCreate (dir :Path, name :String) = checkReload(name)
       override def onModify (dir :Path, name :String) = checkReload(name)
-      protected def checkReload (name :String) {
+      protected def checkReload (name :String) :Unit = {
         if (name endsWith FileSuff) {
           val root = name dropRight FileSuff.length
           if (root endsWith ModeSuff) {

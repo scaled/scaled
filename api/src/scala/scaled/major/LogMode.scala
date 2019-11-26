@@ -21,7 +21,7 @@ class LogMode (env :Env) extends ReadingMode(env) {
     bind("clear-log", "M-k");
 
   @Fn("Clears the contents of this log buffer.")
-  def clearLog () {
+  def clearLog () :Unit = {
     buffer.delete(buffer.start, buffer.end)
   }
 }

@@ -25,8 +25,8 @@ object Impl {
     def setNext (next :Link) :Link = { this.next = next; this }
 
     // plumbing used (or not) by reactors; dangerous but simple and reasonably fast
-    def notify (arg0 :Any) {}
-    def notify (arg0 :Any, arg1 :Any) {}
+    def notify (arg0 :Any) :Unit = {}
+    def notify (arg0 :Any, arg1 :Any) :Unit = {}
 
     override def once () = { oneShot = true; this }
     override def close () = owner.disconnect(this)

@@ -13,7 +13,7 @@ object TestData {
 
   val log = new Logger {
     def log (msg :String) = println(msg)
-    def log (msg :String, exn :Throwable) {
+    def log (msg :String, exn :Throwable) :Unit = {
       println(msg)
       exn.printStackTrace(System.out)
     }
@@ -35,9 +35,9 @@ object TestData {
     val clipboard = new Clipboard {
       private var contents :Option[String] = None
       def read = contents
-      def set (text :String) { contents = Some(text) }
+      def set (text :String) :Unit = { contents = Some(text) }
     }
-    def showURL (url :String) {}
+    def showURL (url :String) :Unit = {}
   }
 
   val workspace :Workspace = new Workspace {
@@ -52,10 +52,10 @@ object TestData {
     def openBuffer (store :Store) = BufferImpl(store)
     def openWindow (geom :Option[Geometry]) = null
     def getInfoWindow (tag :String) = null
-    def visitWindowConfig (window :Window) {}
-    def killBuffer (buffer :Buffer) {}
-    def addHintPath (path :Path) {}
-    def removeHintPath (path :Path) {}
+    def visitWindowConfig (window :Window) :Unit = {}
+    def killBuffer (buffer :Buffer) :Unit = {}
+    def addHintPath (path :Path) :Unit = {}
+    def removeHintPath (path :Path) :Unit = {}
     def exec = editor.exec
     protected def log = TestData.log
   }
@@ -66,20 +66,20 @@ object TestData {
     val onClose = Signal[Window]()
     def focus = ???
     def workspace = TestData.workspace
-    def close () {}
+    def close () :Unit = {}
     def buffers = Seq()
     def exec = workspace.exec
-    def popStatus (msg :String, subtext :String) {
+    def popStatus (msg :String, subtext :String) :Unit = {
       println(msg)
       if (subtext != null) println(subtext)
     }
     def emitStatus (msg :String, ephemeral :Boolean) :Unit = println(msg)
-    def clearStatus () {}
+    def clearStatus () :Unit = {}
     val mini = new Minibuffer() {
       def apply[R] (mode :String, args :Any*) :Future[R] = Promise[R]()
     }
     def statusMini = mini
-    def toFront {}
+    def toFront :Unit = {}
   }
 
   val injector = new ServiceInjector(log, exec, editor) {

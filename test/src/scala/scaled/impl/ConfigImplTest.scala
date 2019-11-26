@@ -20,7 +20,7 @@ class ConfigImplTest {
     val killRingSize = key(40)
   }
 
-  @Test def testReadInit () {
+  @Test def testReadInit () :Unit = {
     val impl = new ConfigImpl("editor", null, null, TestConfig :: Nil, None)
     val props = Seq("# Scaled editor config",
                     "", "# View width", "view-width: 15",
@@ -30,7 +30,7 @@ class ConfigImplTest {
     assertEquals(25, impl(TestConfig.viewHeight))
   }
 
-  @Test def testWrite () {
+  @Test def testWrite () :Unit = {
     val impl = new ConfigImpl("editor", null, null, TestConfig :: Nil, None)
 
     val allDefaults = Seq(

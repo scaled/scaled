@@ -10,18 +10,18 @@ import org.junit.Assert._
 
 abstract class OrderedTestBase {
 
-  @Test def testCollect () {
+  @Test def testCollect () :Unit = {
     val strs = make("one", "two", "three", "four")
     assertEquals(Seq(3, 3, 5), strs collect { case str if (str.length % 2 == 1) => str.length })
   }
 
-  @Test def testCollectFirst () {
+  @Test def testCollectFirst () :Unit = {
     val strs = make("one", "two", "three", "four")
     assertEquals(Some(4), strs collectFirst { case str if (str.length % 2 == 0) => str.length })
     assertEquals(None, strs collectFirst { case str if (str.length > 10) => str.length })
   }
 
-  @Test def testDrop () {
+  @Test def testDrop () :Unit = {
     val one23 = make(1, 2, 3)
     val one2345 = make(1, 2, 3, 4, 5)
     assertEquals(make(3, 4, 5), one2345.drop(2))
@@ -42,7 +42,7 @@ abstract class OrderedTestBase {
     assertEquals(empty, one23.dropWhile(_ < 4))
   }
 
-  @Test def testFind () {
+  @Test def testFind () :Unit = {
     val strs = make("one", "two", "three", "four")
     assertEquals(None, strs.find(_.length == 2))
     assertEquals(Some("one"), strs.find(_.length == 3))
@@ -51,7 +51,7 @@ abstract class OrderedTestBase {
     assertEquals(None, strs.find(_.length == 2))
   }
 
-  @Test def testEquals () {
+  @Test def testEquals () :Unit = {
     val c1 = make("one", "two", "three")
     val c2 = make("one", "two", "three")
     val c3 = make("one", "two", "three", "four")
@@ -65,7 +65,7 @@ abstract class OrderedTestBase {
     assertEquals(make(), empty)
   }
 
-  @Test def testEndsWith () {
+  @Test def testEndsWith () :Unit = {
     val c1 = make(1, 2, 3, 4, 5)
     val c2 = make(3, 4, 5)
     val c3 = make(0, 1, 2, 3, 4, 5)
@@ -77,7 +77,7 @@ abstract class OrderedTestBase {
     assertFalse(c1 endsWith c4)
   }
 
-  @Test def testExistsForall () {
+  @Test def testExistsForall () :Unit = {
     val c1 = make(1, 2, 3, 4, 5)
     assertTrue(c1.exists(_ == 3))
     assertFalse(c1.exists(_ == 9))
@@ -85,13 +85,13 @@ abstract class OrderedTestBase {
     assertFalse(c1.forall(_ < 5))
   }
 
-  @Test def testFilter () {
+  @Test def testFilter () :Unit = {
     val c1 = make(1, 2, 3, 4, 5)
     assertEquals(make(2, 4), c1.filter(_ %2 == 0))
     assertEquals(make(1, 3, 5), c1.filterNot(_ %2 == 0))
   }
 
-  @Test def testForComp () {
+  @Test def testForComp () :Unit = {
     val ints = make(1, 2, 3, 4, 5, 6, 7)
     val evens = for (ii <- ints if (ii % 2 == 0)) yield ii
     assertEquals(make(2, 4, 6), evens)
@@ -111,34 +111,34 @@ abstract class OrderedTestBase {
     assertEquals(3, odds)
   }
 
-  @Test def testGrouped () {
+  @Test def testGrouped () :Unit = {
     val as = make(1, 2, 3, 4, 5, 6, 7)
     assertEquals(make(make(1, 2, 3), make(4, 5, 6), make(7)), as.grouped(3))
   }
 
-  @Test def testGroupBy () {
+  @Test def testGroupBy () :Unit = {
     val strs = make("one", "two", "three", "four", "five")
     assertEquals(Map(3 -> make("one", "two"),
                      4 -> make("four", "five"),
                      5 -> make("three")), strs.groupBy(_.length))
   }
 
-  @Test def testHashCode () {
+  @Test def testHashCode () :Unit = {
     // hash code should be equivalent to Arrays.hashCode
     val ints = make(1, 2, 3, 4, 5)
     assertEquals(ints.hashCode, Arrays.hashCode(Array(1, 2, 3, 4, 5)))
   }
 
-  @Test def testLast () {
+  @Test def testLast () :Unit = {
     assertEquals(5, make(1, 2, 3, 4, 5).last)
     assertEquals(2, make(1, 2).last)
   }
 
-  @Test(expected=classOf[NoSuchElementException]) def testLastOnEmpty () {
+  @Test(expected=classOf[NoSuchElementException]) def testLastOnEmpty () :Unit = {
     assertEquals(5, empty.last)
   }
 
-  @Test def testLengthCompare () {
+  @Test def testLengthCompare () :Unit = {
     assertTrue(make(1, 2, 3).lengthCompare(2) > 0)
     assertEquals(0, make(1, 2, 3).lengthCompare(3))
     assertTrue(make(1, 2, 3).lengthCompare(4) < 0)
@@ -147,11 +147,11 @@ abstract class OrderedTestBase {
     assertTrue(empty.lengthCompare(1) < 0)
   }
 
-  @Test def testMap () {
+  @Test def testMap () :Unit = {
     assertEquals(make(3, 3, 5, 4), make("one", "two", "three", "four").map(_.length))
   }
 
-  @Test def testMinMax () {
+  @Test def testMinMax () :Unit = {
     val is = make(9, 12, 5, 27, 3)
     assertEquals(27, is.max)
     assertEquals( 3, is.min)
@@ -163,31 +163,31 @@ abstract class OrderedTestBase {
     assertEquals("z", strs.minBy(_.length))
   }
 
-  @Test def testPartition () {
+  @Test def testPartition () :Unit = {
     val is = make(5, 3, 7, 4, 12, 9, 2)
     assertEquals((make(5, 3, 7, 9), make(4, 12, 2)), is.partition(_ % 2 != 0))
   }
 
-  @Test def testReduce () {
+  @Test def testReduce () :Unit = {
     val is = make(1, 2, 3, 4)
     assertEquals(10, is.reduceLeft(_ + _))
     def plus (a :Int, b :Int) = a + b
     assertEquals(10, is reduceLeft plus)
   }
 
-  @Test def testScan () {
+  @Test def testScan () :Unit = {
     val is = make(1, 2, 3, 4, 5)
     assertEquals(make(1, 3, 6, 10, 15), is.scan(0)(_ + _))
   }
 
-  @Test def testSize () {
+  @Test def testSize () :Unit = {
     assertEquals(0, empty.size)
     val ints = make(1, 2, 3, 4, 5)
     assertEquals(5, ints.size)
     assertEquals(4, ints.drop(1).size)
   }
 
-  @Test def testSpan () {
+  @Test def testSpan () :Unit = {
     val is = make(1, 2, 3, 4, 5)
     assertEquals((make(1, 2, 3), make(4, 5)), is.span(_ < 4))
     assertEquals((empty, is), is.span(_ > 9))
@@ -195,7 +195,7 @@ abstract class OrderedTestBase {
     assertEquals((empty, empty), empty[Int].span(_ != 4))
   }
 
-  @Test def testTake () {
+  @Test def testTake () :Unit = {
     val one23 = make(1, 2, 3)
     val one2345 = make(1, 2, 3, 4, 5)
 
@@ -217,17 +217,17 @@ abstract class OrderedTestBase {
     assertEquals(empty, one2345.takeWhile(_ > 10))
   }
 
-  @Test def testToArray () {
+  @Test def testToArray () :Unit = {
     val as = make("a", "b", "c")
     assertTrue(Arrays.deepEquals(Array("a", "b", "c") :Array[Object], as.toArray :Array[Object]))
   }
 
-  @Test def testUnzip () {
+  @Test def testUnzip () :Unit = {
     val pairs = make(("a", 1), ("b", 2), ("c", 3))
     assertEquals((make("a", "b", "c"), make(1, 2, 3)), pairs.unzip)
   }
 
-  @Test def testZip () {
+  @Test def testZip () :Unit = {
     val as = make("a", "b", "c")
     val bs = make(1, 2, 3, 4, 5)
 

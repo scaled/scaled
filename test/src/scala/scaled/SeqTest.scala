@@ -10,7 +10,7 @@ import org.junit.Assert._
 
 class SeqTest extends OrderedTestBase {
 
-  @Test def testApply () {
+  @Test def testApply () :Unit = {
     val is = Seq(1, 2, 3, 4)
     assertEquals(1, is(0))
     assertEquals(2, is(1))
@@ -18,13 +18,13 @@ class SeqTest extends OrderedTestBase {
     assertEquals(4, is(3))
   }
 
-  @Test def testBoxedPrimitives () {
+  @Test def testBoxedPrimitives () :Unit = {
     val ints = Array(1, 2, 3, 4)
     val iseq = Seq.from(ints)
     assertEquals(Seq(1, 2, 3, 4), iseq)
   }
 
-  @Test def testContains () {
+  @Test def testContains () :Unit = {
     val is = Seq(1, 2, 3, 4)
     assertTrue(is contains 2)
     assertFalse(is contains 5)
@@ -36,7 +36,7 @@ class SeqTest extends OrderedTestBase {
     assertFalse(Seq[String]() contains "bob")
   }
 
-  @Test def testCount () {
+  @Test def testCount () :Unit = {
     val as = Seq(1, 2, 3, 4)
     assertEquals(2, as.count(_ > 2))
     assertEquals(1, as.count(_ < 2))
@@ -44,45 +44,45 @@ class SeqTest extends OrderedTestBase {
     assertEquals(0, Seq[String]().count(_ == "foo"))
   }
 
-  @Test def testCovariance () {
+  @Test def testCovariance () :Unit = {
     def length (os :Seq[Any]) :Int = os.length
     assertEquals(5, length(Seq(1, 2, 3, 4, 5)))
   }
 
-  @Test def testDistinct () {
+  @Test def testDistinct () :Unit = {
     val as = Seq(1, 2, 3, 2, 4, 1, 3, 5)
     assertEquals(Seq(1, 2, 3, 4, 5), as.distinct)
   }
 
-  @Test def testFlatMap () {
+  @Test def testFlatMap () :Unit = {
     val strs = Seq("one", "two", "three", "four")
     def isEven (str :String) = if (str.length % 2 == 0) Some(str) else None
     assertEquals(Seq("four"), strs.flatMap(s => isEven(s)))
   }
 
-  @Test def testFolds () {
+  @Test def testFolds () :Unit = {
     assertEquals("abc", ("" /: Seq("a", "b", "c"))(_ + _))
     assertEquals("cba", (Seq("a", "b", "c") :\ "")((a,b) => b+a))
   }
 
-  @Test def testFromScala () {
+  @Test def testFromScala () :Unit = {
     val sseq = scala.Seq("a", "b", "c")
     assertEquals(Seq("a", "b", "c"), sseq.fromScala)
   }
 
-  @Test def testIndexOf () {
+  @Test def testIndexOf () :Unit = {
     val strs = Seq("a", "b", "c", "b", "d")
     assertEquals(1, strs.indexOf("b"))
     assertEquals(3, strs.lastIndexOf("b"))
     assertEquals(-1, strs.indexOf("z"))
   }
 
-  @Test def testIterToSeq () {
+  @Test def testIterToSeq () :Unit = {
     val list = Arrays.asList("a", "b", "c", "d")
     assertEquals(Seq("a", "b", "c", "d"), list.iterator.toSeq)
   }
 
-  @Test def testStartsEndsWith () {
+  @Test def testStartsEndsWith () :Unit = {
     val abcde = Seq("a", "b", "c", "d", "e")
     val abc = Seq("a", "b", "c")
     val cde = Seq("c", "d", "e")
@@ -95,7 +95,7 @@ class SeqTest extends OrderedTestBase {
     assertFalse(cde.endsWith(abcde))
   }
 
-  @Test def testUnapply () {
+  @Test def testUnapply () :Unit = {
     val one = Seq("one")
     one match {
       case Seq(a) => assertEquals("one", a)
@@ -111,7 +111,7 @@ class SeqTest extends OrderedTestBase {
     }
   }
 
-  @Test def testUnapplySeq () {
+  @Test def testUnapplySeq () :Unit = {
     val as = Seq("one", "two", "three")
     as match {
       case Seq(h, _*) => assertEquals("one", h)
@@ -140,14 +140,14 @@ class SeqTest extends OrderedTestBase {
     }
   }
 
-  @Test def testReverse () {
+  @Test def testReverse () :Unit = {
     assertEquals(Seq.empty, Seq.empty.reverse)
     assertEquals(Seq("a"), Seq("a").reverse)
     assertEquals(Seq("c", "b", "a"), Seq("a", "b", "c").reverse)
     assertEquals(Seq("d", "c", "b", "a"), Seq("a", "b", "c", "d").reverse)
   }
 
-  @Test def testSlices () {
+  @Test def testSlices () :Unit = {
     val full = Seq("a", "b", "c", "d", "e", "f")
     val bcd = Seq("b", "c", "d")
     val bce = Seq("b", "c", "e")

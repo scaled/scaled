@@ -11,7 +11,7 @@ class OpenHashSet[A] (_table :Array[Int], _elems :Array[Any], _count :Int) exten
 
   override def contains (elem :A) = getIdx(elem) != -1
 
-  override def copyInto (target :Array[Any], offset :Int) {
+  override def copyInto (target :Array[Any], offset :Int) :Unit = {
     System.arraycopy(_elems, 0, target, offset, _count)
   }
   override def iterator () :JIterator[A @uV] = new JIterator[A]() {
@@ -151,11 +151,11 @@ object OpenHashSet {
     // callbacks that allow us to use this builder for OpenHashMap as well
 
     /** Called when we relocate an element in our source array. */
-    protected def didCompact (ii :Int, nn :Int) {}
+    protected def didCompact (ii :Int, nn :Int) :Unit = {}
 
     /** Called when we encounter a duplicate element. `oo` is the index of the original element
       * (which is retained), `dd` is the index of the duplicate element (which is discarded). */
-    protected def sawDuplicate (oo :Int, dd :Int) {}
+    protected def sawDuplicate (oo :Int, dd :Int) :Unit = {}
   }
 
   /** Creates an [[OpenHashSet]] using the supplied initial elements array. This exists mainly to

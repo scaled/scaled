@@ -16,7 +16,7 @@ class FillableText (text :String) extends Text(text) {
 
   /** The stroke to use when rendering this text's background */
   val bgStroke = new StyleableObjectProperty[Paint](null) {
-    override def invalidated () {} // nada
+    override def invalidated () :Unit = {} // nada
     override def getBean = FillableText.this
     override def getName = "bgStroke"
     override def getCssMetaData = FillableText.BgStroke
@@ -24,7 +24,7 @@ class FillableText (text :String) extends Text(text) {
 
   /** The fill to use when rendering this text's background */
   val bgFill = new StyleableObjectProperty[Paint](null) {
-    override def invalidated () {} // nada
+    override def invalidated () :Unit = {} // nada
     override def getBean = FillableText.this
     override def getName = "bgFill"
     override def getCssMetaData = FillableText.BgFill
@@ -47,7 +47,7 @@ class FillableText (text :String) extends Text(text) {
   // we have to do this layout syncing manually (via LineViewImpl), because binding to layoutBounds
   // causes weird JavaFX internal failures and there's no public or protected hook we can tie into
   // during the TextFlow/Text layout process
-  def layoutRect () {
+  def layoutRect () :Unit = {
     val bounds = getLayoutBounds
     fillRect.setWidth(bounds.getWidth)
     fillRect.setHeight(bounds.getHeight+1) // TODO: see EditorPane height hack

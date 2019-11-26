@@ -22,7 +22,7 @@ object Filer {
       _value
     }
     /** Replaces the current value with `value`, and [[write]]s it. */
-    def update (value :T) {
+    def update (value :T) :Unit = {
       _value = value
       write()
     }
@@ -30,7 +30,7 @@ object Filer {
     def update (fn :T => T) :Unit = update(fn(apply()))
 
     /** Reads the backing file into a new value. Replaces the current value therewith. */
-    def read () {
+    def read () :Unit = {
       val lines :Iterable[String] = try {
         if (Files.exists(path)) Files.readAllLines(path) else Seq()
       } catch {
@@ -68,7 +68,7 @@ object Filer {
 
   /** Applies `op` to all subdirectories, subsubdirectories, etc of `root`. If `op` returns false,
     * we descend into the directory, if it returns true we do not. */
-  def descendDirs (root :Path)(op :Path => Boolean) {
+  def descendDirs (root :Path)(op :Path => Boolean) :Unit = {
     val seen = MSet[Path]()
     def apply (dir :Path) :Unit = if (seen.add(dir)) Files.list(dir).forEach(new Consumer[Path] {
       def accept (p :Path) = if (Files.isDirectory(p)) { if (!op(p)) apply(p) }
@@ -77,7 +77,7 @@ object Filer {
   }
 
   /** Applies `op` to all files in `root` and in subdirectories (and subsubdirectories) thereof. */
-  def descendFiles (root :Path)(op :Path => Unit) {
+  def descendFiles (root :Path)(op :Path => Unit) :Unit = {
     val seen = MSet[Path]()
     def apply (dir :Path) :Unit = if (seen.add(dir)) Files.list(dir).forEach(new Consumer[Path] {
       def accept (p :Path) = if (Files.isDirectory(p)) apply(p)

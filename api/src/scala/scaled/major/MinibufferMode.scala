@@ -54,7 +54,7 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
     bind("abort", "C-g");
 
   @Fn("""Aborts the current minibuffer action.""")
-  def abort () {
+  def abort () :Unit = {
     window.emitStatus("Quit")
     promise.fail(Errors.feedback("Aborted"))
   }
@@ -63,7 +63,7 @@ abstract class MinibufferMode (env :Env, promise :Promise[_]) extends EditingMod
   protected def setContents (text :String) :Unit = setContents(Line.fromText(text))
 
   /** Sets contents of the minibuffer to `lines`. Positions the point at the end of the buffer. */
-  protected def setContents (lines :Seq[LineV]) {
+  protected def setContents (lines :Seq[LineV]) :Unit = {
     view.buffer.replace(view.buffer.start, view.buffer.end, lines)
     if (!lines.isEmpty) view.width() = math.max(view.width(), lines.map(_.length).max+1)
     view.point() = view.buffer.end

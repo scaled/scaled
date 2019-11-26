@@ -50,11 +50,11 @@ abstract class ValueV[T] extends ValueReactor[T] with PropertyV[T] {
     new SignalV[T] {
       // connectionAdded and connectionRemoved are only ever called with a lock held on this
       // reactor, so we're safe in checking and mutating _conn
-      override protected def connectionAdded () {
+      override protected def connectionAdded () :Unit = {
         super.connectionAdded()
         if (_conn == null) _conn = ValueV.this.onValue(notifyEmit)
       }
-      override protected def connectionRemoved () {
+      override protected def connectionRemoved () :Unit = {
         super.connectionRemoved()
         if (!hasConnections && _conn != null) {
           _conn.close()
@@ -115,11 +115,11 @@ private abstract class DelegateValueV[D,T] (protected val parent :ValueV[D]) ext
 
   // connectionAdded and connectionRemoved are only ever called with a lock held on this reactor,
   // so we're safe in checking and mutating _conn
-  override protected def connectionAdded () {
+  override protected def connectionAdded () :Unit = {
     super.connectionAdded()
     if (_conn == null) _conn = parent.onChange(onParentChange)
   }
-  override protected def connectionRemoved () {
+  override protected def connectionRemoved () :Unit = {
     super.connectionRemoved()
     if (!hasConnections && _conn != null) {
       _conn.close()

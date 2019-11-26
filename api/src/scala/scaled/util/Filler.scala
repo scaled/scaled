@@ -25,8 +25,8 @@ class Filler (width :Int) {
     * @param withSpace if true then a space will be inserted before `line` if it is added to a line
     * with existing text.
     */
-  def append (line :CharSequence, withSpace :Boolean) {
-    @inline @tailrec def loop (into :StringBuilder, start :Int, withSpace :Boolean) {
+  def append (line :CharSequence, withSpace :Boolean) :Unit = {
+    @inline @tailrec def loop (into :StringBuilder, start :Int, withSpace :Boolean) :Unit = {
       // last break will indicate where we need to rebreak if we overflow
       var lastBreak = start
       // if we're appending to a non-empty line, we may want to insert a space

@@ -367,7 +367,7 @@ abstract class Buffer extends BufferV {
   def kill () :Unit
 
   /** Saves this buffer to its current store. If the buffer is not dirty, NOOPs. */
-  def save () {
+  def save () :Unit = {
     // the caller should check dirty and provide feedback, but let's nip funny biz in the bud
     if (dirty) saveTo(store)
   }

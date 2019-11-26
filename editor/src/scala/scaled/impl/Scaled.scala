@@ -32,7 +32,7 @@ class Scaled extends Application with Editor {
     override def log (msg :String, exn :Throwable) :Unit = Platform.runLater(new Runnable() {
       override def run = { doLog(msg) ; doLog(Errors.stackTraceToString(exn)) }
     })
-    private def doLog (msg :String) {
+    private def doLog (msg :String) :Unit = {
       debugLog(msg)
       Scaled.this.log.emit(msg)
     }
@@ -86,7 +86,7 @@ class Scaled extends Application with Editor {
   val debugLog = if (java.lang.Boolean.getBoolean("scaled.debug")) (msg :String) => println(msg)
                  else (msg :String) => ()
 
-  override def start (stage :Stage) {
+  override def start (stage :Stage) :Unit = {
     // round up exceptions thrown from runnables sent to Platform.runLater
     Thread.currentThread.setUncaughtExceptionHandler((thread, err) => handleError(err))
     // we have to defer resolution of auto-load services until the above constructors have
@@ -101,7 +101,7 @@ class Scaled extends Application with Editor {
     server.start()
   }
 
-  override def stop () {
+  override def stop () :Unit = {
     svcMgr.shutdown();
     pool.shutdown()
   }
@@ -128,7 +128,7 @@ object Scaled {
     * catches the event that comes in when a macOS app is opened with initial files. */
   val openFiles = Value(Seq[Path]())
 
-  def main (args :Array[String]) {
+  def main (args :Array[String]) :Unit = {
     try {
       Desktop.getDesktop.setOpenFileHandler(
         // we force an update here because the last open files request may be the exact same path

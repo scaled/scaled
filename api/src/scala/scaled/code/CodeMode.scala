@@ -230,7 +230,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     })
     if (!choices.isEmpty) checkDeets()
 
-    def extendOrAdvance () {
+    def extendOrAdvance () :Unit = {
       // sanity check that the point isn't somewhere crazy
       val point = view.point()
       if (point.row != comp.start.row) throw Errors.feedback("Point not on completion line?")
@@ -283,7 +283,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       }
     }
 
-    def refine () {
+    def refine () :Unit = {
       var ochoices = choices
       choices = refined
       if (choices.isEmpty) clearActiveComp()
@@ -293,12 +293,12 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
       }
     }
 
-    def commit () {
+    def commit () :Unit = {
       buffer.replace(comp.start, view.point(), Seq(Line(active.insert)))
       clearActiveComp()
     }
 
-    def clear () {
+    def clear () :Unit = {
       compsOptPop.clear()
       if (deetOptPop != null) deetOptPop.clear()
     }
@@ -314,7 +314,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   /** Activates a completion at `pos`. *Note*: this moves the point to the end of the completion
     * prefix detected at `pos`. This is necessary for completion refinement to work properly. */
-  def completeAt (pos :Loc) {
+  def completeAt (pos :Loc) :Unit = {
     val (pstart, pend) = Chars.wordBoundsAt(buffer, pos)
     view.point() = pend // move the point to the end of the to-be-completed prefix
     if (activeComp != null) clearActiveComp()
@@ -324,7 +324,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   /** Clears the active completion, if any. */
-  def clearActiveComp () {
+  def clearActiveComp () :Unit = {
     if (activeComp != null) {
       activeComp.clear()
       activeComp = null
@@ -332,7 +332,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   /** Clears the active completion if the point has moved away from it. */
-  def checkClearActiveComp () {
+  def checkClearActiveComp () :Unit = {
     if (activeComp != null && !activeComp.containsPoint(view.point())) clearActiveComp()
   }
 
@@ -353,7 +353,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   /** Inserts `open` and the corresponding close quote/bracket, leaving the point between the two.
     * The close character will be tagged as auto-inserted so that the electric-foo methods know
     * that it may be overwritten if the user manually types the close character over top of it. */
-  def insertTaggedPair (open :Char) {
+  def insertTaggedPair (open :Char) :Unit = {
     val fst = view.point()
     val mid = buffer.insert(fst, open, Syntax.Default)
     val end = buffer.insert(mid, closeForOpen(open), Syntax.Default)
@@ -386,7 +386,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
   }
 
-  override def fillParagraph () {
+  override def fillParagraph () :Unit = {
     // make sure we're "looking at" something fillable on this line
     if (canAutoFill(pointAtNonWS)) super.fillParagraph()
     else window.popStatus(s"$name-mode doesn't know how to fill this paragraph.")
@@ -400,7 +400,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
 
   // when we break for auto-fill, insert the appropriate comment prefix
-  override def autoBreak (at :Loc) {
+  override def autoBreak (at :Loc) :Unit = {
     val pre = commenter.prefixFor(buffer.syntaxNear(at))
     super.autoBreak(at)
     if (pre != "") {
@@ -410,7 +410,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   // customize some fns to work with code completion
-  override def selfInsertCommand (typed :String) {
+  override def selfInsertCommand (typed :String) :Unit = {
     super.selfInsertCommand(typed)
     if (completer.shouldActivate(buffer, view.point(), typed)) {
       completeAtPoint();
@@ -419,24 +419,24 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
     }
   }
 
-  override def newline () {
+  override def newline () :Unit = {
     if (activeComp == null) super.newline();
     else activeComp.commit();
   }
 
-  override def deleteBackwardChar () {
+  override def deleteBackwardChar () :Unit = {
     super.deleteBackwardChar()
     if (activeComp != null) {
       activeComp.refine()
     }
   }
 
-  override def previousLine () {
+  override def previousLine () :Unit = {
     if (activeComp == null) super.previousLine()
     else activeComp.advance(-1)
   }
 
-  override def nextLine () {
+  override def nextLine () :Unit = {
     if (activeComp == null) super.nextLine()
     else activeComp.advance(1)
   }
@@ -445,7 +445,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   // FNs
 
   @Fn("Displays the syntax at the point.")
-  def showSyntax () {
+  def showSyntax () :Unit = {
     val info = Seq(buffer.syntaxAt(view.point()).toString)
     view.popup() = Popup.text(info, Popup.UpRight(view.point()))
   }
@@ -462,26 +462,26 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          completion, reindents the current line. If the current line is properly indented,
          starts a new completion at the point. In other words attempt to 'DWIM' when the tab
          key is pressed.""")
-  def reindentOrComplete () {
+  def reindentOrComplete () :Unit = {
     val point = view.point()
     if (activeComp != null) activeComp.extendOrAdvance()
     else if (!reindent(point) && Chars.isWhitespace(buffer.charAt(point))) completeAtPoint()
   }
 
   @Fn("If there is an active completion, selects the previous choice.")
-  def previousCompletion () {
+  def previousCompletion () :Unit = {
     if (activeComp != null) activeComp.advance(-1)
   }
 
   @Fn("Clears and abandons any active completion.")
-  def cancelComplete () {
+  def cancelComplete () :Unit = {
     clearActiveComp();
   }
 
   @Fn("""Inserts a newline and performs any other configured automatic actions. This includes
          indenting the cursor according to the mode's indentation rules, processing
          `auto-expand-block` (if enabled) and any other newline-triggered actions.""")
-  def electricNewline () {
+  def electricNewline () :Unit = {
     val p = view.point()
     val expandBlock = config(autoExpandBlock) && (
       buffer.charAt(p.prevC) == '{') && (buffer.charAt(p) == '}')
@@ -502,7 +502,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   @Fn("""Inserts an open bracket, and if the `auto-close-bracket` configuration is true, inserts
          a close bracket following the open bracket, leaving the cursor positioned after the open
          bracket.""")
-  def electricOpenBracket (typed :String) {
+  def electricOpenBracket (typed :String) :Unit = {
     val p = view.point()
     // TODO: instead just scan ahead a bit for the expected close and don't pair if we see it...
     if (config(autoCloseBracket) && p == buffer.lineEnd(p)) insertTaggedPair(typed.charAt(0))
@@ -512,7 +512,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
 
   @Fn("""Automatically indents a close-bracket immediately after typing it. Also avoids duplicating
          the close bracket if the needed bracket is already under the point.""")
-  def electricCloseBracket (typed :String) {
+  def electricCloseBracket (typed :String) :Unit = {
     val p = view.point()
     // if we're currently on the desired close bracket, just pretend like we typed it and fwd-char
     if (isTaggedClose(p, typed.charAt(0))) view.point() = p.nextC
@@ -545,7 +545,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          places the point into the block that encloses the current block, so a repeated invocation
          of this fn will move the point to the next outermost block start, and so forth until no
          enclosing block can be found.""")
-  def previousBracket () {
+  def previousBracket () :Unit = {
     curBlock.getOption match {
       case None    => window.popStatus("No enclosing block can be found.")
       case Some(b) => view.point() = b.start
@@ -555,7 +555,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   @Fn("""Moves the point just after the close bracket (parent, brace, etc.) of the enclosing block.
          If the point is already there, the point is moved just after the next-nearest enclosing
          block's close bracket.""")
-  def nextBracket () {
+  def nextBracket () :Unit = {
     curBlock.getOption match {
       case None    => window.popStatus("No enclosing block can be found.")
       case Some(b) => if (view.point() != b.end.nextC) view.point() = b.end.nextC
@@ -575,7 +575,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          is inside the block, the point will be moved to the mark. This allows one to cycle from
          a point inside the block, to the block start, to the block end, and back to the starting
          point inside the block.""")
-  def bounceBracket () {
+  def bounceBracket () :Unit = {
     curBlock.getOption match {
       case None => window.popStatus("No enclosing block can be found.")
       case Some(b) =>
@@ -597,7 +597,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   }
 
   @Fn("Indents each non-blank line in the region.")
-  def indentRegion () {
+  def indentRegion () :Unit = {
     withRegion { (start, end) =>
       var pos = start ; while (pos < end) {
         reindent(pos, false)
@@ -609,7 +609,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   @Fn("""Comments out the active region. If the start and end of the region are in column zero,
          and line comments are supported by the mode, line comments are used, otherwise the region
          is wrapped in a block comment.""")
-  def commentRegion () {
+  def commentRegion () :Unit = {
     withRegion { (start, end) =>
       if (start.col == 0 && end.col == 0 && commenter.linePrefix != "") {
         buffer.replace(start, end, commenter.lineCommented(buffer, start, end))
@@ -624,7 +624,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
   @Fn("""Removes comments from the active region, assuming they were uniformly applied. If the
          region starts and ends with the block comment delimiters, they will be removed. Otherwise
          the line comment delimiters will be sought and removed from the start of each line.""")
-  def uncommentRegion () {
+  def uncommentRegion () :Unit = {
     withRegion { (start, end) =>
       if (!commenter.unBlockComment(buffer, start, end)) {
         commenter.unLineComment(buffer, start, end)
@@ -636,7 +636,7 @@ abstract class CodeMode (env :Env) extends EditingMode(env) {
          quotes are placed at the start and end of each line in the region, and the quoted line
          separator is inserted between each quoted line. If the start or end of the region are
          not in column zero, a quote character is placed only at the region start and end.""")
-  def quoteRegion () {
+  def quoteRegion () :Unit = {
     withRegion { (start, end) =>
       if (start.col == 0 && end.col == 0) {
         val lastEnd = buffer.backward(end, 1)
