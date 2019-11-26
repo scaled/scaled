@@ -235,7 +235,7 @@ object Config {
       * @throws NoSuchElementException if no scope is defined in any of the supplied states. */
     def apply (states :StateV*) :Scope = {
       val ss = states.map(_.get[Scope]).dropWhile(!_.isDefined)
-      (ss.head.get /: ss.tail)(_ concat _)
+      ss.tail.foldLeft(ss.head.get)(_ concat _)
     }
   }
 

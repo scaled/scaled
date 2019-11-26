@@ -142,7 +142,7 @@ class BufferBuilder (val fillWidth :Int) {
   }
 
   private def styledLine (text :CharSequence, styles :scala.Seq[String]) =
-    ((Line.builder(text) /: styles)(_.withStyle(_))).build()
+    styles.foldLeft(Line.builder(text))(_.withStyle(_)).build()
 
   private def toDashes (text :CharSequence, dash :Char) = {
     val sb = new StringBuilder()
