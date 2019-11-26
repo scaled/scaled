@@ -103,7 +103,7 @@ abstract class OrderedTestBase {
     assertEquals(make("four"), evenLens)
 
     val earlyChars = for (ss <- strs ; rs = ss.reverse ;
-                          cc <- Seq(rs.toArray :_*) if (cc < 'f')) yield cc
+                          cc <- Seq(rs.toIndexedSeq :_*) if (cc < 'f')) yield cc
     assertEquals(make('e', 'e', 'e'), earlyChars)
 
     var odds = 0
