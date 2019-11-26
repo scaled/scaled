@@ -11,7 +11,7 @@ class Seq[+A] private[scaled] (_elems :Array[Any], _size :Int) extends SeqV[A] {
 
   /** Returns a [[scala.IndexedSeq]] with the contents of this seq. */
   def toScala :IndexedSeq[A] = {
-    val full = scala.collection.mutable.WrappedArray.make[A](_elems)
+    val full = scala.collection.immutable.ArraySeq.unsafeWrapArray(_elems.asInstanceOf[Array[A]])
     if (_elems.length == _size) full else full.slice(0, _size)
   }
 
