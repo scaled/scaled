@@ -5,7 +5,6 @@
 package scaled
 
 import java.util.{Collection, Comparator, List => JList, NoSuchElementException, Objects}
-import scala.{collection => sc}
 
 /** A simple functional list class, built from cons cells as God and John McCarthy intended. */
 sealed abstract class List[+A] extends Ordered[A] {
@@ -200,13 +199,13 @@ object List {
     }
     override def append (elems :JIterable[_ <: A]) = append(elems.iterator())
     override def append (elems :Unordered[A]) = append(elems.iterator())
-    override def append (elems :sc.Traversable[A]) = { elems foreach append ; this }
+    override def append (elems :SIterable[A]) = { elems foreach append ; this }
 
     override def += (value :A) = append(value)
     override def ++= (iter :JIterator[_ <: A]) = append(iter)
     override def ++= (elems :JIterable[_ <: A]) = append(elems)
     override def ++= (elems :Unordered[A]) = append(elems)
-    override def ++= (elems :sc.Traversable[A]) = append(elems)
+    override def ++= (elems :SIterable[A]) = append(elems)
 
     override def build () :List[A] = if (_head == null) Nil else {
       _last.unsafeSetTail(Nil)

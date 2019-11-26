@@ -100,17 +100,18 @@ class SeqBuffer[A] (initElems :Array[Any], initSize :Int) extends SeqV[A] with C
   def ++= (elems :Unordered[A]) :Unit = append(elems)
 
   /** Appends `elems` to this buffer. */
-  def append (elems :scala.collection.Traversable[A]) :this.type = {
-    if (!elems.hasDefiniteSize) elems foreach append
+  def append (elems :SIterable[A]) :this.type = {
+    val esize = elems.knownSize
+    if (esize < 0) elems foreach append
     else {
-      val size = _size ; val esize = elems.size
+      val size = _size
       elems.copyToArray(expect(size, esize), size, esize)
       _size = size + esize
     }
     this
   }
   /** See [[append]]. */
-  def ++= (elems :scala.collection.Traversable[A]) :Unit = append(elems)
+  def ++= (elems :SIterable[A]) :Unit = append(elems)
 
   /** Prepends `elem` to this buffer, shifting all elements down by one. */
   def prepend (elem :A) :Unit = insert(0, elem)

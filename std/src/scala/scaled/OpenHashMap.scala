@@ -118,11 +118,11 @@ object OpenHashMap {
     }
 
     override def += (value :(K,V)) :Unit = append(value)
-    override def ++= (elems :Traversable[(K,V)]) = append(elems)
+    override def ++= (elems :SIterable[(K,V)]) = append(elems)
     override def ++= (elems :Unordered[(K,V)]) = append(elems)
     override def ++= (elems :JIterable[_ <: (K,V)]) = append(elems.iterator())
     override def ++= (iter :JIterator[_ <: (K,V)]) = append(iter)
-    override def append (elems :Traversable[(K,V)]) = { elems foreach append ; this }
+    override def append (elems :SIterable[(K,V)]) = { elems foreach append ; this }
     override def append (elems :Unordered[(K,V)]) = { elems foreach append ; this }
     override def append (elems :JIterable[_ <: (K,V)]) = append(elems.iterator())
     override def append (iter :JIterator[_ <: (K,V)]) = {

@@ -324,7 +324,7 @@ object Iterable {
       def hasNext = iter.hasNext
       def next = iter.next
     }
-    override def sizeHint = if (iable.hasDefiniteSize) iable.size else 0
+    override def sizeHint = Math.max(iable.knownSize, 0)
     override def newBuilder[B] (esize :Int) = Seq.builder[B](esize)
     override def newEmpty[B] = Seq.empty
     override protected def toStringType = "IterableView"

@@ -52,7 +52,7 @@ object Unordered {
     /** Appends `elems` to this builder. */
     def append (elems :Unordered[E]) :this.type
     /** Appends `elems` to this builder. */
-    def append (elems :scala.collection.Traversable[E]) :this.type
+    def append (elems :SIterable[E]) :this.type
 
     /** Appends `value` to this builder. */
     def += (value :E) :Unit
@@ -63,7 +63,7 @@ object Unordered {
     /** See [[append]]. */
     def ++= (elems :Unordered[E]) :Unit
     /** See [[append]]. */
-    def ++= (elems :scala.collection.Traversable[E]) :Unit
+    def ++= (elems :SIterable[E]) :Unit
   }
 
   /** Returns an unordered view of `as`. `as` is assumed to be effectively immutable for the
