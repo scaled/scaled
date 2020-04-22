@@ -5,15 +5,25 @@
 package scaled.minor
 
 import java.nio.file.Paths
+import java.util.regex.Pattern
 import scaled._
 import scaled.major.TextConfig
 import scaled.util.{BufferBuilder, SubProcess}
+
+object MetaConfig extends Config.Defs {
+
+  @Var(""""A regular expression used to filter completions from consideration when TAB is
+           pressed to auto-extend the completion. Any completions that match this regexp
+           will be excluded.""")
+  val fileCompleteExclude = key("")
+}
 
 /** Defines fns that are not related to the current buffer, but rather for interation with the
   * editor environment or other global things. */
 @Minor(name="meta", tags=Array("*"), desc="""Provides global meta fns.""")
 class MetaMode (env :Env) extends MinorMode(env) {
   import Workspace._
+  import MetaConfig._
 
   override def keymap = super.keymap.
     // buffer commands
@@ -38,6 +48,8 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
     // misc commands
     bind("execute-extended-command", "M-x");
+
+  override def configDefs = MetaConfig :: super.configDefs
 
   /** Queries the user for the name of a config var and invokes `fn` on the chosen var. */
   def withConfigVar (fn :JConsumer[Config.VarBind[_]]) :Unit = {
@@ -84,8 +96,19 @@ class MetaMode (env :Env) extends MinorMode(env) {
 
   @Fn("Reads a filename from the minibuffer and visits it in a buffer.")
   def findFile () :Unit = {
+    val excludeRe = config(fileCompleteExclude)
+    val comp = if (excludeRe == "") Completer.file(editor.exec) else try {
+      new Completer.File(editor.exec) {
+        private val p = Pattern.compile(excludeRe)
+        override protected def shouldExtend (comp :String) = !p.matcher(comp).matches()
+      }
+    } catch {
+      case e :Throwable =>
+        window.popStatus("Invalid file-complete-exclude regexp:", e.getMessage)
+        Completer.file(editor.exec)
+    }
     window.mini.read("Find file:", buffer.store.parent, fileHistory(wspace),
-                     Completer.file(editor.exec)) onSuccess frame.visitFile
+                     comp) onSuccess frame.visitFile
   }
 
   @Fn("Reads a filename from the minibuffer and visits it in a buffer. The file need not exist.")

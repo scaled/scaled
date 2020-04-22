@@ -54,7 +54,7 @@ class MiniReadMode[T] (
   @Fn("Extends the current completion to the longest shared prefix of the displayed completions.")
   def extendCompletion () :Unit = {
     // if we have at least one completion which prefix-matches our current text...
-    val preMatchedComps = _comp.comps.filter(Completer.startsWithI(current))
+    val preMatchedComps = completer.extend(_comp, current)
     if (!preMatchedComps.isEmpty) {
       // ...set the contents to the longest shared prefix of the applicable completions
       setContents(Completer.longestPrefix(preMatchedComps))

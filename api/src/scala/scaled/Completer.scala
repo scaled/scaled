@@ -4,7 +4,6 @@
 
 package scaled
 
-import java.io.File
 import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.util.stream.Stream
 import scaled.util.{FuzzyMatch, IFuzzyMatch}
@@ -133,6 +132,15 @@ abstract class Completer[T] {
     else apply(prefix)
   }
 
+  /** Does the thing you want when you press tab with a partial completion. In this case it returns
+    * the completions in `comp` that share a common prefix with the supplied `prefix` (which is the
+    * partial completion). This incorporates a hook for filtering completions in scenarios where
+    * certain completions should be skipped when extending a partial completion (things like ~
+    * files or other cruft left by questionably designed tools).
+    */
+  def extend (comp :Completion[T], prefix :String) :SeqV[String] =
+    comp.comps.filter(Completer.startsWithI(prefix)).filter(shouldExtend)
+
   /** Returns the value identified by `curval` given the current completion `comp`. */
   def commit (comp :Completion[T], curval :String) :Option[T] =
     comp(curval) orElse onNonMatch(comp, curval)
@@ -157,6 +165,9 @@ abstract class Completer[T] {
   /** Generates a list of completions which start with `prefix`. `prefix` will be exactly
     * [[minPrefix]] characters long. */
   protected def complete (prefix :String) :Future[Completion[T]]
+
+  /** Used by `extend` to filter undesirable completions. */
+  protected def shouldExtend (comp :String) :Boolean = true
 }
 
 /** Some useful completion functions. */
@@ -257,7 +268,9 @@ object Completer {
   def defang (name :String) :String = name.replace('\n', ' ').replace('\r', ' ')
 
   /** A completer on file system files. */
-  def file (exec :Executor) :Completer[Store] = new Completer[Store] {
+  class File (exec :Executor) extends Completer[Store] {
+    private def fileSep = java.io.File.separator
+
     override def complete (prefix :String) = {
       val (pstr, path, endInSep) = grok(prefix)
       if (endInSep && Files.isDirectory(path)) expand(pstr, path, "")
@@ -277,14 +290,14 @@ object Completer {
       // case where that's all that matches, but I worry about opening the door to infinite loops
       // in weird situations, so I'll punt on that for now
       else if (prefix.length > comp.glob.length &&
-               prefix.substring(comp.glob.length).contains(File.separator)) complete(prefix)
+               prefix.substring(comp.glob.length).contains(fileSep)) complete(prefix)
       else super.refine(comp, prefix)
     }
 
     override def commit (comp :Completion[Store], curval :String) =
       comp.comps.headOption.flatMap(fromString)
 
-    override def pathSeparator = Some(File.separator)
+    override def pathSeparator = Some(fileSep)
     override def toString = "FileCompleter"
 
     class FileFuzzyMatch (glob :String) extends IFuzzyMatch(glob) {
@@ -322,17 +335,20 @@ object Completer {
 
     private def grok (pathstr :String) :(String,Path,Boolean) = {
       val path = Paths.get(pathstr) ; val fname = path.getFileName
-      val endInSep = pathstr endsWith File.separator
+      val endInSep = pathstr endsWith fileSep
       if (fname != null && fname.toString == "~") {
         val home = Paths.get(System.getProperty("user.home"))
-        (s"$home${File.separator}", home, true)
+        (s"$home${fileSep}", home, true)
       } else (pathstr, path, endInSep)
     }
 
     private def rootPath = FileSystems.getDefault.getRootDirectories.iterator.next
     private val format = (file :Path) => {
       val path = defang(file.toString)
-      if (Files.isDirectory(file)) path + File.separator else path
+      if (Files.isDirectory(file)) path + fileSep else path
     }
   }
+
+  /** Returns a completer on file system files. */
+  def file (exec :Executor) :Completer[Store] = new File(exec)
 }

@@ -343,7 +343,10 @@ abstract class ReadingMode (env :Env) extends MajorMode(env) {
 
   @Fn("""Adjusts the scroll offset of the current window so that the line that contains the point
          is centered therein.""")
-  def recenter () = view.scrollTop() = math.max(view.point().row - view.height()/2, 0)
+  def recenter () :Unit = {
+    view.scrollTop() = math.max(view.point().row - view.height()/2, 0)
+    view.popup.clear()
+  }
 
   //
   // BUFFER FNS
