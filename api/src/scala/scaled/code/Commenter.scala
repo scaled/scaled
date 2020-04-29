@@ -278,7 +278,7 @@ class Commenter {
   /** Inserts the doc comment prefix at `p`. Used when electric-newline is typed while inside a doc
     * comment. */
   def insertDocPre (buffer :Buffer, p :Loc) :Loc = {
-    val toInsert = docPrefix // + padding
+    val toInsert = docPrefix + padding
     buffer.insert(p, Line(toInsert))
     p + (0, toInsert.length)
   }
