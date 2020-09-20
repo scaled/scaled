@@ -102,7 +102,6 @@ class MiniReadMode[T] (
     // don't display completions if we're not completing
     // (TODO: have this be a member on Completer; comparing against a global is pretty hacky)
     if (completer != Completer.none) {
-      if (comp.glob != current) setContents(comp.glob)
       val comps = comp.comps
       if (comps.isEmpty) miniui.showCompletions(Seq("No match."))
       else {
