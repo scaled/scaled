@@ -16,6 +16,9 @@ trait Window {
     /** Returns the current geometry of this frame. */
     def geometry :Geometry
 
+    /** Returns the current size of this frame (in pixels). */
+    def size :Size
+
     /** Returns the window that contains this frame. */
     def window :Window = Window.this
 
@@ -65,6 +68,9 @@ trait Window {
 
   /** Returns the current geometry of this window. */
   def geometry :Geometry
+
+  /** Returns the current size of this window (in pixels). */
+  def size :Size
 
   /** Returns the of list frames currently in this window. */
   def frames :SeqV[Frame]
@@ -162,6 +168,11 @@ trait Window {
   */
 case class Geometry (width :Int, height :Int, x :Int, y :Int) {
   override def toString = s"${width}x$height+$x+$y"
+}
+
+/** Describes the pixel size of a [[Window]] or [[Frame]]. */
+case class Size (width :Int, height :Int) {
+  override def toString = s"{width}x{height}"
 }
 
 object Geometry {

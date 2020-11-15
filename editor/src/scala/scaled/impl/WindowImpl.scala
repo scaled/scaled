@@ -114,6 +114,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     }
 
     override def geometry = Geometry(disp.area.width, disp.area.height, 0, 0) // TODO: x/y pos
+    override def size = Size(disp.area.getWidth.toInt, disp.area.getHeight.toInt)
     override def view :BufferViewImpl = if (disp != null) disp.area.bview else null
     override def visit (buffer :Buffer, focus :Boolean) =
       setBuffer(buffer.asInstanceOf[BufferImpl], focus, false)
@@ -157,6 +158,7 @@ class WindowImpl (val stage :Stage, ws :WorkspaceImpl, defWidth :Int, defHeight 
     val fg = focus.geometry // TODO: the right thing when we have multiple frames
     Geometry(fg.width, fg.height, stage.getX.toInt, stage.getY.toInt)
   }
+  override def size = Size(stage.getWidth.toInt, stage.getHeight.toInt)
   override def frames = _frames
   override def focus = _focus.get
   override def workspace = ws

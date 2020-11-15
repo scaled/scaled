@@ -404,7 +404,7 @@ class WorkspaceImpl (val app  :Scaled, val mgr  :WorkspaceManager,
     config.value(EditorConfig.viewTop) onValueNotify { y =>
       if (y >= 0) stage.setY(y)
     }
-    // if geometry was specified on the command line, override the value from prefs
+    // if a position was passed in, override the value from prefs
     geom.pos.foreach { pos => stage.setX(pos._1) ; stage.setY(pos._2) }
 
     // update our last "opened" time when a new editor is created
