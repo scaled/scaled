@@ -27,7 +27,9 @@ class WorkspaceMode (env :Env) extends MinorMode(env) {
 
   @Fn("Opens a new window in the current workspace.")
   def openWindow () :Unit = {
-    wspace.openWindow(None).focus.visit(buffer)
+    var Geometry(width, height, x, y) = window.geometry
+    var geom = Geometry(width, height, x + window.size.width + 10, y)
+    wspace.openWindow(Some(geom)).focus.visit(buffer)
   }
 
   @Fn("Describes the state of the current workspace.")
