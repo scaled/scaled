@@ -91,7 +91,7 @@ object Completion {
 
   private class MapComp[T] (gl :String, cs :SeqV[String], map :Map[String,T])
       extends Completion[T](gl, cs) {
-    def apply (comp :String) = map.get(comp)
+    def apply (comp :String) = map.get(comp) orElse cs.headOption.flatMap(map.get)
     def refine (prefix :String) = {
       val outer = this
       new MapComp[T](prefix, FuzzyMatch(prefix).filter(comps), map) {
